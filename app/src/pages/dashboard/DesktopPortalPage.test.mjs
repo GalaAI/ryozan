@@ -197,3 +197,19 @@ test('Hub record actions open the selected conversation or booking and clear Hub
   assert.equal(app.query().get('convo'), null)
   assert.equal(find(app.render(), 'BookyWorkspace').props.selectedId, 'booking-example')
 })
+
+test('every signed-in role reaches Hub Connections, collector included; deposits stay artist-only', () => {
+  for (const role of ['founder', 'admin', 'artist', 'assistant', 'collector']) {
+    const app = page('portal=hub', role)
+    const ids = app.render().props.actions.map(action => action.id)
+    assert.ok(ids.includes('connections'), role)
+    assert.equal(ids.includes('deposits'), role === 'artist', role)
+    app.render().props.actions.find(action => action.id === 'connections').run()
+    assert.equal(app.query().get('portal'), 'hub')
+    assert.equal(app.query().get('workflow'), 'connections')
+    assert.ok(find(app.render(), 'ArtistConnections'), role)
+  }
+  const collector = page('portal=hub', 'collector')
+  assert.equal(collector.render().props.actions.map(action => action.id).join(','), 'connections,conversations')
+  assert.equal(find(page('portal=hub&workflow=deposits', 'collector').render(), 'ArtistDepositActivity'), undefined)
+})

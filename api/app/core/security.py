@@ -24,6 +24,8 @@ from app.core.database import get_db
 
 settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
+# Same scheme for routes that also serve anonymous callers: no token yields None.
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login", auto_error=False)
 
 # Role hierarchy — higher index = more privileges
 ROLE_HIERARCHY = ["collector", "assistant", "artist", "admin", "founder"]
@@ -242,6 +244,23 @@ async def get_current_user(
         raise credentials_exception
     require_verified_collector(user)
     return user
+
+
+async def get_optional_current_user(
+    token: str | None = Depends(oauth2_scheme_optional),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the signed-in user, or None for anonymous or unusable sessions.
+
+    Runs the full get_current_user validation; any token it would reject
+    (expired, signed out, unverified collector) is treated as anonymous.
+    """
+    if not token:
+        return None
+    try:
+        return await get_current_user(token=token, db=db)
+    except HTTPException:
+        return None
 
 
 def require_role(minimum_role: str):

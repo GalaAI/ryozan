@@ -1,7 +1,8 @@
 /**
- * Shared artist-owned connection surface for the mobile Hub.
- * Existing API clients remain the connection authorities; this component only
- * composes their truthful status and actions without adding a connector registry.
+ * Shared connection surface for the Hub, for every signed-in role.
+ * GET /integrations/options decides which services this account is offered;
+ * the existing API clients remain the connection authorities, and this
+ * component only composes their truthful status and actions.
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
@@ -9,12 +10,22 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import {
   emailConnect,
   googleAuth,
+  integrations,
   pinterestAuth,
   stripeConnect,
   type EmailStatus,
+  type IntegrationId,
   type StripeConnectStatus,
 } from '../lib/api'
+import {
+  integrationAvailability,
+  isShownConnection,
+  shouldReadStatus,
+  type IntegrationAvailability,
+} from '../lib/integration-availability'
+import { isPushSupported } from '../lib/pushNotifications'
 import EmailConnectQuest from './EmailConnectQuest'
+import PushOptIn from './PushOptIn'
 
 type Loadable<T> =
   | { state: 'loading'; value: null }
@@ -122,10 +133,9 @@ function stripePresentation(status: Loadable<StripeConnectStatus>) {
   }
 }
 
-// Per the 2026-10-29 decision, a service that is not connected or whose
-// provider is unavailable shows no control; the list holds live services only.
-function isShownConnection(tone: string) {
-  return tone !== 'disconnected' && tone !== 'failed'
+// A status endpoint for an integration this account is not offered is never called.
+function readOffered<T>(availability: IntegrationAvailability, id: IntegrationId, read: () => Promise<T>) {
+  return shouldReadStatus(availability, id) ? read() : Promise.reject(new Error(`${id} is not offered to this account.`))
 }
 
 export default function ArtistConnections() {
@@ -140,6 +150,7 @@ export default function ArtistConnections() {
   const [google, setGoogle] = useState<Loadable<GoogleStatus>>(loading)
   const [googleSignin, setGoogleSignin] = useState<Loadable<GoogleSigninStatus>>(loading)
   const [pinterest, setPinterest] = useState<Loadable<PinterestStatus>>(loading)
+  const [availability, setAvailability] = useState<IntegrationAvailability>({ state: 'loading' })
   const [acting, setActing] = useState<ActingConnection>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [emailExpanded, setEmailExpanded] = useState(false)
@@ -151,14 +162,20 @@ export default function ArtistConnections() {
     setGoogle(loading())
     setGoogleSignin(loading())
     setPinterest(loading())
+    setAvailability({ state: 'loading' })
     setActionError(null)
 
+    // An options failure falls back to reading every status and showing live connections only.
+    const offered = integrationAvailability(await integrations.options().catch(() => null))
+    if (requestRef.current !== requestId) return
+    setAvailability(offered)
+
     const [stripeResult, emailResult, googleResult, googleSigninResult, pinterestResult] = await Promise.allSettled([
-      stripeConnect.status(),
-      emailConnect.status(),
-      googleAuth.getStatus(),
-      googleAuth.getSigninLinkStatus(),
-      pinterestAuth.getStatus(),
+      readOffered(offered, 'stripe_connect', stripeConnect.status),
+      readOffered(offered, 'email_forwarding', emailConnect.status),
+      readOffered(offered, 'google_calendar', googleAuth.getStatus),
+      readOffered(offered, 'google_calendar', googleAuth.getSigninLinkStatus),
+      readOffered(offered, 'pinterest', pinterestAuth.getStatus),
     ])
     if (requestRef.current !== requestId) return
 
@@ -293,8 +310,6 @@ export default function ArtistConnections() {
   }
 
   const stripeView = stripePresentation(stripe)
-  const allLoading = [stripe, email, google, googleSignin, pinterest].every((item) => item.state === 'loading')
-
   const emailView = email.state === 'loading'
     ? { tone: 'loading' as const, label: 'Checking', detail: 'Reading your Ryozan address status.' }
     : email.state === 'failed'
@@ -333,12 +348,24 @@ export default function ArtistConnections() {
         ? { tone: 'ready' as const, label: pinterest.value.username ? `@${pinterest.value.username}` : 'Connected', detail: 'Your boards are available for booking references.' }
         : { tone: 'disconnected' as const, label: 'Not connected', detail: 'Connect Pinterest to bring your own boards into reference workflows.' }
 
+  const allLoading = availability.state === 'loading'
+    || [stripe, email, google, googleSignin, pinterest].every((item) => item.state === 'loading')
+  const showStripe = isShownConnection(availability, 'stripe_connect', stripeView.tone)
+  const showGoogle = isShownConnection(availability, 'google_calendar', googleView.tone)
+  const showGoogleSignin = isShownConnection(availability, 'google_calendar', googleSigninView.tone)
+  const showPinterest = isShownConnection(availability, 'pinterest', pinterestView.tone)
+  const showEmail = isShownConnection(availability, 'email_forwarding', emailView.tone)
+  // Push has no server status; it is offered only from a successful options read.
+  const showPush = availability.state === 'ready' && availability.offered.has('push')
+  const pushSupported = isPushSupported()
+  const noneShown = ![showStripe, showGoogle, showGoogleSignin, showPinterest, showEmail, showPush].some(Boolean)
+
   return (
-    <section className="bttco-hub-workflow-card bttco-artist-connections" aria-label="Artist Connections">
+    <section className="bttco-hub-workflow-card bttco-artist-connections" aria-label="Connections">
       <header>
         <span>Shishin · Your services</span>
         <strong>Connections</strong>
-        <p>Live services tied to your artist work. A service appears here once the studio has configured it.</p>
+        <p>Third-party services this server offers your account. A service appears here once the server has it configured.</p>
       </header>
 
       {stripeReturn === 'refresh' ? (
@@ -354,15 +381,19 @@ export default function ArtistConnections() {
       {actionError ? <div className="bttco-artist-connections__notice is-error" role="alert">{actionError}</div> : null}
 
       <div className="bttco-artist-connections__toolbar">
-        <span>{allLoading ? 'Checking your services' : 'Personal artist connections'}</span>
+        <span>{allLoading ? 'Checking your services' : 'Your connections'}</span>
         <button type="button" disabled={allLoading || Boolean(acting)} onClick={() => void loadStatuses()}>Refresh</button>
       </div>
 
-      {!allLoading && ![stripeView, googleView, googleSigninView, pinterestView, emailView].some(view => isShownConnection(view.tone)) && (
-        <p role="status">No external services are configured for this studio yet. Booking, Courier and the agents work without them.</p>
+      {!allLoading && noneShown && (
+        <p role="status">
+          {availability.state === 'fallback'
+            ? 'The list of available services could not be read, and no live connections were found. Booking, Courier and the agents work without them.'
+            : 'This server has no third-party connections configured for your account. Booking, Courier and the agents work without them.'}
+        </p>
       )}
       <div className="bttco-artist-connections__list">
-        {isShownConnection(stripeView.tone) && (
+        {showStripe && (
           <ConnectionCard
             name="Stripe"
             mark="S"
@@ -388,7 +419,7 @@ export default function ArtistConnections() {
           </ConnectionCard>
         )}
 
-        {isShownConnection(googleView.tone) && (
+        {showGoogle && (
           <ConnectionCard
             name="Google Calendar"
             mark="G"
@@ -407,7 +438,7 @@ export default function ArtistConnections() {
           />
         )}
 
-        {isShownConnection(googleSigninView.tone) && (
+        {showGoogleSignin && (
           <ConnectionCard
             name="Google sign-in"
             mark="G"
@@ -422,7 +453,7 @@ export default function ArtistConnections() {
           />
         )}
 
-        {isShownConnection(pinterestView.tone) && (
+        {showPinterest && (
           <ConnectionCard
             name="Pinterest"
             mark="P"
@@ -439,7 +470,7 @@ export default function ArtistConnections() {
           />
         )}
 
-        {isShownConnection(emailView.tone) && (
+        {showEmail && (
           <ConnectionCard
             name="Ryozan Email"
             mark="@"
@@ -460,6 +491,20 @@ export default function ArtistConnections() {
                 <EmailConnectQuest mode="full" />
               </div>
             ) : null}
+          </ConnectionCard>
+        )}
+
+        {showPush && (
+          <ConnectionCard
+            name="Push notifications"
+            mark="N"
+            tone={pushSupported ? 'available' : 'disconnected'}
+            status={pushSupported ? 'Available' : 'Not supported here'}
+            detail={pushSupported
+              ? 'Alerts on this device for bookings, messages and quests. Your browser asks before anything is enabled.'
+              : 'This browser cannot receive push notifications. Open Ryozan in a browser or installed app that supports them.'}
+          >
+            {pushSupported ? <PushOptIn /> : null}
           </ConnectionCard>
         )}
       </div>

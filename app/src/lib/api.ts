@@ -3505,6 +3505,26 @@ export const googleAuth = {
     request<{ linked: boolean }>('/auth/google/link/status'),
 }
 
+export type IntegrationId = 'google_calendar' | 'pinterest' | 'plaid' | 'stripe_connect' | 'push' | 'email_forwarding'
+
+export interface IntegrationOption {
+  id: IntegrationId
+  /** The server has this provider's credentials set. */
+  configured: boolean
+  /** The caller's role may start the connect flow; null when signed out. */
+  allowed: boolean | null
+}
+
+export interface IntegrationOptionsResponse {
+  integrations: IntegrationOption[]
+}
+
+export const integrations = {
+  /** Which third-party connections this server offers the current user (optional auth) */
+  options: () =>
+    request<IntegrationOptionsResponse>('/integrations/options'),
+}
+
 export interface PinterestBoard {
   id: string
   name: string

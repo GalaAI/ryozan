@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.v1.endpoints.integrations import STRIPE_CONNECT_ROLES
 from app.constants.timezones import SHOP_TIMEZONE
 from app.core.config import get_settings
 from app.core.database import get_db
@@ -32,7 +33,6 @@ logger = logging.getLogger("bttco.stripe")
 router = APIRouter(prefix="/stripe", tags=["stripe"])
 
 BOOTH_RENT_ACTIVE_STATUSES = {"active", "trialing", "past_due", "unpaid", "incomplete", "paused"}
-CONNECT_ARTIST_ROLES = {"artist", "founder"}
 CONNECT_PLATFORM_PROFILE_CODE = "stripe_connect_platform_profile_incomplete"
 
 
@@ -379,7 +379,7 @@ def _require_artist(user: BTTCOUser) -> None:
 
 
 def _require_connect_artist(user: BTTCOUser) -> None:
-    if user.role not in CONNECT_ARTIST_ROLES:
+    if user.role not in STRIPE_CONNECT_ROLES:
         raise HTTPException(status_code=403, detail="Requires an artist-capable account")
 
 
@@ -495,7 +495,7 @@ async def admin_create_connect_account(
     artist = result.scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="User not found")
-    if artist.role not in CONNECT_ARTIST_ROLES:
+    if artist.role not in STRIPE_CONNECT_ROLES:
         raise HTTPException(status_code=400, detail="User is not artist-capable")
 
     try:
@@ -542,7 +542,7 @@ async def list_artist_stripe_status(
     """Admin: list all artists with their Stripe Connect status."""
     _require_role(current_user, "admin")
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.role.in_(CONNECT_ARTIST_ROLES)))
+    result = await db.execute(select(BTTCOUser).where(BTTCOUser.role.in_(STRIPE_CONNECT_ROLES)))
     artists = result.scalars().all()
 
     projections = [_artist_connect_projection(artist) for artist in artists]

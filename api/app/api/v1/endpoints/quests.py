@@ -38,6 +38,12 @@ router = APIRouter(prefix="/quests", tags=["quests"])
 _NO_COMPLETION_PATH = {"add-to-homescreen", "three-sessions", "leave-review", "refer-friend"}
 
 
+def outbound_email_configured() -> bool:
+    """Whether this install can send mail (verification links, forwarding confirmations)."""
+    settings = get_settings()
+    return bool(settings.RESEND_API_KEY or settings.SENDGRID_API_KEY or settings.SMTP_PASSWORD)
+
+
 def quest_available(slug: str) -> bool:
     """Whether a client could finish this quest on this install today."""
     if slug in _NO_COMPLETION_PATH:
@@ -47,7 +53,7 @@ def quest_available(slug: str) -> bool:
         return bool(settings.VAPID_PUBLIC_KEY)
     if slug in {"connect-email", "email-alias"}:
         # The handle is confirmed by a verification email.
-        return bool(settings.RESEND_API_KEY or settings.SENDGRID_API_KEY or settings.SMTP_PASSWORD)
+        return outbound_email_configured()
     return True
 
 

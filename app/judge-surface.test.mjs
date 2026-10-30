@@ -76,3 +76,19 @@ test('first paint is branded: fonts never block it and app routes show the seal'
   assert.match(html, /<div data-static-app-shell[^>]*><img src="\/assets\/brand\/ryozan-mark\.svg"/)
   assert.match(html, /html\[data-bttco-app-route\] \[data-static-app-shell\] \{ display: grid/)
 })
+
+test('mobile Connections opens for every signed-in role, collectors over You', () => {
+  const mobile = read('./src/pages/dashboard/MobilePortalHome.tsx')
+  assert.match(mobile, /const canUseArtistConnections = Boolean\(user\?\.id\)/)
+  assert.doesNotMatch(mobile, /canUseArtistConnections = \['artist', 'founder'\]/)
+  assert.match(mobile, /\{ id: 'connections', label: 'Connections', value: 'Open', onSelect: \(\) => \{ setAccountOpen\(false\); openArtistConnections\(\) \} \}/)
+  assert.match(mobile, /const search = `\?portal=\$\{isCollector \? 'you' : 'hub'\}&workflow=connections`/)
+  assert.match(mobile, /setActiveTab\(isCollector \? 'you' : 'hub'\)/)
+  assert.match(mobile, /\(isCollector && activeTab === 'you'\)\) && agentChatMode === 'hub-workflow-full'/)
+  // Deposits stay scoped to real artist accounts.
+  assert.match(mobile, /const canViewArtistDeposits = role === 'artist' && user\?\.role === 'artist'/)
+})
+
+test('push opt-in is mounted from Connections, not only the unreachable Settings page', () => {
+  assert.match(read('./src/components/ArtistConnections.tsx'), /import PushOptIn from '\.\/PushOptIn'/)
+})

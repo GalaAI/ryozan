@@ -31,12 +31,12 @@ class ArtistConnectionsFrontendTests(unittest.TestCase):
 
     def test_existing_personal_connection_clients_remain_the_authorities(self):
         for call in (
-            "stripeConnect.status()",
+            "readOffered(offered, 'stripe_connect', stripeConnect.status)",
             "stripeConnect.onboard()",
-            "emailConnect.status()",
-            "googleAuth.getStatus()",
+            "readOffered(offered, 'email_forwarding', emailConnect.status)",
+            "readOffered(offered, 'google_calendar', googleAuth.getStatus)",
             "googleAuth.getConnectUrl()",
-            "pinterestAuth.getStatus()",
+            "readOffered(offered, 'pinterest', pinterestAuth.getStatus)",
             "pinterestAuth.getConnectUrl()",
         ):
             self.assertIn(call, self.connections)
@@ -90,7 +90,8 @@ class ArtistConnectionsFrontendTests(unittest.TestCase):
 
     def test_hub_xar_and_pos_share_one_connections_component(self):
         self.assertEqual(self.portal.count("<ArtistConnections />"), 1)
-        self.assertIn("?portal=hub&workflow=connections", self.portal)
+        # Collectors have no Hub tab, so their Connections sheet opens over You.
+        self.assertIn("`?portal=${isCollector ? 'you' : 'hub'}&workflow=connections`", self.portal)
         self.assertIn("card.id === 'artist-connections'", self.portal)
         self.assertIn(
             "onOpenConnections={canUseArtistConnections ? () => openArtistConnections() : undefined}", self.portal

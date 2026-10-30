@@ -33,6 +33,7 @@ from app.api.v1.endpoints import (
     gala_chat,
     gift_cards,
     google_auth,
+    integrations,
     notification_preferences,
     notifications,
     phone_agents,
@@ -105,6 +106,7 @@ api_router.include_router(gala_chat.router)
 api_router.include_router(google_auth.router)
 api_router.include_router(plaid.router)
 api_router.include_router(pinterest.router)
+api_router.include_router(integrations.router)
 api_router.include_router(email_log.router)
 api_router.include_router(email_templates.router)
 api_router.include_router(references.router)

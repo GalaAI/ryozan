@@ -2444,8 +2444,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   const isFounderOrAdmin = isAdminRole(role)
   const canUsePortalAi = Boolean(user)
   const canUseArtistHub = isArtistPlusRole(role)
-  const canUseArtistConnections = ['artist', 'founder'].includes(role)
-    && ['artist', 'founder'].includes(user?.role ?? '')
+  // Every signed-in account opens Connections; GET /integrations/options decides which services it offers.
+  const canUseArtistConnections = Boolean(user?.id)
   const canViewArtistDeposits = role === 'artist' && user?.role === 'artist'
   const canOpenMercuryContacts = true
   const initialSearchParams = new URLSearchParams(location.search)
@@ -2559,7 +2559,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   const showArtistConnections = useCallback(() => {
     setAccountOpen(false)
     setPendingTab(null)
-    setActiveTab('hub')
+    // Collectors have no Hub tab; their workflow sheet opens over You.
+    setActiveTab(isCollector ? 'you' : 'hub')
     setHubSurface('home')
     setAgentOverrideId(null)
     setAgentChatClosing(false)
@@ -2576,18 +2577,19 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
       body: <ArtistConnections />,
     }])
     setAgentChatOpen(true)
-  }, [user?.id])
+  }, [isCollector, user?.id])
 
   const openArtistConnections = useCallback((anchor?: HTMLElement | null) => {
     if (!canUseArtistConnections) return
-    const target = `${ROUTES.DASHBOARD}?portal=hub&workflow=connections`
-    if (location.search === '?portal=hub&workflow=connections') {
+    const search = `?portal=${isCollector ? 'you' : 'hub'}&workflow=connections`
+    const target = `${ROUTES.DASHBOARD}${search}`
+    if (location.search === search) {
       captureAgentChatOrigin(anchor)
       showArtistConnections()
       return
     }
     navigate(target, { replace: true })
-  }, [canUseArtistConnections, captureAgentChatOrigin, location.search, navigate, showArtistConnections])
+  }, [canUseArtistConnections, captureAgentChatOrigin, isCollector, location.search, navigate, showArtistConnections])
 
   const showArtistDeposits = useCallback(() => {
     setAccountOpen(false)
@@ -3581,7 +3583,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   const mercuryModeAccent = mercuryConversationActive ? '#C8B2F0' : agent.accent
   const mercuryModeBloom = mercuryConversationActive ? '200,178,240' : agent.bloom
   const bookyDebriefActive = agent.id === 'booky' && agentChatMode !== 'full'
-  const hubWorkflowActive = (activeTab === 'hub' || activeTab === 'club') && agentChatMode === 'hub-workflow-full'
+  // Collectors open Connections over You, since they have no Hub tab.
+  const hubWorkflowActive = (activeTab === 'hub' || activeTab === 'club' || (isCollector && activeTab === 'you')) && agentChatMode === 'hub-workflow-full'
   const artistScrollWorkflowActive = hubWorkflowActive && selectedHubWorkflow === 'artist-scroll' && agent.id === 'spyder'
   const displayedAgentLines = hubWorkflowActive
     ? hubWorkflowLines
@@ -4830,6 +4833,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
           avatarSrc={user?.avatar_url || '/assets/brand/ryozan-mark.svg'}
           rows={[
             { id: 'account-settings', label: 'Account settings', value: 'Open', onSelect: openAccountSettings },
+            ...(canUseArtistConnections ? [{ id: 'connections', label: 'Connections', value: 'Open', onSelect: () => { setAccountOpen(false); openArtistConnections() } }] : []),
             ...(role === 'artist' ? [{ id: 'artist-tour', label: 'Replay portal walkthrough', value: 'Start', onSelect: () => { setAccountOpen(false); setActiveTab('hub'); setArtistTourVisible(true) } }] : []),
             { id: 'main-site', label: 'Return to main site', onSelect: requestMainSiteExit },
             { id: 'sign-out', label: 'Sign out', onSelect: signOut },
