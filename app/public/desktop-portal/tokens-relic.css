@@ -1,0 +1,221 @@
+/* ============================================================
+   RYOZAN · NEO-UKIYO-E RELIC PHOSPHOR TOKENS v1
+   Matte obsidian charcoal base (#050607 / #121212), bone text (#dad1b9),
+   and leading-edge HighlightAura, infused with Kuniyoshi woodblock accents:
+   Beni-iro Vermilion (#c24b2a / #D94E34), Ai-iro Prussian Indigo (#1D3557),
+   Kin-iro Gold Leaf (#cba15b), and Sumi-e ink borders on warm Washi Plate
+   surfaces (#ccc4ad).
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400;1,700&family=Bebas+Neue&display=swap');
+
+@font-face{font-family:'KC SimpleSans';src:url('fonts/KCSimpleSans.otf') format('opentype');font-weight:400;font-display:swap}
+@font-face{font-family:'KC SimpleSans Inked';src:url('fonts/KCSimpleSans-Inked.otf') format('opentype');font-weight:400;font-display:swap}
+
+:root {
+  /* ── TYPE ─────────────────────────────────────────────── */
+  --font-display: 'Poppins', system-ui, sans-serif;          /* 800 / 700 · ALL CAPS ONLY */
+  --font-mono:    'JetBrains Mono', ui-monospace, monospace; /* data, labels, buttons */
+  --font-typewriter: 'Courier New', Courier, monospace;      /* typed paperwork — receipts, waivers, email footers */
+  --font-body:    'Space Grotesk', system-ui, sans-serif;    /* prose only */
+  --font-poster:  'Bebas Neue', 'KC Tallboy', sans-serif;    /* posters, merch, wordmark */
+  --font-plate:   'KC SimpleSans', sans-serif;               /* PRINT ONLY — cards, fliers, plates */
+  --font-stamp:   'KC SimpleSans Inked', sans-serif;         /* PRINT ONLY — stamps, receipt marks */
+  --font-script:  'Suti', cursive;                           /* print flourish, never UI */
+
+  --w-display: 800; /* @kind font */
+  --w-header:  700; /* @kind font */
+  --w-mono:    400; /* @kind font */
+  --w-mono-em: 500; /* @kind font */
+
+  /* fluid display steps */
+  --t-hero:    clamp(32px, 6vw, 60px); /* @kind other */
+  --t-lead:    clamp(22px, 3.4vw, 34px); /* @kind other */
+  --t-title:   clamp(18px, 2.4vw, 25px); /* @kind other */
+  --t-header:  12.5px;   /* @kind other */
+  --t-body:    14px; /* @kind other */
+  --t-body-sm: 13.5px; /* @kind other */
+  --t-meta:    11px;     /* @kind other */
+  --t-label:   10px;     /* @kind other */
+  --t-micro:   9.5px;    /* @kind other */
+
+  --ls-hero:   .03em; /* @kind other */
+  --ls-display:.05em; /* @kind other */
+  --ls-header: .22em; /* @kind other */
+  --ls-label:  .16em; /* @kind other */
+  --ls-meta:   .1em; /* @kind other */
+  --lh-tight:  1.02; /* @kind other */
+  --lh-body:   1.65; /* @kind other */
+  --lh-mono:   1.75; /* @kind other */
+
+  /* ── SPACE / SHAPE ───────────────────────────────────── */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 20px; --s-6: 26px; --s-7: 40px; --s-8: 56px;
+  --r-input: 2px; --r-card: 8px; --r-panel: 16px; --r-pill: 99px;
+  --touch-min: 44px; /* @kind other */
+  --container: 1120px; /* @kind other */
+  --hair: 1px; /* @kind other */
+
+  /* ── MOTION ──────────────────────────────────────────── */
+  --t-fast: .15s ease; /* @kind other */
+  --t-base: .25s ease; /* @kind other */
+  --t-slow: .6s cubic-bezier(.16, 1, .3, 1);   /* @kind other */
+  --lift-card: translateY(-3px); /* @kind other */
+  --lift-cta:  translateY(-5px) scale(1.02); /* @kind other */
+  --lift-press:translateY(-2px); /* @kind other */
+
+  /* ── NEO-UKIYO-E PHOSPHOR + KUNIYOSHI WOODBLOCK PALETTE ── */
+  --rp-obsidian:        #050607;   /* Relic Phosphor obsidian charcoal base */
+  --rp-charcoal:        #121212;   /* Relic Phosphor charcoal panel */
+  --rp-bone:            #dad1b9;   /* Relic Phosphor bone ink */
+  --ukiyoe-beni:        #c24b2a;   /* Beni-iro Vermilion woodblock accent */
+  --ukiyoe-vermilion:   #D94E34;   /* High-chroma Hanko seal vermilion */
+  --ukiyoe-ai-indigo:   #1D3557;   /* Ai-iro Prussian Indigo woodblock wash */
+  --ukiyoe-kin-gold:    #cba15b;   /* Kin-iro Gold Leaf */
+  --ukiyoe-washi-plate: #ccc4ad;   /* Warm Washi print plate surface */
+  --ukiyoe-sumi-ink:    #121212;   /* Sumi-e ink border */
+
+  /* Leading-edge Phosphor HighlightAura disclosure tokens */
+  --sidelight:          var(--ukiyoe-kin-gold);
+  --aura-falloff:       linear-gradient(90deg, color-mix(in oklab, var(--sidelight) 26%, transparent) 0%, color-mix(in oklab, var(--sidelight) 8%, transparent) 48%, transparent 92%);
+
+  /* ============ DARK — the stronghold at night (default) ============ */
+  --ground:      #050607;   /* Relic Phosphor obsidian charcoal base */
+  --ground-2:    #0a0b0a;   /* section rhythm */
+  --surface:     #121212;   /* Relic Phosphor charcoal surface */
+  --surface-2:   rgba(218,209,185,.038); /* inset cells, warm bone tint */
+  --surface-3:   rgba(218,209,185,.068); /* hover */
+  --well:        #050607;   /* inputs, ledgers, HUD stage — below ground */
+
+  --line:        rgba(203,161,91,.15);
+  --line-2:      rgba(203,161,91,.24);
+  --line-live:   rgba(203,161,91,.65);   /* hover / active border */
+  --line-dash:   rgba(203,161,91,.24);
+
+  --ink:         #dad1b9;   /* Relic Phosphor primary bone text */
+  --ink-dim:     #c2b9a8;   /* body prose */
+  --ink-mute:    #9a9184;   /* secondary, section headers */
+  --ink-ghost:   #8b8271;   /* mono labels, meta */
+  --ink-faint:   #2b2823;   /* legacy alias — prefer --track */
+  --track:       #24231f;   /* ring and bar tracks — neutral, no hue */
+  --numeral:     #66604e;   /* section numerals */
+
+  --gold:        #cba15b;   /* Kin-iro Gold Leaf primary */
+  --gold-fill:   #cba15b;   /* filled surfaces: primary buttons, booked pill */
+  --gold-decor:  #cba15b;   /* non-text: bars, arcs, hero display, ornament */
+  --gold-ink:    #121212;   /* Sumi-e ink on filled gold */
+  --gold-wash:   rgba(203,161,91,.14);
+  --gold-glow:   0 0 20px rgba(203,161,91,.22);
+
+  /* signals */
+  --sig-live:    #63badf;   /* robin's egg — in the chair / connected / focus */
+  --sig-live-wash: rgba(99,186,223,.16);
+  --sig-warn:    #cba15b;   /* Kin-iro gold — needs you, pending gate */
+  --sig-err:     #D94E34;   /* Beni-iro vermilion — failed, declined */
+  --sig-err-edge:#c24b2a;   /* Beni-iro edge for destructive */
+  --sig-ok:      #70c27b;   /* paid, unlit */
+  --sage:        #4e6851;
+  --sky:         #63badf;
+  --blush:       #fd8e8e;
+  --oxblood:     #5e2222;
+  --flame:       #D94E34;   /* Japanese Beni-iro vermilion */
+  --flame-ink:   #fff2ec;   /* text on flame */
+  --flame-glow:  0 0 18px rgba(217,78,52,.45);
+
+  /* the one contrasting artifact: warm Washi print plate */
+  --hero-bg:     #050607;
+  --hero-ink:    #dad1b9;
+
+  --plate:       #ccc4ad;   /* Warm Washi Plate surface */
+  --plate-ink:   #121212;   /* Sumi-e dark ink on Washi Plate */
+  --plate-mute:  #57523f;
+  --plate-accent:#c24b2a;   /* Beni-iro Vermilion Hanko seal accent */
+
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.35);
+  --shadow-md:   0 4px 12px rgba(0,0,0,.4);
+  --shadow-lg:   0 14px 34px rgba(0,0,0,.55);
+
+  /* dot-wave field — the only background system */
+  --field-rgb:   218,209,185;  /* @kind other */ /* bone */
+  --field-a0:    .010;   /* @kind other */
+  --field-a1:    .064;   /* @kind other */
+  --field-star-rgb: 203,161,91; /* @kind other */ /* Kin-iro gold stars */
+
+  /* ── WARM UKIYO-E ACCENTS ─────────────────────────────
+     Decoration + energy only. Rotate per section (eclectic).
+     Never body text. Dark ink (--accent-ink) rides on fills. */
+  --accent-coral:  #d38a68;   /* terracotta — CTAs, spikes, "needs you" */
+  --accent-brick:  #c24b2a;   /* Beni-iro vermilion — banners, Hanko seals, section blocks */
+  --accent-army:   #1D3557;   /* Ai-iro Prussian Indigo — woodblock tiles, quiet panels */
+  --accent-seal:   #cba15b;   /* Kin-iro Gold Leaf — eyebrows, cartouche, stamps */
+  --accent-cream:  #dad1b9;   /* lit bone surface — sign boards */
+  --accent-ink:    #121212;   /* Sumi-e dark ink for text ON warm fills */
+  --accent:        var(--ukiyoe-beni);
+
+  /* seam: Kuniyoshi woodblock border seam */
+  --seam: linear-gradient(90deg,#1D3557 0 20%,#ccc4ad 20% 34%,#cba15b 34% 54%,#c24b2a 54% 76%,#D94E34 76% 90%,#121212 90% 100%); /* @kind other */
+}
+
+/* ============ LIGHT — the shop in daylight (Washi woodblock edition) ============ */
+[data-theme="shop"] {
+  --ground:      #ccc4ad;
+  --ground-2:    #bfb69d;
+  --surface:     #f7f2e7;
+  --surface-2:   rgba(18,18,18,.04);
+  --surface-3:   rgba(18,18,18,.07);
+  --well:        #e6dfcd;
+
+  --line:        rgba(203,161,91,.42);
+  --line-2:      rgba(203,161,91,.6);
+  --line-live:   rgba(203,161,91,.95);
+  --line-dash:   rgba(203,161,91,.52);
+
+  --ink:         #121212;
+  --ink-dim:     #3b382f;
+  --ink-mute:    #57523f;
+  --ink-ghost:   #544e3b;
+  --ink-faint:   #b6c1b1;
+  --track:       #d8d3c6;
+  --numeral:     #5f6b59;
+
+  --gold:        #7a5a2b;
+  --gold-fill:   #cba15b;
+  --gold-ink:    #121212;
+  --gold-decor:  #cba15b;
+  --gold-wash:   rgba(203,161,91,.16);
+  --gold-glow:   0 0 20px rgba(203,161,91,.22);
+
+  --sig-live:    #1D3557;
+  --sig-live-wash: rgba(29,53,87,.14);
+  --sig-warn:    #8a5410;
+  --sig-err:     #c24b2a;
+  --sig-err-edge:#8f3a22;
+  --sig-ok:      #2f7a3d;
+  --sage:        #3e5641;
+  --sky:         #1D3557;
+  --blush:       #c24b2a;
+  --oxblood:     #5e2222;
+
+  --hero-bg:     #121212;
+  --hero-ink:    #dad1b9;
+
+  --plate:       #121212;
+  --plate-ink:   #dad1b9;
+  --plate-mute:  #9a9184;
+  --plate-accent:#cba15b;
+
+  --shadow-sm:   0 1px 3px rgba(60,48,28,.12);
+  --shadow-md:   0 4px 12px rgba(60,48,28,.14);
+  --shadow-lg:   0 12px 28px rgba(60,48,28,.16);
+
+  --field-rgb:   59,56,47;     /* @kind other */
+  --field-star-rgb: 18,18,18;  /* @kind other */
+  --field-a0:    .022; /* @kind other */
+  --field-a1:    .094; /* @kind other */
+
+  --wall-paper:  #f7f2e7;
+  --wall-sage:   #c6d6c0;
+  --wall-sky:    #bfe0ee;
+  --wall-blush:  #fadedb;
+  --wall-plaster:#ede6d8;
+}

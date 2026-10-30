@@ -1,0 +1,180 @@
+.bttco-agent-evolution {
+  display: grid;
+  gap: 14px;
+  padding: 2px 0 88px;
+  color: var(--cream, #f1eadf);
+}
+.bttco-agent-evolution > header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+.bttco-agent-evolution > header button,
+.bttco-agent-evolution > header select,
+.bttco-agent-evolution button,
+.bttco-agent-evolution input,
+.bttco-agent-evolution textarea,
+.bttco-agent-evolution select {
+  border: 1px solid rgba(217, 191, 149, 0.24);
+  border-radius: 10px;
+  background: #151412;
+  color: #f1eadf;
+  font: inherit;
+}
+.bttco-agent-evolution > header button,
+.bttco-agent-evolution > header select,
+.bttco-agent-evolution button {
+  min-height: 40px;
+  padding: 0 12px;
+}
+.bttco-agent-evolution > header span,
+.bttco-agent-evolution__workbench article > span {
+  color: #d9bf95;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.bttco-agent-evolution > header h2 {
+  margin: 2px 0 0;
+  font-size: 22px;
+}
+.bttco-agent-evolution__status {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid rgba(217, 191, 149, 0.18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+.bttco-agent-evolution__status span {
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(217, 191, 149, 0.12);
+  color: #d9bf95;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.bttco-agent-evolution__status small {
+  color: rgba(241, 234, 223, 0.58);
+}
+.bttco-agent-evolution__traits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 9px;
+}
+.bttco-agent-evolution__traits label {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+  padding: 11px;
+  border: 1px solid rgba(217, 191, 149, 0.16);
+  border-radius: 10px;
+  background: #11100f;
+  color: rgba(241, 234, 223, 0.72);
+  font-size: 11px;
+}
+.bttco-agent-evolution__traits output {
+  color: #d9bf95;
+}
+.bttco-agent-evolution__traits input[type="range"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  accent-color: #d9bf95;
+}
+.bttco-agent-evolution__traits .is-check {
+  display: flex;
+  align-items: center;
+}
+.bttco-agent-evolution__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.bttco-agent-evolution button {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+.bttco-agent-evolution button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.bttco-agent-evolution__workbench {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.bttco-agent-evolution__workbench article {
+  display: grid;
+  gap: 9px;
+  padding: 13px;
+  border: 1px solid rgba(217, 191, 149, 0.18);
+  border-radius: 12px;
+  background: #11100f;
+}
+.bttco-agent-evolution__workbench p {
+  margin: 0;
+  color: rgba(241, 234, 223, 0.58);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.bttco-agent-evolution__workbench input,
+.bttco-agent-evolution__workbench textarea {
+  width: 100%;
+  min-height: 40px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  font-size: 12px;
+}
+.bttco-agent-evolution__workbench textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+.bttco-agent-evolution__file {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px dashed rgba(217, 191, 149, 0.34);
+  border-radius: 10px;
+  color: rgba(241, 234, 223, 0.62);
+  font-size: 11px;
+  cursor: pointer;
+}
+.bttco-agent-evolution__file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.bttco-agent-evolution button.is-live {
+  border-color: #d9bf95;
+  background: #d9bf95;
+  color: #17130e;
+}
+.bttco-agent-evolution__notice,
+.bttco-agent-evolution__empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid rgba(217, 191, 149, 0.18);
+  border-radius: 10px;
+  background: rgba(217, 191, 149, 0.08);
+  color: #d9bf95;
+  font-size: 12px;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .bttco-agent-evolution__workbench {
+    grid-template-columns: 1fr;
+  }
+  .bttco-agent-evolution > header {
+    grid-template-columns: auto 1fr;
+  }
+  .bttco-agent-evolution > header select {
+    grid-column: 1 / -1;
+  }
+}

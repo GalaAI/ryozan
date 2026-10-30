@@ -1,0 +1,298 @@
+/* ══════════════════════════════════════════════════════
+   BTTCO — DESIGN SYSTEM REALIGNMENT
+   Drop at: app/src/styles/scene-compat.css
+   Import in app/src/index.css IMMEDIATELY AFTER tokens.css:
+
+       @import "./styles/tokens.css";
+       @import "./styles/scene-compat.css";   <-- add this line
+
+   WHAT THIS DOES — read before shipping:
+
+   This applies GLOBALLY. It corrects the values in tokens.css that drifted
+   from the design system, and adds the token vocabulary the portal design
+   scenes are authored in. Every screen in the app restyles: the dashboard,
+   the public site, the portal. That is the intent.
+
+   IMAGERY IS NOT TOUCHED. No logo, tiger mark, flash illustration, shop photo
+   or crew portrait is referenced by any token here. Those are <img> sources
+   and background-image URLs — nothing below can reach them. What changes is
+   chrome: text colour, panel fill, border hue, and typeface.
+
+   NEEDS A SCREEN TO STAY PUT? Add data-bt-legacy to its root element and it
+   keeps the old values (block at the bottom). Use it as a temporary parking
+   spot for one screen, not as a strategy.
+   ══════════════════════════════════════════════════════ */
+
+:root {
+  /* ── CORRECTIONS ─────────────────────────────────────
+     Seven values in tokens.css no longer match the design system.
+     Each line notes what it was, so a regression is traceable. */
+
+  --text-secondary: #c9c0b0;   /* was #C0C0C0 — cool grey, reads clinical against warm bone */
+  --text-muted:     #9d9686;   /* was #666666 — too dark; mono labels were near-illegible */
+  --text-dim:       #6f695d;   /* was #4a4a4a — see DISABLED STATES note below */
+  --muted:          #9d9686;   /* was #b9ad96 */
+  --bone-white:     #d9bf95;   /* was #d4c9b5 — headings regain the tan */
+
+  --panel:              #1a1b1a;                 /* was rgba(255,248,236,.04) */
+  --panel-hover:        #202120;                 /* was rgba(255,248,236,.07) */
+  --panel-border:       rgba(232,223,207,0.14);  /* was gold @ 25% */
+  --panel-border-hover: rgba(217,191,149,0.45);  /* was gold @ 40% */
+  --border-subtle:      rgba(232,223,207,0.12);  /* was gold @ 15% */
+  --border-active:      rgba(217,191,149,0.45);  /* was gold @ 45% */
+
+  /* PANEL NOTE — the biggest visible change. Panels were a translucent warm
+     wash; over near-black that goes brown, and nested panels compounded into
+     mud. Panels are now solid and near-black: colour lives in the border, the
+     glyph and the label, never in the fill. Nested panels get depth from
+     --panel vs --panel-hover instead of stacked alpha. Layered cards will look
+     flatter and cleaner — if one now reads as too flat, give it a border, not
+     a tint. */
+
+  /* RETIRED: --tiger-orange #faae15. The yellow reads mustard on our
+     near-black and browns out every panel it touches. Both names resolve to
+     the warm bone-tan so existing references degrade gracefully rather than
+     breaking. Anything that was a yellow "live"/"new" badge becomes tan —
+     if a badge needs urgency, use --sig-warn (terracotta). */
+  --tan:                #d9bf95;
+  --tan-glow:           rgba(217,191,149,0.28);
+  --tiger-orange:       #d9bf95;
+  --tiger-orange-glow:  rgba(217,191,149,0.28);
+
+  /* ── TYPE ────────────────────────────────────────────
+     The real stack: KC Tallboy, Poppins, JetBrains Mono, Courier,
+     Space Grotesk. Requires the Google link in app/index.html — see
+     INTEGRATION.md step 2b. Fallbacks are the old faces, so a failed font
+     load degrades rather than breaks.
+
+     This is the second big visible change: every heading and every line of
+     body copy in the app changes typeface. Layout shifts slightly — Poppins
+     and Space Grotesk have different metrics from Oswald and Inter. Check
+     anything with tight fixed-width labels. */
+
+  --font-display: 'Poppins', 'Oswald', sans-serif;        /* 800/900 ALL CAPS — titles, headlines */
+  --font-body:    'Space Grotesk', 'Inter', sans-serif;   /* prose, chat, forms, nav */
+  --font-heading: 'KC Tallboy', 'Bebas Neue', sans-serif; /* wordmark + posters ONLY */
+  --font-title:   'Poppins', 'Bebas Neue', sans-serif;    /* was Inter */
+  --font-mono:    'JetBrains Mono', 'IBM Plex Mono', monospace;
+  --font-btn:     'JetBrains Mono', monospace;            /* button labels — brand signature */
+  --font-plate:   'Courier New', Courier, monospace;      /* print plates, receipt tape */
+  --font-accent:  'KC SimpleSans', sans-serif;
+  --font-script:  'Suti', cursive;                        /* print flourish, never UI */
+
+  /* ── SCENE VOCABULARY ────────────────────────────────
+     The names Portal Mobile v2 and BTTCO Portal One are authored in. Without
+     these, anything built from the scenes renders with undefined colours.
+     Aliases, not new values — one vocabulary, two sets of names, until the
+     old names are gone from the codebase. */
+
+  --ink:        var(--text);
+  --ink-dim:    var(--text-secondary);
+  --ink-mute:   var(--text-muted);
+  --ink-ghost:  var(--text-muted);
+
+  --line:       var(--border-subtle);
+  --line-2:     var(--panel-border);
+  --line-live:  var(--border-active);
+  --line-dash:  var(--panel-border);
+
+  --ground:     var(--bg);
+  --ground-2:   var(--alt-smoke);
+  --surface:    var(--panel);
+  --surface-2:  var(--bg-surface);
+  --surface-3:  var(--bg-surface-elevated);
+  --well:       #0b0c0b;   /* GAP — nothing upstream defines a below-ground surface */
+  --track:      #24231f;   /* GAP — ring/bar track, deliberately hueless */
+
+  --gold-decor: var(--gold);
+  --gold-fill:  var(--gold);
+  --gold-ink:   var(--bg);
+  --gold-wash:  var(--gold-glow);
+
+  --sig-ok:     var(--alt-spring);
+  --sig-live:   var(--alt-sky);
+  --sig-err:    var(--alt-pink);
+  --sig-warn:   #d38a68;   /* GAP — upstream --pending is the retired mustard */
+
+  --accent-coral: #d38a68; /* GAP — every CTA in the portal */
+  --accent-cream: var(--text);
+  --accent-seal:  var(--tan);
+  --accent-ink:   var(--alt-smoke);
+  --accent:       var(--accent-coral);
+
+  --font-poster: var(--font-heading);
+
+  /* ── STARSEED FIELD ──────────────────────────────────
+     The portal's background system (relic-field-gsap.js reads these off the
+     host element). Defaults are the resting values; the scenes override a0/a1
+     upward because the portal ground is darker. Without the engine loaded
+     these do nothing — see src/field/README.md. */
+  --field-rgb:      232,223,207;   /* bone — the marks */
+  --field-a0:       .010;          /* trough — near invisible */
+  --field-a1:       .064;          /* crest — where the wave reads */
+  --field-star-rgb: 228,217,192;   /* cream — stars only */
+
+  --touch-min:   44px;
+}
+
+/* ── DISABLED STATES ─────────────────────────────────
+   --text-dim moved from #4a4a4a to the system's #6f695d, which is lighter.
+   dashboard.css uses it for disabled controls, so disabled text is now more
+   visible than before. If a disabled control reads as enabled, that control
+   needs a real disabled treatment (reduced opacity, no pointer) rather than
+   a darker grey — but this line is the fast revert while you get to it: */
+/* :root { --text-dim: #4a4a4a; } */
+
+/* ── ESCAPE HATCH ────────────────────────────────────
+   Put data-bt-legacy on a screen's root to hold it at the old values while
+   you work through it. Temporary by design — every use is a to-do. */
+
+[data-bt-legacy] {
+  --text-secondary: #C0C0C0;
+  --text-muted:     #666666;
+  --text-dim:       #4a4a4a;
+  --muted:          #b9ad96;
+  --bone-white:     #d4c9b5;
+  --panel:              rgba(255, 248, 236, 0.04);
+  --panel-hover:        rgba(255, 248, 236, 0.07);
+  --panel-border:       rgba(166, 125, 67, 0.25);
+  --panel-border-hover: rgba(166, 125, 67, 0.4);
+  --border-subtle:      rgba(166, 125, 67, 0.15);
+  --border-active:      rgba(166, 125, 67, 0.45);
+  --tiger-orange:       #faae15;
+  --tiger-orange-glow:  rgba(250, 174, 21, 0.30);
+  --font-display: 'Oswald', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-title:   'Inter', sans-serif;
+}
+
+/* ══════════════════════════════════════════════════════
+   NEXUS UWC PANEL — pulled into the brand
+   That panel shipped with its own token set lifted from GalaX, so it ignored
+   BTTCO colours entirely and the global realignment could not reach it. These
+   overrides repoint it at the real tokens. Nothing structural changes.
+   ══════════════════════════════════════════════════════ */
+
+.nexus-uwc {
+  --nuwc-accent:     var(--gold);
+  --nuwc-accent-dim: var(--gold-wash);
+  --nuwc-cream:      var(--text);
+  --nuwc-cream-soft: var(--tan);
+  --nuwc-bg:         var(--bg);
+  --nuwc-bg-panel:   var(--panel);
+  --nuwc-border:     var(--panel-border);
+  --nuwc-border-sub: var(--border-subtle);
+  --nuwc-item-bg:    var(--bg-surface);
+  --nuwc-kicker:     var(--text-muted);
+  --nuwc-text:       var(--text);
+  --nuwc-muted:      var(--text-secondary);
+  --nuwc-dim:        var(--text-muted);
+  background: var(--bg);
+}
+
+/* Theme presets keep their identity but take heritage values */
+.nexus-uwc.theme--blood  { --nuwc-accent: var(--alt-oxblood); --nuwc-accent-dim: rgba(94,34,34,.16); --nuwc-border: rgba(94,34,34,.3); }
+.nexus-uwc.theme--forest { --nuwc-accent: var(--alt-sage);    --nuwc-accent-dim: rgba(78,104,81,.16); --nuwc-border: rgba(78,104,81,.3); }
+.nexus-uwc.theme--ocean  { --nuwc-accent: var(--alt-sky);     --nuwc-accent-dim: rgba(99,186,223,.16); --nuwc-border: rgba(99,186,223,.3); }
+.nexus-uwc.theme--ash    { --nuwc-accent: var(--text-muted);  --nuwc-accent-dim: rgba(157,150,134,.16); --nuwc-border: rgba(157,150,134,.3); }
+
+/* Solid fills that bypassed the token set */
+.nexus-uwc .nuwc-command,
+.nexus-uwc .nuwc-cal-cell,
+.nexus-uwc .nuwc-cal-day-heading,
+.nexus-uwc .nuwc-cal-day-event,
+.nexus-uwc .nuwc-ev-row,
+.nexus-uwc .nuwc-herald-row,
+.nexus-uwc .nuwc-brief-hero,
+.nexus-uwc .nuwc-quests-pill { background: var(--panel); }
+
+.nexus-uwc .nuwc-cal-view-toggle,
+.nexus-uwc .nuwc-cal-nav { background: var(--bg); }
+
+.nexus-uwc .nuwc-cal-cell:hover,
+.nexus-uwc .nuwc-cal-day-event:hover,
+.nexus-uwc .nuwc-ev-row--open,
+.nexus-uwc .nuwc-cal-cell.selected:not(.today) { background: var(--panel-hover); }
+
+.nexus-uwc .nuwc-cal-cell.today,
+.nexus-uwc .nuwc-cal-view-toggle__btn.active { background: var(--panel-hover); border-color: var(--gold); }
+
+.nexus-uwc .nuwc-qs-hover-card { background: var(--panel); }
+
+.nexus-uwc .nuwc-brief {
+  background: var(--panel);
+}
+
+/* Status greens/ambers onto the heritage signals */
+.nexus-uwc .nuwc-ev-source,
+.nexus-uwc .nuwc-ev-paid,
+.nexus-uwc .nuwc-daily-brief-top .ok,
+.nexus-uwc .nuwc-cal-day-event.merged .nuwc-cal-day-event__time,
+.nexus-uwc .qdm-badge-done { color: var(--sig-ok) !important; }
+
+.nexus-uwc .nuwc-daily-brief-top .warn,
+.nexus-uwc .nuwc-generated-line.warn b { color: var(--sig-warn); }
+
+.nexus-uwc .nuwc-ev-status--confirmed,
+.nexus-uwc .nuwc-ev-status--completed { background: rgba(112,194,123,.14); color: var(--sig-ok); }
+.nexus-uwc .nuwc-ev-status--cancelled { background: rgba(253,142,142,.14); color: var(--sig-err); }
+.nexus-uwc .nuwc-ev-status--pending   { background: var(--gold-wash);      color: var(--gold); }
+
+.nexus-uwc .nuwc-cal-day-event.calendar .nuwc-cal-day-event__time,
+.nexus-uwc .nuwc-brief-agenda-row__time.cal,
+.nexus-uwc .nuwc-generated-session__time.cal { color: var(--sig-live); }
+
+/* Type floor — nothing uppercase-tracked below 10.5px. Was 7–9px. */
+.nexus-uwc .nuwc-col__label,
+.nexus-uwc .nuwc-section-label,
+.nexus-uwc .nuwc-cal-label,
+.nexus-uwc .nuwc-cal-date-weekday,
+.nexus-uwc .nuwc-generated-label,
+.nexus-uwc .nuwc-generated-group__head,
+.nexus-uwc .nuwc-brief-kicker,
+.nexus-uwc .nuwc-cal-sync-result,
+.nexus-uwc .nuwc-qp-label,
+.nexus-uwc .nuwc-qs-hover-title,
+.nexus-uwc .nuwc-herald-type,
+.nexus-uwc .nuwc-ev-source,
+.nexus-uwc .nuwc-ev-dk,
+.nexus-uwc .nuwc-ev-status { font-size: 10.5px; }
+
+.nexus-uwc .nuwc-cal-view-toggle__btn,
+.nexus-uwc .nuwc-cal-nav__label,
+.nexus-uwc .nuwc-generated-group__head button,
+.nexus-uwc .nuwc-generated-actions button,
+.nexus-uwc .nuwc-gala-compose button,
+.nexus-uwc .nuwc-generated-signals span,
+.nexus-uwc .nuwc-brief-agenda-row em,
+.nexus-uwc .nuwc-generated-session em { font-size: 10.5px; }
+
+.nexus-uwc .nuwc-cal-view-toggle { min-width: 220px; }
+.nexus-uwc .nuwc-cal-nav { min-width: 178px; }
+
+/* Body copy floor */
+.nexus-uwc .nuwc-brief-copy,
+.nexus-uwc .nuwc-daily-brief-top,
+.nexus-uwc .nuwc-generated-line,
+.nexus-uwc .nuwc-ev-meta,
+.nexus-uwc .nuwc-brief-hero p,
+.nexus-uwc .nuwc-brief-agenda-row__main strong,
+.nexus-uwc .nuwc-generated-session__main strong { font-size: 12px; }
+
+.nexus-uwc .nuwc-brief-agenda-row__main small,
+.nexus-uwc .nuwc-generated-session__main small,
+.nexus-uwc .nuwc-cal-cell__more,
+.nexus-uwc .nuwc-cal-week-preview span,
+.nexus-uwc .nuwc-cal-cell__weekday,
+.nexus-uwc .nuwc-cal-dow { font-size: 11px; }
+
+/* Brand faces */
+.nexus-uwc .nuwc-command__title,
+.nexus-uwc .nuwc-brief-hero h2,
+.nexus-uwc .nuwc-cal-date-big,
+.nexus-uwc .nuwc-debrief__date { font-family: var(--font-display); }
+
+.nexus-uwc .nuwc-ev-title,
+.nexus-uwc .nuwc-focus-text,
+.nexus-uwc .nuwc-focus-empty,
+.nexus-uwc .nuwc-qp-label { font-family: var(--font-body); }

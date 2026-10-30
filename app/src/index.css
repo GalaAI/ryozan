@@ -1,0 +1,191 @@
+/* ══════════════════════════════════════════════════════
+   BTTCO App: Main CSS Entry Point
+   Tailwind v4 + Brand Design Tokens
+   ══════════════════════════════════════════════════════ */
+
+/* Scan actual UI sources, not generated output or development artifacts. */
+@import "tailwindcss" source(none);
+@source "./";
+@source "../*.html";
+@source "../book";
+@source "../public";
+@source "../../packages/ui/src";
+
+/* ── Global: Kill hover underlines ─────────────────
+   No link anywhere should underline on hover.
+   Individual files had scattered a:hover underline rules.
+   this single override replaces all of them.
+   ──────────────────────────────────────────────────── */
+a:hover,
+a:focus {
+  text-decoration: none !important;
+}
+
+/* ── Heading defaults: h2 / h3 ─────────────────────── */
+h2, h3 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+/* ── App layout + infrastructure tokens (brand tokens: @bttco/ui) ── */
+@import "./styles/app-layout.css";
+
+/* ── Shared Component Library ────────────────────────── */
+@import "./styles/components.css";
+
+/* ── Global Nav Arrow System ─────────────────────────── */
+@import "./styles/nav-arrows.css";
+
+/* ── Email Template Editor Toolkit ──────────────────── */
+@import "./styles/email-template-editor.css";
+
+/* ── Assets Panel (brand hub) ────────────────────────── */
+@import "./styles/assets-panel.css";
+
+/* ── Nexus UWC — hub panel redesign (replaces uwc-unified-card) ── */
+@import "./styles/nexus-uwc.css";
+
+/* ── Viewport boundary ─────────────────────────────────
+   Keep the browser document fixed and make the application root the only
+   page-level scroll owner. This prevents iOS rubber-band scrolling from
+   exposing the browser canvas while preserving legitimate long-page scroll.
+   PortalShell and other product shells keep their own nested scroll regions.
+   ──────────────────────────────────────────────────── */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background: var(--bg, #0b0c0b);
+}
+
+html,
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#root {
+  height: 100vh;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* In an installed iOS PWA, the dynamic viewport can be shortened by the
+   translucent status-bar region. Keep the application canvas on the full
+   large viewport while browser tabs continue to follow dynamic chrome. */
+@media (display-mode: standalone) {
+  html:root[data-bttco-app-route],
+  html:root[data-bttco-app-route] body,
+  html:root[data-bttco-app-route] #root {
+    height: 100lvh;
+  }
+}
+
+/* ── Tailwind Theme Bridge ─────────────────────────────
+   Maps CSS custom properties from tokens.css to Tailwind
+   utility classes (e.g., bg-gold, text-bone, font-heading)
+   ──────────────────────────────────────────────────── */
+
+@theme {
+  /* Colors */
+  --color-bg-dark: var(--bg);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-surface-elevated: var(--bg-surface-elevated);
+  --color-gold: var(--gold);
+  --color-gold-vibrant: var(--gold-vibrant);
+  --color-gold-glow: var(--gold-glow);
+  --color-tiger-orange: var(--tiger-orange);
+  --color-bone: var(--bone-white);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-active: var(--border-active);
+  --color-panel: var(--panel);
+  --color-panel-border: var(--panel-border);
+
+  /* shadcn semantic bridge mapped onto BTTCO tokens */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--panel);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--panel);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--gold);
+  --color-primary-foreground: var(--bg);
+  --color-secondary: var(--bg-surface);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--bg-surface-elevated);
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--gold);
+  --color-accent-foreground: var(--bg);
+  --color-destructive: var(--danger);
+  --color-border: var(--panel-border);
+  --color-input: var(--panel-border);
+  --color-ring: var(--gold);
+
+  /* Heritage palette (aligned with design system — shop wall colors) */
+  --color-sage:    var(--alt-sage);
+  --color-spring:  var(--alt-spring);
+  --color-pink:    var(--alt-pink);
+  --color-sky:     var(--alt-sky);
+  --color-oxblood: var(--alt-oxblood);
+  --color-smoke:   var(--alt-smoke);
+
+  /* Status colors */
+  --color-success: var(--ok);
+  --color-warning: var(--pending);
+  --color-danger: var(--danger);
+
+  /* Font families */
+  --font-heading: var(--font-heading);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-accent: var(--font-accent);
+  --font-mono: var(--font-mono);
+  --font-btn: var(--font-btn);
+  --font-title: var(--font-title);
+
+  /* Border radii */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-pill: var(--radius-pill);
+}
+
+/* ── Custom Font Faces ───────────────────────────────
+   Loaded from public/assets/fonts/
+   ──────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: "KC Tallboy";
+  src: local("KC Tallboy"), url("/assets/fonts/KCTallboy.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Suti carries the "Welcome Stranger" outro in LogoLoader. It used to be
+   declared inside the loader iframe; the native port needs it app-side. */
+@font-face {
+  font-family: "Suti";
+  src: local("Suti"), url("/assets/fonts/Suti.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "KC SimpleSans";
+  src: local("KC SimpleSans"), url("/assets/fonts/KCSimpleSans.otf") format("opentype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}

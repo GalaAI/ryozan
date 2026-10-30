@@ -1,0 +1,23 @@
+{
+  "name": "Ryozan Studio",
+  "short_name": "Ryozan",
+  "description": "Ryozan: the studio operating system run by Gala and the eight Bandits on NVIDIA Nemotron.",
+  "start_url": "/portal",
+  "display": "standalone",
+  "background_color": "#0b0c0b",
+  "theme_color": "#0b0c0b",
+  "icons": [
+    {
+      "src": "/assets/brand/ryozan-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/assets/brand/ryozan-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["lifestyle", "business"],
+  "lang": "en-US"
+}

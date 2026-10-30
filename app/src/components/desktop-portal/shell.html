@@ -1,0 +1,157 @@
+<div ref="{{ pageRef }}" data-yard="1" data-open="{{ yardOpenNum }}" data-shelved="{{ yardShelvedNum }}" data-mobile="{{ mobileNum }}" style="--field-a0:.05;--field-a1:.16;--field-star-rgb:200,161,94;--field-star-rest-l:.75;--field-star-rest-a:.55;--field-hover:1;--field-pass-secs:11;--field-rest-secs:2.5;--field-band:520;position:relative;width:100%;height:{{ compositionHeight }};display:flex;overflow:hidden;background:var(--ground);color:var(--ink);font-family:'Space Grotesk',sans-serif;box-sizing:border-box">
+  <canvas ref="{{ fieldRef }}" aria-hidden="true" style="position:absolute;inset:0;z-index:0;pointer-events:none"></canvas>
+  <span aria-hidden="true" style="position:fixed;inset:0;z-index:0;pointer-events:none;background:{{ agBloom }};transition:background .6s cubic-bezier(.16,1,.3,1)"></span>
+  <span aria-hidden="true" style="position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(115% 78% at 50% 8%,rgba(0,0,0,0) 42%,rgba(0,0,0,.34) 88%,rgba(0,0,0,.5) 100%)"></span>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute"><filter id="btGrainTiles"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="5" stitchTiles="stitch"></feTurbulence><feColorMatrix type="saturate" values="0"></feColorMatrix></filter></svg>
+
+  <!-- ══ BANNER NAV, brick swallowtail rail ══ -->
+  <aside aria-label="Portal navigation" style="position: relative; z-index: 4; width: {{ railW }}; flex-shrink: 0; display: {{ railDisplay }}; justify-content: center; padding: 0; margin-left: {{ railGap }}; filter: drop-shadow(10px 14px 8px rgba(0,0,0,.5))">
+    <img src="/assets/brand/ryozan-mark.svg" alt="Ryozan" draggable="false" onClick="{{ railToggle }}" onMouseEnter="{{ tigerEnter }}" onMouseLeave="{{ tigerLeave }}" title="{{ tigerTip }}" style="position: absolute; top: {{ tigerTop }}; left: 50%; transform: {{ tigerT }}; z-index: 6; width: 61px; height: 56px; object-fit: contain; filter: {{ tigerFx }}; transition: filter .25s ease, top .25s ease; user-select: none; -webkit-user-drag: none; cursor: pointer">
+    <!-- gold trim -->
+    <div class="{{ bannerClass }}" style="width: {{ bannerW }}; height: {{ bannerH }}; transition: height .4s cubic-bezier(.16,1,.3,1); display: flex; clip-path: polygon(0 0,100% 0,100% calc(100% - 26px),50% 100%,0 calc(100% - 26px)); padding: 7px 6px; box-sizing: border-box; background: linear-gradient(0deg,#a67d43,#5c452a); box-shadow: 0 10px 18px rgba(0,0,0,.5); transform: {{ bannerT }}">
+      <!-- Operator-approved matte charcoal and black banner body. -->
+      <div class="bt-rail-panel" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;clip-path:polygon(0 0,100% 0,100% calc(100% - 23px),50% 100%,0 calc(100% - 23px));padding:16px 0 58px;box-sizing:border-box;background-image:linear-gradient(0deg,#202020,#0b0b0b)">
+
+        <svg class="bt-grain" aria-hidden="true" width="100%" height="100%" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:overlay;opacity:.3;z-index:0"><rect x="0" y="0" width="100%" height="100%" filter="url(#btGrainTiles)"></rect></svg>
+        <div style="width:76px;height:56px;flex-shrink:0"></div>
+        <nav class="bt-banner-nav" style="position: relative; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 14px; width: 56px; flex-shrink: 0; height: auto; min-height: 0">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5" style="height: 0px; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px">
+            <button type="button" onClick="{{ t.pick }}" aria-label="{{ t.label }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:0;border:0;background:transparent;cursor:pointer;width:100%;transition:transform .2s ease" style-hover="transform:translateY(-2px)">
+              <span class="bt-nav-box" style="width:42px;height:34px;display:flex;align-items:center;justify-content:center;color:{{ t.fg }};filter:{{ t.glow }};transition:filter .25s ease,color .2s ease" style-hover="color:var(--accent-cream);filter:drop-shadow(0 0 8px rgba(232,223,207,.6))" data-om-raster="">{{ t.icon }}</span>
+              <span class="bt-nav-label" style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:{{ t.fg }};text-shadow:{{ t.tglow }};transition:text-shadow .25s ease,color .2s ease">{{ t.label }}</span>
+            </button>
+          </sc-for>
+        </nav>
+        <div aria-hidden="true" class="bt-wordmark" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 0.9; font-family: 'KC Tallboy','Bebas Neue',sans-serif; font-size: 40px; letter-spacing: .04em; color: var(--gold-decor); pointer-events: none; padding: 22px 0 10px; width: 41px; position: relative; text-shadow: -5px 3px 3px #00000085"><div style="box-sizing: border-box; display: flex; flex-direction: column; gap: 1px; justify-content: center; align-items: center"><span>R</span><span>Y</span><span>O</span><span>Z</span><span>A</span><span>N</span></div><svg width="58" height="8" viewBox="0 0 58 8" preserveAspectRatio="none" style="position: absolute; left: 0px; top: 53px; width: 65px; height: 8px; overflow: visible; fill: none; stroke: var(--gold-vibrant); stroke-width: 2px; stroke-linecap: round; stroke-linejoin: round; opacity: 0.46"><path d="M 0.1878873257169822 4.21282669869331 L 57.812112674283014 3.78717330130669" style="opacity: 1; transform: translate(0px, -20px)"></path></svg></div>
+
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative;z-index:1">
+
+    <!-- topbar -->
+    <span aria-hidden="true" style="position:absolute;top:-14px;left:-38px;right:-18px;height:86px;z-index:0;pointer-events:none;background:{{ agAccent }};filter:blur(36px);opacity:.2;border-radius:28px;transition:background .6s cubic-bezier(.16,1,.3,1)"></span>
+    <span aria-hidden="true" style="position:absolute;top:56px;left:10%;right:10%;height:14px;z-index:0;pointer-events:none;background:{{ agAccent }};filter:blur(22px);opacity:.28;border-radius:99px;transition:background .6s cubic-bezier(.16,1,.3,1)"></span>
+    <header style="flex-shrink: 0; display: flex; align-items: center; gap: 12px; flex-wrap: nowrap; padding: 0 calc({{ padMain }} + 22px) 0 calc({{ padMain }} + 42px); min-height: 68px; border-bottom: 1px solid var(--line); background: {{ agHeadWash }}; position: relative; z-index: 2; border-radius: 18px 18px 10px 10px; border-color: {{ agPanelLine }}; box-shadow: -4px 4px 13px 5px #00000097, {{ agHeadGlow }}; border-width: 2px; border-style: solid; padding-top: 0px; padding-bottom: 0px; top: -7px; width: auto; max-width: none; margin: 0 -24px 0 -44px; box-sizing: border-box; height: {{ mainHeaderHeight }}">
+      <span aria-hidden="true" style="position:absolute;left:0;right:0;top:-2px;height:2px;overflow:hidden;pointer-events:none"><span style="position:absolute;top:0;left:0;width:38%;height:100%;background:linear-gradient(90deg,rgba(0,0,0,0),{{ agSweep }},rgba(0,0,0,0));filter:blur(.4px);animation:btSweep 9s cubic-bezier(.55,0,.45,1) infinite"></span></span>
+      <span aria-hidden="true" style="position:absolute;left:0;right:0;bottom:-2px;height:2px;overflow:hidden;pointer-events:none"><span style="position:absolute;top:0;left:0;width:38%;height:100%;background:linear-gradient(90deg,rgba(0,0,0,0),{{ agSweep }},rgba(0,0,0,0));filter:blur(.4px);animation:btSweep 9s cubic-bezier(.55,0,.45,1) 1.4s infinite"></span></span>
+
+
+      <div style="flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px;margin-right:6px;overflow:hidden;transform:{{ mainHeaderContentOffset }}">
+
+        <span style="font-family: 'Poppins',sans-serif; font-weight: 800; font-size: {{ titleSize }}; line-height: 1; letter-spacing: .01em; text-transform: uppercase; color: var(--ink); white-space: nowrap; overflow: visible; position: relative; top: 2px">{{ title }}</span>
+      </div>
+      <sc-if value="{{ isPreviewing }}" hint-placeholder-val="{{ false }}">
+        <button type="button" onClick="{{ exitPreview }}" title="Return to your own portal" style="flex-shrink:0;display:flex;align-items:center;min-height:28px;margin-left:14px;padding:0 13px;border:1px solid var(--gold);border-radius:99px;background:var(--surface);color:var(--gold);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap" style-hover="background:var(--gold);color:#121312">← Exit {{ previewLabel }} preview</button>
+      </sc-if>
+      <div style="flex:0 1 24px;min-width:8px"></div>
+
+
+
+      <div style="flex-shrink:0;display:flex;align-items:center;gap:10px;transform:{{ mainHeaderContentOffset }}"><button type="button" onClick="{{ goCourier }}" aria-label="Inbox" title="Inbox" style="position:relative;flex-shrink:0;width:{{ hdrBtn }};height:{{ hdrBtn }};border-radius:12px;border:1px solid var(--line-2);background:var(--ground);color:rgba(232,223,207,.9);display:flex;align-items:center;justify-content:center;cursor:pointer" style-hover="color:var(--ink);border-color:var(--gold-decor)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+        <span style="position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:99px;background:#D38A68;color:#29140E;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 22px 2px #D38A6875">{{ unread }}</span>
+      </button>
+      <div style="position:relative;flex-shrink:0">
+        <button type="button" onClick="{{ toggleSettings }}" aria-label="Profile and settings" aria-expanded="{{ settingsOpenStr }}" title="Profile · settings" style="display:flex;align-items:center;justify-content:center;width:{{ hdrBtn }};height:{{ hdrBtn }};padding:0;border:2px solid {{ avatarRing }};border-radius:99px;background-color:var(--ground);background-image:{{ avatarBg }};background-size:cover;background-position:center;cursor:pointer;overflow:hidden;color:var(--gold);font-family:'Poppins',sans-serif;font-weight:800;font-size:13px;letter-spacing:.04em" style-hover="border-color:var(--gold)">{{ avatarInitials }}</button>
+        <sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+          <div role="menu" aria-label="Settings" style="position:absolute;top:calc(100% + 10px);right:0;z-index:60;width:262px;display:flex;flex-direction:column;border:1px solid var(--line-2);border-radius:14px;background:var(--well);box-shadow:0 20px 50px rgba(0,0,0,.6);overflow:hidden">
+            <div style="display:flex;align-items:center;gap:11px;padding:13px 14px;border-bottom:1px solid var(--line);background:var(--surface)">
+              <span aria-hidden="true" style="flex-shrink:0;width:38px;height:38px;border-radius:99px;background-color:var(--ground);background-image:{{ avatarBg }};background-size:cover;background-position:center;border:2px solid var(--gold-decor)"></span>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ userName }}</span>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)">{{ roleLabel }}</span>
+              </div>
+            </div>
+            <sc-for list="{{ settingsRows }}" as="sr" hint-placeholder-count="5">
+              <button type="button" onClick="{{ sr.pick }}" style="display:flex;align-items:center;gap:10px;min-height:44px;padding:0 14px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;text-align:left;font-family:'Space Grotesk',sans-serif;font-size:12.5px" style-hover="background:var(--surface)">
+                <span style="flex:1;min-width:0">{{ sr.label }}</span>
+                <span style="flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:{{ sr.fg }}">{{ sr.value }}</span>
+              </button>
+            </sc-for>
+            <span style="padding:9px 14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.08em;line-height:1.6;color:var(--ink-ghost)">{{ settingsFoot }}</span>
+          </div>
+        </sc-if>
+      </div>
+      </div>
+    </header>
+
+    <!-- mobile nav strip, the rail folds into this under 760px -->
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+      <nav aria-label="Portal navigation" class="bt-tabbar" style="position:fixed;left:0;right:0;bottom:0;z-index:28;display:flex;justify-content:space-around;gap:0;padding:6px 4px calc(6px + env(safe-area-inset-bottom));border-top:2px solid var(--gold-decor);background:linear-gradient(180deg,#1a201b,#0e100e)">
+
+
+        <sc-for list="{{ tabs }}" as="mt" hint-placeholder-count="5">
+          <button type="button" onClick="{{ mt.pick }}" aria-label="{{ mt.label }}" style="position:relative;z-index:2;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:48px;padding:0 2px;border-radius:10px;border:0;background:transparent;color:{{ mt.fg }};cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">
+            <span style="display:flex" data-om-raster="">{{ mt.icon }}</span>{{ mt.label }}
+          </button>
+        </sc-for>
+      </nav>
+    </sc-if>
+
+    <!-- viewport, one screen, no scroll -->
+    <div ref="{{ vpRef }}" class="bt-vp" style="flex:1;min-height:0;display:flex;flex-direction:{{ vpFlow }};gap:{{ vpGap }};padding:{{ vpPadTop }} {{ padMain }} var(--gala-clear);overflow:hidden">
+
+      <!-- ══ AGENT CHAT, persistent left column; the agent follows the open tab ══ -->
+      <sc-if value="{{ stuChatDock }}" hint-placeholder-val="{{ false }}">
+<div style="position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 0; background: linear-gradient(180deg, rgba(28,29,28,.42), rgba(7,7,7,.92)), var(--well); overflow: hidden; border: 0; border-top: 1px solid {{ agPanelLine }}; border-left: 1px solid {{ agPanelLine }}; border-bottom: 1px solid {{ agPanelLine }}; border-radius: 18px 0 0 18px; width: {{ stuChatW }}; flex-shrink: 0; height: 100%; padding-top: 0px; padding-bottom: 0px">
+                <div ref="{{ dividerRef }}" onMouseDown="{{ stuResizeStart }}" title="Drag to resize" style="position:absolute;top:69px;bottom:0;right:-5px;width:17px;z-index:9;cursor:{{ stuRailCursor }}"><div style="position:absolute;top:0;bottom:0;left:5px;width:3px;opacity:{{ stuRailOn }};background:{{ stuRailBg }};filter:{{ stuRailGlow }};transition:{{ stuRailTrans }}"></div></div>
+                <svg class="bt-grain" aria-hidden="true" width="100%" height="100%" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:overlay;opacity:.2"><rect x="0" y="0" width="100%" height="100%" filter="url(#btGrainTiles)"></rect></svg>
+                <div style="position:relative;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid {{ agPanelMute }};height:69px;box-sizing:border-box;background:{{ stuHeadGlow }}"><svg class="bt-grain" aria-hidden="true" width="100%" height="100%" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:overlay;opacity:.22"><rect x="0" y="0" width="100%" height="100%" filter="url(#btGrainTiles)"></rect></svg>
+                  <span aria-hidden="true" style="flex-shrink: 0; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 42px; color: {{ stuCurAccent }}; text-shadow: 0 0 12px, 0 0 26px">{{ stuCurGlyph }}</span>
+                  <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                    <span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:17px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink)">{{ stuCurName }}</span>
+
+                  </div>
+                  <span style="flex:1"></span>
+
+
+                </div>
+                {{ nativeThread }}
+                <div style="position: relative; flex-shrink: 0; display: flex; flex-direction: column; gap: 9px; padding: 12px 16px 14px; border-top: 1px solid var(--line); opacity: 1; border-style: none">
+
+
+                  <div style="position:relative;display:flex;align-items:center;gap:9px">
+                    <sc-if value="{{ stuPlusOpen }}" hint-placeholder-val="{{ false }}">
+                      <div onClick="{{ stuPlusClose }}" aria-hidden="true" style="position:fixed;inset:0;z-index:8;background:transparent"></div>
+                      <div style="position:absolute;bottom:52px;left:0;z-index:9;display:flex;flex-direction:column;gap:8px;width:250px;padding:10px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface);box-shadow:0 14px 36px rgba(0,0,0,.55);animation:bt-gala-in .18s ease both">
+                        <input type="file" multiple="multiple" ref="{{ stuUploadRef }}" onChange="{{ stuUploadChange }}" aria-hidden="true" style="display:none"></input>
+                        <button type="button" onClick="{{ stuUploadPick }}" onDragOver="{{ stuDropOver }}" onDragLeave="{{ stuDropLeave }}" onDrop="{{ stuDrop }}" title="Upload anything — files, photos, references, healed shots, IDs" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px 12px;border:1.5px dashed {{ stuDropLine }};border-radius:10px;background:{{ stuDropBg }};color:var(--ink);cursor:pointer;text-align:center;transition:border-color .18s ease, background .18s ease" style-hover="border-color:var(--gold)"><span aria-hidden="true" style="font-size:20px;color:var(--gold)">⏏</span><span style="font-family:'Space Grotesk',sans-serif;font-size:12.5px;font-weight:600">Drop files here</span><span style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--ink-ghost)">or click to browse</span></button>
+                        <sc-if value="{{ stuInboxHas }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto">
+                            <sc-for list="{{ stuInboxView }}" as="uf" hint-placeholder-count="2">
+                              <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--ground)"><span aria-hidden="true" style="flex-shrink:0;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:rgba(200,161,94,.14);color:var(--gold);font-size:11px">{{ uf.glyph }}</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ uf.name }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--ink-ghost)">{{ uf.size }}</span></div><button type="button" onClick="{{ uf.remove }}" aria-label="Remove" style="flex-shrink:0;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border:0;border-radius:6px;background:transparent;color:var(--ink-ghost);cursor:pointer;font-size:11px" style-hover="color:var(--ink);background:rgba(232,223,207,.12)">×</button></div>
+                            </sc-for>
+                          </div>
+                          <button type="button" onClick="{{ stuInboxSend }}" style="padding:8px 10px;border:0;border-radius:8px;background:var(--gold);color:#151109;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700" style-hover="filter:brightness(1.1)">Pin {{ stuInboxN }} to thread</button>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                    <span style="position:relative;flex:1;min-width:0;display:flex">
+                    <button type="button" onClick="{{ stuPlusToggle }}" aria-expanded="{{ stuPlusOpenStr }}" aria-label="Attach or pick talents" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);width:32px;height:32px;border:0;border-radius:99px;background:transparent;color:{{ stuPlusFg }};cursor:pointer;font-size:22px;font-weight:300;line-height:1;display:flex;align-items:center;justify-content:center;transition:color .2s ease, text-shadow .25s ease;z-index:2;text-shadow:{{ stuPlusGlow }}" style-hover="color:var(--accent-cream);text-shadow:0 0 10px rgba(232,223,207,.75), 0 0 20px rgba(232,223,207,.4)">+</button>
+                    <textarea data-chat-composer aria-label="{{ stuComposerPh }}" placeholder="{{ stuComposerPh }}" rows="2" value="{{ stuInput }}" onChange="{{ stuInputChange }}" onKeyDown="{{ stuInputKey }}"></textarea><span data-chat-count aria-live="polite" style="position:absolute;right:12px;bottom:4px;pointer-events:none;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-ghost)">{{ stuCount }}</span></span>
+                    <button type="button" onClick="{{ stuSend }}" style="flex-shrink:0;min-height:42px;padding:0 20px;border-radius:99px;border:0;background:{{ stuSendBg }};color:#121312;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;box-shadow:{{ stuSendGlow }};transition:transform .2s ease, box-shadow .25s ease" style-hover="transform:translateY(-2px);box-shadow:{{ stuSendGlowHover }}">Send</button>
+                  </div>
+                </div>
+              </div>
+      </sc-if>
+
+
+      <div data-screen-label="{{ title }}" style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--well);border:0;border-top:1px solid {{ agPanelMute }};border-right:1px solid {{ agPanelMute }};border-bottom:1px solid {{ agPanelMute }};border-radius:{{ weldRad }};box-shadow:none;overflow:hidden">
+          <div style="position:relative;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid {{ agPanelMute }};height:69px;box-sizing:border-box;background:{{ stuHeadWash }}"><svg class="bt-grain" aria-hidden="true" width="100%" height="100%" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:overlay;opacity:.22"><rect x="0" y="0" width="100%" height="100%" filter="url(#btGrainTiles)"></rect></svg>
+            <sc-if value="{{ stuHasChips }}" hint-placeholder-val="{{ false }}">
+              <div role="tablist" aria-label="Open pod spawns" style="display:flex;align-items:center;gap:6px;min-width:0;overflow-x:auto;margin-left:6px;padding:0 8px">
+                <sc-for list="{{ stuChips }}" as="pt" hint-placeholder-count="2">
+                  <div style="flex-shrink:0;display:flex;align-items:center;gap:7px;min-height:34px;padding:0 4px;margin-right:14px;border:0;background:transparent;opacity:{{ pt.op }};transition:opacity .2s ease" style-hover="opacity:1">
+                    <button type="button" onClick="{{ pt.pick }}" role="tab" aria-selected="{{ pt.activeStr }}" title="{{ pt.title }}" style="font-family:'Poppins',sans-serif;font-size:11.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-cream);text-shadow:{{ pt.tglow }};transition:text-shadow .25s ease;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis;min-height:34px;padding:0 6px;border:0;background:transparent;cursor:pointer">{{ pt.kind }}</button>
+                    <button type="button" onClick="{{ pt.close }}" aria-label="Close {{ pt.kind }}" style="flex-shrink:0;width:34px;height:34px;border:0;border-radius:99px;background:transparent;color:var(--ink-ghost);cursor:pointer;font-size:10.5px;line-height:1;display:flex;align-items:center;justify-content:center" style-hover="color:var(--accent-coral)">✕</button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <span style="flex:1"></span>
+            <sc-if value="{{ hasActiveAction }}"><button type="button" onClick="{{ podFxClose }}" aria-label="Close active component" style="flex-shrink:0;width:34px;height:34px;border:0;border-radius:9px;background:transparent;color:var(--accent-cream);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .15s ease" style-hover="border-color:var(--gold);color:var(--gold)">✕</button></sc-if>
+          </div>
+          <div style="position:relative;flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column">{{ nativeBody }}</div></div></div>{{ nativeDock }}</div></div>

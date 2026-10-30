@@ -1,0 +1,191 @@
+/* ══════════════════════════════════════════════════════════════
+   BTTCO / GalaX — Global Nav Arrow System
+   ══════════════════════════════════════════════════════════════
+
+   USAGE GUIDE
+   ───────────
+   Apply these classes anywhere navigation arrows are needed.
+   Tokens are defined in tokens.css under "Nav Arrow System".
+
+   CONTEXTS (add a modifier class to the wrapper or parent):
+     .nav-arrows                 → default inline carousel row
+     .nav-arrows--gallery        → absolute-positioned for lightbox / image gallery
+     .nav-arrows--overlay        → semi-transparent for video/slide overlays
+     .nav-arrows--compact        → smaller size for tight spaces (tables, modals)
+
+   ARROW BUTTON:
+     .nav-arrow                  → base circle button (always needed)
+     .nav-arrow--prev            → left / previous (position modifier)
+     .nav-arrow--next            → right / next (position modifier)
+     .nav-arrow[disabled]        → faded, no-pointer (browser-native disabled)
+
+   PILL INDICATOR ROW:
+     .nav-pills                  → container for pill track
+     .nav-pill                   → individual pill <div> (not interactive)
+     .nav-pill.active            → active/current pill (wider + glow)
+
+   TEMPLATE — copy this block for new nav components:
+   ───────────────────────────────────────────────────
+     <div class="nav-arrows">
+       <button class="nav-arrow nav-arrow--prev" aria-label="Previous">
+         <svg ...>chevron-left</svg>
+       </button>
+       <div class="nav-pills">
+         <div class="nav-pill active"></div>
+         <div class="nav-pill"></div>
+       </div>
+       <button class="nav-arrow nav-arrow--next" aria-label="Next">
+         <svg ...>chevron-right</svg>
+       </button>
+     </div>
+
+   For gallery/lightbox (no pills, arrows positioned absolutely):
+     <button class="nav-arrow nav-arrow--prev" aria-label="Previous">...</button>
+     <button class="nav-arrow nav-arrow--next" aria-label="Next">...</button>
+
+   ══════════════════════════════════════════════════════════════ */
+
+
+/* ── Arrow Button: Base ─────────────────────────────────── */
+
+.nav-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--nav-arrow-size);
+  height: var(--nav-arrow-size);
+  border-radius: 50%;
+  background: var(--nav-arrow-bg);
+  border: 1.5px solid var(--nav-arrow-border);
+  color: var(--nav-arrow-color);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.nav-arrow:hover {
+  background: var(--nav-arrow-bg-hover);
+  border-color: var(--nav-arrow-border-hover);
+  color: var(--nav-arrow-color-hover);
+  box-shadow: var(--nav-arrow-glow);
+}
+
+.nav-arrow[disabled],
+.nav-arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
+}
+
+
+/* ── Size Modifiers ─────────────────────────────────────── */
+
+.nav-arrow--lg {
+  width: var(--nav-arrow-size-lg);
+  height: var(--nav-arrow-size-lg);
+}
+
+.nav-arrow--sm {
+  width: var(--nav-arrow-size-sm);
+  height: var(--nav-arrow-size-sm);
+}
+
+
+/* ── Inline Row Container ───────────────────────────────── */
+
+.nav-arrows {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.nav-arrows .nav-arrow {
+  margin: 0 var(--space-1);
+}
+
+
+/* ── Gallery / Lightbox Mode ────────────────────────────── */
+/* Use .nav-arrow--prev and .nav-arrow--next as standalone  */
+/* absolutely-positioned buttons inside a relative wrapper  */
+
+.nav-arrows--gallery .nav-arrow--prev,
+.nav-arrow--gallery-prev {
+  position: fixed;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--nav-arrow-size-lg);
+  height: var(--nav-arrow-size-lg);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--bone-white);
+  z-index: var(--z-modal);
+}
+
+.nav-arrows--gallery .nav-arrow--next,
+.nav-arrow--gallery-next {
+  position: fixed;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--nav-arrow-size-lg);
+  height: var(--nav-arrow-size-lg);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--bone-white);
+  z-index: var(--z-modal);
+}
+
+.nav-arrows--gallery .nav-arrow--prev:hover,
+.nav-arrow--gallery-prev:hover,
+.nav-arrows--gallery .nav-arrow--next:hover,
+.nav-arrow--gallery-next:hover {
+  background: rgba(166, 125, 67, 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+@media (max-width: 600px) {
+  .nav-arrows--gallery .nav-arrow--prev,
+  .nav-arrow--gallery-prev { left: 0.25rem; }
+  .nav-arrows--gallery .nav-arrow--next,
+  .nav-arrow--gallery-next { right: 0.25rem; }
+  .nav-arrows--gallery .nav-arrow--prev,
+  .nav-arrows--gallery .nav-arrow--next,
+  .nav-arrow--gallery-prev,
+  .nav-arrow--gallery-next {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+
+/* ── Pill Indicator Row ─────────────────────────────────── */
+
+.nav-pills {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.nav-pill {
+  width: var(--nav-pill-width);
+  height: var(--nav-pill-height);
+  border-radius: var(--radius-sm);
+  background: var(--nav-pill-bg);
+  flex-shrink: 0;
+  flex-grow: 0;
+  transition: width var(--transition-base), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.nav-pill.active {
+  width: var(--nav-pill-width-active);
+  background: var(--nav-pill-bg-active);
+  box-shadow: var(--nav-pill-glow);
+}

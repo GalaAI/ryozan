@@ -1,0 +1,32 @@
+:root {
+  /* Names app code reads that the design system does not define yet.
+     Each is a candidate for the artifact; until it lands there, it lives here.
+     --cream-rgb mirrors the cream token; --tan is Spyder's accent. */
+  --cream-rgb:             226,218,194;
+  --brick-red:             #a33a31;
+  --brick-red-rgb:         163,58,49;
+  --tan:                   #d9bf95;
+  --tan-glow:              rgba(217,191,149,0.28);
+  --panel-raised:          linear-gradient(180deg, rgba(28,29,28,0.92), rgba(12,13,12,0.97));
+  --shadow-lift:           inset 0 1px 0 rgba(var(--cream-rgb),0.07), 0 1px 2px rgba(0,0,0,0.5), 0 8px 20px -10px rgba(0,0,0,0.75);
+  --upload-accent:         var(--cream);
+  --upload-border:         color-mix(in srgb, var(--upload-accent) 28%, transparent);
+  --upload-border-active:  color-mix(in srgb, var(--upload-accent) 58%, transparent);
+  --upload-surface:        color-mix(in srgb, var(--upload-accent) 7%, var(--panel));
+  --upload-surface-active: color-mix(in srgb, var(--upload-accent) 12%, var(--panel-hover));
+  --upload-ink:            var(--cream);
+  --upload-ink-muted:      var(--text-muted);
+  --upload-ink-on-accent:  var(--bg-dark);
+  --upload-shadow:         inset 0 1px 0 rgba(var(--cream-rgb),0.055), 0 12px 28px rgba(0,0,0,0.22);
+  --artist-feed-tab-padding-inline: var(--space-6);
+  --artist-feed-tab-min-width: auto;
+}
+
+/* Public artist tabs keep their original spacing until a narrow viewport
+   needs the existing compact spacing scale. The package owns that boundary. */
+@media (max-width: 380px) {
+  :root {
+    --artist-feed-tab-padding-inline: var(--space-2);
+    --artist-feed-tab-min-width: 0;
+  }
+}

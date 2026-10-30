@@ -1,0 +1,28 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173,
+      "autoPort": true,
+      "cwd": "app"
+    },
+    {
+      "name": "devtool",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["serve.mjs"],
+      "port": 8899,
+      "autoPort": true,
+      "cwd": "devtool"
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "api/.venv/Scripts/uvicorn.exe",
+      "runtimeArgs": ["main:app", "--reload", "--port", "8801"],
+      "port": 8801,
+      "cwd": "api"
+    }
+  ]
+}

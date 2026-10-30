@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Temp scripts
+_*.py
+# Python dunder files (e.g. __init__.py) always matter — don't let the
+# _*.py rule above eat them.
+!**/__init__.py
+!**/__main__.py
+!app/services/_email_assets.py
+_*.txt
+_*.log
+
+# Local dev utilities (not needed on Railway)
+# Leading slash scopes these to the api root so api/tests/ is still tracked.
+/test_*.py
+/check_*.py
+/seed_*.py
+/migrate_*.py
+/fix_*.py
+/encode_*.py
+/make_*.py
+/send_*.py
+/run_*.py
+/bake_*.py
+/full_*.py
+audit*.ps1
+boot_and_check.ps1
+check-status.ps1
+ensure_api.*
+kill*.ps1
+restart_api.ps1
+run_*.bat
+run_fg.ps1
+start*.ps1
+*.sql
+*.pid
+server.log
+server-error.log
+logo_b64.txt
+email_logo_b64.txt
+uploads/
+docs/
+n8n-workflows/
+workflows/
+.dev-secrets.json

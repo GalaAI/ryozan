@@ -1,0 +1,24 @@
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes (unused imports, undefined names, shadowing)
+    "I",      # isort
+    "N",      # pep8-naming
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear (common bugs)
+    "A",      # flake8-builtins (shadowing builtins)
+    "SIM",    # flake8-simplify
+    "TCH",    # type-checking imports
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument (FastAPI Depends pattern)
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]  # unused imports in __init__ are intentional
+"main.py" = ["E402"]      # module-level import not at top (startup migrations import bcrypt inline)

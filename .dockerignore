@@ -1,0 +1,26 @@
+# Docker build ignore — keeps the upload lean for Railway
+node_modules
+app/node_modules
+.git
+.claude
+.venv
+__pycache__
+*.pyc
+*.pyo
+
+# Large non-web assets at repo root (source files, PSDs, etc.)
+# Anchored to the root so it does NOT match app/public/assets.
+/ASSETS
+
+# Dev/scratch files
+*.log
+*.local
+.env
+.wrangler
+dist-ssr
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db

@@ -1,0 +1,248 @@
+/* ══════════════════════════════════════════════════════
+   BTTCO App: application layout and infrastructure tokens
+   Brand tokens (colour, type, spacing, radius, shadow, motion) come from
+   @bttco/ui/tokens.css (BTTCO Modern Classic), loaded in main.tsx.
+   This file holds only app-shell dimensions, z-index, nav-arrow and
+   tooltip infrastructure, plus the global rules that used to sit in tokens.css.
+   ══════════════════════════════════════════════════════ */
+
+:root {
+    /* ── Layout ────────────────────────────────────────── */
+    --sidebar-width: 80px;
+    --sidebar-collapsed: 0px;
+    --sidebar-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --topbar-height: 56px;
+    --hotbar-height: 80px;
+    --hotbar-clearance: calc(var(--hotbar-height) + 24px);
+    --content-max-width: 1200px;
+    /* Consumed by nav-arrows.css — do not hardcode these values elsewhere */
+    --nav-arrow-size: 28px;          /* default circle diameter */
+    --nav-arrow-size-lg: 52px;       /* lightbox / fullscreen */
+    --nav-arrow-size-sm: 22px;       /* compact / inline */
+    --nav-arrow-bg: #080808;
+    --nav-arrow-bg-hover: #111111;
+    --nav-arrow-border: rgba(166, 125, 67, 0.45);
+    --nav-arrow-border-hover: rgba(166, 125, 67, 0.7);
+    --nav-arrow-color: rgba(166, 125, 67, 0.55);
+    --nav-arrow-color-hover: rgba(166, 125, 67, 0.85);
+    --nav-arrow-glow: 0 0 14px rgba(166, 125, 67, 0.35), 0 0 4px rgba(166, 125, 67, 0.2);
+    --nav-pill-width: 16px;
+    --nav-pill-width-active: 28px;
+    --nav-pill-height: 3px;
+    --nav-pill-bg: rgba(166, 125, 67, 0.2);
+    --nav-pill-bg-active: var(--gold);
+    --nav-pill-glow: 0 0 6px rgba(166, 125, 67, 0.5), 0 0 2px rgba(166, 125, 67, 0.3);
+    /* ── Z-Index Scale ─────────────────────────────────── */
+    --z-base: 1;
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-overlay: 300;
+    --z-modal: 400;
+    --z-toast: 500;
+    /* ── Tooltip System ─────────────────────────────────── */
+    --tooltip-bg: #1a1814;
+    --tooltip-border: rgba(166, 125, 67, 0.35);
+    --tooltip-text: var(--cream);
+    --tooltip-z: 9000;
+}
+
+/* ── Global heading overrides ──────────────────────── */
+h4 {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--bone-white);
+  letter-spacing: 0.07em;
+  margin: 0;
+}
+
+/* Public footer text treatment */
+:where(
+  .portfolio-footer p,
+  .contact-footer,
+  .parking-footer,
+  .parking-footer-note,
+  .legal-footer p,
+  .legal-footer-note,
+  .public-form-footer,
+  .scroll-footer
+) {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  opacity: 0.3;
+}
+
+/* ══════════════════════════════════════════════════════
+   BTTCO Global Tooltip System
+   Replaces OS-native title= bubbles with styled tooltips.
+   Applies to any element with a title attribute.
+   Uses ::before (bubble) + ::after (arrow).
+   ══════════════════════════════════════════════════════ */
+
+/* Tooltip anchor — interactive leaf elements only.
+   Scoped to buttons/links/inputs to avoid overflow clipping
+   on layout containers that also carry title attributes. */
+button[title]:not([title=""]),
+a[title]:not([title=""]),
+[role="button"][title]:not([title=""]),
+input[title]:not([title=""]),
+svg[title]:not([title=""]),
+[data-tip]:not([data-tip=""]) {
+  position: relative;
+}
+
+/* ── Shared mixin via custom property trick ─────────────
+   Define the full selector list once as a variable alias  */
+
+/* The tooltip bubble */
+button[title]:not([title=""])::before,
+a[title]:not([title=""])::before,
+[role="button"][title]:not([title=""])::before,
+input[title]:not([title=""])::before,
+[data-tip]:not([data-tip=""])::before {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  background: var(--tooltip-bg);
+  border: 1px solid var(--tooltip-border);
+  color: var(--tooltip-text);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  padding: 4px 8px;
+  border-radius: 5px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(166, 125, 67, 0.1);
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: var(--tooltip-z);
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+
+/* title-based elements read from the title attr; data-tip elements override */
+button[title]:not([title=""])::before,
+a[title]:not([title=""])::before,
+[role="button"][title]:not([title=""])::before,
+input[title]:not([title=""])::before { content: attr(title); }
+[data-tip]:not([data-tip=""])::before { content: attr(data-tip); }
+
+/* The arrow */
+button[title]:not([title=""])::after,
+a[title]:not([title=""])::after,
+[role="button"][title]:not([title=""])::after,
+input[title]:not([title=""])::after,
+[data-tip]:not([data-tip=""])::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--tooltip-border);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: var(--tooltip-z);
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+
+/* ── Position variants ─────────────────────────────────
+   Add to element to flip when near screen edges          */
+.tooltip-below::before {
+  bottom: auto !important;
+  top: calc(100% + 8px) !important;
+}
+.tooltip-below::after {
+  bottom: auto !important;
+  top: calc(100% + 3px) !important;
+  border-top-color: transparent !important;
+  border-bottom-color: var(--tooltip-border) !important;
+}
+.tooltip-left::before {
+  left: auto !important;
+  right: 0 !important;
+  transform: none !important;
+}
+.tooltip-left::after {
+  left: auto !important;
+  right: 12px !important;
+  transform: none !important;
+}
+.tooltip-right::before {
+  left: 0 !important;
+  transform: none !important;
+}
+.tooltip-right::after {
+  left: 12px !important;
+  transform: none !important;
+}
+
+/* Opt-out for elements where tooltip pseudo-elements break layout */
+.no-tooltip[title]::before,
+.no-tooltip[title]::after,
+.no-tooltip[data-tip]::before,
+.no-tooltip[data-tip]::after,
+button.no-tooltip::before,
+button.no-tooltip::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Disable global hover-tooltips permanently.
+   The previous global button[title] system created pseudo-elements on hover
+   across the dashboard, which caused pointer artifacts around compact icon
+   controls. Tooltips must now be implemented component-by-component. */
+button[title]:not([title=""])::before,
+button[title]:not([title=""])::after,
+a[title]:not([title=""])::before,
+a[title]:not([title=""])::after,
+[role="button"][title]:not([title=""])::before,
+[role="button"][title]:not([title=""])::after,
+input[title]:not([title=""])::before,
+input[title]:not([title=""])::after,
+[data-tip]:not([data-tip=""])::before,
+[data-tip]:not([data-tip=""])::after {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Cursor stability guard.
+   Interactive controls often contain spans, svg, paths, and labels. If those
+   children resolve back to cursor:auto while the parent is cursor:pointer,
+   Chrome can visibly flicker between the arrow and hand cursor during mouse
+   travel. Keep descendants on the parent cursor unless they are real form
+   controls that need their own text/default cursor behavior. */
+button *,
+a *,
+[role="button"] *,
+[data-action] *,
+.hotbar-slot *,
+.scroll-tile *,
+.scroll-tile-action-btn *,
+.scroll-tile-expanded-header *,
+.scroll-empty-review-action *,
+.nuwc-ev-row * {
+  cursor: inherit;
+}
+
+button input,
+button textarea,
+button select,
+a input,
+a textarea,
+a select,
+[role="button"] input,
+[role="button"] textarea,
+[role="button"] select {
+  cursor: auto;
+}

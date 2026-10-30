@@ -1,0 +1,792 @@
+/*
+ * Courier - Interactive Message Artifacts
+ *
+ * Styles for structured message cards (QuoteProposalCard, SlotProposalCard,
+ * WaiverRequestCard, etc.). Shared across the staff-side Courier thread and
+ * the client-side public quote page.
+ *
+ * Design tokens come from tokens.css. No hardcoded colors.
+ */
+
+/* Quote Proposal card */
+
+.qp-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    background: var(--panel, #1a1b1a);
+    border: 1px solid var(--panel-border, rgba(166, 125, 67, 0.25));
+    border-radius: 12px;
+    font-family: var(--font-body), 'Inter', sans-serif;
+    max-width: 460px;
+}
+
+.qp-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(166, 125, 67, 0.15);
+}
+
+.qp-card-label {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted, #b9ad96);
+}
+
+.qp-card-badge {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: rgba(166, 125, 67, 0.12);
+    color: var(--gold, #a67d43);
+    border: 1px solid rgba(166, 125, 67, 0.25);
+}
+
+.qp-card-badge--ok {
+    color: #2ecc71;
+    background: rgba(46, 204, 113, 0.08);
+    border-color: rgba(46, 204, 113, 0.25);
+}
+
+.qp-card-badge--mute {
+    color: var(--text-muted, #b9ad96);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.qp-card-badge--warn {
+    color: #e8a33d;
+    background: rgba(232, 163, 61, 0.08);
+    border-color: rgba(232, 163, 61, 0.28);
+}
+
+.qp-card-rows {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    color: var(--text, #e8dfcf);
+}
+
+.qp-card-rows td {
+    padding: 4px 0;
+}
+
+.qp-card-rows td:first-child {
+    color: var(--text-muted, #b9ad96);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+}
+
+.qp-card-value {
+    text-align: right;
+    font-weight: 600;
+}
+
+.qp-card-value--gold {
+    color: var(--gold, #a67d43);
+}
+
+.qp-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.qp-card-actions .btn {
+    flex: 1;
+}
+
+.qp-card-note {
+    font-size: 0.72rem;
+    color: var(--text-muted, #b9ad96);
+    font-style: italic;
+    text-align: center;
+    padding: 4px 0 2px;
+}
+
+.qp-card-error {
+    font-size: 0.75rem;
+    color: #e74c3c;
+    padding: 6px 8px;
+    background: rgba(231, 76, 60, 0.08);
+    border: 1px solid rgba(231, 76, 60, 0.2);
+    border-radius: 6px;
+}
+
+
+/* Quote Proposal composer (staff toolbar) */
+
+.qp-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    margin: 4px 0;
+    background: rgba(166, 125, 67, 0.06);
+    border: 1px solid rgba(166, 125, 67, 0.2);
+    border-radius: 8px;
+}
+
+.qp-composer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.qp-composer-label {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.6rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold, #a67d43);
+}
+
+.qp-composer-close {
+    background: none;
+    border: none;
+    color: var(--text-muted, #b9ad96);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.qp-composer-close:hover {
+    color: var(--text, #e8dfcf);
+}
+
+.qp-composer-fields {
+    display: flex;
+    gap: 8px;
+}
+
+.qp-composer-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.qp-composer-field label {
+    font-size: 0.65rem;
+    color: var(--text-muted, #b9ad96);
+    letter-spacing: 0.04em;
+}
+
+.qp-composer-field input {
+    width: 100%;
+    padding: 6px 8px;
+    background: var(--bg-surface, #141514);
+    border: 1px solid var(--panel-border, rgba(166, 125, 67, 0.2));
+    border-radius: 4px;
+    color: var(--text, #e8dfcf);
+    font-size: 0.82rem;
+    font-family: inherit;
+}
+
+.qp-composer-field input:focus {
+    outline: none;
+    border-color: var(--gold, #a67d43);
+}
+
+.qp-composer-hint {
+    font-size: 0.6rem;
+    color: var(--text-muted, #b9ad96);
+    opacity: 0.7;
+}
+
+/* Active state for toolbar toggle buttons */
+.bkm-msg-toolbar-btn--active,
+.courier-tool-btn--active {
+    background: rgba(166, 125, 67, 0.15) !important;
+    border-color: var(--gold, #a67d43) !important;
+    color: var(--gold, #a67d43) !important;
+}
+
+/* Booking courier bar - wraps tools + input + send in one row */
+.bkm-courier-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--panel-border, rgba(166, 125, 67, 0.15));
+}
+
+/* Booking recovery queue */
+
+.bkm-recovery {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid rgba(232, 163, 61, 0.25);
+    border-radius: 8px;
+    background: rgba(232, 163, 61, 0.06);
+}
+
+.bkm-recovery-head,
+.bkm-recovery-row,
+.bkm-recovery-actions,
+.bkm-recovery-meta,
+.bkm-recovery-images {
+    display: flex;
+    align-items: center;
+}
+
+.bkm-recovery-head {
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.bkm-recovery-kicker {
+    margin: 0 0 0.2rem;
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #e8a33d;
+}
+
+.bkm-recovery h2 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text, #e8dfcf);
+}
+
+.bkm-recovery-actions {
+    gap: 0.65rem;
+    font-size: 0.72rem;
+    color: var(--text-muted, #b9ad96);
+}
+
+.bkm-recovery-refresh {
+    padding: 0.35rem 0.65rem;
+    border: 1px solid rgba(232, 163, 61, 0.3);
+    border-radius: 6px;
+    background: rgba(232, 163, 61, 0.08);
+    color: #e8a33d;
+    cursor: pointer;
+}
+
+.bkm-recovery-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.bkm-recovery-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    padding: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.bkm-recovery-main {
+    min-width: 0;
+}
+
+.bkm-recovery-row {
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.bkm-recovery-status {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid rgba(232, 163, 61, 0.28);
+    background: rgba(232, 163, 61, 0.08);
+    color: #e8a33d;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.bkm-recovery-meta {
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.35rem;
+    font-size: 0.74rem;
+    color: var(--text-muted, #b9ad96);
+}
+
+.bkm-recovery-meta a {
+    color: var(--text-muted, #b9ad96);
+}
+
+.bkm-recovery-desc {
+    margin: 0.45rem 0 0;
+    color: var(--text, #e8dfcf);
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.bkm-recovery-images {
+    gap: 0.35rem;
+}
+
+@media (max-width: 720px) {
+    .bkm-recovery-head,
+    .bkm-recovery-card {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+
+/* Slot Proposal card */
+
+.sp-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem 1.1rem;
+    background: var(--panel, #1a1b1a);
+    border: 1px solid var(--panel-border, rgba(166, 125, 67, 0.25));
+    border-radius: 12px;
+    font-family: var(--font-body), 'Inter', sans-serif;
+    max-width: 460px;
+}
+
+.sp-slot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sp-slot-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(250, 174, 21, 0.04);
+    border: 1px solid rgba(166, 125, 67, 0.18);
+    border-radius: 8px;
+    color: var(--text, #e8dfcf);
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.sp-slot-btn:hover:not(:disabled) {
+    border-color: var(--gold, #a67d43);
+    background: rgba(166, 125, 67, 0.1);
+}
+
+.sp-slot-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.sp-slot-btn--selected {
+    border-color: #2ecc71;
+    background: rgba(46, 204, 113, 0.08);
+}
+
+.sp-slot-btn--muted {
+    opacity: 0.35;
+}
+
+.sp-slot-label {
+    flex: 1;
+}
+
+.sp-slot-dur {
+    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-size: 0.7rem;
+    color: var(--text-muted, #b9ad96);
+}
+
+.sp-slot-check {
+    color: #2ecc71;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.sp-cancel-btn {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: var(--text-muted, #b9ad96);
+    font-size: 0.72rem;
+    padding: 6px 12px;
+    cursor: pointer;
+    align-self: center;
+    margin-top: 4px;
+}
+
+.sp-cancel-btn:hover {
+    color: var(--text, #e8dfcf);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Courier delivery visibility */
+
+.courier-delivery-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(166, 125, 67, 0.18);
+    border-radius: 12px;
+    background:
+        linear-gradient(180deg, rgba(28, 22, 15, 0.82), rgba(18, 18, 18, 0.88));
+}
+
+.courier-delivery-head h3 {
+    margin: 0.15rem 0 0;
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text, #e8dfcf);
+}
+
+.courier-delivery-head p {
+    margin: 0.3rem 0 0;
+    color: var(--text-muted, #b9ad96);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+
+.courier-delivery-kicker {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold, #a67d43);
+}
+
+.courier-delivery-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+}
+
+.courier-delivery-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    padding: 0.75rem 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.courier-delivery-stat strong {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: var(--text, #e8dfcf);
+}
+
+.courier-delivery-stat span {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.7rem;
+    color: var(--text-muted, #b9ad96);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.courier-delivery-stat--warn strong {
+    color: #df7e7e;
+}
+
+.courier-delivery-note {
+    padding: 0.7rem 0.8rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted, #b9ad96);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.76rem;
+    line-height: 1.5;
+}
+
+.courier-delivery-log {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.courier-delivery-log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.courier-delivery-log-head span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted, #b9ad96);
+}
+
+.courier-delivery-log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.courier-delivery-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    align-items: start;
+    padding: 0.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.courier-delivery-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 0.35rem;
+    background: #8d8d8d;
+}
+
+.courier-delivery-dot--sent,
+.courier-delivery-dot--delivered {
+    background: #6dbf7e;
+}
+
+.courier-delivery-dot--opened,
+.courier-delivery-dot--clicked {
+    background: #f0bc6d;
+}
+
+.courier-delivery-dot--failed,
+.courier-delivery-dot--bounced {
+    background: #df7e7e;
+}
+
+.courier-delivery-copy {
+    min-width: 0;
+}
+
+.courier-delivery-primary {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.courier-delivery-email {
+    color: var(--text, #e8dfcf);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.courier-delivery-badge {
+    padding: 0.14rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.courier-delivery-badge--sent,
+.courier-delivery-badge--delivered {
+    color: #6dbf7e;
+}
+
+.courier-delivery-badge--opened,
+.courier-delivery-badge--clicked {
+    color: #f0bc6d;
+}
+
+.courier-delivery-badge--failed,
+.courier-delivery-badge--bounced {
+    color: #df7e7e;
+}
+
+.courier-delivery-badge--queued {
+    color: var(--text-muted, #b9ad96);
+}
+
+.courier-delivery-template {
+    color: var(--gold, #a67d43);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.courier-delivery-subject {
+    margin-top: 0.2rem;
+    color: var(--text-muted, #b9ad96);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.74rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.courier-delivery-error {
+    margin-top: 0.22rem;
+    color: #df7e7e;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.courier-delivery-meta {
+    margin-top: 0.22rem;
+    color: rgba(185, 173, 150, 0.7);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+}
+
+.courier-delivery-retry {
+    min-width: 56px;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid rgba(223, 126, 126, 0.35);
+    border-radius: 8px;
+    background: rgba(223, 126, 126, 0.08);
+    color: #df7e7e;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.courier-delivery-empty {
+    padding: 1rem 0.85rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025);
+    color: var(--text-muted, #b9ad96);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.courier-file-input {
+    display: none;
+}
+
+.courier-number-filter {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+}
+
+.courier-number-filter-btn {
+    display: flex;
+    min-width: 0;
+    min-height: 42px;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.12rem;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid var(--panel-border, rgba(166, 125, 67, 0.2));
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text, #e8dfcf);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+}
+
+.courier-number-filter-btn span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.courier-number-filter-btn small {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted, #b9ad96);
+    font-family: var(--font-mono, monospace);
+    font-size: 0.58rem;
+}
+
+.courier-number-filter-btn.active {
+    border-color: var(--gold, #a67d43);
+    background: rgba(166, 125, 67, 0.12);
+    color: var(--gold, #a67d43);
+}
+
+.courier-number-filter-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.42;
+}
+
+@media (max-width: 900px) {
+    .courier-delivery-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .courier-delivery-row {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .courier-delivery-retry {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
+/* Slot Proposal composer (staff toolbar) */
+
+.sp-composer-slot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 10px;
+    background: rgba(166, 125, 67, 0.08);
+    border: 1px solid rgba(166, 125, 67, 0.15);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    color: var(--text, #e8dfcf);
+}
+
+/* Booking approval card: status sentences wrap on narrow screens instead of
+   widening the card (StatusText is nowrap by design for short labels). */
+.bkm-collector-slots[data-booking-approval] [data-approval-copy] {
+  /* StatusText sets white-space inline; the override must win. */
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.bkm-collector-slots[data-booking-approval] {
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
+}

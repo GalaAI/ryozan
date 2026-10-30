@@ -1,0 +1,222 @@
+name: Deploy Watchdog
+
+# Probes live BTTCo health on demand. If anything goes red (HTTP non-2xx
+# on /health, or /api/v1/auth/me returns 500 instead of the expected 401),
+# opens a GitHub issue tagged 'incident' so the operator gets notified.
+#
+# The former 15-minute schedule consumed hosted Actions minutes even while the
+# application was healthy. Continuous monitoring belongs in the deployment
+# platform or ED3N; this workflow remains as an explicit diagnostic probe.
+#
+# Probe targets:
+#   GET https://ryozan.app/health      → expect 200
+#   POST /api/v1/auth/login (no creds)          → expect 422 (validation),
+#                                                 NOT 500 (means startup migration trap re-broke)
+#   GET /api/v1/auth/me (no token)              → expect 401 (auth working)
+#
+# Why these probes:
+#   /health             — basic liveness, FastAPI up + Postgres reachable
+#   /auth/login → 422   — startup migrations ran (the 2026-05-22 trap returned 500)
+#   /auth/me → 401      — auth flow not crashing on JWT decode
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: deploy-watchdog
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe BTTCo production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe /health
+        id: health
+        run: |
+          set +e
+          code=$(curl -sS -o /tmp/health.txt -w "%{http_code}" https://ryozan.app/health)
+          echo "health_code=$code" >> "$GITHUB_OUTPUT"
+          echo "health_body=$(cat /tmp/health.txt | tr -d '\n' | head -c 500)" >> "$GITHUB_OUTPUT"
+          echo "::notice::health=$code"
+
+      - name: Probe /api/v1/auth/login (no creds, expect 422)
+        id: login
+        run: |
+          set +e
+          code=$(curl -sS -o /tmp/login.txt -w "%{http_code}" \
+            -X POST https://ryozan.app/api/v1/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"watchdog@example.com","password":"watchdog"}')
+          echo "login_code=$code" >> "$GITHUB_OUTPUT"
+          echo "login_body=$(cat /tmp/login.txt | tr -d '\n' | head -c 500)" >> "$GITHUB_OUTPUT"
+          echo "::notice::login=$code"
+
+      - name: Probe /api/v1/auth/me (no token, expect 401)
+        id: me
+        run: |
+          set +e
+          code=$(curl -sS -o /tmp/me.txt -w "%{http_code}" https://ryozan.app/api/v1/auth/me)
+          echo "me_code=$code" >> "$GITHUB_OUTPUT"
+          echo "me_body=$(cat /tmp/me.txt | tr -d '\n' | head -c 500)" >> "$GITHUB_OUTPUT"
+          echo "::notice::me=$code"
+
+      - name: Evaluate state
+        id: state
+        run: |
+          health="${{ steps.health.outputs.health_code }}"
+          login="${{ steps.login.outputs.login_code }}"
+          me="${{ steps.me.outputs.me_code }}"
+
+          # Define what "healthy" means for each probe
+          health_ok=false
+          login_ok=false
+          me_ok=false
+
+          [ "$health" = "200" ] && health_ok=true
+
+          # Login expectations: 401 (bad creds) or 422 (validation) — anything
+          # else (especially 500) means the backend is in a degraded state
+          case "$login" in
+            401|422) login_ok=true ;;
+          esac
+
+          # Me expectations: 401 only
+          [ "$me" = "401" ] && me_ok=true
+
+          if $health_ok && $login_ok && $me_ok; then
+            echo "verdict=green" >> "$GITHUB_OUTPUT"
+            echo "::notice::All probes green."
+          else
+            echo "verdict=red" >> "$GITHUB_OUTPUT"
+            echo "::error::Probes failed: health=$health login=$login me=$me"
+          fi
+
+      - name: Open incident issue on red
+        if: steps.state.outputs.verdict == 'red'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const health = '${{ steps.health.outputs.health_code }}';
+            const login = '${{ steps.login.outputs.login_code }}';
+            const me = '${{ steps.me.outputs.me_code }}';
+            const healthBody = `${{ steps.health.outputs.health_body }}`;
+            const loginBody = `${{ steps.login.outputs.login_body }}`;
+            const meBody = `${{ steps.me.outputs.me_body }}`;
+
+            // Dedup: don't open a new issue if one is already open for this
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'incident,watchdog',
+            });
+
+            if (existing.data.length > 0) {
+              console.log(`Open incident issue already exists: #${existing.data[0].number}`);
+              // Append a comment instead
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: [
+                  `Still red as of ${new Date().toISOString()}`,
+                  '',
+                  '| Probe | Code |',
+                  '|---|---|',
+                  `| /health | ${health} |`,
+                  `| /api/v1/auth/login | ${login} (expected 401 or 422) |`,
+                  `| /api/v1/auth/me | ${me} (expected 401) |`,
+                ].join('\n'),
+              });
+              return;
+            }
+
+            const title = `[watchdog] BTTCo production probe failure ${new Date().toISOString().slice(0,16)}`;
+            const body = [
+              '## Production probe failed',
+              '',
+              `Detected at: ${new Date().toISOString()}`,
+              '',
+              '| Probe | HTTP code | Expected |',
+              '|---|---|---|',
+              `| GET /health | **${health}** | 200 |`,
+              `| POST /api/v1/auth/login (no creds) | **${login}** | 401 or 422 |`,
+              `| GET /api/v1/auth/me (no token) | **${me}** | 401 |`,
+              '',
+              '### Response bodies (first 500 chars)',
+              '',
+              '**/health:**',
+              '```',
+              healthBody || '(empty)',
+              '```',
+              '',
+              '**/auth/login:**',
+              '```',
+              loginBody || '(empty)',
+              '```',
+              '',
+              '**/auth/me:**',
+              '```',
+              meBody || '(empty)',
+              '```',
+              '',
+              '### Likely causes',
+              '',
+              '- **/health 5xx** — Railway service is down or Postgres unreachable. Check `railway logs --service BTTCO`.',
+              '- **/auth/login 500** — startup migration trap returned. New ORM columns without matching `_run_startup_migrations()` SQL in `api/main.py`. This is the 2026-05-22 root cause; see PR #33.',
+              '- **/auth/me 5xx** — JWT decode crashing or DB query broken.',
+              '- **All 200-range** — false positive, probably; close this issue.',
+              '',
+              '### Runbook',
+              '',
+              '1. `railway logs --service BTTCO --deployment` and find the most recent traceback',
+              '2. If startup-migration trap: add the missing ALTER TABLE to `_run_startup_migrations()` and re-deploy',
+              '3. If Postgres down: `railway redeploy --yes` from CLI (the dashboard restart button reuses cached broken image)',
+              '4. If genuinely fine: close issue with a comment explaining why',
+              '',
+              'Re-run the diagnostic manually after the repair to record recovery.',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['incident', 'watchdog'],
+            });
+
+            console.log('Opened new incident issue');
+
+      - name: Close incident on green
+        if: steps.state.outputs.verdict == 'green'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'incident,watchdog',
+            });
+
+            for (const issue of existing.data) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Probes back to green at ${new Date().toISOString()}. Auto-closing.`,
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+              console.log(`Auto-closed incident issue #${issue.number}`);
+            }

@@ -1,0 +1,51 @@
+{
+  "name": "@bttco/ui",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Ryozan Studio portal component library. Extracted from the design scenes \u2014 not authored here.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens.css": "./src/tokens/tokens.css",
+    "./fonts.css": "./fonts/fonts.css",
+    "./scene-compat.css": "./src/tokens/scene-compat.css"
+  },
+  "files": [
+    ".oxlintrc.json",
+    "design-system",
+    "src",
+    "fonts",
+    "MAPPING.md",
+    "CONFLICTS.md",
+    "README.md",
+    "GETTING-IT-RUNNING.md"
+  ],
+  "scripts": {
+    "lint": "oxlint --config .oxlintrc.json src",
+    "tokens:gen": "node scripts/gen-tokens.mjs",
+    "pack:app": "npm pack --pack-destination ../../app/vendor"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": false
+    },
+    "react-dom": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "oxlint": "^0.15.0",
+    "typescript": "^5.6.0"
+  },
+  "sideEffects": [
+    "*.css"
+  ]
+}

@@ -1,0 +1,51 @@
+.bttco-email-foundry-frame {
+  width: 100%;
+  height: calc(100dvh - 210px);
+  min-height: 520px;
+  overflow: hidden;
+  border: 0;
+  background: #0b0c0b;
+}
+
+.bttco-email-foundry-frame__iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #0b0c0b;
+}
+
+.bttco-email-foundry-frame__status {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  padding: 24px;
+  color: var(--cream, #e4d9c0);
+  font: 700 11px/1.5 var(--font-mono, monospace);
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.bttco-portal-intermission {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow: hidden;
+  background: #0b0c0b;
+}
+
+.bttco-portal-intermission__iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #0b0c0b;
+}
+
+@media (max-width: 520px) {
+  .bttco-email-foundry-frame {
+    height: calc(100dvh - 186px);
+    min-height: 500px;
+  }
+}

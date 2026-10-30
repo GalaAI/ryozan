@@ -1,0 +1,230 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "error",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": [
+              "design-canvas.jsx",
+              "ios-frame.jsx",
+              "preview/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Poppins|Space Grotesk|JetBrains Mono|Bebas Neue|KC Tallboy|KC Tallboy Inked|KC SimpleSans|KC SimpleSans Inked|Suti|Courier New|Courier|Oswald|Inter|IBM Plex Mono|Aero Wolves|Aero Wolves Outline|Aero Wolves Stamp))/i]",
+        "message": "Font not provided by the design system (BTTCO Modern Classic). Available: Poppins (display), Space Grotesk (body), JetBrains Mono (labels), Bebas Neue (content overlay only), KC Tallboy (poster), KC SimpleSans (print), Suti (print flourish), Courier New / Courier (typewriter); legacy website faces kept for existing pages: Oswald, Inter, IBM Plex Mono; under evaluation, not approved for production: Aero Wolves, Aero Wolves Outline, Aero Wolves Stamp."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {},
+    "tokens": [
+      "--alt-oxblood",
+      "--alt-pink",
+      "--alt-sage",
+      "--alt-sky",
+      "--alt-smoke",
+      "--alt-spring",
+      "--bg",
+      "--bg-active",
+      "--bg-dark",
+      "--bg-elevated",
+      "--bg-hover",
+      "--bg-surface",
+      "--bg-surface-elevated",
+      "--bone-white",
+      "--border-active",
+      "--border-subtle",
+      "--danger",
+      "--font-accent",
+      "--font-body",
+      "--font-btn",
+      "--font-display",
+      "--font-heading",
+      "--font-mono",
+      "--font-script",
+      "--font-title",
+      "--gold",
+      "--gold-glow",
+      "--gold-vibrant",
+      "--info",
+      "--muted",
+      "--ok",
+      "--panel",
+      "--panel-border",
+      "--panel-border-hover",
+      "--panel-hover",
+      "--pending",
+      "--radius-lg",
+      "--radius-md",
+      "--radius-pill",
+      "--radius-sm",
+      "--radius-xl",
+      "--shadow-glow",
+      "--shadow-gold",
+      "--shadow-lg",
+      "--shadow-md",
+      "--shadow-sm",
+      "--sidebar-bg",
+      "--space-0",
+      "--space-1",
+      "--space-10",
+      "--space-12",
+      "--space-16",
+      "--space-2",
+      "--space-20",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-8",
+      "--text",
+      "--text-2xl",
+      "--text-3xl",
+      "--text-4xl",
+      "--text-base",
+      "--text-dim",
+      "--text-lg",
+      "--text-muted",
+      "--text-primary",
+      "--text-secondary",
+      "--text-sm",
+      "--text-xl",
+      "--text-xs",
+      "--tiger-orange",
+      "--tiger-orange-glow",
+      "--transition-base",
+      "--transition-fast",
+      "--transition-slow"
+    ],
+    "tokenKinds": {
+      "--gold": "color",
+      "--gold-vibrant": "color",
+      "--gold-glow": "color",
+      "--tiger-orange": "color",
+      "--tiger-orange-glow": "color",
+      "--bg": "color",
+      "--bg-dark": "color",
+      "--bg-surface": "color",
+      "--bg-surface-elevated": "color",
+      "--bg-elevated": "color",
+      "--bg-hover": "color",
+      "--bg-active": "color",
+      "--sidebar-bg": "color",
+      "--panel": "color",
+      "--panel-hover": "color",
+      "--panel-border": "color",
+      "--panel-border-hover": "color",
+      "--text": "font",
+      "--text-primary": "font",
+      "--text-secondary": "font",
+      "--text-muted": "font",
+      "--text-dim": "font",
+      "--muted": "color",
+      "--bone-white": "color",
+      "--alt-sage": "color",
+      "--alt-spring": "color",
+      "--alt-pink": "color",
+      "--alt-sky": "color",
+      "--alt-smoke": "color",
+      "--alt-oxblood": "color",
+      "--ok": "color",
+      "--pending": "color",
+      "--danger": "color",
+      "--info": "color",
+      "--border-subtle": "color",
+      "--border-active": "color",
+      "--font-heading": "font",
+      "--font-display": "font",
+      "--font-body": "font",
+      "--font-accent": "font",
+      "--font-mono": "font",
+      "--font-btn": "font",
+      "--font-title": "font",
+      "--font-script": "font",
+      "--text-xs": "font",
+      "--text-sm": "font",
+      "--text-base": "font",
+      "--text-lg": "font",
+      "--text-xl": "font",
+      "--text-2xl": "font",
+      "--text-3xl": "font",
+      "--text-4xl": "font",
+      "--space-0": "spacing",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-8": "spacing",
+      "--space-10": "spacing",
+      "--space-12": "spacing",
+      "--space-16": "spacing",
+      "--space-20": "spacing",
+      "--radius-sm": "radius",
+      "--radius-md": "radius",
+      "--radius-lg": "radius",
+      "--radius-xl": "radius",
+      "--radius-pill": "radius",
+      "--shadow-sm": "shadow",
+      "--shadow-md": "shadow",
+      "--shadow-lg": "shadow",
+      "--shadow-gold": "shadow",
+      "--shadow-glow": "shadow",
+      "--transition-fast": "other",
+      "--transition-base": "other",
+      "--transition-slow": "other"
+    },
+    "fontFamilies": [
+      "Aero Wolves",
+      "Aero Wolves Outline",
+      "Aero Wolves Stamp",
+      "Bebas Neue",
+      "IBM Plex Mono",
+      "Inter",
+      "JetBrains Mono",
+      "KC SimpleSans",
+      "KC SimpleSans Inked",
+      "KC Tallboy",
+      "KC Tallboy Inked",
+      "Oswald",
+      "Suti"
+    ]
+  }
+}

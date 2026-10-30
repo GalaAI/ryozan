@@ -1,0 +1,109 @@
+/*
+ * LogoLoader — native port of LogoLoaderMobile.dc.html.
+ *
+ * Every keyframe, easing, duration and delay below is copied verbatim from
+ * that file. The composition is canon. What is NOT here, deliberately:
+ * the authoring pause control, and the CSS-custom-property tweak bridge
+ * (`--ll-*` set from JS). Tweaks are props on the component now, so there is
+ * no external layer for a "restore exact composition" pass to strip off.
+ */
+
+.ll-root {
+  min-height: 100dvh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0b0c0b;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* THE BLOOM. Hidden through the fill; at 100% it breathes in over .9s —
+   a radial gold wash plus a lit copy of the mark glowing past its own ink. */
+.ll-root [data-bloom] { opacity: 0; transition: opacity .12s linear; }
+
+@keyframes llBloomIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes llPulse {
+  0%   { opacity: 1;   filter: drop-shadow(0 0 18px rgba(200,161,94,.4)) drop-shadow(0 0 44px rgba(200,161,94,.18)) }
+  42%  { opacity: .75; filter: drop-shadow(0 0 9px rgba(200,161,94,.2)) drop-shadow(0 0 24px rgba(200,161,94,.09)) }
+  100% { opacity: 1;   filter: drop-shadow(0 0 18px rgba(200,161,94,.4)) drop-shadow(0 0 44px rgba(200,161,94,.18)) }
+}
+.ll-root [data-ll="bloom"] [data-bloom] {
+  opacity: 1;
+  animation: llBloomIn .12s cubic-bezier(.16,1,.3,1) both,
+             llPulse 1.3s cubic-bezier(.45,0,.55,1) .12s 1;
+}
+.ll-root [data-ll="launch"] [data-bloom] { opacity: 1; }
+
+/* THE SLINGSHOT. Anticipation: the mark draws back and coils, then fires
+   off-stage right on a hard accelerating ease. */
+@keyframes llSling {
+  0%   { transform: translateX(0) rotate(0) scale(1); animation-timing-function: cubic-bezier(.16,1,.3,1) }
+  38%  { transform: translateX(-9%) rotate(-4deg) scale(.965); animation-timing-function: cubic-bezier(.7,0,.9,.42) }
+  100% { transform: translateX(160vw) rotate(6deg) scale(1.02) }
+}
+.ll-root [data-ll="launch"] { animation: llSling .95s both; }
+
+/* THE WIPE. The welcome sits BEHIND the tiger, fully clipped until the launch
+   leg begins (.36s), then reveals left to right on the same accelerating ease
+   so the edge rides the tiger out. */
+@keyframes llSwipe {
+  from { clip-path: inset(-40% 100% -40% -10%) }
+  to   { clip-path: inset(-40% -10% -40% -10%) }
+}
+
+/* HANGTIME. Holds ~4s, swelling slowly, then fades out where it stands. */
+@keyframes llHang {
+  0%   { transform: scale(1); opacity: 1 }
+  84%  { transform: scale(var(--ll-swell,1.22)); opacity: 1 }
+  100% { transform: scale(var(--ll-swell-end,1.26)); opacity: 0 }
+}
+
+/* THE STARS. Four-point pops .5s after the tiger clears (first lands at
+   1.45s), then a slow twinkle. Even stars breathe in inverse phase and must
+   LAND dim, or the snap to the alt cycle reads as a blink. */
+@keyframes llStar { from { opacity: 0 } to { opacity: 1 } }
+@keyframes llStarTall {
+  from { opacity: 0; transform: scale(1,1.55) }
+  to   { opacity: 1; transform: scale(1,1.55) }
+}
+@keyframes llStarDim {
+  from { opacity: 0 }
+  to   { opacity: .5; filter: drop-shadow(0 0 2px rgba(200,161,94,.18)) drop-shadow(0 0 6px rgba(200,161,94,.08)) }
+}
+@keyframes llStarTallDim {
+  from { opacity: 0; transform: scale(1,1.55) }
+  to   { opacity: .5; transform: scale(1,1.55); filter: drop-shadow(0 0 2px rgba(200,161,94,.18)) drop-shadow(0 0 6px rgba(200,161,94,.08)) }
+}
+@keyframes llTwinkle {
+  0%,100% { opacity: 1;  filter: drop-shadow(0 0 6px rgba(200,161,94,.55)) drop-shadow(0 0 16px rgba(200,161,94,.25)) }
+  50%     { opacity: .5; filter: drop-shadow(0 0 2px rgba(200,161,94,.18)) drop-shadow(0 0 6px rgba(200,161,94,.08)) }
+}
+@keyframes llTwinkleAlt {
+  0%,100% { opacity: .5; filter: drop-shadow(0 0 2px rgba(200,161,94,.18)) drop-shadow(0 0 6px rgba(200,161,94,.08)) }
+  50%     { opacity: 1;  filter: drop-shadow(0 0 6px rgba(200,161,94,.55)) drop-shadow(0 0 16px rgba(200,161,94,.25)) }
+}
+
+.ll-root [data-star] {
+  position: absolute;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0 6px rgba(200,161,94,.55)) drop-shadow(0 0 16px rgba(200,161,94,.25));
+  animation: llStar .6s ease-out both,
+             llTwinkle calc(2.8s / var(--tw,1)) ease-in-out 2.4s infinite;
+  line-height: 1;
+}
+.ll-root [data-star="tall"] { animation-name: llStarTall, llTwinkle; }
+.ll-root [data-star]:nth-child(even) {
+  animation-name: llStarDim, llTwinkleAlt;
+  animation-duration: .6s, calc(3.4s / var(--tw,1));
+}
+.ll-root [data-star="tall"]:nth-child(even) { animation-name: llStarTallDim, llTwinkleAlt; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ll-root [data-ll],
+  .ll-root [data-bloom],
+  .ll-root [data-star],
+  .ll-root .ll-welcome { animation: none !important; }
+}

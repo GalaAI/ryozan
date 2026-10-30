@@ -1,0 +1,7 @@
+node_modules
+.git
+.claude
+.venv
+__pycache__
+dist
+*.pyc

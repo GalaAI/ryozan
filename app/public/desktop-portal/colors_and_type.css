@@ -1,0 +1,269 @@
+/* ══════════════════════════════════════════════════════
+   Ryozan Studio — Colors & Type
+   Speakeasy palette: blackened bg, aged gold, bone white.
+   Old-school traditional tattoo flash sensibility.
+   Lifted directly from BTTCO/app/src/styles/tokens.css
+   ══════════════════════════════════════════════════════ */
+
+/* ── Webfonts ──────────────────────────────────────── */
+@font-face {
+  font-family: "KC Tallboy";
+  src: local("KC Tallboy"), url("./fonts/KCTallboy.otf") format("opentype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+/* Distressed/inked variant of KC Tallboy — same family, separate face for grit. */
+@font-face {
+  font-family: "KC Tallboy Inked";
+  src: local("KC Tallboy Inked"), url("./fonts/KCTallboy-Inked.otf") format("opentype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "KC SimpleSans";
+  src: local("KC SimpleSans"), url("./fonts/KCSimpleSans.otf") format("opentype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+/* Distressed/inked variant of KC SimpleSans — same family, separate face for grit. */
+@font-face {
+  font-family: "KC SimpleSans Inked";
+  src: local("KC SimpleSans Inked"), url("./fonts/KCSimpleSans-Inked.otf") format("opentype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+
+/* ── Aero Wolves — blackletter / gothic display family ───
+   Six cuts: Regular, Outline, Stamp, each in upright + oblique.
+   Modeled with three families so variant pickup stays explicit:
+     "Aero Wolves"          → Regular   (normal + italic)
+     "Aero Wolves Outline"  → Outline   (normal + italic)
+     "Aero Wolves Stamp"    → Stamp     (normal + italic)
+   Use for posters, merch, badges, section dividers, social. */
+@font-face {
+  font-family: "Aero Wolves";
+  src: local("Aero Wolves"),
+       url("./fonts/Aero_Wolves_Regular.otf") format("opentype"),
+       url("./fonts/Aero_Wolves_Regular.ttf") format("truetype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Aero Wolves";
+  src: local("Aero Wolves Oblique"),
+       url("./fonts/Aero_Wolves_Oblique.otf") format("opentype"),
+       url("./fonts/Aero_Wolves_Oblique.ttf") format("truetype");
+  font-weight: normal; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: "Aero Wolves Outline";
+  src: local("Aero Wolves Outline"),
+       url("./fonts/Aero_Wolves_Outline.otf") format("opentype"),
+       url("./fonts/Aero_Wolves_Outline.ttf") format("truetype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Aero Wolves Outline";
+  src: local("Aero Wolves Oblique Outline"),
+       url("./fonts/Aero_Wolves_Oblique_Outline.otf") format("opentype"),
+       url("./fonts/Aero_Wolves_Oblique_Outline.ttf") format("truetype");
+  font-weight: normal; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: "Aero Wolves Stamp";
+  src: local("Aero Wolves Stamp"),
+       url("./fonts/Aero_Wolves_Stamp.otf") format("opentype"),
+       url("./fonts/Aero_Wolves_Stamp.ttf") format("truetype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Aero Wolves Stamp";
+  src: local("Aero Wolves Oblique Stamp"),
+       url("./fonts/Aero_Wolves_Oblique_Stamp.otf") format("opentype"),
+       url("./fonts/Aero_Wolves_Oblique_Stamp.ttf") format("truetype");
+  font-weight: normal; font-style: italic; font-display: swap;
+}
+
+@font-face {
+  font-family: "Suti";
+  src: local("Suti"), url("./fonts/Suti.otf") format("opentype");
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+/* Google Font fallbacks for the rest of the stack */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ── Brand Color (signature aged gold) ───────── */
+  --gold:            #a67d43;        /* primary brand mark, links, accents */
+  --gold-vibrant:    #a67d43;
+  --gold-glow:       rgba(166,125,67,0.30);
+  --tiger-orange:    #faae15;        /* secondary accent / energy */
+  --tiger-orange-glow: rgba(250,174,21,0.30);
+
+  /* ── Background System ───────────────────────── */
+  --bg:              #121312;        /* base — near-black with green undertone */
+  --bg-dark:         #121312;
+  --bg-surface:      rgba(255,255,255,0.03);
+  --bg-surface-elevated: rgba(255,255,255,0.06);
+  --bg-elevated:     rgba(255,255,255,0.08);
+  --bg-hover:        rgba(255,255,255,0.06);
+  --bg-active:       rgba(255,255,255,0.10);
+  --sidebar-bg:      rgba(10,10,10,0.95);
+
+  /* ── Panel / Card Surfaces (warm tint) ───────── */
+  --panel:               rgba(255,248,236,0.04);
+  --panel-hover:         rgba(255,248,236,0.07);
+  --panel-border:        rgba(166,125,67,0.25);
+  --panel-border-hover:  rgba(166,125,67,0.40);
+
+  /* ── Text ────────────────────────────────────── */
+  --text:            #e8dfcf;        /* default body, warm bone */
+  --text-primary:    #e8dfcf;
+  --text-secondary:  #C0C0C0;
+  --text-muted:      #666666;
+  --text-dim:        #4a4a4a;
+  --muted:           #b9ad96;
+  --bone-white:      #d4c9b5;        /* heading accent */
+
+  /* ── Heritage Palette (the shop's wall colors) ─
+     Sourced from the physical studio interior — sage walls
+     with traditional-flash pinks and blues. Use sparingly:
+     section accents, illustration support, social/print.
+     Never general UI chrome (gold + bg + bone do that work). */
+  --alt-sage:        #4e6851;        /* deep muted sage — anchor green */
+  --alt-spring:      #70c27b;        /* spring green — wall paint, accent */
+  --alt-pink:        #fd8e8e;        /* flash pink — pastel accent */
+  --alt-sky:         #63badf;        /* sky blue — pastel accent */
+  --alt-smoke:       #1a1814;        /* near-black — dark sections */
+  --alt-oxblood:     #5e2222;        /* deep red — flash callouts, retained from production set */
+
+  /* ── Status ──────────────────────────────────── */
+  --ok:        #4caf50;
+  --pending:   #ffb300;
+  --danger:    #d9534f;
+  --info:      #2196f3;
+
+  /* ── Borders ─────────────────────────────────── */
+  --border-subtle: rgba(166,125,67,0.15);
+  --border-active: rgba(166,125,67,0.45);
+
+  /* ── Type Families ───────────────────────────── */
+  --font-heading:  'KC Tallboy', 'Oswald', sans-serif;            /* main display — distressed gothic */
+  --font-display:  'Oswald', sans-serif;                           /* secondary display, eyebrows */
+  --font-body:     'Inter', sans-serif;                            /* body */
+  --font-accent:   'KC SimpleSans', sans-serif;                    /* tightly-tracked sans accent */
+  --font-mono:     'IBM Plex Mono', monospace;                     /* meta, mono detail */
+  --font-btn:      'JetBrains Mono', monospace;                    /* CTA buttons */
+  --font-title:    'Bebas Neue', sans-serif;                       /* hero/title alt */
+  --font-script:   'Suti', cursive;                                /* tattoo-script accent (rare) */
+
+  /* ── Type Scale (1.25 ratio) ────────────────── */
+  --text-xs:    0.64rem;     /* ~10.24px */
+  --text-sm:    0.8rem;      /* ~12.8px  */
+  --text-base:  1rem;        /* 16px     */
+  --text-lg:    1.25rem;     /* 20px     */
+  --text-xl:    1.563rem;    /* ~25px    */
+  --text-2xl:   1.953rem;    /* ~31.25px */
+  --text-3xl:   2.441rem;    /* ~39px    */
+  --text-4xl:   3.052rem;    /* ~48.8px  */
+
+  /* ── Spacing (4px base) ─────────────────────── */
+  --space-0: 0; --space-1: 4px; --space-2: 8px; --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px; --space-8: 32px;
+  --space-10: 40px; --space-12: 48px; --space-16: 64px; --space-20: 80px;
+
+  /* ── Radii ──────────────────────────────────── */
+  --radius-sm: 2px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 99px;
+
+  /* ── Shadows ────────────────────────────────── */
+  --shadow-sm:   0 1px 2px rgba(0,0,0,0.30);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.40);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.50);
+  --shadow-gold: 0 0 20px rgba(166,125,67,0.20);
+  --shadow-glow: 0 0 40px rgba(166,125,67,0.30);
+
+  /* ── Transitions ────────────────────────────── */
+  --transition-fast: 0.15s ease; /* @kind other */
+  --transition-base: 0.25s ease; /* @kind other */
+  --transition-slow: 0.6s cubic-bezier(0.16, 1, 0.3, 1); /* @kind other */
+}
+
+/* ══════════════════════════════════════════════════════
+   Semantic typography — apply on bare HTML
+   ══════════════════════════════════════════════════════ */
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* h1 / h3 — hero & section openers — tall display gothic */
+h1, h3, .heading-display {
+  font-family: var(--font-title);   /* Bebas Neue — falls back from KC Tallboy when used as wordmark */
+  font-weight: 700;
+  color: var(--bone-white);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin: 0;
+}
+h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); }
+h3 { font-size: var(--text-2xl); }
+
+/* h2 — sub-section — gold, bold sans, tight uppercase */
+h2 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  color: var(--gold);
+  font-size: 1.5em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  margin: 0;
+}
+
+/* h4 — overlines & dashboard labels */
+h4 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  color: var(--bone-white);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin: 0;
+}
+
+/* Eyebrow / subheading detail */
+.subheading, .eyebrow {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 500;
+  color: var(--gold);
+}
+
+/* Body */
+p { font-family: var(--font-body); color: var(--text); line-height: 1.7; margin: 0; }
+.lead { font-size: 1.1rem; color: var(--bone-white); }
+
+/* Mono / meta / coordinates */
+.mono, code, kbd, .meta {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+/* Serif accent (uppercase serif-ish via Oswald, since we don't ship a serif) */
+.serif {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+
+/* Buttons inherit btn font */
+.btn-text { font-family: var(--font-btn); text-transform: uppercase; letter-spacing: 0.10em; font-weight: 700; }
+
+/* Links — never underline on hover */
+a { color: var(--gold); text-decoration: none; transition: color var(--transition-fast); }
+a:hover { color: var(--bone-white); text-decoration: none; }

@@ -1,0 +1,49 @@
+name: "Copilot Setup Steps"
+
+# Pre-flight environment for the Copilot coding agent.
+# When you assign an issue to @copilot, GitHub runs this workflow first
+# (only the `copilot-setup-steps` job, named exactly that) to install the
+# toolchain so the agent has ruff/node/etc. available without re-installing
+# on every action.
+# See: https://docs.github.com/en/copilot/customizing-copilot/customizing-the-development-environment-for-copilot-coding-agent
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install backend toolchain (pinned ruff)
+        run: |
+          pip install --upgrade pip
+          pip install ruff==0.15.13
+          pip install -r api/requirements.txt
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: app
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Setup gh CLI
+        run: |
+          gh --version
+          railway --version || npm i -g @railway/cli

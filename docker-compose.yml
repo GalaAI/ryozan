@@ -1,0 +1,78 @@
+name: ryozan
+
+services:
+  # Local Postgres. Bound to loopback on 5433 so it is unreachable from the LAN
+  # and never collides with a host Postgres on 5432. POSTGRES_PASSWORD comes
+  # from the root .env (see .env.example).
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: nexus
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ryozan_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nexus"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Local SMTP capture for email E2E (UI at http://localhost:8025), loopback only.
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+
+  # Dev: separate services with hot reload
+  api:
+    build: ./api
+    ports:
+      - "127.0.0.1:18788:8801"
+    env_file:
+      - ./api/.env
+    environment:
+      # In-container the db service is reachable at its compose hostname, not
+      # localhost (which is the api container itself). These override the
+      # localhost URLs in api/.env for the container network only.
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/nexus
+      DATABASE_SYNC_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/nexus
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./api:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8801 --reload
+
+  app:
+    image: node:20-alpine
+    working_dir: /app
+    ports:
+      - "127.0.0.1:15300:5173"
+    volumes:
+      - ./app:/app
+      - /app/node_modules
+    environment:
+      VITE_API_TARGET: http://api:8801
+    command: sh -c "npm ci --no-audit --no-fund && node node_modules/vite/bin/vite.js --host 0.0.0.0 --port 5173 --strictPort"
+    depends_on:
+      - api
+
+  # Production: unified build (use with --profile production)
+  # docker compose --profile production up --build production
+  production:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - ./api/.env
+    profiles:
+      - production
+
+volumes:
+  ryozan_pgdata:

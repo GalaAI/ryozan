@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ryozan-econ"
+version = "0.1.0"
+description = "Portable double-entry bookkeeping for a studio. Part of the Ryozan bundle."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["accounting", "double-entry", "bookkeeping", "ledger", "studio", "ryozan"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Accounting",
+    "Typing :: Typed",
+]
+# No dependencies on purpose: pure domain logic, so embedding it never drags a
+# database or web framework into the host application.
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["ryozan_econ*"]

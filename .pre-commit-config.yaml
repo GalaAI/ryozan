@@ -1,0 +1,27 @@
+# BTTCO pre-commit configuration
+#
+# Install:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run on demand:
+#   pre-commit run --all-files          # whole repo
+#   pre-commit run --files <path>...    # specific files
+#
+# The ruff version below MUST match:
+#   - .github/workflows/api.yml         (CI install)
+#   - api/requirements-dev.txt          (dev-install)
+#   - scripts/lint-fix.sh               (RUFF_PIN constant)
+# When updating, change all four together.
+
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.13
+    hooks:
+      - id: ruff
+        name: ruff check
+        args: [--fix]
+        files: ^api/(app/|main\.py)
+      - id: ruff-format
+        name: ruff format
+        files: ^api/(app/|main\.py)

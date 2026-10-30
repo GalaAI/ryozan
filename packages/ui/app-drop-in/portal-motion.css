@@ -1,0 +1,138 @@
+/* ══════════════════════════════════════════════════════
+   BTTCO — PORTAL MOTION + UTILITY CLASSES
+   Drop at: app/src/styles/portal-motion.css
+   Import in app/src/index.css AFTER scene-compat.css.
+
+   Extracted verbatim from the two design scenes. These are the named
+   animations and utility classes the scenes reference by name — without them
+   sheets appear with no entrance, cards do not deal, the grain film is flat,
+   and the nav rail loses its hover behaviour. Not decoration: the handoff
+   calls this motion language product.
+
+   The authoring rig's own rules (.pom-desk, .pom-side, .pom-dock,
+   .pom-pickcur) are stripped — those are the motion/aesthetics desk and must
+   never ship.
+
+   GSAP drives entrances, exits and casts; these keyframes cover the pieces
+   CSS owns. gsap@3.15 and @gsap/react are already in app/package.json.
+
+   REMOVED: the yard/pod strip (.bt-yard, [data-yard], bt-yard-idle/run/wave).
+   It animated a sprite sheet we do not have assets for. Cut deliberately —
+   do not re-add it from memory.
+   ══════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* ── from Portal Mobile v2.dc.html ─────────────────────────── */
+body{margin:0;background:var(--ground,#121312)}
+a{color:var(--gold,#a67d43);text-decoration:none}
+a:hover{color:var(--ink,#e8dfcf)}
+*,*::before,*::after{box-sizing:border-box}
+@keyframes pomSheetIn{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes pomCast{0%{transform:translateY(0) rotate(var(--cr,0deg)) rotateY(0deg)}18%{transform:translateY(-26px) rotate(calc(var(--cr,0deg) * .3)) rotateY(0deg)}34%{transform:translateY(-20px) rotate(-3deg) rotateY(0deg)}48%{transform:translateY(-26px) rotate(3deg) rotateY(0deg)}62%{transform:translateY(-24px) rotate(0deg) rotateY(90deg)}72%{transform:translateY(-24px) rotate(0deg) rotateY(180deg)}100%{transform:translateY(-320px) scale(.72) rotateY(180deg);opacity:0}}
+@keyframes pomIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes pomRide{from{offset-distance:0%}to{offset-distance:100%}}
+@keyframes pomRimBreathe{0%,100%{opacity:.5}45%{opacity:1}}
+@keyframes pomEmb{0%{color:rgba(0,0,0,.5);filter:drop-shadow(0 0 0 rgba(0,0,0,0))}26%{color:var(--emb,#70c27b);filter:drop-shadow(0 0 8px var(--emb,#70c27b))}48%{color:var(--emb,#70c27b);filter:drop-shadow(0 0 8px var(--emb,#70c27b))}100%{color:rgba(0,0,0,.5);filter:drop-shadow(0 0 0 rgba(0,0,0,0))}}
+@keyframes pomCardIn{from{opacity:0;transform:translateY(14px) rotateX(22deg)}to{opacity:1;transform:none}}
+@keyframes pomLabRise{from{opacity:0;transform:translateY(41px)}to{opacity:1;transform:none}}
+/* the cast card arrives as the object that just left the hand: it enters small
+   from below, travels up into the response row, holds, then expands to full size */
+@keyframes pomCastLand{
+0%{opacity:0;transform:translateY(150px) scale(.44) rotate(-5deg)}
+18%{opacity:1}
+52%{transform:translateY(0) scale(.44) rotate(0deg)}
+62%{transform:translateY(0) scale(.44)}
+100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes pomRec{from{opacity:0;transform:translateY(7px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes pomStamp{0%{opacity:0;transform:translate(-50%,-50%) rotate(-12deg) scale(1.5)}55%{opacity:1;transform:translate(-50%,-50%) rotate(-12deg) scale(.94)}75%{transform:translate(-50%,-50%) rotate(-12deg) scale(1.03)}100%{opacity:1;transform:translate(-50%,-50%) rotate(-12deg) scale(1)}}
+@keyframes pomPress{0%{opacity:0;transform:rotate(var(--pr,-7deg)) scale(1.42)}46%{opacity:1;transform:rotate(var(--pr,-7deg)) scale(.9)}64%{transform:rotate(var(--pr,-7deg)) scale(1.05)}82%{transform:rotate(var(--pr,-7deg)) scale(.98)}100%{opacity:1;transform:rotate(var(--pr,-7deg)) scale(1)}}
+@keyframes pomRecoil{0%,100%{transform:none}38%{transform:translateY(1.5px) scale(.994)}}
+@keyframes pomBlink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes pomDeal{from{opacity:0;transform:translateY(16px) rotate(-3deg) scale(.96)}to{opacity:1;transform:none}}
+@keyframes pomPlay{from{opacity:0;transform:translateY(80px) rotate(11deg) scale(.9)}60%{opacity:1;transform:translateY(-6px) rotate(-2deg)}to{opacity:1;transform:none}}
+/* shared CTA state: coral + glow on hover and press. Put .bt-cta on any
+   outline button that should light up when touched. */
+.bt-cta{transition:border-color .18s ease,color .18s ease,box-shadow .22s ease,text-shadow .22s ease}
+.bt-cta:hover,.bt-cta:focus-visible{border-color:var(--alt-pink,#fd8e8e)!important;color:var(--alt-pink,#fd8e8e)!important;box-shadow:0 0 14px rgba(253,142,142,.45),0 0 30px rgba(253,142,142,.18);text-shadow:0 0 10px rgba(253,142,142,.55);outline:none}
+.bt-cta:active{border-color:var(--alt-pink,#fd8e8e)!important;color:#22100a!important;background:var(--alt-pink,#fd8e8e)!important;box-shadow:0 0 18px rgba(253,142,142,.6),0 0 38px rgba(253,142,142,.25);text-shadow:none}
+/* modest depth: one light source at the top of the screen. Surfaces get a
+   hairline top highlight and a soft cast shadow so they read as sitting
+   above the field rather than printed on it. */
+@keyframes btSweep{0%{transform:translateX(-110%);opacity:0}12%{opacity:.9}50%{transform:translateX(290%);opacity:.9}62%{opacity:0}100%{transform:translateX(290%);opacity:0}}
+/* edge fades only appear on a side that actually has content scrolled past it,
+   so the first and last tiles are never dimmed at rest */
+[data-gal-mask="both"]{-webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,0),#000 22px,#000 calc(100% - 22px),rgba(0,0,0,0));mask-image:linear-gradient(90deg,rgba(0,0,0,0),#000 22px,#000 calc(100% - 22px),rgba(0,0,0,0))}
+[data-gal-mask="start"]{-webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,0),#000 22px);mask-image:linear-gradient(90deg,rgba(0,0,0,0),#000 22px)}
+[data-gal-mask="end"]{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),rgba(0,0,0,0));mask-image:linear-gradient(90deg,#000 calc(100% - 22px),rgba(0,0,0,0))}
+.bt-lift{box-shadow:inset 0 1px 0 rgba(232,223,207,.07),0 1px 2px rgba(0,0,0,.5),0 8px 20px -10px rgba(0,0,0,.75)}
+.pom-scroll{scrollbar-width:none;-webkit-overflow-scrolling:touch}
+/* iOS zooms the page whenever a focused field is under 16px — so on device
+   every field renders at 16px. Nothing else changes. */
+@media (max-width:560px){input,textarea,select{font-size:16px!important}}
+.pom-scroll::-webkit-scrollbar{display:none}
+/* real phone only: bottom-anchored surfaces clear the home indicator */
+@media (max-width:560px){
+  [role="dialog"]{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))!important}
+  button[aria-label="Open agent chat"]{bottom:calc(84px + env(safe-area-inset-bottom,0px))!important}
+  [data-sheet][aria-label="Booky debrief"]{bottom:calc(88px + env(safe-area-inset-bottom,0px))!important}
+}
+/* touch only: every small control gains an invisible 44px minimum hit area */
+@media (max-width:560px) and (pointer:coarse){
+  button{position:relative}
+  button::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:max(100%,44px);height:max(100%,44px)}
+}
+
+/* ── from BTTCO Portal One.dc.html ─────────────────────────── */
+body{margin:0;background:var(--ground)}
+a{color:var(--gold);text-decoration:none}
+a:hover{color:var(--ink)}
+::-webkit-scrollbar{width:0;height:0}
+*,*::before,*::after{box-sizing:border-box}
+/* PERF: live SVG turbulence + backdrop blur are the mobile framerate killers.
+   Coarse pointers get a cheap static grain and opaque panels instead. */
+@media (pointer:coarse){
+  [data-screen-label]{-webkit-overflow-scrolling:touch}
+  .bt-cast,.bt-castbar,[aria-live="polite"]{display:none!important}
+  [aria-label="Chat with Gala"]{bottom:calc(60px + env(safe-area-inset-bottom))!important}
+  .bt-grain{display:none}
+  [data-grainy]{background-image:radial-gradient(rgba(232,223,207,.05) .5px,transparent .5px);background-size:3px 3px}
+  [style*="backdrop-filter"]{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+}
+.bt-tip{position:absolute;top:calc(100% + 7px);right:0;z-index:120;pointer-events:none;opacity:0;transform:translateY(-3px);transition:opacity .16s ease,transform .16s ease;white-space:normal;width:max-content;max-width:190px;text-align:right;line-height:1.5;background:#0d0d0c;border:1px solid rgba(200,161,94,.35);border-radius:8px;padding:5px 9px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:none;color:#d8b98a;text-shadow:0 0 8px rgba(200,161,94,.55);box-shadow:0 8px 20px rgba(0,0,0,.5)}
+[data-tip]:hover .bt-tip{opacity:1;transform:none}
+[data-tip]:hover{z-index:60}
+img,svg,canvas,video{max-width:100%}
+input,textarea,select,button{max-width:100%;font:inherit}
+[data-screen-label]{position:relative;scroll-behavior:auto;overscroll-behavior:contain}
+[data-screen-label]>*{min-width:0}
+@keyframes stuIn{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+@keyframes stuArt{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes stuBlink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes stuShine{from{background-position:-160px 0}to{background-position:240px 0}}
+/* MOBILE SCROLL MODEL: every top-level panel fits the space between the header
+   and the Pod (the screen scroller's own height). A panel taller than that
+   scrolls INSIDE itself; when its content runs out, the scroll chains to the
+   page, which snaps to the next panel. scroll-snap-stop keeps a hard flick
+   from skipping panels. Scoped to data-mobile so desktop keeps GSAP snap. */
+@keyframes bt-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes bt-blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes bt-gala-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes bt-spawn{from{opacity:0;transform:translateY(24px) scale(.82)}to{opacity:1;transform:none}}
+@media (max-height:700px){
+  .bt-wordmark{display:none !important}
+  .bt-medallion{display:none !important}
+  /* wordmark + medallion are gone, so the swallowtail no longer needs 58px of skirt */
+  .bt-rail-panel{padding-bottom:30px !important}
+  .bt-banner-nav{gap:2px !important;margin-top:8px !important}
+  .bt-banner-nav .bt-nav-box{width:36px !important;height:28px !important}
+  .bt-banner-nav .bt-nav-label{font-size:10.5px !important;letter-spacing:.08em !important}
+}
+@media (max-height:470px){
+  .bt-banner-nav .bt-nav-label{display:none !important}
+  .bt-rail-panel{padding-bottom:22px !important}
+}
+.bt-banner-nav{flex:0 0 auto}
+.bt-wordmark{flex:1 1 0;min-height:0}

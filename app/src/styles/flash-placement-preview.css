@@ -1,0 +1,485 @@
+/* Co-owned by FlashPlacementPreview: no previous stylesheet owned camera compositing. */
+/*
+ * ShopPage also renders inside the public artist portfolio, outside DashboardLayout.
+ * These scoped rules preserve the public storefront without loading the full dashboard
+ * stylesheet into a collector-facing route.
+ */
+.portfolio-page .shop-page {
+  width: min(1120px, calc(100% - 32px));
+  height: auto;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 24px 0 56px;
+  overflow: visible;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.portfolio-page .shop-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.portfolio-page .shop-header h2 {
+  margin: 0;
+  color: #d9bf95;
+  font: 700 clamp(1.15rem, 4vw, 1.55rem) / 1.1 "Space Grotesk", sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.portfolio-page .shop-count {
+  color: rgba(226, 218, 194, 0.68);
+  font: 0.72rem / 1.4 "Geist Mono", monospace;
+}
+
+.portfolio-page .shop-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.portfolio-page .shop-filter-btn {
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid rgba(217, 191, 149, 0.26);
+  border-radius: 999px;
+  color: rgba(226, 218, 194, 0.72);
+  background: rgba(217, 191, 149, 0.04);
+  font: 700 0.68rem / 1 "Space Grotesk", sans-serif;
+  text-transform: capitalize;
+}
+
+.portfolio-page .shop-filter-btn.active,
+.portfolio-page .shop-filter-btn:hover {
+  border-color: #d9bf95;
+  color: #d9bf95;
+  background: rgba(217, 191, 149, 0.1);
+}
+
+.portfolio-page .shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.portfolio-page .shop-design-card {
+  overflow: hidden;
+  border: 1px solid rgba(217, 191, 149, 0.24);
+  border-radius: 14px;
+  color: #e2dac2;
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.portfolio-page .shop-design-card:hover,
+.portfolio-page .shop-design-card:focus-visible,
+.portfolio-page .shop-design-card.selected {
+  border-color: #d9bf95;
+  box-shadow: 0 0 0 1px rgba(217, 191, 149, 0.6);
+  outline: none;
+}
+
+.portfolio-page .shop-design-card:hover {
+  transform: translateY(-2px);
+}
+
+.portfolio-page .shop-design-card.claimed {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.portfolio-page .shop-design-preview,
+.portfolio-page .shop-design-placeholder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #090909;
+}
+
+.portfolio-page .shop-design-placeholder {
+  display: grid;
+  place-items: center;
+  color: rgba(226, 218, 194, 0.55);
+  font-size: 0.75rem;
+}
+
+.portfolio-page .shop-design-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+
+.portfolio-page .shop-design-info {
+  display: grid;
+  gap: 5px;
+  padding: 14px 14px 10px;
+}
+
+.portfolio-page .shop-design-name {
+  overflow: hidden;
+  color: #e2dac2;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.portfolio-page .shop-design-style,
+.portfolio-page .shop-design-time {
+  color: rgba(226, 218, 194, 0.62);
+  font-size: 0.7rem;
+  text-transform: capitalize;
+}
+
+.portfolio-page .shop-design-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px 14px;
+}
+
+.portfolio-page .shop-design-price,
+.portfolio-page .shop-design-price-tbd {
+  color: #d9bf95;
+  font: 700 0.88rem / 1 "Geist Mono", monospace;
+}
+
+.portfolio-page .shop-selected-badge,
+.portfolio-page .shop-claimed-badge {
+  padding: 3px 7px;
+  border: 1px solid rgba(217, 191, 149, 0.5);
+  border-radius: 5px;
+  color: #d9bf95;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.portfolio-page .flash-checkout-bar {
+  position: sticky;
+  top: 10px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d9bf95;
+  border-radius: 12px;
+  background: rgba(18, 18, 18, 0.96);
+  backdrop-filter: blur(10px);
+}
+
+.portfolio-page .flash-checkout-info {
+  display: grid;
+  gap: 3px;
+}
+
+.portfolio-page .flash-checkout-count {
+  color: #e2dac2;
+  font-weight: 700;
+}
+
+.portfolio-page .flash-checkout-discount {
+  color: #d9bf95;
+  font-size: 0.68rem;
+}
+
+.portfolio-page .flash-checkout-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portfolio-page .shop-claim-btn,
+.portfolio-page .flash-checkout-clear {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d9bf95;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.portfolio-page .shop-claim-btn {
+  color: #111;
+  background: #d9bf95;
+}
+
+.portfolio-page .flash-checkout-clear {
+  color: #e2dac2;
+  background: transparent;
+}
+
+.portfolio-page .shop-loading,
+.portfolio-page .shop-empty {
+  padding: 48px 20px;
+  color: rgba(226, 218, 194, 0.68);
+  text-align: center;
+}
+
+.placement-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  background: rgba(4, 4, 4, 0.86);
+  backdrop-filter: blur(14px);
+}
+
+.placement-preview-dialog {
+  width: min(760px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  border: 1px solid rgba(217, 191, 149, 0.36);
+  border-radius: 18px;
+  padding: 18px;
+  color: #e2dac2;
+  background: #121212;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.placement-preview-header,
+.placement-preview-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.placement-preview-header h2 {
+  margin: 3px 0 0;
+  font: 700 clamp(1.15rem, 4vw, 1.55rem) / 1.1 "Space Grotesk", sans-serif;
+}
+
+.placement-preview-kicker {
+  color: #d9bf95;
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.placement-preview-close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border: 1px solid rgba(226, 218, 194, 0.22);
+  border-radius: 50%;
+  color: inherit;
+  background: transparent;
+  font-size: 1.6rem;
+}
+
+.placement-preview-privacy,
+.placement-preview-footer p {
+  margin: 10px 0;
+  color: rgba(226, 218, 194, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.placement-preview-source-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.placement-preview-source-actions button,
+.placement-preview-footer button {
+  min-height: 46px;
+  border: 1px solid rgba(217, 191, 149, 0.34);
+  border-radius: 10px;
+  color: #e2dac2;
+  background: rgba(217, 191, 149, 0.08);
+  font-weight: 700;
+}
+
+.placement-preview-source-actions button.is-active,
+.placement-preview-footer button:not(:disabled) {
+  color: #101010;
+  background: #d9bf95;
+}
+
+.placement-preview-stage {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border: 1px solid rgba(226, 218, 194, 0.18);
+  border-radius: 14px;
+  background: #090909;
+}
+
+.placement-preview-stage video,
+.placement-preview-background {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placement-preview-flash {
+  position: absolute;
+  z-index: 2;
+  height: auto;
+  max-width: none;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.28));
+}
+
+.placement-preview-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: rgba(226, 218, 194, 0.58);
+  text-align: center;
+}
+
+.placement-preview-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 14px;
+  margin-top: 14px;
+}
+
+.placement-preview-controls label {
+  display: grid;
+  gap: 6px;
+  color: rgba(226, 218, 194, 0.74);
+  font-size: 0.72rem;
+}
+
+.placement-preview-controls label:first-child {
+  grid-column: 1 / -1;
+}
+
+.placement-preview-controls select {
+  min-height: 46px;
+  border: 1px solid rgba(226, 218, 194, 0.22);
+  border-radius: 9px;
+  padding: 0 12px;
+  color: #e2dac2;
+  background: #1a1a1a;
+  font-size: 16px;
+}
+
+.placement-preview-controls input[type="range"] {
+  width: 100%;
+  accent-color: #d9bf95;
+}
+
+.placement-preview-consent {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 16px 0 8px;
+  color: rgba(226, 218, 194, 0.78);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.placement-preview-consent input {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  accent-color: #d9bf95;
+}
+
+.placement-preview-error {
+  margin: 10px 0;
+  color: #ffad9f;
+  font-size: 0.8rem;
+}
+
+.placement-preview-footer {
+  align-items: center;
+  margin-top: 12px;
+}
+
+.placement-preview-footer p {
+  max-width: 420px;
+}
+
+.placement-preview-footer button {
+  min-width: 170px;
+  padding: 0 16px;
+}
+
+.placement-preview-footer button:disabled {
+  opacity: 0.42;
+}
+
+.shop-preview-tryon-btn {
+  width: calc(100% - 24px);
+  min-height: 44px;
+  margin: 0 12px 12px;
+  border: 1px solid rgba(217, 191, 149, 0.42);
+  border-radius: 9px;
+  color: #e2dac2;
+  background: rgba(217, 191, 149, 0.08);
+  font: 700 0.76rem / 1 "Space Grotesk", sans-serif;
+  letter-spacing: 0.04em;
+}
+
+.fb-preview-btn {
+  width: 100%;
+  min-height: 46px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(217, 191, 149, 0.42);
+  border-radius: 9px;
+  color: #e2dac2;
+  background: rgba(217, 191, 149, 0.08);
+  font-weight: 700;
+}
+
+@media (max-width: 560px) {
+  .portfolio-page .shop-page {
+    width: min(100% - 24px, 1120px);
+    padding-top: 18px;
+  }
+
+  .portfolio-page .shop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-page .flash-checkout-bar,
+  .portfolio-page .flash-checkout-right {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .placement-preview-dialog {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .placement-preview-controls,
+  .placement-preview-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .placement-preview-footer {
+    display: grid;
+  }
+
+  .placement-preview-footer button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .placement-preview-backdrop {
+    backdrop-filter: none;
+  }
+}

@@ -1,0 +1,413 @@
+name: Backend CI
+
+on:
+  # Hosted-runner contingency only. Navigate publishes these same required
+  # contexts from the Ark execution sandbox for every PR head SHA.
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Backend Verify
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install dependencies and pinned Ruff
+        run: pip install -r requirements.txt ruff==0.15.13
+
+      - name: Ruff lint
+        run: ruff check app/ main.py
+
+      - name: Ruff format check
+        run: ruff format --check app/ main.py
+
+      - name: Syntax check (all API and test modules)
+        # A bad find-and-replace once left an invalid identifier in config.py and
+        # two test files; py_compile on main.py alone never saw the tests.
+        run: python -m compileall -q main.py app tests scripts
+
+      - name: Import all endpoint modules
+        run: |
+          python -c "
+          import importlib, sys
+          modules = [
+            'app.api.v1.router',
+            'app.api.v1.endpoints.admin_api_usage',
+            'app.api.v1.endpoints.ai',
+            'app.api.v1.endpoints.ai_memories',
+            'app.api.v1.endpoints.archive',
+            'app.api.v1.endpoints.artists',
+            'app.api.v1.endpoints.auth',
+            'app.api.v1.endpoints.bookings',
+            'app.api.v1.endpoints.broadcasts',
+            'app.api.v1.endpoints.calendar',
+            'app.api.v1.endpoints.club',
+            'app.api.v1.endpoints.conversations',
+            'app.api.v1.endpoints.dashboard',
+            'app.api.v1.endpoints.documents',
+            'app.api.v1.endpoints.email_automations',
+            'app.api.v1.endpoints.email_connect',
+            'app.api.v1.endpoints.email_inbound',
+            'app.api.v1.endpoints.email_log',
+            'app.api.v1.endpoints.email_templates',
+            'app.api.v1.endpoints.flash',
+            'app.api.v1.endpoints.google_auth',
+            'app.api.v1.endpoints.messages',
+            'app.api.v1.endpoints.notification_preferences',
+            'app.api.v1.endpoints.notifications',
+            'app.api.v1.endpoints.gala_chat',
+            'app.api.v1.endpoints.plaid',
+            'app.api.v1.endpoints.pos',
+            'app.api.v1.endpoints.push',
+            'app.api.v1.endpoints.quests',
+            'app.api.v1.endpoints.quotes',
+            'app.api.v1.endpoints.references',
+            'app.api.v1.endpoints.response_templates',
+            'app.api.v1.endpoints.scrolls',
+            'app.api.v1.endpoints.session_types',
+            'app.api.v1.endpoints.stripe_connect',
+            'app.api.v1.endpoints.stripe_webhooks',
+            'app.api.v1.endpoints.users',
+            'app.api.v1.endpoints.waiver',
+          ]
+          failed = []
+          for m in modules:
+            try:
+              importlib.import_module(m)
+              print(f'  OK: {m}')
+            except Exception as e:
+              print(f'  FAIL: {m} - {e}')
+              failed.append(m)
+          if failed:
+            print(f'\n{len(failed)} module(s) failed to import.')
+            sys.exit(1)
+          print(f'\nAll {len(modules)} modules imported successfully.')
+          "
+
+      - name: Import all models
+        run: python -c "import app.models; print('All models loaded successfully')"
+
+      - name: Router route count
+        run: |
+          python -c "
+          from fastapi import FastAPI
+          from app.api.v1.router import api_router
+          app = FastAPI(); app.include_router(api_router, prefix='/api/v1')
+          n = sum(len(v) for v in app.openapi()['paths'].values())
+          print(f'Router loaded: {n} operations')
+          assert n > 100
+          "
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -p "*_tests.py"
+
+  migrations:
+    name: Schema boot
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    # Production builds its schema on boot, not from Alembic: main.py's
+    # _run_startup_migrations() runs Base.metadata.create_all plus a list of
+    # idempotent ALTERs. That path was only ever exercised against a database
+    # that already had the schema -- a fresh or half-built database was first
+    # tried in production (the 500 the deploy watchdog exists to catch).
+    #
+    # This job replays the real boot path against an empty Postgres, then
+    # checks Alembic and the ORM still agree: with the schema stamped at head,
+    # `alembic upgrade head` must be a clean no-op. A model added without a
+    # matching migration, or a broken migration, fails the PR instead of the
+    # live site.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nexus
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nexus"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/nexus
+      DATABASE_SYNC_URL: postgresql://postgres:postgres@localhost:5432/nexus
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Single migration head
+        run: |
+          heads=$(python -m alembic heads | grep -c '(head)')
+          echo "alembic heads: $heads"
+          test "$heads" -eq 1
+
+      - name: Booking approval integration
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "booking_approval_pg_tests.py"
+
+      - name: Duplicate-email migration integration
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "boot_email_index_pg_tests.py"
+
+      - name: Courier SMS booking routing integration
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "courier_sms_booking_routing_pg_tests.py"
+
+      - name: POS attempt integration
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "pos_attempt_pg_tests.py"
+
+      - name: Production boot schema path against an empty database
+        run: |
+          python -c "
+          import asyncio
+          from main import _run_startup_migrations
+          asyncio.run(_run_startup_migrations())
+          "
+
+      - name: Core tables exist
+        run: |
+          python -c "
+          import sqlalchemy as sa
+          from app.core.config import get_settings
+          e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
+          names = sa.inspect(e).get_table_names()
+          bttco = [n for n in names if n.startswith('bttco_')]
+          print(f'bttco tables created: {len(bttco)}')
+          missing = {'bttco_users', 'bttco_bookings'} - set(names)
+          assert not missing, f'missing core tables: {missing}'
+          assert len(bttco) > 40, f'suspiciously few tables: {len(bttco)}'
+          "
+
+      - name: Startup migrations ran to completion (no swallowed error)
+        # _run_startup_migrations wraps every raw statement in one try/except
+        # that prints "(non-fatal)" and returns, so a failure part-way through
+        # silently skips everything after it and the job still goes green. The
+        # starter-quest seed is the last statement in that block that has
+        # actually broken in production (it omitted the NOT NULL id/is_active/
+        # created_at values create_all does not give server defaults for), so
+        # requiring the quests to be present proves the block ran end to end.
+        run: |
+          python -c "
+          import sqlalchemy as sa
+          from app.core.config import get_settings
+          e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
+          with e.connect() as c:
+              n = c.execute(sa.text('SELECT count(*) FROM bttco_quests')).scalar()
+          assert n > 0, (
+              'bttco_quests is empty after the boot path. The seed INSERT raised and '
+              'was swallowed by the non-fatal handler, which also skipped every '
+              'statement after it.'
+          )
+          print(f'starter quests seeded: {n}')
+          "
+
+      - name: Built-in scroll categories seeded by the boot path
+        # bttco_scroll_categories was created by create_all but seeded only
+        # inside alembic (20260330 seeds artist/shop/misc, 20260426 renames misc
+        # -> templates). Production has no alembic_version table, so neither
+        # migration ever ran there and the table shipped empty -- every
+        # /scrolls/{category_slug} lookup 404'd and the feature was dead.
+        # This job is the only place that can catch that class of bug, because
+        # it replays the boot path against an empty database exactly as
+        # production does.
+        #
+        # Six of the seven rows are required, not just the migrations' three.
+        # ScrollsPanel.tsx does
+        #   .then(cats => { if (cats.length > 0) setCategories(cats) })
+        # so it swaps its six-tab BUILTIN_CATEGORIES fallback for whatever the
+        # API returns. A three-row seed would silently remove the Waivers,
+        # Upkeep and Quest Log tabs. Assert the reconciled post-20260426 slugs
+        # ('templates', not the superseded 'misc') and every builtin flag.
+        #
+        # The seventh, 'owner-archive' ("Artist Scrolls"), is backend-owned and
+        # deliberately absent from BUILTIN_CATEGORIES -- it is the owner's copy
+        # of every submitted Artist Scroll, not a frontend fallback tab. Its
+        # slug is hardcoded in app/services/scroll_archive.py, so without the
+        # row list_category_docs 404s while submit_scroll keeps filing archive
+        # rows into it.
+        run: |
+          python -c "
+          import sqlalchemy as sa
+          from app.core.config import get_settings
+          e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
+          with e.connect() as c:
+              rows = c.execute(sa.text(
+                  'SELECT slug, label, icon, sort_order, is_builtin FROM bttco_scroll_categories '
+                  'ORDER BY sort_order'
+              )).all()
+          got = [tuple(r) for r in rows]
+          want = [
+              ('artist', 'Artist', '📜', 0, True),
+              ('shop', 'Shop', '🏪', 1, True),
+              ('templates', 'Templates', 'message-square', 2, True),
+              ('waivers', 'Waivers', '📋', 3, True),
+              ('upkeep', 'Upkeep', '🔧', 4, True),
+              ('quests', 'Quest Log', 'quest', 5, True),
+              ('owner-archive', 'Artist Scrolls', 'archive', 6, True),
+          ]
+          assert got == want, (
+              f'built-in scroll categories are wrong after the boot path.\n'
+              f'  want: {want}\n  got:  {got}\n'
+              'With no rows every scrolls category endpoint returns 404 and the '
+              'feature is unusable. With a partial seed the frontend replaces its '
+              'six-tab fallback with fewer tabs and the missing ones vanish. '
+              'Seeding these only in an alembic migration does not reach '
+              'production, which has never run alembic.'
+          )
+          print(f'built-in scroll categories seeded: {got}')
+          "
+
+      - name: Every model column exists in the database
+        run: |
+          python -c "
+          import sqlalchemy as sa
+          from app.core.database import Base
+          from app.core.config import get_settings
+          from app.api.v1 import router as _r  # noqa: F401  registers every model
+          e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
+          insp = sa.inspect(e)
+          live = set(insp.get_table_names())
+          drift = []
+          for t in Base.metadata.sorted_tables:
+              if t.name not in live:
+                  drift.append(f'{t.name}: table missing entirely')
+                  continue
+              have = {c['name'] for c in insp.get_columns(t.name)}
+              for col in t.columns:
+                  if col.name not in have:
+                      drift.append(f'{t.name}.{col.name}')
+          if drift:
+              raise SystemExit(
+                  'Model declares columns the database does not have. Every query '
+                  'touching these tables would raise UndefinedColumn at runtime:\n  '
+                  + '\n  '.join(drift)
+              )
+          print(f'model/database parity OK across {len(Base.metadata.sorted_tables)} tables')
+          "
+
+      - name: A new column on an existing table reaches the database
+        # The regression this job exists for. create_all only creates missing
+        # TABLES, so before the additive reconciler a new column on a table that
+        # already existed in production was silently dropped on the floor and
+        # surfaced as UndefinedColumn on the first request after deploy. Drop a
+        # column from a populated table, replay the boot path, and require it back.
+        run: |
+          python -c "
+          import asyncio
+          from sqlalchemy import inspect, select, text
+          from sqlalchemy.ext.asyncio import AsyncSession
+          from main import _run_startup_migrations
+          from app.core.database import engine
+          from app.api.v1 import router as _r  # noqa: F401
+          from app.models.user import BTTCOUser
+
+          TABLE, COLUMN = 'bttco_users', 'booking_buffer_enabled'
+
+          async def main():
+              async with AsyncSession(engine) as s:
+                  s.add(BTTCOUser(email='ci@bttco.test', password_hash='x', name='CI', role='artist'))
+                  await s.commit()
+              async with engine.begin() as c:
+                  await c.execute(text(f'ALTER TABLE {TABLE} DROP COLUMN {COLUMN}'))
+              cols = lambda si: {x['name'] for x in inspect(si).get_columns(TABLE)}
+              async with engine.connect() as c:
+                  assert COLUMN not in await c.run_sync(cols), 'setup failed: column still present'
+              print(f'simulated production predating {TABLE}.{COLUMN}, table has rows')
+
+              await _run_startup_migrations()
+
+              async with engine.connect() as c:
+                  assert COLUMN in await c.run_sync(cols), (
+                      f'REGRESSION: {TABLE}.{COLUMN} is on the model but did not reach '
+                      'the database. Adding a column to an existing table is broken again.'
+                  )
+              async with AsyncSession(engine) as s:
+                  user = (await s.execute(select(BTTCOUser))).scalars().first()
+                  assert user.booking_buffer_enabled is True, 'existing row did not get the server default'
+              print('column healed and the pre-existing row carries the server default')
+
+          asyncio.run(main())
+          "
+
+      - name: Alembic agrees with the ORM (stamp head, upgrade is a no-op)
+        run: |
+          python -m alembic stamp head
+          python -m alembic upgrade head
+          python -m alembic current | tee /tmp/current.txt
+          grep -q '(head)' /tmp/current.txt
+
+      - name: Router loads against the booted schema
+        run: |
+          python -c "
+          from fastapi import FastAPI
+          from app.api.v1.router import api_router
+          app = FastAPI(); app.include_router(api_router, prefix='/api/v1')
+          n = sum(len(v) for v in app.openapi()['paths'].values())
+          print(f'Router loaded: {n} operations')
+          assert n > 100
+          "
+
+  ryozan-econ:
+    name: Ryozan E-con
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ryozan-econ
+    # The bookkeeping core is pure domain logic: no dependencies, no database, no
+    # BTTCO imports, so it needs none of the verify job's setup. Its whole value
+    # is its invariants -- entries balance, the trial balance ties, the balance
+    # sheet ties, a deposit stays a liability until earned -- and those are cheap
+    # to prove, so they are proven on every run rather than assumed.
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Invariant tests
+        run: PYTHONPATH=. python -m unittest discover -s tests -p "*_tests.py" -v
+
+      - name: Lint with the repo ruff config
+        run: |
+          pip install ruff==0.15.13
+          ruff check --config ../../api/ruff.toml .
+          ruff format --check --config ../../api/ruff.toml .
+
+  # API deployment is owned by Railway's native Git integration after an
+  # authorized PR reaches main. Navigate requires Backend Verify, Schema boot,
+  # and Frontend Verify on the exact PR SHA, then observes the exact Railway
+  # production SHA, Vercel frontend, and live health before the next merge.

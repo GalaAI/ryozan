@@ -1,0 +1,91 @@
+version: 2
+
+# Major version updates are NOT raised for the application ecosystems below.
+# The pile they created was unmergeable in practice: eslint 10, vite 8,
+# typescript 7, @vitejs/plugin-react 6 and @eslint/js 10 all failed Type Check,
+# and react-plaid-link 5 changed its TypeScript types. Each needs a deliberate
+# migration with someone watching, not an auto-raised PR competing for review
+# attention with the patch and minor updates that actually are safe.
+#
+# github-actions keeps majors on purpose: those bumps are CI infrastructure,
+# they cannot reach production, and holding them back would strand the runners
+# on unsupported action versions.
+#
+# To take a major deliberately: bump it by hand on a branch and let CI judge it.
+#
+# Grouping (2026-10-20): daily one-bump-per-PR intake produced about twenty
+# open Dependabot PRs at a time, each a separate production deploy on merge
+# (Railway and Vercel deploy from main). Updates now arrive weekly as one PR
+# per ecosystem, so each week is one review, one local verification and one
+# deploy per surface. open-pull-requests-limit stays at 10 so a group PR that
+# is held is not blocked from being refreshed, and so a security update, which
+# Dependabot raises outside the schedule, can still open on its own.
+
+updates:
+  # Frontend. Covered by Frontend CI (Type Check, Build, Lint) and Backend CI.
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "automerge"
+    groups:
+      app-npm-weekly:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+  # Backend. Covered by Backend CI (Lint & Validate, Import Validation, Tests,
+  # Schema boot). Runtime deps here sit under payments and booking, so a major
+  # is a deliberate change, never an automatic one.
+  - package-ecosystem: "pip"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "automerge"
+    groups:
+      api-pip-weekly:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+  # CI infrastructure only. Majors stay enabled here deliberately -- see above,
+  # so the group includes them.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "automerge"
+    groups:
+      github-actions-weekly:
+        patterns:
+          - "*"

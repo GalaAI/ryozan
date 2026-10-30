@@ -1,0 +1,9 @@
+# BTTCO API development-only dependencies
+# Install: pip install -r requirements-dev.txt
+#
+# This file pins the same versions CI uses so local lint/format
+# results match `Backend CI` on GitHub. When CI's pin changes,
+# this file changes too.
+
+# Linter + formatter (must match .github/workflows/api.yml + .pre-commit-config.yaml)
+ruff==0.16.8

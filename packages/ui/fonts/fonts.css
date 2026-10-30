@@ -1,0 +1,19 @@
+/* @bttco/ui — font faces. Paths are relative to this file.
+   Faces shipped: KC Tallboy (+Inked), KC SimpleSans (+Inked), Suti,
+   Aero Wolves (Regular/Outline/Stamp, upright + oblique).
+   Google-hosted members of the stack (Inter, Oswald, Bebas Neue,
+   IBM Plex Mono, JetBrains Mono) are NOT vendored here — load them
+   from the app shell. See CONFLICTS.md #4 for Poppins / Space Grotesk. */
+
+@font-face { font-family: "KC Tallboy"; src: local("KC Tallboy"), url("./KCTallboy.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: "KC Tallboy Inked"; src: local("KC Tallboy Inked"), url("./KCTallboy-Inked.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: "KC SimpleSans"; src: local("KC SimpleSans"), url("./KCSimpleSans.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: "KC SimpleSans Inked"; src: local("KC SimpleSans Inked"), url("./KCSimpleSans-Inked.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: "Suti"; src: local("Suti"), url("./Suti.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+
+@font-face { font-family: "Aero Wolves"; src: local("Aero Wolves"), url("./Aero_Wolves_Regular.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: "Aero Wolves"; src: local("Aero Wolves Oblique"), url("./Aero_Wolves_Oblique.otf") format("opentype"); font-weight: normal; font-style: italic; font-display: swap; }
+@font-face { font-family: "Aero Wolves Outline"; src: local("Aero Wolves Outline"), url("./Aero_Wolves_Outline.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: "Aero Wolves Outline"; src: local("Aero Wolves Oblique Outline"), url("./Aero_Wolves_Oblique_Outline.otf") format("opentype"); font-weight: normal; font-style: italic; font-display: swap; }
+@font-face { font-family: "Aero Wolves Stamp"; src: local("Aero Wolves Stamp"), url("./Aero_Wolves_Stamp.otf") format("opentype"); font-weight: normal; font-style: normal; font-display: swap; }
+@font-face { font-family: "Aero Wolves Stamp"; src: local("Aero Wolves Oblique Stamp"), url("./Aero_Wolves_Oblique_Stamp.otf") format("opentype"); font-weight: normal; font-style: italic; font-display: swap; }

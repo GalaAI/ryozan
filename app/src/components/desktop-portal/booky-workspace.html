@@ -1,0 +1,165 @@
+<div style="flex: 1 1 auto; min-height: 0; position: relative; display: grid; grid-template-columns: {{ gridSplitQ }}; grid-template-rows: {{ gridRowsQ }}; gap: 0; align-items: stretch; background: linear-gradient(180deg, rgba(28,29,28,.42), rgba(7,7,7,.92)), var(--well); border: 1px solid {{ agPanelLine }}; border-left: {{ weldBL }}; border-radius: {{ weldRad }}; box-shadow: none; overflow: {{ gridOverQ }}"><svg class="bt-grain" aria-hidden="true" width="100%" height="100%" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;mix-blend-mode:overlay;opacity:.22"><rect x="0" y="0" width="100%" height="100%" filter="url(#btGrainTiles)"></rect></svg>
+<div data-booking-detail="{{ selectedId }}" style="display: flex; flex-direction: column; min-height: 320px; min-width: 0; box-sizing: border-box; overflow: hidden">
+            <sc-if value="{{ isCollector }}" hint-placeholder-val="{{ false }}"><div style="flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;padding:14px 18px 0"><button type="button" style="min-height:30px;padding:0 14px;border-radius:99px;border:1px solid rgba(232,223,207,.45);background:transparent;color:rgba(232,223,207,.9);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase" style-hover="background:var(--accent-cream);color:#121312">Request a session</button></div></sc-if>
+            <sc-if value="{{ hudShowInq }}" hint-placeholder-val="{{ false }}">
+            <div style="position: relative; flex: {{ inquiryFlex }}; min-height: 0; overflow-y: auto; border-radius: 10px; background: var(--surface); border: 3px solid #D4C9B5CD; box-shadow: -10px 16px 53px 4px rgba(0,0,0,.4); width: calc(100% - 36px); max-width: 560px; box-sizing: border-box; margin: 14px auto 18px; display: flex; flex-direction: column">
+                <div style="position: relative; display: flex; align-items: stretch; border-bottom: 2px solid var(--line-2); border-color: #D4C9B5CC">
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:12px 13px 10px">
+                    <span style="font-family: 'JetBrains Mono',monospace; font-size:10.5px; letter-spacing: .14em; color: var(--ink-ghost)">{{ inqKind }} · {{ inqRef }} · {{ inqStatusTag }}</span>
+                    <span style="font-family: 'Poppins',sans-serif; font-weight: 800; font-size: 23px; line-height: 1.15; text-transform: uppercase"><span style="color:var(--accent-coral)">{{ inqTitleMain }}</span> <span style="color:var(--ink)">{{ inqTitleSub }}</span></span>
+                    <span style="font-family: 'JetBrains Mono',monospace; font-size: 12.5px; letter-spacing: .1em; color: var(--ink-ghost); margin-top: 3px">START TIME <span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:12px;letter-spacing:0;color:var(--ink)">{{ inqTime }}</span></span>
+                  </div>
+                  <div style="flex-shrink:0;display:flex;flex-direction:column;justify-content:center;padding:10px 13px;border-left:2px dotted var(--line-2)">
+                    <span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:26px;line-height:1;color:var(--ink)">{{ inqDay }}</span>
+                    <span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:15px;line-height:1.2;color:var(--ink)">{{ inqMon }}</span>
+                  </div>
+                </div>
+
+                <div style="flex-shrink: 0; margin-top: 3px; padding: 8px 13px; background: var(--surface); border-radius: 0 10px 10px 0; border-style: none">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:12.5px;line-height:1.55;color:var(--ink-mute);text-wrap:pretty">{{ inqDesc }}</span>
+              </div><div style="flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; margin: 6px 13px 0; border: 2px solid var(--line-2); border-color: #D4C9B5CC; border-radius: 12px">
+                  <span style="display: flex; flex-direction: column; padding: 8px 11px; border-right: 2px solid var(--line-2); border-bottom: 2px solid var(--line-2); border-color: #D4C9B5CC"><span style="font-family: 'JetBrains Mono',monospace; font-size:10.5px; letter-spacing: .16em; color: var(--ink-ghost)">TYPE</span><span style="font-family: 'Poppins',sans-serif; font-weight: 800; font-size: 14px; line-height: 1.15; text-transform: uppercase; color: var(--ink); position: relative; top: 2px">{{ inqType }}</span></span>
+                  <span style="display: flex; flex-direction: column; padding: 8px 11px; border-bottom: 2px solid var(--line-2); border-color: #D4C9B5CD"><span style="font-family: 'JetBrains Mono',monospace; font-size:10.5px; letter-spacing: .16em; color: var(--ink-ghost)">PLACEMENT</span><span style="font-family: 'Poppins',sans-serif; font-weight: 800; font-size: 14px; line-height: 1.15; text-transform: uppercase; color: var(--ink); position: relative; top: 2px">{{ inqPlacement }}</span></span>
+                  <span style="display: flex; flex-direction: column; padding: 8px 11px; border-right: 2px solid var(--line-2); border-color: #D4C9B5CC"><span style="font-family: 'JetBrains Mono',monospace; font-size:10.5px; letter-spacing: .16em; color: var(--ink-ghost)">SIZE</span><span style="font-family: 'Poppins',sans-serif; font-weight: 800; font-size: 14px; line-height: 1.15; text-transform: uppercase; color: var(--ink); position: relative; top: 2px">{{ inqSize }}</span></span>
+                  <span style="display:flex;flex-direction:column;padding:8px 11px"><span style="font-family: 'JetBrains Mono',monospace; font-size:10.5px; letter-spacing: .16em; color: var(--ink-ghost)">BUDGET</span><span style="font-family: 'Poppins',sans-serif; font-weight: 800; font-size: 14px; line-height: 1.15; text-transform: uppercase; color: var(--ink); position: relative; top: 2px">{{ inqBudget }}</span></span>
+                </div><sc-if value="{{ hudIsAppt }}" hint-placeholder-val="{{ false }}"><div style="flex-shrink:0;margin:12px 13px 0;display:flex"></div></sc-if><div style="flex: {{ referenceFlex }}; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 12px 13px 4px">
+                  <span style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-white)">Reference images</span>
+                  <div style="flex: {{ referenceRowFlex }}; min-height: {{ referenceMinHeight }}; display: flex; gap: 8px; align-items: stretch; overflow-x: auto">
+                    {{ referenceImages }}
+                  </div>
+                </div>
+                <div style="display: flex; flex-shrink:0; flex-direction: column; gap: 6px; padding: 10px 13px 13px; margin-top: auto">
+                  <sc-if value="{{ hudIsInq }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:8px">
+                      <sc-for list="{{ inqActions }}" as="ia" hint-placeholder-count="2">
+                        <button type="button" onClick="{{ ia.act }}" style="flex:1;min-height:36px;padding:0 14px;border-radius:99px;border:{{ ia.line }};background:{{ ia.bg }};color:{{ ia.fg }};cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;box-shadow:{{ ia.glow }};transition:transform .2s ease, box-shadow .25s ease" style-hover="transform:translateY(-2px)">{{ ia.label }}</button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ hudIsAppt }}" hint-placeholder-val="{{ false }}">
+                    <button type="button" onClick="{{ hudOpenTicket }}" style="width: 100%; min-height: 38px; padding: 0 20px; border-radius: 99px; border: 0; background: var(--accent-coral); color: #22100a; cursor: pointer; font-family: 'JetBrains Mono',monospace; font-size:11px; font-weight: 700; letter-spacing: .16em; line-height: 15.5px; text-align: center; text-transform: uppercase; box-shadow: 0 0 16px rgba(253,142,142,.3); transition: box-shadow .25s ease" style-hover="box-shadow:0 0 26px rgba(253,142,142,.5)">Open session pass →</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hudShowTicket }}" hint-placeholder-val="{{ false }}">
+            <div style="position:relative;flex:1;min-height:0;overflow-y:auto;display:flex;justify-content:center;padding:36px 10px 14px"><button type="button" onClick="{{ hudBackCard }}" style="position:absolute;top:6px;left:14px;z-index:2;min-height:26px;padding:0 12px;border-radius:99px;border:1px solid rgba(232,223,207,.45);background:transparent;color:rgba(232,223,207,.9);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase" style-hover="background:var(--accent-cream);color:#121312">← Details</button>
+              <div style="width:392px;max-width:100%;height:fit-content;flex-shrink:0;background:#16150f;border-radius:24px;padding:13px;display:flex;flex-direction:column;gap:11px;box-shadow:0 24px 60px rgba(0,0,0,.55)">
+                <div style="position:relative;overflow:hidden;background:#000;border:1px solid rgba(200,161,94,.2);border-radius:18px;padding:14px;display:grid;grid-template-columns:150px 1fr;gap:14px">
+                  <div style="position:relative;overflow:hidden;border-radius:12px;min-height:158px">
+                    <div aria-label="Booking reference" style="position:absolute;inset:8px;display:flex;align-items:center;justify-content:center">{{ sessionReference }}</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#8b8270">Session pass</span>
+                    <span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:31px;line-height:.92;color:#ece4d4;text-transform:uppercase;margin-top:8px">{{ tkPass }}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#c8a15e;margin-top:8px">✦ {{ tkStyle }} ✦</span>
+                    <span style="flex:1"></span>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+                      <svg width="58" height="58" viewBox="0 0 58 58" style="transform:rotate(-90deg);flex:none" aria-hidden="true">
+                        <circle cx="29" cy="29" r="23" fill="none" stroke="#3a362b" stroke-width="6"></circle>
+                        <circle cx="29" cy="29" r="23" fill="none" stroke="#c8a15e" stroke-width="6" stroke-dasharray="{{ tkProgress }}" stroke-linecap="round"></circle>
+                        <circle cx="29" cy="29" r="23" fill="none" stroke="#d38a68" stroke-width="6" stroke-dasharray="0 145" stroke-dashoffset="-66" stroke-linecap="round"></circle>
+                      </svg>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.5;color:#9a917f">{{ tkStart }}<br><span style="color:#ece4d4">→ {{ tkEnd }}</span></span>
+                    </div>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px">
+                  <div style="background:#26241c;border-radius:13px;padding:11px 13px;display:flex;flex-direction:column;gap:3px"><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#8b8270">Artist</span><span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:17px;color:#ece4d4">{{ tkArtist }}</span></div>
+                  <div style="background:#26241c;border-radius:13px;padding:11px 13px;display:flex;flex-direction:column;gap:3px"><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#8b8270">Chair</span><span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:17px;color:#ece4d4">{{ tkChair }}</span></div>
+                  <div style="background:#26241c;border-radius:13px;padding:11px 13px;display:flex;flex-direction:column;gap:3px"><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#8b8270">Style</span><span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:17px;color:#ece4d4">{{ tkShort }}</span></div>
+                </div>
+                <div style="position:relative;overflow:hidden;background:#ece4d4;border-radius:18px;padding:17px 18px">
+                  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#6f6455">Estimated total</span>
+                      <span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:{{ tkAmtSize }};line-height:1;color:#16150f">{{ tkAmt }}</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.05em;color:#6f6455">deposit · <span style="color:#2f7a3d;font-weight:700">{{ tkDep }}</span></span>
+                    </div>
+                    <span style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:#8a7f68">{{ locationLabel }}</span>
+                  </div>
+                </div>
+                <div style="display:flex;gap:9px;height:120px">
+                  <div style="flex:0 0 62px;background:#c8a15e;border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 0"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#16150f">↙↙↙</span><span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:28px;color:#16150f">ø{{ tkChair }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;color:#16150f">·—··</span></div>
+                  <div style="flex:0 0 62px;background:#d9bf95;border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:14px 0"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#16150f">↖↗↖</span><span style="writing-mode:vertical-rl;font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;color:#16150f;letter-spacing:.1em">{{ tkDateCode }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#16150f">↗↖↗</span></div>
+                  <div style="flex:1;background:#ece4d4;border-radius:30px;display:flex;align-items:center;justify-content:center"><span style="font-family:'Poppins',sans-serif;font-weight:800;font-size:36px;color:#16150f">{{ tkHrs }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:20px;color:#6f6455;margin-left:2px">HR</span></div>
+                  <div style="flex:0 0 44px;background:#ef8a5c;border-radius:30px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:14px 0;gap:5px"><span style="width:6px;height:6px;background:#16150f;border-radius:50%"></span><span style="width:6px;height:14px;background:#16150f;border-radius:4px"></span><span style="width:6px;height:6px;background:#16150f;border-radius:50%"></span></div>
+                  <div style="flex:0 0 40px;background:#26241c;border-radius:30px;display:flex;align-items:center;justify-content:center"><span style="writing-mode:vertical-rl;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:#8b8270">{{ tkStatus }}</span></div>
+                </div>
+                <div style="background:#ece4d4;border-radius:18px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:14px">
+                  <div style="display:flex;flex-direction:column;gap:5px">
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#6f6455">Session <span style="color:#16150f;font-weight:700">{{ tkSerial }}</span></span>
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#6f6455">{{ tkStatus }}</span>
+                  </div>
+                  <span style="flex:none;width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(23,22,15,.35);display:grid;place-items:center"><img src="/assets/brand/ryozan-mark.svg" alt="Ryozan seal" style="width:34px;height:34px;object-fit:contain"></span>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+          </div>
+          <div style="display: flex; flex-direction: column; min-height: 320px; box-sizing: border-box; overflow: hidden; order: -1; margin: 14px; border: 1px solid {{ agPanelLine }}; border-radius: 16px; background: var(--well); box-shadow: none">
+
+            <sc-if value="{{ isStaff }}" hint-placeholder-val="{{ true }}">
+
+            </sc-if>
+            <div style="flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 8px; border-radius: 0px">
+              <sc-if value="{{ hudInqAny }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px 4px">
+                  <span style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-white)">Bookings</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:#29140E;background:#D38A68;border-radius:99px;padding:3px 9px;box-shadow:0 0 22px 2px #D38A6875">{{ loadedLabel }}</span>
+                </div>
+              </sc-if>
+              <sc-for list="{{ hudInq }}" as="q" hint-placeholder-count="3">
+                <button type="button" data-booking-id="{{ q.id }}" aria-pressed="{{ q.selected }}" onClick="{{ q.pick }}" style="display:flex;flex-direction:column;padding:11px 10px 9px;border-radius:10px;background:{{ q.rowBg }};cursor:pointer;border:0;text-align:left;width:100%" style-hover="background:var(--surface)">
+                  <div style="display:flex;align-items:center;gap:12px">
+                  <span style="flex-shrink:0;width:3px;height:30px;border-radius:2px;background:{{ q.bar }}"></span>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:600;color:var(--ink)">{{ q.client }}</span>
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:var(--ink-ghost)">{{ q.piece }}</span>
+                  </div>
+                  <span style="flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-mute)">{{ q.when }}</span>
+                  <span style="flex-shrink:0;width:72px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:{{ q.stFg }}">{{ q.status }}</span>
+                  </div>
+                  <sc-if value="{{ q.gala }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:8px;margin:7px 0 0 15px">
+                      <span style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;line-height:1.4;color:var(--ink-ghost)">✦ {{ q.gala }}</span>
+
+                    </div>
+                  </sc-if>
+                </button>
+</sc-for>
+              <span style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-white);padding:12px 10px 4px">{{ additionalLabel }}</span>
+              <sc-for list="{{ hudAppt }}" as="q" hint-placeholder-count="2">
+                <button type="button" data-booking-id="{{ q.id }}" aria-pressed="{{ q.selected }}" onClick="{{ q.pick }}" style="display:flex;flex-direction:column;padding:11px 10px 9px;border-radius:10px;background:{{ q.rowBg }};cursor:pointer" style-hover="background:var(--surface)">
+                  <div style="display:flex;align-items:center;gap:12px">
+                  <span style="flex-shrink:0;width:3px;height:30px;border-radius:2px;background:{{ q.bar }}"></span>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:600;color:var(--ink)">{{ q.client }}</span>
+                    <span style="font-family:'Space Grotesk',sans-serif;font-size:12.5px;color:var(--ink-ghost)">{{ q.piece }}</span>
+                  </div>
+                  <span style="flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--ink-mute)">{{ q.when }}</span>
+                  <span style="flex-shrink:0;width:72px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:{{ q.stFg }}">{{ q.status }}</span>
+                  </div>
+                  <sc-if value="{{ q.gala }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:8px;margin:7px 0 0 15px">
+                      <span style="font-family:'Space Grotesk',sans-serif;font-size:11.5px;line-height:1.4;color:var(--ink-ghost)">✦ {{ q.gala }}</span>
+                      <button type="button" title="⚙ BUILD: Gala drafts the reply (quote range from comps, slot offers from real gaps), artist approves before send" style="flex-shrink:0;min-height:22px;padding:0 10px;border-radius:99px;border:1px solid rgba(232,223,207,.45);background:transparent;color:rgba(232,223,207,.9);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase" style-hover="background:var(--accent-cream);color:#121312">{{ q.galaCta }}</button>
+                    </div>
+                  </sc-if>
+                </button>
+</sc-for>
+            </div>
+            <sc-if value="{{ isStaff }}" hint-placeholder-val="{{ true }}">
+              <div style="flex-shrink: 0; display: flex; flex-direction: column; gap: 7px; padding: 11px 18px 14px; border-top: 1px dashed {{ agPanelLine }}">
+                <span style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-white)">Smart fill · open gaps</span>
+                <sc-for list="{{ smartFills }}" as="sf" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="flex-shrink:0;width:64px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--gold)">{{ sf.gap }}</span>
+                    <span style="flex:1;min-width:0;font-family:'Space Grotesk',sans-serif;font-size:12px;line-height:1.4;color:var(--ink-mute)">{{ sf.pitch }}</span>
+                    <button type="button" onClick="{{ sf.act }}" title="Spawns the slot-offer card, Gala drafts the message" style="flex-shrink:0;min-height:24px;padding:0 11px;border-radius:99px;border:1px solid rgba(232,223,207,.45);background:transparent;color:rgba(232,223,207,.9);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase" style-hover="background:var(--accent-cream);color:#121312">Offer slot</button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+          </div>

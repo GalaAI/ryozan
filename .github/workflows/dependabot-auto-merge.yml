@@ -1,0 +1,65 @@
+name: Dependabot Auto Merge
+
+# Operator-approved dependency maintenance loop (2026-08-04). Dependabot opens a
+# dependency PR, CI runs the same gates as any other PR, and this workflow
+# approves and queues a squash auto-merge for non-major updates. Major bumps are
+# labeled and left for a human. The merge itself still waits on the required CI
+# check configured on main, so this removes the review stop, not the test gate.
+#
+# pull_request_target on purpose: a `pull_request` run from Dependabot receives a
+# read-only GITHUB_TOKEN, so approve and merge would both 403. This job never
+# checks out or executes PR code, so running in base-repo context is safe.
+
+on:
+  # Hosted contingency only while dependency intake moves to Renovate plus
+  # Navigate validation. No automatic GitHub-hosted jobs consume the budget.
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Flag major bumps for manual review
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          # Labels are cosmetic routing here, not the gate. A missing or
+          # already-removed label must not fail the run and leave a red check on
+          # a PR whose only real outcome is "a human looks at this".
+          gh pr edit "$PR_URL" --remove-label automerge || true
+          gh pr edit "$PR_URL" --add-label needs-manual-review || true
+          echo "Major version bump. Leaving this PR for a human."
+
+      - name: Approve minor and patch updates
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: >-
+          gh pr review --approve "$PR_URL"
+          --body "Automated approval of a non-major dependency update.
+          Merge still waits on required CI."
+
+      - name: Enable squash auto-merge
+        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"

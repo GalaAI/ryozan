@@ -1,0 +1,52 @@
+#!/bin/bash
+# BTTCO API pre-push quality gate
+# Blocks push if lint or import validation fails
+#
+# INSTALL: cp hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+
+echo ""
+echo "=== BTTCO API Pre-Push Checks ==="
+echo ""
+
+# Check if ruff is available
+if command -v ruff &> /dev/null; then
+  echo "[1/3] Running ruff lint..."
+  ruff check app/ main.py --quiet
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "Ruff lint failed. Push blocked."
+    echo "Run: ruff check app/ main.py --fix"
+    exit 1
+  fi
+  echo "  Lint passed."
+else
+  echo "[1/3] Ruff not installed, skipping lint (install with: pip install ruff)"
+fi
+
+echo "[2/3] Validating router imports..."
+python -c "
+from fastapi import FastAPI
+from app.api.v1.router import api_router
+app = FastAPI(); app.include_router(api_router, prefix='/api/v1')
+n = sum(len(v) for v in app.openapi()['paths'].values())
+print(f'  Router OK: {n} operations')
+" 2>&1
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "Router import failed. Push blocked."
+  echo "Fix the import errors above, then try again."
+  exit 1
+fi
+
+echo "[3/3] Validating models..."
+python -c "import app.models; print('  Models OK')" 2>&1
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "Model import failed. Push blocked."
+  echo "Fix the import errors above, then try again."
+  exit 1
+fi
+
+echo ""
+echo "=== All checks passed. Pushing... ==="
+echo ""

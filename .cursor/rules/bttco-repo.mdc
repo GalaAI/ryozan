@@ -1,0 +1,12 @@
+---
+description: Ryozan monorepo layout, deploy boundaries, and where to read first
+alwaysApply: true
+---
+
+# Ryozan - repo context
+
+- **Frontend (Vite PWA):** repo `app/` — `npm run dev` (default **5173**).
+- **Backend (FastAPI):** repo `api/` — `uvicorn main:app --reload --port 8801`. Entry module is `main.py` at `api/` root.
+- **Production:** single **Railway** service from root `Dockerfile` + `railway.toml`; FastAPI serves the built SPA. Not “Cloudflare hosts the app” unless you deliberately add Workers/Pages for that.
+- **Cloudflare in this product:** typically **R2**, **DNS**, **Email Worker** (inbound) — do not assume Workers replace the Railway API container without checking the repo.
+- **Canonical agent doc:** root `AGENTS.md` (commands, CI, env pointers). Prefer updating `AGENTS.md` for long procedural docs; keep `.cursor/rules/` short and behavioral.

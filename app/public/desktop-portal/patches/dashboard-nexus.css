@@ -1,0 +1,328 @@
+/* ══════════════════════════════════════════════════════════════════════
+   BTTCO — Nexus Dashboard: Design System Type Alignment
+
+   DROP-IN PATCH for: BTTCO/app/src/styles/dashboard.css
+
+   HOW TO USE:
+     Option A (recommended): @import this file at the BOTTOM of
+       dashboard.css so it cascades over existing rules.
+
+     Option B: copy individual blocks into dashboard.css manually.
+
+   WHAT THIS CHANGES:
+     - Greeting: Bebas Neue display name, JetBrains Mono eyebrow
+     - Toolbelt: JetBrains Mono labels, stronger active state
+     - Panel headers: Bebas Neue section titles, mono sub-labels
+     - Stat cards: Inter 800 tabular numerals, mono labels
+     - Booking rows: Bebas Neue client names, Inter 800 times
+     - Search trigger: JetBrains Mono
+     - Nexus badge: JetBrains Mono
+
+   DOES NOT CHANGE:
+     - Layout, spacing, or flex structure (zero layout risk)
+     - Colors (uses existing tokens — zero color risk)
+     - Anything outside .nexus, .nexus-*, .panel-* scope
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. GREETING HEADER ─────────────────────────────────────────────── */
+
+/* "Good morning," eyebrow line → JetBrains Mono, gold, spaced */
+.nexus-greeting .home-greeting {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  margin: 0 0 0.2rem;
+}
+
+/* "Justin Walker" display name → Bebas Neue, large, bone-white */
+.nexus-greeting .home-name {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-weight: 400;
+  font-size: 2.6rem;
+  line-height: 0.95;
+  letter-spacing: 0.02em;
+  color: var(--bone-white);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* Huddle title variant */
+.nexus-greeting .home-name.huddle-title {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 2.0rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+
+/* ── 2. TOOLBELT ─────────────────────────────────────────────────────── */
+
+/* Anchor the toolbelt with a subtle gold left border */
+.nexus-toolbelt {
+  border-left: 1px solid var(--border-subtle);
+}
+
+/* "TOOLKIT" section header → gold mono */
+.nexus-toolbelt-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+/* Tool labels → JetBrains Mono for brand voice consistency */
+.nexus-tool-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Active tool: left-border accent (mirrors sidebar active pattern) */
+.nexus-tool.active {
+  color: var(--gold);
+  background: var(--border-subtle);
+  border-color: var(--panel-border);
+  border-left: 2px solid var(--gold);
+  box-shadow: inset 2px 0 8px -2px var(--gold-glow);
+}
+
+/* Hover: preview the active state */
+.nexus-tool:hover {
+  color: var(--bone-white);
+  background: var(--panel);
+  border-color: var(--panel-border);
+}
+
+
+/* ── 3. PANEL HEADERS ───────────────────────────────────────────────── */
+
+/* Section panel titles → Bebas Neue, bone-white */
+.panel-title {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--bone-white);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+/* Nexus panel header text → same treatment */
+.nexus-panel-header {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bone-white);
+}
+
+/* Panel header sub-span (the label with icon) */
+.nexus-panel-header > span {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  gap: 7px;
+}
+
+
+/* ── 4. STAT CARDS ──────────────────────────────────────────────────── */
+
+/* Stat labels → JetBrains Mono */
+.stat-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+/* Stat values → Inter ExtraBold, tabular nums, dense */
+.stat-value {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--bone-white);
+  font-feature-settings: "tnum";
+  line-height: 1;
+}
+
+
+/* ── 5. BOOKING ROWS ────────────────────────────────────────────────── */
+
+/* Client name → Bebas Neue display */
+.nexus-book-client,
+.booking-client {
+  font-family: 'Bebas Neue', 'Oswald', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bone-white);
+  line-height: 1;
+}
+
+/* Booking time → Inter 800 tabular */
+.nexus-book-time {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--gold);
+  font-feature-settings: "tnum";
+}
+
+/* Booking date → JetBrains Mono */
+.nexus-book-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+}
+
+/* Booking description → JetBrains Mono */
+.nexus-book-desc,
+.booking-desc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* Booking artist label → gold mono */
+.booking-artist {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+
+/* ── 6. SEARCH TRIGGER ──────────────────────────────────────────────── */
+
+.nexus-search-trigger {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.nexus-search-placeholder {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+
+/* ── 7. BADGES ──────────────────────────────────────────────────────── */
+
+.nexus-badge,
+.panel-badge,
+.booking-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+
+/* ── 8. WALLET / STAT STRIP ─────────────────────────────────────────── */
+
+/* Wallet values → Inter 800 */
+.nexus-wallet-value {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum";
+}
+
+/* Wallet labels → JetBrains Mono */
+.nexus-wallet-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+/* Strip items (stat summary bar) */
+.nexus-strip-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+
+/* ── 9. NEXUS PANEL LOADING STATE ───────────────────────────────────── */
+
+.nexus-panel-loading {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+
+/* ── 10. SECTION LABELS ─────────────────────────────────────────────── */
+
+.section-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+
+/* ── RESPONSIVE: keep toolbelt legible on smaller viewports ─────────── */
+
+@media (max-width: 900px) {
+  .nexus-greeting .home-name {
+    font-size: 2.0rem;
+  }
+  .nexus-tool-label {
+    font-size: 0.48rem;
+    letter-spacing: 0.08em;
+  }
+}
+
+@media (max-width: 600px) {
+  .nexus-greeting .home-name {
+    font-size: 1.6rem;
+  }
+  .nexus-greeting .home-greeting {
+    font-size: 0.55rem;
+    letter-spacing: 0.16em;
+  }
+}

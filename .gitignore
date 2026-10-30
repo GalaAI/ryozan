@@ -1,0 +1,107 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment (contains secrets)
+.env
+*.local
+.dev/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node
+node_modules/
+dist-ssr/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Alembic
+api/alembic/versions/__pycache__/
+
+# SQLite dev databases
+*.db
+
+# Local dev utilities (api)
+api/test_*.py
+api/check_*.py
+api/seed_*.py
+api/migrate_*.py
+api/fix_*.py
+api/encode_*.py
+api/make_*.py
+api/send_*.py
+api/run_*.py
+api/bake_*.py
+api/full_*.py
+api/*.ps1
+api/*.bat
+api/*.sql
+api/*.pid
+api/server.log
+api/server-error.log
+api/logo_b64.txt
+api/email_logo_b64.txt
+api/uploads/
+api/docs/
+api/n8n-workflows/
+api/workflows/
+
+# Claude Code worktrees (local only)
+.claude/worktrees/
+.claude/settings.local.json
+
+# Cursor local runtime state
+.cursor/hooks/state/
+
+# Vercel (not used — Railway is the deploy target)
+.vercel/
+app/.vercel/
+
+# Wrangler local dev state
+.wrangler/
+
+# Scratch / one-off HTML prototypes
+*.html
+!app/index.html
+# ?raw-imported desktop portal templates are source, not scratch prototypes.
+!app/src/components/desktop-portal/*.html
+!app/public/privacy.html
+!app/public/sms-terms.html
+!app/public/dependencies/@bttco/**/*.dc.html
+# @bttco/booking-flow ships its three canon pages under their design-system names (BTTCO-059)
+!app/public/dependencies/@bttco/booking-flow/**/*.html
+# @bttco/booking-flow entries: the canon pages are their own documents (src/booking-host)
+!app/book.html
+!app/book/*.html
+!app/ask.html
+# @bttco/waiver-intake: canon check-in page and its document entry (src/waiver-host)
+!app/public/dependencies/@bttco/waiver-intake/**/*.html
+!app/checkin.html
+.vercel
+
+# Local product experiments and temporary interactive artifacts
+.lab/
