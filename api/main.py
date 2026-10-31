@@ -2,7 +2,11 @@
 Ryozan API — entry point.
 
 Start with:
-    uvicorn main:app --reload --port 8801
+    alembic upgrade head          # the schema is Alembic's alone; startup issues no DDL
+    uvicorn main:app --reload --port 18788
+
+A database built by the pre-2026-10-31 boot path (it has the tables but no
+alembic_version) is adopted once with `python scripts/adopt_schema.py --apply`.
 """
 
 import asyncio
@@ -27,10 +31,9 @@ from app.api.v1.endpoints.conversations import process_courier_notification_outb
 from app.api.v1.endpoints.flash import process_apex_training_manifest_once
 from app.api.v1.router import api_router
 from app.core.config import get_settings
-from app.core.database import Base, async_session, engine
+from app.core.database import async_session, engine
 from app.core.deploy_state import get_deploy_state
 from app.core.rate_limit import limiter
-from app.core.schema_sync import install_pos_attempt_v1_constraints, reconcile_additive_columns
 from app.services.email import process_booky_courier_outbox_once
 from app.services.gallery_storage import process_gallery_deletion_outbox_once
 from app.services.pack_bridge import process_pack_bridge_outbox_once, queue_recent_learning_captures_once
@@ -88,33 +91,6 @@ async def _heal_portfolio_derivatives() -> None:
     except Exception as exc:
         print(f"[Ryozan] portfolio derivatives error: {exc}", flush=True)
 
-
-_PERFORMANCE_INDEX_STATEMENTS = (
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_artist_id ON bttco_bookings (artist_id)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_client_id ON bttco_bookings (client_id)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_status ON bttco_bookings (status)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_created_at ON bttco_bookings (created_at)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_scheduled_date ON bttco_bookings (scheduled_date) WHERE scheduled_date IS NOT NULL",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_artist_status ON bttco_bookings (artist_id, status)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_users_role ON bttco_users (role)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_conversation_id ON bttco_bookings (conversation_id) WHERE conversation_id IS NOT NULL",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_notifications_user_id ON bttco_notifications (user_id)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_notifications_read ON bttco_notifications (user_id, read) WHERE read = FALSE",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_bttco_sms_messages_courier_message_id ON bttco_sms_messages (courier_message_id) WHERE courier_message_id IS NOT NULL",
-)
-
-# The database-level guarantee that one email is one account. Nothing enforced
-# this before, which is how two rows differing only by capitalization reached
-# production and turned login into an HTTP 500 for the people who owned them.
-#
-# Applied on boot rather than only via alembic because production has no
-# alembic_version table and has never run a migration. Mirrored in
-# alembic/versions/20260808_unique_lower_email.py for environments that do.
-#
-# NOT `CONCURRENTLY`: this must be able to fail loudly and immediately while
-# duplicates exist, rather than leaving an INVALID index behind. Its caller
-# catches that failure so the rest of the boot block still runs.
-_EMAIL_UNIQUE_INDEX_SQL = "CREATE UNIQUE INDEX IF NOT EXISTS ux_bttco_users_email_lower ON bttco_users (lower(email))"
 
 _CONTENT_SECURITY_POLICY = "; ".join(
     [
@@ -224,69 +200,82 @@ def _should_serve_spa_path(full_path: str) -> bool:
     return not leaf.endswith(_BLOCKED_SPA_SUFFIXES)
 
 
-async def _run_startup_migrations():
-    """
-    Run idempotent schema migrations on boot.
+def _alembic_head() -> str | None:
+    """The head revision of this checkout's migration chain."""
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
 
-    This handles column additions that can't wait for a manual migration
-    (e.g. when Railway CLI auth is unavailable). Every statement uses
-    IF NOT EXISTS / safe checks so it's harmless to run on every deploy.
-    """
-    # ── Ensure all tables exist (idempotent — skips existing) ──
-    # create_all only creates tables that are missing. It never alters one that
-    # already exists, so a new column on an existing table is silently skipped
-    # and the first request that selects it raises UndefinedColumn.
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("[Ryozan] Table creation check: OK")
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).parent / "alembic"))
+    return ScriptDirectory.from_config(config).get_current_head()
 
-    # ── Add model columns missing from tables that already exist ──
-    # This is what closes the gap create_all leaves. Derived from the ORM
-    # metadata, so adding a column to a model is enough -- no hand-written
-    # ALTER needed below. Additive only; refuses anything that would fail on a
-    # populated table. The hand-written block that follows is kept because it
-    # carries historical backfills and index creation this cannot infer.
-    async with engine.begin() as conn:
-        plan = await reconcile_additive_columns(conn, Base.metadata)
-        await conn.run_sync(install_pos_attempt_v1_constraints)
-        await conn.execute(sa_text("ALTER TABLE bttco_gift_cards ALTER COLUMN recipient_email DROP NOT NULL"))
-        # Lane configuration codes (SENDER_NOT_CONFIGURED) exceed the original varchar(20).
-        await conn.execute(sa_text("ALTER TABLE bttco_sms_messages ALTER COLUMN error_code TYPE VARCHAR(40)"))
-        default_session_types_seeded = await conn.run_sync(seed_default_session_types)
-        await conn.execute(
-            sa_text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS ux_bttco_users_booth_rent_subscription_id "
-                "ON bttco_users (booth_rent_subscription_id) "
-                "WHERE booth_rent_subscription_id IS NOT NULL"
+
+async def _check_schema_revision() -> None:
+    """Say loudly when the database is not at the Alembic head. Read-only.
+
+    The schema is owned by Alembic alone. In the container `alembic upgrade head`
+    runs before uvicorn (Dockerfile CMD, railway.toml startCommand) and a failed
+    migration stops the deploy, so this only fires for a process started some
+    other way, typically a local `uvicorn main:app` against a database nobody
+    migrated.
+    """
+    try:
+        head = _alembic_head()
+        async with engine.connect() as conn:
+            has_table = await conn.scalar(sa_text("SELECT to_regclass('public.alembic_version') IS NOT NULL"))
+            current = await conn.scalar(sa_text("SELECT version_num FROM alembic_version")) if has_table else None
+    except Exception as exc:  # noqa: BLE001 - diagnostics must not stop the API
+        print(f"[Ryozan] Schema revision check failed: {type(exc).__name__}: {exc}", flush=True)
+        return
+    if current == head:
+        print(f"[Ryozan] Schema at Alembic head {head}", flush=True)
+        return
+    print(
+        f"[Ryozan] SCHEMA NOT AT HEAD: database is at {current or 'no revision'}, code expects {head}. "
+        "Run `alembic upgrade head` (a database built by the old boot path needs "
+        "`python scripts/adopt_schema.py` first).",
+        flush=True,
+    )
+
+
+async def _seed_step(name: str, step) -> None:
+    """Run one seed step; a failure is logged and never skips the steps after it."""
+    try:
+        await step()
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - one broken seed must not take the others down
+        print(f"[Ryozan] Startup seed FAILED ({name}): {type(exc).__name__}: {exc}", flush=True)
+
+
+async def _run_startup_seeds() -> None:
+    """Idempotent data seeds and repairs that run on every boot. No schema DDL.
+
+    Schema changes are Alembic revisions and nothing else (see alembic/versions).
+    What runs here is data: rows that are meant to be refreshed on every deploy
+    (built-in scroll categories, starter-quest copy), per-account defaults, and
+    cheap idempotent repairs of historical values. Each step is isolated by
+    _seed_step, so one failure is reported and the rest still run.
+    """
+
+    async def default_session_types() -> None:
+        async with engine.begin() as conn:
+            installed = await conn.run_sync(seed_default_session_types)
+        print(f"[Ryozan] Default session types installed: {installed}", flush=True)
+
+    async def pos_commission_base() -> None:
+        # Rows written before POS attempt v1 carried no commission base; it is the amount.
+        async with engine.begin() as conn:
+            await conn.execute(
+                sa_text(
+                    "UPDATE bttco_pos_transactions "
+                    "SET commission_base_cents = amount_cents "
+                    "WHERE attempt_version IS NULL AND commission_base_cents = 0 AND price_adjustment_cents = 0"
+                )
             )
-        )
-        await conn.execute(
-            sa_text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS ux_bttco_scroll_categories_slug ON bttco_scroll_categories (slug)"
-            )
-        )
-        await conn.execute(
-            sa_text(
-                "UPDATE bttco_pos_transactions "
-                "SET commission_base_cents = amount_cents "
-                "WHERE attempt_version IS NULL AND commission_base_cents = 0 AND price_adjustment_cents = 0"
-            )
-        )
-    print(f"[Ryozan] Default session types installed: {default_session_types_seeded}")
-    # flush=True because container stdout is block-buffered: without it these
-    # lines sit in the buffer and never reach the Railway log, which would make
-    # the refusal warnings below invisible exactly when they matter.
-    if plan.statements:
-        print(f"[Ryozan] Additive columns applied: {len(plan.statements)}", flush=True)
-        for statement in plan.statements:
-            print(f"[Ryozan]   {statement}", flush=True)
-    else:
-        print("[Ryozan] Additive column check: no drift", flush=True)
-    for name, reason in plan.refused:
-        # Loud on purpose: a refusal means the model declares a column the
-        # database will not get, which is the UndefinedColumn failure waiting
-        # to happen. Fix the model, do not ignore this.
-        print(f"[Ryozan] REFUSED column {name}: {reason}", flush=True)
+
+    await _seed_step("default session types", default_session_types)
+    await _seed_step("POS commission base", pos_commission_base)
 
     # Convert SQLAlchemy URL to asyncpg format
     db_url = settings.DATABASE_URL
@@ -295,558 +284,176 @@ async def _run_startup_migrations():
 
     conn = await asyncpg.connect(db_url)
     try:
-        # Seed the built-in scroll categories (idempotent via ON CONFLICT).
-        # First statement in this block on purpose. Everything here shares one
-        # try/except that prints "(non-fatal)" and returns, so any statement
-        # that raises silently skips every statement after it. The Scrolls
-        # feature is dead without these rows: list_category_docs 404s on a
-        # missing slug, so it must not sit behind ~40 statements that could
-        # skip it.
-        #
-        # Three of these rows only ever existed in alembic
-        # (20260330_add_scroll_categories seeds artist/shop/misc,
-        # 20260426_rename_misc_and_create_response_templates renames misc ->
-        # templates). Production has no alembic_version table, so neither
-        # migration has ever run there and the table shipped empty.
-        #
-        # All SIX rows are seeded, not just the three the migrations know about.
-        # ScrollsPanel.tsx replaces its BUILTIN_CATEGORIES fallback wholesale as
-        # soon as the API returns anything non-empty:
-        #     .then(cats => { if (cats.length > 0) setCategories(cats) })
-        # so seeding only the migrations' three would delete the Waivers, Upkeep
-        # and Quest Log tabs from the UI. Those three are special-cased render
-        # branches (activeSlug === 'upkeep' etc.) that still need a category row
-        # to appear as a tab. slug / label / icon / sort_order mirror
-        # BUILTIN_CATEGORIES verbatim so nothing shifts or renames.
-        #
-        # is_builtin is TRUE on all six so DELETE /scrolls/categories/{slug}
-        # refuses them. create_category always writes is_builtin=False, and
-        # _slugify('Quest Log') is 'quest_log', so a deleted builtin could not be
-        # recreated with the slug its hardcoded render branch matches on.
-        #
-        # Reconcile the historical built-in misc row before the canonical
-        # upsert. If templates already exists, the stale built-in row is simply
-        # removed. A custom misc row is left alone.
-        await conn.execute("""
-            DELETE FROM bttco_scroll_categories
-            WHERE slug = 'misc'
-              AND is_builtin = TRUE
-              AND EXISTS (
-                  SELECT 1 FROM bttco_scroll_categories WHERE slug = 'templates'
-              )
-        """)
-        await conn.execute("""
-            UPDATE bttco_scroll_categories
-            SET slug = 'templates'
-            WHERE slug = 'misc'
-              AND is_builtin = TRUE
-              AND NOT EXISTS (
-                  SELECT 1 FROM bttco_scroll_categories WHERE slug = 'templates'
-              )
-        """)
 
-        # Every NOT NULL column is supplied explicitly. create_all builds this
-        # table from the ORM model, whose id / is_builtin / sort_order /
-        # ai_digest_enabled / created_at defaults are Python-side only, so the
-        # live columns carry NO server default -- the same omission that broke
-        # the starter-quest seed.
-        #
-        # The seventh row, 'owner-archive' (label "Artist Scrolls"), is the only
-        # backend-owned one: it is NOT in ScrollsPanel's BUILTIN_CATEGORIES,
-        # because it is not a frontend fallback tab. It is the owner's copy of
-        # every submitted Artist Scroll -- see app/services/scroll_archive.py --
-        # and maps to document category 'scroll_owner-archive' under the
-        # scrolls.py `scroll_{slug}` convention. It deliberately does NOT reuse
-        # 'scroll': that category is the artist's own scroll, which
-        # GET /documents/scroll/my returns for the caller and which submit_scroll
-        # deletes on every upsert, so filing the owner's archive there would both
-        # leak an artist's scroll to the founder as their own and delete the
-        # archive on the founder's next submission.
-        #
-        # It is is_builtin=TRUE for a stronger reason than the other six. Their
-        # failure mode on deletion is a missing tab. This one's slug is hardcoded
-        # in backend service code (OWNER_ARCHIVE_CATEGORY), so deleting the row
-        # makes list_category_docs 404 while submit_scroll keeps filing archive
-        # rows into it -- the owner would lose access to compliance records that
-        # are still accumulating. _slugify('Artist Scrolls') is 'artist_scrolls',
-        # so it could not be recreated with the slug the backend matches on
-        # either.
-        await conn.execute("""
-            INSERT INTO bttco_scroll_categories (id, slug, label, icon, description, is_builtin, sort_order, ai_digest_enabled, created_at)
-            VALUES
-                (gen_random_uuid(), 'artist',    'Artist',    '📜',             'Artist compliance scrolls: BBP cert, employment agreements, license records.', TRUE, 0, FALSE, now()),
-                (gen_random_uuid(), 'shop',      'Shop',      '🏪',             'Shop-level documents: vendor agreements, insurance, lease summaries.',         TRUE, 1, FALSE, now()),
-                (gen_random_uuid(), 'templates', 'Templates', 'message-square', 'Reusable auto-message response templates for staff quick-replies.',            TRUE, 2, FALSE, now()),
-                (gen_random_uuid(), 'waivers',   'Waivers',   '📋',             'Send consent forms and track waiver status.',                                  TRUE, 3, FALSE, now()),
-                (gen_random_uuid(), 'upkeep',    'Upkeep',    '🔧',             'Daily, weekly, and monthly station maintenance quests.',                       TRUE, 4, FALSE, now()),
-                (gen_random_uuid(), 'quests',    'Quest Log', 'quest',          'Active, completed, paused, and archived quests for everyone.',                 TRUE, 5, FALSE, now()),
-                (gen_random_uuid(), 'owner-archive', 'Artist Scrolls', 'archive', 'Durable copies of Artist Scrolls submitted by artists, filed to the owner.',  TRUE, 6, FALSE, now())
-            ON CONFLICT (slug) DO UPDATE SET
-                label = EXCLUDED.label,
-                icon = EXCLUDED.icon,
-                description = EXCLUDED.description,
-                is_builtin = TRUE,
-                sort_order = EXCLUDED.sort_order,
-                ai_digest_enabled = FALSE
-        """)
-        builtin_scroll_categories = await conn.fetchval(
-            "SELECT count(*) FROM bttco_scroll_categories WHERE is_builtin = TRUE"
-        )
-        print(
-            f"[Ryozan] built-in scroll categories reconciled: {builtin_scroll_categories}",
-            flush=True,
-        )
+        async def scroll_categories() -> None:
+            # Seed the built-in scroll categories (idempotent via ON CONFLICT).
+            # The Scrolls feature is dead without these rows: list_category_docs
+            # 404s on a missing slug. Its own _seed_step, so no other seed can
+            # skip it.
+            #
+            # Three of these rows once lived only in Alembic revisions
+            # (20260330_add_scroll_categories seeded artist/shop/misc,
+            # 20260426_rename_misc_and_create_response_templates renamed misc ->
+            # templates) that production never ran, so the table shipped empty.
+            # The 20261031 baseline is schema only; the rows are seeded here.
+            #
+            # All SIX rows are seeded, not just the three the migrations know about.
+            # ScrollsPanel.tsx replaces its BUILTIN_CATEGORIES fallback wholesale as
+            # soon as the API returns anything non-empty:
+            #     .then(cats => { if (cats.length > 0) setCategories(cats) })
+            # so seeding only the migrations' three would delete the Waivers, Upkeep
+            # and Quest Log tabs from the UI. Those three are special-cased render
+            # branches (activeSlug === 'upkeep' etc.) that still need a category row
+            # to appear as a tab. slug / label / icon / sort_order mirror
+            # BUILTIN_CATEGORIES verbatim so nothing shifts or renames.
+            #
+            # is_builtin is TRUE on all six so DELETE /scrolls/categories/{slug}
+            # refuses them. create_category always writes is_builtin=False, and
+            # _slugify('Quest Log') is 'quest_log', so a deleted builtin could not be
+            # recreated with the slug its hardcoded render branch matches on.
+            #
+            # Reconcile the historical built-in misc row before the canonical
+            # upsert. If templates already exists, the stale built-in row is simply
+            # removed. A custom misc row is left alone.
+            await conn.execute("""
+                DELETE FROM bttco_scroll_categories
+                WHERE slug = 'misc'
+                  AND is_builtin = TRUE
+                  AND EXISTS (
+                      SELECT 1 FROM bttco_scroll_categories WHERE slug = 'templates'
+                  )
+            """)
+            await conn.execute("""
+                UPDATE bttco_scroll_categories
+                SET slug = 'templates'
+                WHERE slug = 'misc'
+                  AND is_builtin = TRUE
+                  AND NOT EXISTS (
+                      SELECT 1 FROM bttco_scroll_categories WHERE slug = 'templates'
+                  )
+            """)
 
-        # ── must_reset_password column (added 2026-03-09) ──
-        await conn.execute("""
-            ALTER TABLE bttco_users
-            ADD COLUMN IF NOT EXISTS must_reset_password BOOLEAN NOT NULL DEFAULT FALSE
-        """)
-
-        # NOTE: One-time forced reset was applied on initial deploy (2026-03-09).
-        # Removed the recurring UPDATE that was re-setting must_reset_password = TRUE
-        # on every deploy, even after users had already changed their password.
-
-        # ── Artist core columns (may be missing if DB was created without Tauri migrations) ──
-        for col_sql in [
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS slug VARCHAR(100) UNIQUE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS specialty TEXT[]",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS bio TEXT",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booking_mode VARCHAR(50)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS instagram_url VARCHAR(500)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS portfolio_images TEXT[]",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS portfolio_thumbs JSONB",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS portfolio_focus JSONB",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS reasons TEXT[]",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS password_state VARCHAR(24)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMPTZ",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS password_change_method VARCHAR(16)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS last_login_method VARCHAR(16)",
-        ]:
-            await conn.execute(col_sql)
-
-        # Stripe event IDs extend the existing Huddl lifecycle ledger. The
-        # unique nullable index makes booking and deposit-task transitions
-        # atomic with the event that triggered them.
-        await conn.execute("""
-            ALTER TABLE bttco_booking_lifecycle_events
-            ADD COLUMN IF NOT EXISTS provider_event_id VARCHAR(255)
-        """)
-        await conn.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS ix_bttco_booking_lifecycle_events_provider_event_id
-            ON bttco_booking_lifecycle_events (provider_event_id)
-        """)
-
-        # ── Stripe + profile columns (added 2026-03-19) ──
-        for col_sql in [
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS stripe_account_id VARCHAR(255)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS stripe_onboarding_complete BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS commission_rate INTEGER",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_amount_cents INTEGER",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_interval VARCHAR(16)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_payment_method VARCHAR(16) NOT NULL DEFAULT 'cash'",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_status VARCHAR(24) NOT NULL DEFAULT 'not_configured'",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_subscription_id VARCHAR(255)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_checkout_session_id VARCHAR(255)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_current_period_end TIMESTAMPTZ",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_next_due_date DATE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booth_rent_cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS is_guest_artist BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS plaid_access_token VARCHAR(512)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS availability_source VARCHAR(50) NOT NULL DEFAULT 'none'",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booking_slot_interval_minutes INTEGER NOT NULL DEFAULT 30",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booking_buffer_minutes INTEGER NOT NULL DEFAULT 30",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booking_min_notice_hours INTEGER NOT NULL DEFAULT 24",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booking_max_advance_days INTEGER NOT NULL DEFAULT 180",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booking_allow_same_day BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS facebook_url VARCHAR(500)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS tiktok_url VARCHAR(500)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS website_url VARCHAR(500)",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS title VARCHAR(255)",
-        ]:
-            await conn.execute(col_sql)
-        await conn.execute("""
-            UPDATE bttco_users
-            SET booth_rent_payment_method = 'autodraft'
-            WHERE booth_rent_payment_method = 'stripe'
-        """)
-        await conn.execute("""
-            UPDATE bttco_users
-            SET booth_rent_interval = 'biweekly'
-            WHERE booth_rent_interval = 'week'
-        """)
-        await conn.execute("""
-            ALTER TABLE bttco_users
-            ALTER COLUMN booth_rent_payment_method SET DEFAULT 'cash'
-        """)
-        # ── Booking URL column (added 2026-03-27) ──
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS booking_url VARCHAR(500)")
-
-        # ── Gala AI personality + Nexus profile columns (added 2026-03-20) ──
-        await conn.execute(
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS gala_personality INTEGER NOT NULL DEFAULT 75"
-        )
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS nexus_profile JSONB DEFAULT NULL")
-        for col_sql in [
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS membership_tier VARCHAR(50) NOT NULL DEFAULT 'freemium'",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS membership_status VARCHAR(50) NOT NULL DEFAULT 'active'",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS ai_monthly_message_cap INTEGER NOT NULL DEFAULT 40",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS early_access_galax3 BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS connected_apps_unlocked BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS product_entitlements JSONB NOT NULL DEFAULT '{}'::jsonb",
-        ]:
-            await conn.execute(col_sql)
-        await conn.execute("CREATE INDEX IF NOT EXISTS ix_bttco_users_membership_tier ON bttco_users(membership_tier)")
-
-        # ── Gala auto-reply mode column (added 2026-04-01) ──
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS gala_auto_reply VARCHAR(50)")
-
-        # ── Saved artist signature URL (added 2026-04-15) ──
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS saved_signature_url VARCHAR(500)")
-
-        # ── Flash artist settings (added 2026-04-18) ──
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS flash_deposit_amount NUMERIC(8,2)")
-        await conn.execute(
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS allow_prepay_full BOOLEAN NOT NULL DEFAULT FALSE"
-        )
-
-        # ── Hustle Stash / flash canvas metadata (added 2026-05-19) ──
-        for col_sql in [
-            "ALTER TABLE bttco_flash_designs ADD COLUMN IF NOT EXISTS size_label VARCHAR(100)",
-            "ALTER TABLE bttco_flash_designs ADD COLUMN IF NOT EXISTS placement VARCHAR(120)",
-            "ALTER TABLE bttco_flash_designs ADD COLUMN IF NOT EXISTS mask_json JSONB",
-            "ALTER TABLE bttco_flash_designs ADD COLUMN IF NOT EXISTS canvas_state JSONB",
-            "ALTER TABLE bttco_flash_designs ADD COLUMN IF NOT EXISTS ai_metadata JSONB",
-            "ALTER TABLE bttco_flash_designs ADD COLUMN IF NOT EXISTS gala_sync_enabled BOOLEAN NOT NULL DEFAULT FALSE",
-        ]:
-            await conn.execute(col_sql)
-        await conn.execute(
-            "CREATE INDEX IF NOT EXISTS ix_bttco_stash_items_artist_lane ON bttco_stash_items(artist_id, lane)"
-        )
-        await conn.execute("CREATE INDEX IF NOT EXISTS ix_bttco_stash_items_status ON bttco_stash_items(status)")
-        await conn.execute(
-            "CREATE INDEX IF NOT EXISTS ix_bttco_stash_canvas_artist_lane ON bttco_stash_canvas_sessions(artist_id, lane)"
-        )
-        await conn.execute(
-            "CREATE INDEX IF NOT EXISTS ix_bttco_stash_canvas_sheet_id ON bttco_stash_canvas_sessions(sheet_id)"
-        )
-
-        # ── Courier proxy_for (inbox delegation, added 2026-04-30) ──
-        await conn.execute(
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS proxy_for UUID REFERENCES bttco_users(id) ON DELETE SET NULL"
-        )
-
-        # ── Google OAuth stable account id (added 2026-05-12) ──
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS google_refresh_token VARCHAR(512)")
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS google_calendar_id VARCHAR(255)")
-        await conn.execute("ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255)")
-        await conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_bttco_users_google_id ON bttco_users(google_id) WHERE google_id IS NOT NULL"
-        )
-
-        # ── One POS row per Stripe Checkout Session (added 2026-09-27) ──
-        # The POS card record is written by the Stripe webhook, and Stripe
-        # retries webhooks. The handler checks for an existing row first, but
-        # two concurrent retries can both pass that check, so the guarantee is
-        # enforced here rather than left to application timing. Partial, because
-        # cash rows carry no session id.
-        await conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS ux_bttco_pos_transactions_stripe_session_id "
-            "ON bttco_pos_transactions(stripe_session_id) WHERE stripe_session_id IS NOT NULL"
-        )
-
-        # ── SMS / A2P 10DLC opt-in tracking (added 2026-05-22, PR #31) ──
-        # Critical: the SmsMessage/SmsTemplate ORM models + the BTTCOUser model
-        # reference these columns at SELECT time. Without them, every
-        # `SELECT * FROM bttco_users` (login, register, /me, etc.) raises
-        # UndefinedColumnError → 500.
-        for col_sql in [
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS sms_opt_in_at TIMESTAMPTZ",
-            "ALTER TABLE bttco_users ADD COLUMN IF NOT EXISTS sms_opt_out_at TIMESTAMPTZ",
-        ]:
-            await conn.execute(col_sql)
-
-        # SMS message log + templates (mirrors migration 20260522_sms_messaging)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_sms_messages (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                direction VARCHAR(10) NOT NULL,
-                to_phone VARCHAR(20) NOT NULL,
-                from_phone VARCHAR(20) NOT NULL,
-                body TEXT NOT NULL,
-                status VARCHAR(30) NOT NULL DEFAULT 'queued',
-                error_code VARCHAR(20),
-                error_message TEXT,
-                twilio_sid VARCHAR(64) UNIQUE,
-                template_slug VARCHAR(100),
-                conversation_id UUID,
-                user_id UUID,
-                sender_id UUID,
-                price_cents INTEGER,
-                num_segments INTEGER,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                delivered_at TIMESTAMPTZ
+            # Every NOT NULL column is supplied explicitly. create_all builds this
+            # table from the ORM model, whose id / is_builtin / sort_order /
+            # ai_digest_enabled / created_at defaults are Python-side only, so the
+            # live columns carry NO server default -- the same omission that broke
+            # the starter-quest seed.
+            #
+            # The seventh row, 'owner-archive' (label "Artist Scrolls"), is the only
+            # backend-owned one: it is NOT in ScrollsPanel's BUILTIN_CATEGORIES,
+            # because it is not a frontend fallback tab. It is the owner's copy of
+            # every submitted Artist Scroll -- see app/services/scroll_archive.py --
+            # and maps to document category 'scroll_owner-archive' under the
+            # scrolls.py `scroll_{slug}` convention. It deliberately does NOT reuse
+            # 'scroll': that category is the artist's own scroll, which
+            # GET /documents/scroll/my returns for the caller and which submit_scroll
+            # deletes on every upsert, so filing the owner's archive there would both
+            # leak an artist's scroll to the founder as their own and delete the
+            # archive on the founder's next submission.
+            #
+            # It is is_builtin=TRUE for a stronger reason than the other six. Their
+            # failure mode on deletion is a missing tab. This one's slug is hardcoded
+            # in backend service code (OWNER_ARCHIVE_CATEGORY), so deleting the row
+            # makes list_category_docs 404 while submit_scroll keeps filing archive
+            # rows into it -- the owner would lose access to compliance records that
+            # are still accumulating. _slugify('Artist Scrolls') is 'artist_scrolls',
+            # so it could not be recreated with the slug the backend matches on
+            # either.
+            await conn.execute("""
+                INSERT INTO bttco_scroll_categories (id, slug, label, icon, description, is_builtin, sort_order, ai_digest_enabled, created_at)
+                VALUES
+                    (gen_random_uuid(), 'artist',    'Artist',    '📜',             'Artist compliance scrolls: BBP cert, employment agreements, license records.', TRUE, 0, FALSE, now()),
+                    (gen_random_uuid(), 'shop',      'Shop',      '🏪',             'Shop-level documents: vendor agreements, insurance, lease summaries.',         TRUE, 1, FALSE, now()),
+                    (gen_random_uuid(), 'templates', 'Templates', 'message-square', 'Reusable auto-message response templates for staff quick-replies.',            TRUE, 2, FALSE, now()),
+                    (gen_random_uuid(), 'waivers',   'Waivers',   '📋',             'Send consent forms and track waiver status.',                                  TRUE, 3, FALSE, now()),
+                    (gen_random_uuid(), 'upkeep',    'Upkeep',    '🔧',             'Daily, weekly, and monthly station maintenance quests.',                       TRUE, 4, FALSE, now()),
+                    (gen_random_uuid(), 'quests',    'Quest Log', 'quest',          'Active, completed, paused, and archived quests for everyone.',                 TRUE, 5, FALSE, now()),
+                    (gen_random_uuid(), 'owner-archive', 'Artist Scrolls', 'archive', 'Durable copies of Artist Scrolls submitted by artists, filed to the owner.',  TRUE, 6, FALSE, now())
+                ON CONFLICT (slug) DO UPDATE SET
+                    label = EXCLUDED.label,
+                    icon = EXCLUDED.icon,
+                    description = EXCLUDED.description,
+                    is_builtin = TRUE,
+                    sort_order = EXCLUDED.sort_order,
+                    ai_digest_enabled = FALSE
+            """)
+            builtin_scroll_categories = await conn.fetchval(
+                "SELECT count(*) FROM bttco_scroll_categories WHERE is_builtin = TRUE"
             )
-        """)
-        for ix_sql in [
-            "CREATE INDEX IF NOT EXISTS ix_sms_messages_to_phone ON bttco_sms_messages(to_phone)",
-            "CREATE INDEX IF NOT EXISTS ix_sms_messages_created_at ON bttco_sms_messages(created_at)",
-            "CREATE INDEX IF NOT EXISTS ix_sms_messages_status ON bttco_sms_messages(status)",
-            "CREATE INDEX IF NOT EXISTS ix_sms_messages_direction ON bttco_sms_messages(direction)",
-        ]:
-            await conn.execute(ix_sql)
-
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_sms_templates (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                slug VARCHAR(100) NOT NULL UNIQUE,
-                name VARCHAR(255) NOT NULL,
-                category VARCHAR(50) NOT NULL DEFAULT 'transactional',
-                body TEXT NOT NULL,
-                variables JSONB NOT NULL DEFAULT '[]'::jsonb,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                description TEXT,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            print(
+                f"[Ryozan] built-in scroll categories reconciled: {builtin_scroll_categories}",
+                flush=True,
             )
-        """)
-        # owner_id from PR #32 (staff scope)
-        await conn.execute("ALTER TABLE bttco_sms_templates ADD COLUMN IF NOT EXISTS owner_id UUID")
-        await conn.execute("CREATE INDEX IF NOT EXISTS ix_sms_templates_owner_id ON bttco_sms_templates(owner_id)")
 
-        # ── Artist counter-signature columns (added 2026-03-19) ──
-        for col_sql in [
-            "ALTER TABLE bttco_document_instances ADD COLUMN IF NOT EXISTS artist_signature TEXT",
-            "ALTER TABLE bttco_document_instances ADD COLUMN IF NOT EXISTS artist_signed_at TIMESTAMPTZ",
-            "ALTER TABLE bttco_document_instances ADD COLUMN IF NOT EXISTS artist_id_reviewed UUID REFERENCES bttco_users(id)",
-        ]:
-            await conn.execute(col_sql)
+        async def booth_rent_values() -> None:
+            await conn.execute("""
+                UPDATE bttco_users
+                SET booth_rent_payment_method = 'autodraft'
+                WHERE booth_rent_payment_method = 'stripe'
+            """)
+            await conn.execute("""
+                UPDATE bttco_users
+                SET booth_rent_interval = 'biweekly'
+                WHERE booth_rent_interval = 'week'
+            """)
 
-        # ── Quest tables (added 2026-03-15) ──
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_quests (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                slug VARCHAR(80) NOT NULL UNIQUE,
-                title VARCHAR(255) NOT NULL,
-                description TEXT NOT NULL,
-                category VARCHAR(50) NOT NULL DEFAULT 'onboarding',
-                xp_reward INTEGER NOT NULL DEFAULT 0,
-                coin_reward INTEGER NOT NULL DEFAULT 0,
-                requirement VARCHAR(255) NOT NULL,
-                target_count INTEGER NOT NULL DEFAULT 1,
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                sort_order INTEGER NOT NULL DEFAULT 0,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-        """)
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_user_quests (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES bttco_users(id) ON DELETE CASCADE,
-                quest_id UUID NOT NULL REFERENCES bttco_quests(id) ON DELETE CASCADE,
-                progress INTEGER NOT NULL DEFAULT 0,
-                completed BOOLEAN NOT NULL DEFAULT FALSE,
-                claimed BOOLEAN NOT NULL DEFAULT FALSE,
-                completed_at TIMESTAMPTZ,
-                claimed_at TIMESTAMPTZ,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                UNIQUE(user_id, quest_id)
-            )
-        """)
-        await conn.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_bttco_quests_slug_unique
-            ON bttco_quests (slug)
-        """)
+        async def password_hashes_and_quests() -> None:
+            # ── Fix broken password hashes (permanent safety net) ──
+            # Detects hashes that aren't valid bcrypt (60 chars, $2b$ or $2a$ prefix)
+            # and resets them to a known default so users can log in and change password.
+            import os as _os
 
-        # ── Email routes table (added 2026-03-19) ──
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_email_routes (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                handle VARCHAR(100) NOT NULL UNIQUE,
-                forward_to VARCHAR(255) NOT NULL,
-                user_id UUID NOT NULL REFERENCES bttco_users(id) ON DELETE CASCADE,
-                verified BOOLEAN NOT NULL DEFAULT FALSE,
-                verify_token VARCHAR(255),
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                verified_at TIMESTAMPTZ
-            )
-        """)
+            import bcrypt as _bcrypt
 
-        # ── Fix broken password hashes (permanent safety net) ──
-        # Detects hashes that aren't valid bcrypt (60 chars, $2b$ or $2a$ prefix)
-        # and resets them to a known default so users can log in and change password.
-        import os as _os
-
-        import bcrypt as _bcrypt
-
-        _default_pw = _bcrypt.hashpw(b"tattoo", _bcrypt.gensalt()).decode()
-        fixed = await conn.execute(
-            """
-            UPDATE bttco_users
-            SET password_hash = $1, must_reset_password = TRUE,
-                password_state = 'setup_required', password_changed_at = now(), password_change_method = 'setup'
-            WHERE length(password_hash) != 60
-               OR (password_hash NOT LIKE '$2b$%' AND password_hash NOT LIKE '$2a$%')
-        """,
-            _default_pw,
-        )
-        if fixed and fixed != "UPDATE 0":
-            print(f"[Ryozan] Fixed broken password hashes: {fixed}")
-
-        # ── One-time staff password reset (triggered by RESET_ALL_PASSWORDS env var) ──
-        if _os.environ.get("RESET_ALL_PASSWORDS") == "1":
-            reset_result = await conn.execute(
+            _default_pw = _bcrypt.hashpw(b"tattoo", _bcrypt.gensalt()).decode()
+            fixed = await conn.execute(
                 """
                 UPDATE bttco_users
                 SET password_hash = $1, must_reset_password = TRUE,
                     password_state = 'setup_required', password_changed_at = now(), password_change_method = 'setup'
-                WHERE role IN ('artist', 'admin', 'founder', 'assistant')
+                WHERE length(password_hash) != 60
+                   OR (password_hash NOT LIKE '$2b$%' AND password_hash NOT LIKE '$2a$%')
             """,
                 _default_pw,
             )
-            print(f"[Ryozan] RESET STAFF PASSWORDS: {reset_result} (remove RESET_ALL_PASSWORDS env var now)")
+            if fixed and fixed != "UPDATE 0":
+                print(f"[Ryozan] Fixed broken password hashes: {fixed}")
 
-        # ── Seed starter quests (idempotent; copy refreshes on every boot) ──
-        await conn.execute("""
-            INSERT INTO bttco_quests (id, slug, title, description, category, xp_reward, coin_reward, requirement, target_count, sort_order, is_active, created_at)
-            VALUES
-                (gen_random_uuid(), 'first-booking',   'First Session',     'Every master was once a disaster. Book your first session and let the ritual begin. The needle remembers what the mind forgets.',                'onboarding', 50,  10, 'Submit a booking request',    1, 1, TRUE, now()),
-                (gen_random_uuid(), 'profile-pic',     'Face Card',         'An artist without a face is just a rumor. Upload your portrait so the mortals know who wields the machine.',                      'onboarding', 25,   5, 'Set a profile avatar',        1, 2, TRUE, now()),
-                (gen_random_uuid(), 'waiver-signed',   'Consent King',      'The ancient pact between artist and canvas. Sign the waiver — it protects you both from the chaos of regret and litigation.',                     'onboarding', 30,   5, 'Sign a waiver',               1, 3, TRUE, now()),
-                (gen_random_uuid(), 'connect-email',   'Digital Address',   'Claim your @ryozan.app handle. One domain. One identity. The ravens will know where to find you.',                  'onboarding', 35,  10, 'Connect your studio email',    1, 4, TRUE, now()),
-                (gen_random_uuid(), 'add-to-homescreen','Go Mobile',        'Bind the portal to your device. Home screen access means you are one tap from the tower at all times. No excuses.', 'onboarding',100,  20, 'Add app to home screen',      1, 5, TRUE, now()),
-                (gen_random_uuid(), 'enable-notifications','Signal Flare',  'Light the beacon. Enable push notifications so the tower can reach you when bookings drop, messages land, or quests appear. Silence is not an option.', 'onboarding', 75, 15, 'Enable push notifications', 1, 6, TRUE, now()),
-                (gen_random_uuid(), 'three-sessions',  'Repeat Offender',   'Three sessions deep and you are no longer a tourist. You are a regular. The shop knows your coffee order. Probably.',                     'loyalty',   150,  50, 'Complete 3 sessions',          3, 7, TRUE, now()),
-                (gen_random_uuid(), 'leave-review',    'Voice of the People','The algorithm feeds on stars. Leave a Google review and help the uninitiated find the tower. Honesty appreciated. Five stars preferred.',                        'social',     40,  15, 'Submit a Google review',       1, 8, TRUE, now()),
-                (gen_random_uuid(), 'refer-friend',    'Pack Leader',       'Bring a friend into the fold. One referral who books a session and you earn the right to say you built this. Because you did.',                  'social',     75,  25, 'Refer 1 friend',              1, 9, TRUE, now()),
-                (gen_random_uuid(), 'email-alias',     'Shadow Name',       'Every legend needs an alias. Create an email forwarding alias so clients can reach you through the studio domain. One name. One mask. No spam.', 'side', 40, 15, 'Create an email alias', 1, 11, TRUE, now())
-            ON CONFLICT (slug) DO UPDATE SET
-                title = EXCLUDED.title, description = EXCLUDED.description, requirement = EXCLUDED.requirement
-        """)
+            # ── One-time staff password reset (triggered by RESET_ALL_PASSWORDS env var) ──
+            if _os.environ.get("RESET_ALL_PASSWORDS") == "1":
+                reset_result = await conn.execute(
+                    """
+                    UPDATE bttco_users
+                    SET password_hash = $1, must_reset_password = TRUE,
+                        password_state = 'setup_required', password_changed_at = now(), password_change_method = 'setup'
+                    WHERE role IN ('artist', 'admin', 'founder', 'assistant')
+                """,
+                    _default_pw,
+                )
+                print(f"[Ryozan] RESET STAFF PASSWORDS: {reset_result} (remove RESET_ALL_PASSWORDS env var now)")
 
-        # ── Push subscriptions table (added 2026-03-20) ──
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_push_subscriptions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES bttco_users(id) ON DELETE CASCADE,
-                endpoint TEXT NOT NULL,
-                p256dh TEXT NOT NULL,
-                auth TEXT NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                UNIQUE(user_id, endpoint)
-            )
-        """)
+            # ── Seed starter quests (idempotent; copy refreshes on every boot) ──
+            await conn.execute("""
+                INSERT INTO bttco_quests (id, slug, title, description, category, xp_reward, coin_reward, requirement, target_count, sort_order, is_active, created_at)
+                VALUES
+                    (gen_random_uuid(), 'first-booking',   'First Session',     'Every master was once a disaster. Book your first session and let the ritual begin. The needle remembers what the mind forgets.',                'onboarding', 50,  10, 'Submit a booking request',    1, 1, TRUE, now()),
+                    (gen_random_uuid(), 'profile-pic',     'Face Card',         'An artist without a face is just a rumor. Upload your portrait so the mortals know who wields the machine.',                      'onboarding', 25,   5, 'Set a profile avatar',        1, 2, TRUE, now()),
+                    (gen_random_uuid(), 'waiver-signed',   'Consent King',      'The ancient pact between artist and canvas. Sign the waiver — it protects you both from the chaos of regret and litigation.',                     'onboarding', 30,   5, 'Sign a waiver',               1, 3, TRUE, now()),
+                    (gen_random_uuid(), 'connect-email',   'Digital Address',   'Claim your @ryozan.app handle. One domain. One identity. The ravens will know where to find you.',                  'onboarding', 35,  10, 'Connect your studio email',    1, 4, TRUE, now()),
+                    (gen_random_uuid(), 'add-to-homescreen','Go Mobile',        'Bind the portal to your device. Home screen access means you are one tap from the tower at all times. No excuses.', 'onboarding',100,  20, 'Add app to home screen',      1, 5, TRUE, now()),
+                    (gen_random_uuid(), 'enable-notifications','Signal Flare',  'Light the beacon. Enable push notifications so the tower can reach you when bookings drop, messages land, or quests appear. Silence is not an option.', 'onboarding', 75, 15, 'Enable push notifications', 1, 6, TRUE, now()),
+                    (gen_random_uuid(), 'three-sessions',  'Repeat Offender',   'Three sessions deep and you are no longer a tourist. You are a regular. The shop knows your coffee order. Probably.',                     'loyalty',   150,  50, 'Complete 3 sessions',          3, 7, TRUE, now()),
+                    (gen_random_uuid(), 'leave-review',    'Voice of the People','The algorithm feeds on stars. Leave a Google review and help the uninitiated find the tower. Honesty appreciated. Five stars preferred.',                        'social',     40,  15, 'Submit a Google review',       1, 8, TRUE, now()),
+                    (gen_random_uuid(), 'refer-friend',    'Pack Leader',       'Bring a friend into the fold. One referral who books a session and you earn the right to say you built this. Because you did.',                  'social',     75,  25, 'Refer 1 friend',              1, 9, TRUE, now()),
+                    (gen_random_uuid(), 'email-alias',     'Shadow Name',       'Every legend needs an alias. Create an email forwarding alias so clients can reach you through the studio domain. One name. One mask. No spam.', 'side', 40, 15, 'Create an email alias', 1, 11, TRUE, now())
+                ON CONFLICT (slug) DO UPDATE SET
+                    title = EXCLUDED.title, description = EXCLUDED.description, requirement = EXCLUDED.requirement
+            """)
 
-        # ── Notification preferences table (added 2026-03-20) ──
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_notification_preferences (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL UNIQUE REFERENCES bttco_users(id) ON DELETE CASCADE,
-                email_bookings BOOLEAN NOT NULL DEFAULT TRUE,
-                email_messages BOOLEAN NOT NULL DEFAULT TRUE,
-                email_quests BOOLEAN NOT NULL DEFAULT TRUE,
-                email_marketing BOOLEAN NOT NULL DEFAULT FALSE,
-                push_bookings BOOLEAN NOT NULL DEFAULT TRUE,
-                push_messages BOOLEAN NOT NULL DEFAULT TRUE,
-                push_quests BOOLEAN NOT NULL DEFAULT TRUE,
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-        """)
-
-        # ── Booking columns that may be missing on older prod DB (added 2026-03-20) ──
-        for col_sql in [
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS guest_name VARCHAR(255)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS guest_email VARCHAR(255)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS guest_phone VARCHAR(50)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS sms_opt_in BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS sms_opt_in_at TIMESTAMPTZ",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS sms_consent_text TEXT",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS reference_code VARCHAR(20) UNIQUE",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS budget VARCHAR(50)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS timeline VARCHAR(50)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS stripe_checkout_session_id VARCHAR(255)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS stripe_payment_intent_id VARCHAR(255)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS google_calendar_event_id VARCHAR(255)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS source VARCHAR(50) NOT NULL DEFAULT 'bttco'",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS booking_kind VARCHAR(50) NOT NULL DEFAULT 'tattoo_session'",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS consultation_method VARCHAR(50)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS conversation_id UUID REFERENCES bttco_conversations(id)",
-            "ALTER TABLE bttco_bookings ADD COLUMN IF NOT EXISTS deposit_paid BOOLEAN DEFAULT FALSE",
-        ]:
-            await conn.execute(col_sql)
-
-        # ── Create index on reference_code if missing ──
-        await conn.execute("""
-            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_reference_code
-            ON bttco_bookings (reference_code)
-            WHERE reference_code IS NOT NULL
-        """)
-
-        # ── Booking query performance indexes (added 2026-05-26) ──
-        for idx_sql in _PERFORMANCE_INDEX_STATEMENTS:
-            await conn.execute(idx_sql)
-
-        # ── Courier artifact message columns (quote/slot proposals, added 2026-05-14) ──
-        for col_sql in [
-            "ALTER TABLE bttco_messages ADD COLUMN IF NOT EXISTS artifact_payload JSONB",
-            "ALTER TABLE bttco_messages ADD COLUMN IF NOT EXISTS artifact_state JSONB",
-            "ALTER TABLE bttco_messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ",
-        ]:
-            await conn.execute(col_sql)
-
-        # ── Artist session type rates + buffer (added 2026-06-22, PR #88) ──
-        for col_sql in [
-            "ALTER TABLE bttco_artist_session_types ADD COLUMN IF NOT EXISTS buffer_minutes INTEGER",
-            "ALTER TABLE bttco_artist_session_types ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC(10, 2)",
-        ]:
-            await conn.execute(col_sql)
-
-        # ── API usage budget tracker table (added 2026-04-05) ──
-        await conn.execute("""
-            CREATE TABLE IF NOT EXISTS bttco_api_usage (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID REFERENCES bttco_users(id) ON DELETE SET NULL,
-                endpoint VARCHAR(100) NOT NULL,
-                input_tokens INTEGER NOT NULL DEFAULT 0,
-                output_tokens INTEGER NOT NULL DEFAULT 0,
-                estimated_cost DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-        """)
-        await conn.execute("""
-            CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_api_usage_created_at
-            ON bttco_api_usage (created_at)
-        """)
-
-        # ── Case-insensitive unique email (added 2026-08-08) ──
-        # Production has never run alembic and has no alembic_version table, so
-        # the matching migration would never reach it; this is the path that
-        # actually creates the index in production.
-        #
-        # Deliberately in its own try/except: the outer handler prints and
-        # RETURNS, so an exception here would silently skip every statement
-        # after it. This one is EXPECTED to fail until duplicates are merged
-        # (run scripts/dedupe_user_emails.py), and a boot must never be held
-        # hostage to that.
-        try:
-            await conn.execute(_EMAIL_UNIQUE_INDEX_SQL)
-            print("[Ryozan] Unique index on lower(email): OK", flush=True)
-        except Exception as index_error:  # noqa: BLE001 - advisory only, boot must continue
-            print(
-                "[Ryozan] Unique index on lower(email) NOT created: "
-                f"{index_error}. Duplicate emails still exist — run "
-                "scripts/dedupe_user_emails.py (dry-run first), then redeploy.",
-                flush=True,
-            )
-
-        print("[Ryozan] Startup migrations: OK")
-    except Exception as e:
-        print(f"[Ryozan] Startup migration error (non-fatal): {e}")
+        await _seed_step("built-in scroll categories", scroll_categories)
+        await _seed_step("booth rent values", booth_rent_values)
+        await _seed_step("password hashes and starter quests", password_hashes_and_quests)
+        print("[Ryozan] Startup seeds: done", flush=True)
     finally:
         await conn.close()
 
@@ -869,7 +476,8 @@ async def lifespan(app: FastAPI):
     # ── Startup ───────────────────────────────
     print(f"[Ryozan] Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     print(f"[Ryozan] Database: {settings.DATABASE_URL.split('@')[1]}")  # hide creds
-    await _run_startup_migrations()
+    await _check_schema_revision()
+    await _run_startup_seeds()
     await _ensure_demo_account()
     outbox_task = asyncio.create_task(_run_owner_email_outbox())
     derivatives_task = (

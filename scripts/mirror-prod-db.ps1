@@ -65,8 +65,8 @@ if ($Docker) {
 }
 $env:DATABASE_URL = $localUrl
 
-# Fresh docker volumes have no schema; create ORM tables idempotently.
-Write-Host "      Ensuring schema (create_all, idempotent)..."
+# Fresh docker volumes have no schema; migrate to the Alembic head (idempotent).
+Write-Host "      Ensuring schema (alembic upgrade head)..."
 & $py (Join-Path $repo "api\scripts\ensure_schema.py")
 if ($LASTEXITCODE -ne 0) { Write-Error "schema init failed" }
 

@@ -31,10 +31,10 @@ from sqlalchemy.exc import MultipleResultsFound  # noqa: E402
 
 from app.api.v1.endpoints import auth  # noqa: E402
 from app.core.rate_limit import limiter  # noqa: E402
+from app.core.schema_compare import BASELINE_SQL_PATH  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.core.user_lookup import rank_candidates  # noqa: E402
 from app.models.user import BTTCOUser, normalize_email  # noqa: E402
-from main import _EMAIL_UNIQUE_INDEX_SQL  # noqa: E402
 
 DUPLICATE_EMAIL = "client.alpha@ryozan.app"
 DUPLICATE_EMAIL_MIXED = "Client.Alpha@ryozan.app"
@@ -547,20 +547,27 @@ class DuplicateRegistrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-# ── Requirement 3: the boot DDL statement itself ───────────────────────────
+# ── Requirement 3: the schema carries the index ────────────────────────────
 
 
-class BootIndexStatementTests(unittest.TestCase):
-    def test_index_is_unique_case_insensitive_and_idempotent(self):
-        sql = _EMAIL_UNIQUE_INDEX_SQL
+class BaselineEmailIndexTests(unittest.TestCase):
+    """The Alembic baseline owns the index; adopt_schema creates it on a database that lacks it.
 
-        self.assertIn("CREATE UNIQUE INDEX IF NOT EXISTS", sql)
-        self.assertIn("ux_bttco_users_email_lower", sql)
-        self.assertIn("bttco_users (lower(email))", sql)
+    A database with duplicate emails cannot be adopted: CREATE UNIQUE INDEX fails
+    inside the adoption transaction and nothing changes. Run
+    scripts/dedupe_user_emails.py (dry-run first), then adopt.
+    """
+
+    def test_index_is_unique_case_insensitive(self):
+        baseline = BASELINE_SQL_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "CREATE UNIQUE INDEX ux_bttco_users_email_lower ON public.bttco_users USING btree (lower((email)::text));",
+            baseline,
+        )
 
     def test_index_is_not_created_concurrently(self):
-        """CONCURRENTLY would leave an INVALID index behind on failure."""
-        self.assertNotIn("CONCURRENTLY", _EMAIL_UNIQUE_INDEX_SQL)
+        """CONCURRENTLY would leave an INVALID index behind on failure and cannot run in a transaction."""
+        self.assertNotIn("CONCURRENTLY", BASELINE_SQL_PATH.read_text(encoding="utf-8"))
 
 
 class DedupeSafetyTests(unittest.IsolatedAsyncioTestCase):

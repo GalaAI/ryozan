@@ -9,4 +9,5 @@ COPY . .
 
 RUN mkdir -p uploads
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Migrate, then serve. A failed migration exits non-zero and the API never starts.
+CMD ["sh", "-c", "alembic upgrade head || { echo \"[Ryozan] alembic upgrade head FAILED; refusing to start the API\" >&2; exit 1; }; exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

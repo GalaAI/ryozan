@@ -45,7 +45,7 @@ services:
         condition: service_healthy
     volumes:
       - ./api:/app
-    command: uvicorn main:app --host 0.0.0.0 --port 8801 --reload
+    command: sh -c "alembic upgrade head && exec uvicorn main:app --host 0.0.0.0 --port 8801 --reload"
 
   app:
     image: node:20-alpine

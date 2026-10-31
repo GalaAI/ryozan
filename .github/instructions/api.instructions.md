@@ -7,17 +7,22 @@ applyTo: "api/**"
 These rules supplement `.github/copilot-instructions.md` and override defaults
 when editing anything under `api/`.
 
-## Migration trap reminder
-When you add or rename a column on any SQLAlchemy model in `api/app/models/`:
+## Schema changes: Alembic only
+The schema has one path. The container runs `alembic upgrade head` before
+uvicorn starts and `main.py` issues no DDL. When you add or change a column,
+table, index or constraint on a model in `api/app/models/`:
 
-1. Write the alembic migration in `api/alembic/versions/YYYYMMDD_<slug>.py`.
-2. **Also add the matching idempotent SQL to `_run_startup_migrations()` in
-   `api/main.py`.** Railway doesn't run alembic on deploy.
-3. PR description must include the SQL you added to `main.py`.
+1. Write an Alembic revision in `api/alembic/versions/YYYYMMDD_<slug>.py`
+   whose `down_revision` is the current head (`alembic heads` must stay at one).
+2. Never add CREATE/ALTER statements to `main.py`; startup only seeds data.
+3. A column added to a table that already has rows must be nullable or carry
+   a server default.
+
+See `api/alembic/README.md` (baseline, adopting an old database).
 
 ## SQL style
-* Use `IF NOT EXISTS` on every `ALTER TABLE ADD COLUMN`, `CREATE TABLE`,
-  `CREATE INDEX`. The startup migration runs on every boot.
+* Startup data seeds (`_run_startup_seeds` in `main.py`) run on every boot, so
+  every seed statement must be idempotent (`ON CONFLICT`, guarded `UPDATE`).
 * Use `text(...)` from sqlalchemy when running raw SQL inside async sessions;
   asyncpg connections accept raw strings.
 

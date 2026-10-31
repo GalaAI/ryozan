@@ -580,55 +580,29 @@ def check_endpoint_coverage():
 # =================================================================
 
 def check_stale_migrations():
-    header("Stale Migration Detector", "migrations")
+    """The schema has one path, Alembic: require a single head and no DDL in main.py."""
+    header("Migration Chain", "migrations")
     issues = 0
-    if not MAIN_FILE.exists():
-        failed("main.py not found")
+    try:
+        from alembic.config import Config
+        from alembic.script import ScriptDirectory
+
+        config = Config()
+        config.set_main_option("script_location", str(MAIN_FILE.parent / "alembic"))
+        heads = ScriptDirectory.from_config(config).get_heads()
+    except Exception as exc:  # noqa: BLE001 - report, do not crash the preflight
+        failed(f"alembic chain unreadable: {exc}")
         _record_encounter("migrations", 1)
         return
-
-    main_source = MAIN_FILE.read_text(encoding="utf-8")
-
-    alter_pattern = re.compile(
-        r"ALTER\s+TABLE\s+(\w+)\s+ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\s+(\w+)", re.I
-    )
-    alter_cols: dict[str, set[str]] = {}
-    for match in alter_pattern.finditer(main_source):
-        alter_cols.setdefault(match.group(1).lower(), set()).add(match.group(2).lower())
-
-    create_pattern = re.compile(
-        r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+(\w+)\s*\((.*?)\)", re.I | re.DOTALL
-    )
-    create_cols: dict[str, set[str]] = {}
-    for match in create_pattern.finditer(main_source):
-        table = match.group(1).lower()
-        for line in match.group(2).split(","):
-            tok = line.strip().split()
-            if tok and tok[0].isidentifier():
-                skip = {"unique", "primary", "foreign", "check", "constraint"}
-                if tok[0].lower() not in skip and not tok[0].startswith(")"):
-                    create_cols.setdefault(table, set()).add(tok[0].lower())
-
-    model_cols = _parse_model_columns()
-    covered = 0
-    uncovered = []
-    for mc in model_cols:
-        table = mc.table.lower()
-        col = mc.column.lower()
-        if col in alter_cols.get(table, set()) or col in create_cols.get(table, set()):
-            covered += 1
-        else:
-            uncovered.append(mc)
-
-    passed(f"{covered} model columns have corresponding migrations")
-    if uncovered:
-        by_table: dict[str, list[str]] = {}
-        for mc in uncovered:
-            by_table.setdefault(mc.table, []).append(mc.column)
-        for table, cols in sorted(by_table.items()):
-            for col in sorted(cols):
-                warned(f"{table}.{col} -- no ALTER or CREATE in main.py (relies on create_all)")
-                issues += 1
+    if len(heads) == 1:
+        passed(f"alembic chain has one head: {heads[0]}")
+    else:
+        failed(f"alembic chain has {len(heads)} heads: {heads}; add a merge revision")
+        issues += 1
+    main_source = MAIN_FILE.read_text(encoding="utf-8") if MAIN_FILE.exists() else ""
+    if re.search(r"(CREATE\s+(UNIQUE\s+)?(TABLE|INDEX)|ALTER\s+TABLE)|create_all\(", main_source, re.I):
+        failed("main.py issues schema DDL; schema changes belong in an Alembic revision")
+        issues += 1
     _record_encounter("migrations", issues)
 
 

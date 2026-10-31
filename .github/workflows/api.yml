@@ -125,17 +125,11 @@ jobs:
     defaults:
       run:
         working-directory: api
-    # Production builds its schema on boot, not from Alembic: main.py's
-    # _run_startup_migrations() runs Base.metadata.create_all plus a list of
-    # idempotent ALTERs. That path was only ever exercised against a database
-    # that already had the schema -- a fresh or half-built database was first
-    # tried in production (the 500 the deploy watchdog exists to catch).
-    #
-    # This job replays the real boot path against an empty Postgres, then
-    # checks Alembic and the ORM still agree: with the schema stamped at head,
-    # `alembic upgrade head` must be a clean no-op. A model added without a
-    # matching migration, or a broken migration, fails the PR instead of the
-    # live site.
+    # The schema has one path: `alembic upgrade head`, which the container runs
+    # before uvicorn starts. This job builds an empty Postgres exactly that way,
+    # proves the result is the baseline snapshot, proves adoption of a database
+    # built by the old boot path, runs the startup data seeds, and checks every
+    # model column exists, so a model change without a revision fails the PR.
     services:
       postgres:
         image: postgres:16-alpine
@@ -176,11 +170,6 @@ jobs:
           BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "booking_approval_pg_tests.py"
 
-      - name: Duplicate-email migration integration
-        env:
-          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
-        run: python -m unittest discover -s tests -p "boot_email_index_pg_tests.py"
-
       - name: Courier SMS booking routing integration
         env:
           BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
@@ -201,13 +190,26 @@ jobs:
           BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "gala_schedule_pg_tests.py"
 
-      - name: Production boot schema path against an empty database
+      - name: Baseline and adoption against a real Postgres
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "schema_baseline_pg_tests.py"
+
+      - name: alembic upgrade head on an empty database (the container's path)
+        run: |
+          psql "$DATABASE_SYNC_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public"
+          python -m alembic upgrade head
+          python -m alembic current | tee /tmp/current.txt
+          grep -q '(head)' /tmp/current.txt
+
+      - name: Startup data seeds
         run: |
           python -c "
           import asyncio
-          from main import _run_startup_migrations
-          asyncio.run(_run_startup_migrations())
-          "
+          from main import _run_startup_seeds
+          asyncio.run(_run_startup_seeds())
+          " | tee /tmp/seeds.txt
+          ! grep -q 'Startup seed FAILED' /tmp/seeds.txt
 
       - name: Core tables exist
         run: |
@@ -223,14 +225,10 @@ jobs:
           assert len(bttco) > 40, f'suspiciously few tables: {len(bttco)}'
           "
 
-      - name: Startup migrations ran to completion (no swallowed error)
-        # _run_startup_migrations wraps every raw statement in one try/except
-        # that prints "(non-fatal)" and returns, so a failure part-way through
-        # silently skips everything after it and the job still goes green. The
-        # starter-quest seed is the last statement in that block that has
-        # actually broken in production (it omitted the NOT NULL id/is_active/
-        # created_at values create_all does not give server defaults for), so
-        # requiring the quests to be present proves the block ran end to end.
+      - name: Starter quests seeded
+        # The starter-quest seed has broken in production before (it omitted the
+        # NOT NULL id/is_active/created_at values the schema gives no server
+        # default for); requiring the rows proves it ran.
         run: |
           python -c "
           import sqlalchemy as sa
@@ -238,38 +236,15 @@ jobs:
           e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
           with e.connect() as c:
               n = c.execute(sa.text('SELECT count(*) FROM bttco_quests')).scalar()
-          assert n > 0, (
-              'bttco_quests is empty after the boot path. The seed INSERT raised and '
-              'was swallowed by the non-fatal handler, which also skipped every '
-              'statement after it.'
-          )
+          assert n > 0, 'bttco_quests is empty after the startup seeds; the seed INSERT failed.'
           print(f'starter quests seeded: {n}')
           "
 
-      - name: Built-in scroll categories seeded by the boot path
-        # bttco_scroll_categories was created by create_all but seeded only
-        # inside alembic (20260330 seeds artist/shop/misc, 20260426 renames misc
-        # -> templates). Production has no alembic_version table, so neither
-        # migration ever ran there and the table shipped empty -- every
-        # /scrolls/{category_slug} lookup 404'd and the feature was dead.
-        # This job is the only place that can catch that class of bug, because
-        # it replays the boot path against an empty database exactly as
-        # production does.
-        #
-        # Six of the seven rows are required, not just the migrations' three.
-        # ScrollsPanel.tsx does
-        #   .then(cats => { if (cats.length > 0) setCategories(cats) })
-        # so it swaps its six-tab BUILTIN_CATEGORIES fallback for whatever the
-        # API returns. A three-row seed would silently remove the Waivers,
-        # Upkeep and Quest Log tabs. Assert the reconciled post-20260426 slugs
-        # ('templates', not the superseded 'misc') and every builtin flag.
-        #
-        # The seventh, 'owner-archive' ("Artist Scrolls"), is backend-owned and
-        # deliberately absent from BUILTIN_CATEGORIES -- it is the owner's copy
-        # of every submitted Artist Scroll, not a frontend fallback tab. Its
-        # slug is hardcoded in app/services/scroll_archive.py, so without the
-        # row list_category_docs 404s while submit_scroll keeps filing archive
-        # rows into it.
+      - name: Built-in scroll categories seeded at startup
+        # Without these rows every /scrolls/{category_slug} lookup 404s. Six of
+        # the seven mirror ScrollsPanel.tsx BUILTIN_CATEGORIES (a partial seed
+        # makes the frontend drop tabs); 'owner-archive' is backend-owned
+        # (app/services/scroll_archive.py hardcodes its slug).
         run: |
           python -c "
           import sqlalchemy as sa
@@ -295,9 +270,7 @@ jobs:
               f'  want: {want}\n  got:  {got}\n'
               'With no rows every scrolls category endpoint returns 404 and the '
               'feature is unusable. With a partial seed the frontend replaces its '
-              'six-tab fallback with fewer tabs and the missing ones vanish. '
-              'Seeding these only in an alembic migration does not reach '
-              'production, which has never run alembic.'
+              'six-tab fallback with fewer tabs and the missing ones vanish.'
           )
           print(f'built-in scroll categories seeded: {got}')
           "
@@ -323,65 +296,14 @@ jobs:
                       drift.append(f'{t.name}.{col.name}')
           if drift:
               raise SystemExit(
-                  'Model declares columns the database does not have. Every query '
-                  'touching these tables would raise UndefinedColumn at runtime:\n  '
+                  'Model declares columns the migrated database does not have. Add an '
+                  'Alembic revision; every query touching these would raise UndefinedColumn:\n  '
                   + '\n  '.join(drift)
               )
           print(f'model/database parity OK across {len(Base.metadata.sorted_tables)} tables')
           "
 
-      - name: A new column on an existing table reaches the database
-        # The regression this job exists for. create_all only creates missing
-        # TABLES, so before the additive reconciler a new column on a table that
-        # already existed in production was silently dropped on the floor and
-        # surfaced as UndefinedColumn on the first request after deploy. Drop a
-        # column from a populated table, replay the boot path, and require it back.
-        run: |
-          python -c "
-          import asyncio
-          from sqlalchemy import inspect, select, text
-          from sqlalchemy.ext.asyncio import AsyncSession
-          from main import _run_startup_migrations
-          from app.core.database import engine
-          from app.api.v1 import router as _r  # noqa: F401
-          from app.models.user import BTTCOUser
-
-          TABLE, COLUMN = 'bttco_users', 'booking_buffer_enabled'
-
-          async def main():
-              async with AsyncSession(engine) as s:
-                  s.add(BTTCOUser(email='ci@bttco.test', password_hash='x', name='CI', role='artist'))
-                  await s.commit()
-              async with engine.begin() as c:
-                  await c.execute(text(f'ALTER TABLE {TABLE} DROP COLUMN {COLUMN}'))
-              cols = lambda si: {x['name'] for x in inspect(si).get_columns(TABLE)}
-              async with engine.connect() as c:
-                  assert COLUMN not in await c.run_sync(cols), 'setup failed: column still present'
-              print(f'simulated production predating {TABLE}.{COLUMN}, table has rows')
-
-              await _run_startup_migrations()
-
-              async with engine.connect() as c:
-                  assert COLUMN in await c.run_sync(cols), (
-                      f'REGRESSION: {TABLE}.{COLUMN} is on the model but did not reach '
-                      'the database. Adding a column to an existing table is broken again.'
-                  )
-              async with AsyncSession(engine) as s:
-                  user = (await s.execute(select(BTTCOUser))).scalars().first()
-                  assert user.booking_buffer_enabled is True, 'existing row did not get the server default'
-              print('column healed and the pre-existing row carries the server default')
-
-          asyncio.run(main())
-          "
-
-      - name: Alembic agrees with the ORM (stamp head, upgrade is a no-op)
-        run: |
-          python -m alembic stamp head
-          python -m alembic upgrade head
-          python -m alembic current | tee /tmp/current.txt
-          grep -q '(head)' /tmp/current.txt
-
-      - name: Router loads against the booted schema
+      - name: Router loads against the migrated schema
         run: |
           python -c "
           from fastapi import FastAPI

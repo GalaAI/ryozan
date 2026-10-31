@@ -3,7 +3,8 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "sh -c 'uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'"
+# Migrate, then serve. A failed migration exits non-zero and the API never starts.
+startCommand = "sh -c 'alembic upgrade head || { echo \"[Ryozan] alembic upgrade head FAILED; refusing to start the API\" >&2; exit 1; }; exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}'"
 healthcheckPath = "/health"
 healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"

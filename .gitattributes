@@ -2,3 +2,6 @@
 # text normalization here preserves their manifest hashes on Windows checkout.
 app/public/dependencies/@bttco/login-gate/1.0.0/** -text
 app/public/dependencies/@bttco/logo-loader/1.1.1/** -text
+
+# Generated Alembic baseline (scripts/schema_dump.py): keep it byte-identical on every checkout.
+api/alembic/baseline/** text eol=lf

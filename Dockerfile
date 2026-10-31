@@ -34,4 +34,7 @@ COPY --from=frontend /build/dist ./static
 
 RUN mkdir -p uploads
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# The schema is Alembic's alone: migrate first, and never start the API on a
+# schema that failed to migrate. The container exits non-zero, the deploy fails
+# its health check, and the previous deployment keeps serving.
+CMD ["sh", "-c", "alembic upgrade head || { echo \"[Ryozan] alembic upgrade head FAILED; refusing to start the API\" >&2; exit 1; }; exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

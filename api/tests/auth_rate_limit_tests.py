@@ -16,10 +16,10 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.endpoints import auth, bookings
 from app.core.rate_limit import get_rate_limit_key, limiter
+from app.core.schema_compare import BASELINE_SQL_PATH  # noqa: E402
 from app.core.security import hash_password
 from app.models.user import BTTCOUser
 from app.schemas.booking import PublicBookingResponse
-from main import _PERFORMANCE_INDEX_STATEMENTS  # noqa: E402
 
 
 class _FakeScalars:
@@ -222,26 +222,21 @@ class AuthRateLimitTests(unittest.TestCase):
         self.assertEqual(response.status_code, 429)
 
 
-class StartupIndexMigrationTests(unittest.TestCase):
-    def test_performance_indexes_use_real_columns_and_concurrent_creation(self):
-        statements = "\n".join(_PERFORMANCE_INDEX_STATEMENTS)
+class BaselinePerformanceIndexTests(unittest.TestCase):
+    def test_performance_indexes_use_real_columns(self):
+        baseline = BASELINE_SQL_PATH.read_text(encoding="utf-8")
 
         self.assertIn(
-            "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_bookings_conversation_id ON bttco_bookings (conversation_id) WHERE conversation_id IS NOT NULL",
-            statements,
+            "CREATE INDEX idx_bttco_bookings_conversation_id ON public.bttco_bookings USING btree "
+            "(conversation_id) WHERE (conversation_id IS NOT NULL);",
+            baseline,
         )
         self.assertIn(
-            "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_bttco_notifications_read ON bttco_notifications (user_id, read) WHERE read = FALSE",
-            statements,
+            "CREATE INDEX idx_bttco_notifications_read ON public.bttco_notifications USING btree "
+            "(user_id, read) WHERE (read = false);",
+            baseline,
         )
-        self.assertNotIn("booking_id", statements)
-        self.assertNotIn("is_read", statements)
-        self.assertTrue(
-            all(
-                statement.startswith("CREATE INDEX CONCURRENTLY IF NOT EXISTS")
-                for statement in _PERFORMANCE_INDEX_STATEMENTS
-            )
-        )
+        self.assertNotIn("is_read", baseline)
 
 
 if __name__ == "__main__":

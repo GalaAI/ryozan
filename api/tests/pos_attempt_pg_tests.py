@@ -1,41 +1,36 @@
-"""Real PostgreSQL constraints and additive POS attempt schema proof.
+"""Real PostgreSQL constraints and POS attempt data proof.
 
-The existing booking fixture owns an isolated-schema test convention, while
-schema-sync unit tests cannot prove concurrent uniqueness or populated-table
-upgrades. This suite reuses that convention for the existing POS record only.
+The existing booking fixture owns an isolated-schema test convention; unit
+tests cannot prove concurrent uniqueness. This suite reuses that convention for
+the existing POS record only. The POS v1 columns and constraints themselves are
+part of the Alembic baseline (alembic/baseline/20261031_baseline_schema.sql).
 """
 
 import asyncio
 import contextlib
 import io
 import os
-import runpy
 import unittest
 from datetime import UTC, datetime
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
 import asyncpg
-from alembic.migration import MigrationContext
-from alembic.operations import Operations
-from sqlalchemy import inspect, select, text
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.database import Base
-from app.core.schema_sync import install_pos_attempt_v1_constraints, reconcile_additive_columns
 from app.models.booking import Booking
 from app.models.message import Conversation  # noqa: F401 - register Booking's existing foreign key target
-from app.models.pos_transaction import POS_ATTEMPT_V1_COLUMNS, POSTransaction
+from app.models.pos_transaction import POSTransaction
 from app.models.user import BTTCOUser
 from app.schemas.pos import POSAttemptResponse, POSBalanceSnapshot, POSReceiptContext
 
 TEST_DATABASE_URL = os.environ.get("BTTCO_TEST_DATABASE_URL", "")
 if TEST_DATABASE_URL.startswith("postgresql://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
-MIGRATION_PATH = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "20261019_pos_attempts.py"
 
 
 @unittest.skipUnless(TEST_DATABASE_URL, "set BTTCO_TEST_DATABASE_URL for isolated POS PostgreSQL proof")
@@ -247,69 +242,14 @@ class POSAttemptPostgresTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(invalid=invalid):
                 await self._reject(**invalid)
 
-    async def _legacy_table(self):
-        row = POSTransaction(
-            id=uuid4(),
-            artist_id=self.artist_id,
-            created_by=self.operator_id,
-            booking_id=self.booking_id,
-            amount_cents=5_200,
-            commission_base_cents=5_000,
-            price_adjustment_cents=200,
-            payment_method="card",
-            processor="stripe",
-            stripe_session_id="cs_legacy",
-            status="completed",
-        )
-        await self._save(row)
-        async with self.engine.begin() as connection:
-            for name in POS_ATTEMPT_V1_COLUMNS:
-                await connection.execute(text(f'ALTER TABLE bttco_pos_transactions DROP COLUMN "{name}" CASCADE'))
-            before = (await connection.execute(text("SELECT to_jsonb(p) FROM bttco_pos_transactions p"))).scalar_one()
-        return row.id, before
-
-    async def _assert_legacy_unchanged(self, row_id, before):
-        async with self.engine.begin() as connection:
-            after = (
-                await connection.execute(
-                    text("SELECT to_jsonb(p) FROM bttco_pos_transactions p WHERE id = :id"), {"id": row_id}
-                )
-            ).scalar_one()
-            checks = await connection.run_sync(
-                lambda conn: {item["name"] for item in inspect(conn).get_check_constraints("bttco_pos_transactions")}
-            )
-        self.assertEqual({key: value for key, value in after.items() if key not in POS_ATTEMPT_V1_COLUMNS}, before)
-        self.assertTrue(all(after[name] is None for name in POS_ATTEMPT_V1_COLUMNS))
-        self.assertIn("ck_pos_attempt_v1_presence", checks)
-        await self._reject(tip_cents=-1)
-
-    async def test_alembic_upgrade_is_additive_idempotent_and_preserves_legacy_rows(self):
-        row_id, before = await self._legacy_table()
-
-        def migrate(connection, operation):
-            with Operations.context(MigrationContext.configure(connection)):
-                runpy.run_path(str(MIGRATION_PATH))[operation]()
-
-        async with self.engine.begin() as connection:
-            await connection.run_sync(migrate, "upgrade")
-            await connection.run_sync(migrate, "upgrade")
-        await self._assert_legacy_unchanged(row_id, before)
-        await self._save(self._attempt())
-        with self.assertRaisesRegex(RuntimeError, "durable attempts exist"):
-            async with self.engine.begin() as connection:
-                await connection.run_sync(migrate, "downgrade")
-
-    async def test_additive_startup_owner_installs_columns_and_constraints_twice(self):
-        row_id, before = await self._legacy_table()
-        for _ in range(2):
-            async with self.engine.begin() as connection:
-                plan = await reconcile_additive_columns(connection, Base.metadata)
-                self.assertEqual(plan.refused, [])
-                await connection.run_sync(install_pos_attempt_v1_constraints)
-        await self._assert_legacy_unchanged(row_id, before)
-
     async def test_real_startup_preserves_tip_only_attempt_and_legacy_values(self):
         import main
+
+        # The seeds write to tables beyond this fixture's POS slice (scroll
+        # categories, quests). Startup no longer creates tables, so the fixture
+        # schema gets every table main.py's import chain registers.
+        async with self.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
 
         balance = POSBalanceSnapshot(
             livemode=False,
@@ -355,10 +295,10 @@ class POSAttemptPostgresTests(unittest.IsolatedAsyncioTestCase):
             patch("asyncpg.connect", side_effect=scoped_connect),
             contextlib.redirect_stdout(boot_output),
         ):
-            await main._run_startup_migrations()
-            await main._run_startup_migrations()
-        self.assertNotIn("non-fatal", boot_output.getvalue())
-        self.assertEqual(boot_output.getvalue().count("Startup migrations: OK"), 2)
+            await main._run_startup_seeds()
+            await main._run_startup_seeds()
+        self.assertNotIn("Startup seed FAILED", boot_output.getvalue())
+        self.assertEqual(boot_output.getvalue().count("Startup seeds: done"), 2)
         async with self.sessions() as db:
             rows = (
                 (await db.execute(select(POSTransaction).where(POSTransaction.id.in_([tip.id, legacy.id]))))

@@ -5,18 +5,15 @@ port/database prevents cross-feature test state and never accepts a remote URL.
 """
 
 import asyncio
-import importlib.util
 import io
 import os
 import secrets
 import unittest
 from contextlib import ExitStack, redirect_stdout
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import httpx
 from fastapi import FastAPI
-from sqlalchemy import select
 
 from app.api.v1.endpoints import auth, users
 from app.core.database import Base, async_session, engine
@@ -99,68 +96,12 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(evidence["password_status"], "user_set")
         self.assertEqual(evidence["last_login_method"], "password")
 
-    async def test_revision_roundtrip_preserves_credential_and_leaves_historical_evidence_null(self):
-        from alembic.migration import MigrationContext
-        from alembic.operations import Operations
-
-        path = Path(__file__).resolve().parents[1] / "alembic/versions/20261001_account_status.py"
-        spec = importlib.util.spec_from_file_location("account_status_revision", path)
-        migration = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(migration)
-
-        def roundtrip(conn):
-            with Operations.context(MigrationContext.configure(conn)):
-                migration.downgrade()
-                migration.upgrade()
-
-        async with engine.begin() as conn:
-            await conn.run_sync(roundtrip)
-        async with async_session() as db:
-            result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == self.artist_id))
-            artist = result.scalar_one()
-            for field in (
-                "password_state",
-                "password_changed_at",
-                "password_change_method",
-                "last_login_at",
-                "last_login_method",
-            ):
-                self.assertIsNone(getattr(artist, field))
-            email = artist.email
-        response = await self.client.post("/auth/login", json={"email": email, "password": self.secret})
-        self.assertEqual(response.status_code, 200)
-
-    async def test_startup_additive_reconciliation_preserves_unknowns_and_is_repeatable(self):
-        from sqlalchemy import text
-
-        from app.core.schema_sync import reconcile_additive_columns
-
-        fields = (
-            "password_state",
-            "password_changed_at",
-            "password_change_method",
-            "last_login_at",
-            "last_login_method",
-        )
-        async with engine.begin() as conn:
-            for field in fields:
-                await conn.execute(text(f"ALTER TABLE bttco_users DROP COLUMN {field}"))
-            first = await reconcile_additive_columns(conn, Base.metadata)
-            self.assertEqual(len(first.statements), 5)
-            self.assertEqual(first.refused, [])
-            second = await reconcile_additive_columns(conn, Base.metadata)
-            self.assertEqual(second.statements, [])
-        async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
-            for field in fields:
-                self.assertIsNone(getattr(artist, field))
-
     async def test_full_lifespan_preserves_history_and_records_only_fixture_staff_resets(self):
         import main
 
         self.assertEqual(main.settings.DATABASE_URL, os.environ["DATABASE_URL"])
         self.assertTrue(main.settings.LOCAL_DEV_MODE)
-        # Exercise the real lifespan and migrations. Only unrelated outbound
+        # Exercise the real lifespan and startup seeds. Only unrelated outbound
         # worker inputs are mocked; all account writes and reads use this DB.
         for worker in (
             "process_owner_email_outbox_once",
@@ -204,8 +145,8 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
                         transport=httpx.ASGITransport(app=main.app), base_url="http://fixture.local"
                     ) as client:
                         response = await client.get("/api/v1/users/artist-account-status", headers=self.owner_headers)
-            self.assertIn("Startup migrations: OK", output.getvalue())
-            self.assertNotIn("Startup migration error", output.getvalue())
+            self.assertIn("Startup seeds: done", output.getvalue())
+            self.assertNotIn("Startup seed FAILED", output.getvalue())
             return response
 
         response = await boot("0")

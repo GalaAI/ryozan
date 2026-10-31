@@ -70,3 +70,6 @@ docs/
 n8n-workflows/
 workflows/
 .dev-secrets.json
+
+# The Alembic baseline schema is a generated, committed artifact (alembic/README.md).
+!alembic/baseline/*.sql

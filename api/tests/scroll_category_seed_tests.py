@@ -1,10 +1,9 @@
-"""The built-in scroll categories must be seeded by the boot path, not by alembic.
+"""The built-in scroll categories are seeded at boot, by main._run_startup_seeds().
 
-Production builds its schema from main.py's _run_startup_migrations(), never
-from alembic. There is no alembic_version table there. Anything seeded only
-inside a migration therefore never reaches production. That is exactly what
-happened to bttco_scroll_categories: the table was created by
-Base.metadata.create_all and shipped with zero rows, so every
+The schema is Alembic's (the 20261031 baseline is schema only); these rows are
+data that every deploy refreshes, so they are seeded on boot. History: before
+the baseline, production never ran Alembic, the rows lived only in Alembic
+revisions, and bttco_scroll_categories shipped with zero rows, so every
 /scrolls/{category_slug} lookup raised 404 and the whole feature was dead.
 
 The seed carries SEVEN rows, not the three the migrations know about.
@@ -31,6 +30,7 @@ import unittest
 from pathlib import Path
 
 import main
+from app.core.schema_compare import BASELINE_SQL_PATH
 from app.models.scroll_category import ScrollCategory
 
 SCROLLS_PANEL = Path(__file__).resolve().parents[2] / "app" / "src" / "components" / "ScrollsPanel.tsx"
@@ -75,9 +75,9 @@ _FRONTEND_ROW = re.compile(r"slug:\s*'([^']*)'.*?label:\s*'([^']*)'.*?icon:\s*'(
 
 def _seed_statement() -> str:
     """The INSERT INTO bttco_scroll_categories statement inside the boot path."""
-    source = inspect.getsource(main._run_startup_migrations)
+    source = inspect.getsource(main._run_startup_seeds)
     match = re.search(r"INSERT INTO bttco_scroll_categories.*?(?=\"\"\")", source, re.DOTALL)
-    assert match, "no bttco_scroll_categories seed found in _run_startup_migrations"
+    assert match, "no bttco_scroll_categories seed found in _run_startup_seeds"
     return match.group(0)
 
 
@@ -111,7 +111,7 @@ def _frontend_builtin_categories() -> list[tuple[str, str, str, int]]:
 class ScrollCategorySeedTests(unittest.TestCase):
     def test_boot_path_seeds_the_categories(self):
         """The seed lives in the boot path, which is the only thing production runs."""
-        self.assertIn("INSERT INTO bttco_scroll_categories", inspect.getsource(main._run_startup_migrations))
+        self.assertIn("INSERT INTO bttco_scroll_categories", inspect.getsource(main._run_startup_seeds))
 
     def test_seeds_every_builtin_category(self):
         got = [(slug, label, icon, order) for slug, label, icon, _, _, order, _ in _seeded_rows()]
@@ -186,7 +186,7 @@ class ScrollCategorySeedTests(unittest.TestCase):
     def test_reconciles_the_superseded_misc_tab(self):
         """20260426 renamed misc to templates. Boot must repair legacy state."""
         statement = _seed_statement()
-        startup = inspect.getsource(main._run_startup_migrations)
+        startup = inspect.getsource(main._run_startup_seeds)
         self.assertIn("WHERE slug = 'misc'", startup)
         self.assertIn("SET slug = 'templates'", startup)
         self.assertNotIn("'misc',", statement)
@@ -225,17 +225,16 @@ class ScrollCategorySeedTests(unittest.TestCase):
             with self.subTest(assignment=assignment):
                 self.assertIn(assignment, statement)
 
-    def test_slug_conflict_target_is_repaired_before_seed(self):
-        """Legacy production tables need the model's unique slug invariant before ON CONFLICT."""
-        source = inspect.getsource(main._run_startup_migrations)
-        index_at = source.index("CREATE UNIQUE INDEX IF NOT EXISTS ux_bttco_scroll_categories_slug")
-        seed_at = source.index("INSERT INTO bttco_scroll_categories")
-
-        self.assertLess(index_at, seed_at)
-        self.assertIn("ON bttco_scroll_categories (slug)", source[index_at:seed_at])
+    def test_slug_conflict_target_is_in_the_baseline_schema(self):
+        """ON CONFLICT (slug) needs the unique slug index; the Alembic baseline creates it."""
+        baseline = BASELINE_SQL_PATH.read_text(encoding="utf-8")
+        self.assertIn(
+            "CREATE UNIQUE INDEX ux_bttco_scroll_categories_slug ON public.bttco_scroll_categories USING btree (slug);",
+            baseline,
+        )
 
     def test_boot_log_counts_only_builtin_categories(self):
-        startup = inspect.getsource(main._run_startup_migrations)
+        startup = inspect.getsource(main._run_startup_seeds)
         self.assertIn(
             "SELECT count(*) FROM bttco_scroll_categories WHERE is_builtin = TRUE",
             startup,
@@ -272,17 +271,12 @@ class ScrollCategorySeedTests(unittest.TestCase):
         """ScrollCategory.id has only a Python-side default, so raw SQL must generate one."""
         self.assertEqual(len(_SEED_ROW.findall(_seed_statement())), len(EXPECTED_CATEGORIES))
 
-    def test_seed_runs_before_the_historical_ddl(self):
-        """One try/except covers the whole block, so anything earlier can skip the seed."""
-        source = inspect.getsource(main._run_startup_migrations)
-        seed_at = source.index("INSERT INTO bttco_scroll_categories")
-        for later in ("ALTER TABLE bttco_users", "INSERT INTO bttco_quests", "CREATE TABLE IF NOT EXISTS"):
-            with self.subTest(statement=later):
-                self.assertLess(
-                    seed_at,
-                    source.index(later),
-                    f"the scroll category seed sits behind '{later}', which can skip it",
-                )
+    def test_seeds_issue_no_schema_ddl(self):
+        """Startup owns data only; every schema change is an Alembic revision."""
+        source = inspect.getsource(main._run_startup_seeds)
+        for ddl in ("CREATE TABLE", "ALTER TABLE", "CREATE INDEX", "CREATE UNIQUE INDEX", "DROP TABLE", "create_all("):
+            with self.subTest(statement=ddl):
+                self.assertNotIn(ddl, source)
 
 
 if __name__ == "__main__":

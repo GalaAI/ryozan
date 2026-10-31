@@ -9,5 +9,5 @@ alwaysApply: false
 - **Import package:** application code lives in the **`api/app/`** Python package (`from app....`). Do **not** confuse with the **repo-root `app/`** folder (that is the Vite React frontend).
 - **Entrypoint:** `uvicorn main:app` from **`api/`** (see `main.py`).
 - **DB / config:** follow existing `app.core.config`, SQLAlchemy/async patterns in-tree; env names live in `api/.env.example`.
-- **Migrations / schema:** repo uses startup idempotency in `main.py` for some changes; if you add tables/columns, align with existing Alembic or startup migration patterns already used for similar changes.
+- **Migrations / schema:** Alembic is the only schema path (`alembic upgrade head` runs before the API starts; `main.py` issues no DDL). Every table/column/index change is a new revision in `api/alembic/versions`; see `api/alembic/README.md`.
 - **Static SPA in prod:** the API also mounts built frontend assets — changes to static mounting or CORS should stay consistent with the unified Docker/Railway layout in the root `Dockerfile`.

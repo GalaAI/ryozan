@@ -1,8 +1,9 @@
 """
-Alembic migration environment.
+Alembic migration environment: the one path that builds and changes Ryozan's schema.
 
-Imports all models so autogenerate can detect schema changes.
-Uses async engine from our database module.
+The chain starts at 20261031_baseline (the complete schema the old boot path
+built). The container runs `alembic upgrade head` before the API starts; the
+API itself issues no DDL. Connects with the sync (psycopg2) form of DATABASE_URL.
 """
 
 from logging.config import fileConfig
@@ -12,71 +13,15 @@ from sqlalchemy.engine import Connection
 
 from alembic import context
 
-# Import Base and all models so autogenerate sees them
+# Register exactly the models the running API registers, by importing the same
+# modules main.py imports. A hand-kept list here drifted from the app: it named
+# models the app never loads (guild) and missed ones it does (booking add-ons,
+# rewards), so autogenerate compared against a schema nobody runs.
+from app.api.v1 import router as _api_router  # noqa: F401
 from app.core.config import get_settings
 from app.core.database import Base
-from app.models.ai_memory import AIMemory  # noqa: F401
-from app.models.api_usage import APIUsage  # noqa: F401
-from app.models.booking import Booking  # noqa: F401
-from app.models.booking_draft import BookingDraft  # noqa: F401
-from app.models.booking_lifecycle_event import BookingLifecycleEvent  # noqa: F401
-from app.models.booking_slot_hold import BookingSlotHold  # noqa: F401
-from app.models.broadcast import Broadcast, GalaFeedback  # noqa: F401
-from app.models.club import ClubPost, ClubPostLike  # noqa: F401
-from app.models.crm_pipeline_task import CrmPipelineTask  # noqa: F401
-from app.models.document import DocumentInstance, DocumentTemplate  # noqa: F401
-from app.models.econ import EconConnection, EconLedgerEntry, EconSyncRun  # noqa: F401
-from app.models.email_log import EmailLog  # noqa: F401
-from app.models.email_route import EmailRoute  # noqa: F401
-from app.models.email_template import EmailTemplate  # noqa: F401
-from app.models.flash import FlashDesign, FlashSheet, ModelFeedbackSample  # noqa: F401
-from app.models.gallery_deletion_outbox import GalleryDeletionOutbox  # noqa: F401
-from app.models.gift_card import GiftCard, GiftCardRedemption  # noqa: F401
-from app.models.guild import (  # noqa: F401
-    ClassEnrollment,
-    GauntletAttempt,
-    GauntletChallenge,
-    GuildClass,
-    Inspiration,
-    LeaderboardEntry,
-)
-from app.models.mcp_oauth import (  # noqa: F401
-    McpOAuthAuthorizationCode,
-    McpOAuthClient,
-    McpOAuthRefreshToken,
-)
-from app.models.message import Conversation, ConversationParticipant, Message  # noqa: F401
-from app.models.notification import Notification  # noqa: F401
-from app.models.notification_preferences import NotificationPreferences  # noqa: F401
-from app.models.pack_bridge_outbox import PackBridgeOutbox  # noqa: F401
-from app.models.pos_transaction import POSTransaction  # noqa: F401
-from app.models.push_subscription import PushSubscription  # noqa: F401
-from app.models.quest import Quest, UserQuest  # noqa: F401
-from app.models.quote import Quote  # noqa: F401
-from app.models.reference import Reference, ReferenceView  # noqa: F401
-from app.models.response_template import ResponseTemplate  # noqa: F401
-from app.models.scroll_category import ScrollCategory  # noqa: F401
-from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox  # noqa: F401
-from app.models.session_type import ArtistSessionType  # noqa: F401
-from app.models.sms_message import SmsMessage  # noqa: F401
-from app.models.sms_template import SmsTemplate  # noqa: F401
-from app.models.stash import StashCanvasSession, StashItem  # noqa: F401
-from app.models.time_block import TimeBlock  # noqa: F401
-from app.models.user import BTTCOUser  # noqa: F401
-from app.models.viber import (  # noqa: F401
-    ViberAccount,
-    ViberAIProvider,
-    ViberConnection,
-    ViberProposal,
-)
-from app.models.workspace import (  # noqa: F401
-    Workspace,
-    WorkspaceChannel,
-    WorkspaceFeatureStatus,
-    WorkspaceLog,
-    WorkspaceNote,
-    WorkspaceTodo,
-)
+from app.mcp import oauth as _mcp_oauth  # noqa: F401
+from app.mcp import router as _mcp_router  # noqa: F401
 
 settings = get_settings()
 config = context.config

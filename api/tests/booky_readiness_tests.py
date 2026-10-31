@@ -6,12 +6,10 @@ but no test owner covers Booky's account-bound authority or recovery contract.
 These tests exercise that boundary while reusing the canonical service owners.
 """
 
-import importlib.util
 import inspect
 import json
 import unittest
 from datetime import UTC, date, datetime, timedelta
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -131,19 +129,30 @@ class _ResendRequest:
 def _booking(*, status=BookingStatus.PENDING, method="meet"):
     now = datetime.now(UTC)
     return Booking(
-        id=uuid4(), artist_id=uuid4(), client_id=uuid4(), status=status,
-        description="Consultation request", booking_kind="consultation",
-        consultation_method=method, reference_code="BKG-BOOKY",
-        scheduled_date=date(2026, 8, 28), scheduled_time="10:00",
-        duration_minutes=30, updated_at=now, created_at=now,
+        id=uuid4(),
+        artist_id=uuid4(),
+        client_id=uuid4(),
+        status=status,
+        description="Consultation request",
+        booking_kind="consultation",
+        consultation_method=method,
+        reference_code="BKG-BOOKY",
+        scheduled_date=date(2026, 8, 28),
+        scheduled_time="10:00",
+        duration_minutes=30,
+        updated_at=now,
+        created_at=now,
     )
 
 
 class BookyPolicyTests(unittest.TestCase):
     def test_consent_snapshot_requires_matching_fields(self):
         base = {
-            "artist_slug": "justin", "first_name": "Founder", "last_name": "Canary",
-            "email": "collector@example.test", "description": "A sufficiently detailed booking request",
+            "artist_slug": "justin",
+            "first_name": "Founder",
+            "last_name": "Canary",
+            "email": "collector@example.test",
+            "description": "A sufficiently detailed booking request",
         }
         with self.assertRaises(ValidationError):
             PublicBookingSubmit(**base, booky_consent=True)
@@ -163,7 +172,8 @@ class BookyPolicyTests(unittest.TestCase):
     def test_positive_config_identity_and_collector_canary_fail_closed(self):
         collector_id = uuid4()
         disabled = _resolve(
-            "consult_auto", collector_id=collector_id,
+            "consult_auto",
+            collector_id=collector_id,
             settings=_settings(
                 BOOKY_AUTOMATION_ENABLED=False,
                 BOOKY_CANARY_COLLECTOR_IDS=str(collector_id),
@@ -231,8 +241,10 @@ class BookySettingsTests(unittest.IsolatedAsyncioTestCase):
         founder = SimpleNamespace(id=uuid4(), role="founder")
         added = []
         db = SimpleNamespace(
-            get=AsyncMock(return_value=artist), add=added.append,
-            commit=AsyncMock(), refresh=AsyncMock(),
+            get=AsyncMock(return_value=artist),
+            add=added.append,
+            commit=AsyncMock(),
+            refresh=AsyncMock(),
         )
         with patch.object(bookings_endpoint, "get_settings", return_value=_settings()):
             with self.assertRaises(HTTPException) as skipped:
@@ -271,17 +283,28 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
             self.assertRaises(RuntimeError),
         ):
             await _run_booky_confirmation_saga(
-                missing_db, booking=booking, artist=artist, conversation=conversation,
-                client_name="Collector", client_email="collector@example.test",
-                action_id="booky-action", hold_token="hold", decision_details={}, attempt=0,
+                missing_db,
+                booking=booking,
+                artist=artist,
+                conversation=conversation,
+                client_name="Collector",
+                client_email="collector@example.test",
+                action_id="booky-action",
+                hold_token="hold",
+                decision_details={},
+                attempt=0,
                 intent_provider_event_id="intent",
             )
         create_call.assert_not_awaited()
 
         results = [_Result(scalar=uuid4()), *[_Result() for _ in range(5)]]
         db = SimpleNamespace(
-            execute=AsyncMock(side_effect=results), get=AsyncMock(return_value=None),
-            add=MagicMock(), flush=AsyncMock(), commit=AsyncMock(), rollback=AsyncMock(),
+            execute=AsyncMock(side_effect=results),
+            get=AsyncMock(return_value=None),
+            add=MagicMock(),
+            flush=AsyncMock(),
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
         )
         create_call.reset_mock()
         with (
@@ -292,9 +315,16 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
             patch.object(bookings_endpoint, "update_booking_event", update_call),
         ):
             confirmed, conference_url, message = await _run_booky_confirmation_saga(
-                db, booking=booking, artist=artist, conversation=conversation,
-                client_name="Collector", client_email="collector@example.test",
-                action_id="booky-action", hold_token="hold", decision_details={}, attempt=0,
+                db,
+                booking=booking,
+                artist=artist,
+                conversation=conversation,
+                client_name="Collector",
+                client_email="collector@example.test",
+                action_id="booky-action",
+                hold_token="hold",
+                decision_details={},
+                attempt=0,
                 intent_provider_event_id="intent",
             )
 
@@ -310,22 +340,30 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
         booking = _booking()
         db = SimpleNamespace(
             execute=AsyncMock(),
-            add=MagicMock(), commit=AsyncMock(),
+            add=MagicMock(),
+            commit=AsyncMock(),
         )
         with (
             patch.object(bookings_endpoint, "_require_durable_booky_intent", new=AsyncMock()),
             patch.object(bookings_endpoint, "_booky_receipt_by_provider_id", new=AsyncMock(return_value=None)),
             patch.object(bookings_endpoint, "_add_booky_receipt_once", new=AsyncMock()),
             patch.object(
-                bookings_endpoint, "create_booking_event",
+                bookings_endpoint,
+                "create_booking_event",
                 new=AsyncMock(return_value={"event_id": "calendar-event", "conference_url": None}),
             ),
         ):
             confirmed, _, message = await _run_booky_confirmation_saga(
-                db, booking=booking, artist=_artist("consult_auto"),
-                conversation=SimpleNamespace(id=uuid4()), client_name="Collector",
-                client_email="collector@example.test", action_id="booky-meet-failure",
-                hold_token="hold", decision_details={}, attempt=0,
+                db,
+                booking=booking,
+                artist=_artist("consult_auto"),
+                conversation=SimpleNamespace(id=uuid4()),
+                client_name="Collector",
+                client_email="collector@example.test",
+                action_id="booky-meet-failure",
+                hold_token="hold",
+                decision_details={},
+                attempt=0,
                 intent_provider_event_id="intent",
             )
         self.assertFalse(confirmed)
@@ -347,8 +385,12 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
             return None
 
         db = SimpleNamespace(
-            get=AsyncMock(return_value=None), add=MagicMock(), flush=AsyncMock(),
-            commit=AsyncMock(), rollback=AsyncMock(), execute=AsyncMock(),
+            get=AsyncMock(return_value=None),
+            add=MagicMock(),
+            flush=AsyncMock(),
+            commit=AsyncMock(),
+            rollback=AsyncMock(),
+            execute=AsyncMock(),
         )
         provider_state = {
             "event_id": "calendar-event",
@@ -366,9 +408,16 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
             patch.object(bookings_endpoint, "update_booking_event", update_call),
         ):
             confirmed, _, _ = await _run_booky_confirmation_saga(
-                db, booking=booking, artist=artist, conversation=SimpleNamespace(id=uuid4()),
-                client_name="Collector", client_email="collector@example.test",
-                action_id="booky-resume", hold_token="hold", decision_details={}, attempt=1,
+                db,
+                booking=booking,
+                artist=artist,
+                conversation=SimpleNamespace(id=uuid4()),
+                client_name="Collector",
+                client_email="collector@example.test",
+                action_id="booky-resume",
+                hold_token="hold",
+                decision_details={},
+                attempt=1,
                 intent_provider_event_id="intent",
             )
         self.assertTrue(confirmed)
@@ -379,30 +428,46 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
         booking = _booking()
         added = AsyncMock()
         db = SimpleNamespace(
-            get=AsyncMock(return_value=booking), add=MagicMock(), flush=AsyncMock(),
+            get=AsyncMock(return_value=booking),
+            add=MagicMock(),
+            flush=AsyncMock(),
             commit=AsyncMock(side_effect=[RuntimeError("calendar commit"), None]),
-            rollback=AsyncMock(), execute=AsyncMock(),
+            rollback=AsyncMock(),
+            execute=AsyncMock(),
         )
         with (
             patch.object(bookings_endpoint, "_require_durable_booky_intent", new=AsyncMock()),
             patch.object(bookings_endpoint, "_booky_receipt_by_provider_id", new=AsyncMock(return_value=None)),
             patch.object(bookings_endpoint, "_add_booky_receipt_once", added),
             patch.object(
-                bookings_endpoint, "create_booking_event",
+                bookings_endpoint,
+                "create_booking_event",
                 new=AsyncMock(return_value={"event_id": "calendar-event", "conference_url": "meet-url"}),
             ),
             patch.object(
-                bookings_endpoint, "get_booking_event_state",
-                new=AsyncMock(return_value={
-                    "event_id": "calendar-event", "conference_url": "meet-url", "attendee_emails": [],
-                }),
+                bookings_endpoint,
+                "get_booking_event_state",
+                new=AsyncMock(
+                    return_value={
+                        "event_id": "calendar-event",
+                        "conference_url": "meet-url",
+                        "attendee_emails": [],
+                    }
+                ),
             ),
         ):
             confirmed, _, _ = await _run_booky_confirmation_saga(
-                db, booking=booking, artist=_artist("consult_auto"),
-                conversation=SimpleNamespace(id=uuid4()), client_name="Collector",
-                client_email="collector@example.test", action_id="booky-calendar-commit",
-                hold_token="hold", decision_details={}, attempt=0, intent_provider_event_id="intent",
+                db,
+                booking=booking,
+                artist=_artist("consult_auto"),
+                conversation=SimpleNamespace(id=uuid4()),
+                client_name="Collector",
+                client_email="collector@example.test",
+                action_id="booky-calendar-commit",
+                hold_token="hold",
+                decision_details={},
+                attempt=0,
+                intent_provider_event_id="intent",
             )
         self.assertFalse(confirmed)
         db.rollback.assert_awaited_once()
@@ -422,15 +487,19 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
 
         added = AsyncMock()
         db = SimpleNamespace(
-            get=AsyncMock(return_value=booking), add=MagicMock(), flush=AsyncMock(),
+            get=AsyncMock(return_value=booking),
+            add=MagicMock(),
+            flush=AsyncMock(),
             commit=AsyncMock(side_effect=[RuntimeError("invitation commit"), None]),
-            rollback=AsyncMock(), execute=AsyncMock(),
+            rollback=AsyncMock(),
+            execute=AsyncMock(),
         )
         state_call = AsyncMock(
             side_effect=[
                 {"event_id": "calendar-event", "conference_url": "meet-url", "attendee_emails": []},
                 {
-                    "event_id": "calendar-event", "conference_url": "meet-url",
+                    "event_id": "calendar-event",
+                    "conference_url": "meet-url",
                     "attendee_emails": ["collector@example.test"],
                 },
             ]
@@ -444,10 +513,17 @@ class BookySagaTests(unittest.IsolatedAsyncioTestCase):
             patch.object(bookings_endpoint, "update_booking_event", update_call),
         ):
             confirmed, _, _ = await _run_booky_confirmation_saga(
-                db, booking=booking, artist=_artist("consult_auto"),
-                conversation=SimpleNamespace(id=uuid4()), client_name="Collector",
-                client_email="collector@example.test", action_id="booky-invite-commit",
-                hold_token="hold", decision_details={}, attempt=0, intent_provider_event_id="intent",
+                db,
+                booking=booking,
+                artist=_artist("consult_auto"),
+                conversation=SimpleNamespace(id=uuid4()),
+                client_name="Collector",
+                client_email="collector@example.test",
+                action_id="booky-invite-commit",
+                hold_token="hold",
+                decision_details={},
+                attempt=0,
+                intent_provider_event_id="intent",
             )
         self.assertFalse(confirmed)
         update_call.assert_awaited_once()
@@ -472,38 +548,65 @@ class BookyProjectionTests(unittest.IsolatedAsyncioTestCase):
         booking = _booking(status=BookingStatus.CONFIRMED)
         now = datetime.now(UTC)
         message = Message(
-            id=uuid4(), conversation_id=uuid4(), sender_id=booking.artist_id,
-            content="Confirmed", metadata_json='{"delivery_status":"sent","delivery_attempts":1}',
+            id=uuid4(),
+            conversation_id=uuid4(),
+            sender_id=booking.artist_id,
+            content="Confirmed",
+            metadata_json='{"delivery_status":"sent","delivery_attempts":1}',
         )
         receipts = [
             BookingLifecycleEvent(
-                id=uuid4(), booking_id=booking.id, artist_id=booking.artist_id,
-                event_type="booky_recommendation", source="booky", summary="ready",
+                id=uuid4(),
+                booking_id=booking.id,
+                artist_id=booking.artist_id,
+                event_type="booky_recommendation",
+                source="booky",
+                summary="ready",
                 details={
-                    "action_id": "booky-projection", "configured_mode": "consult_auto",
-                    "effective_mode": "consult_auto", "truth_state": "ready",
-                    "recommendation": "Private staff action", "explanation": "Policy details",
-                    "confidence": "high", "policy_version": "v1", "risk": "low",
+                    "action_id": "booky-projection",
+                    "configured_mode": "consult_auto",
+                    "effective_mode": "consult_auto",
+                    "truth_state": "ready",
+                    "recommendation": "Private staff action",
+                    "explanation": "Policy details",
+                    "confidence": "high",
+                    "policy_version": "v1",
+                    "risk": "low",
                     "required_approval": False,
-                }, created_at=now,
+                },
+                created_at=now,
             ),
             BookingLifecycleEvent(
-                id=uuid4(), booking_id=booking.id, artist_id=booking.artist_id,
-                event_type="consultation_confirmed", source="booky", summary="confirmed",
+                id=uuid4(),
+                booking_id=booking.id,
+                artist_id=booking.artist_id,
+                event_type="consultation_confirmed",
+                source="booky",
+                summary="confirmed",
                 details={"conference_created": True, "invitation_state": "sent"},
                 created_at=now + timedelta(seconds=1),
             ),
             BookingLifecycleEvent(
-                id=uuid4(), booking_id=booking.id, artist_id=booking.artist_id,
-                event_type="booky_delivery_intent", source="booky", summary="queued",
-                details={"courier_message_id": str(message.id)}, created_at=now + timedelta(seconds=2),
+                id=uuid4(),
+                booking_id=booking.id,
+                artist_id=booking.artist_id,
+                event_type="booky_delivery_intent",
+                source="booky",
+                summary="queued",
+                details={"courier_message_id": str(message.id)},
+                created_at=now + timedelta(seconds=2),
             ),
         ]
         email_log = EmailLog(
-            id=uuid4(), to_email="collector@example.test", subject="Confirmed",
-            template="booking-confirmation", status="sent", courier_message_id=message.id,
+            id=uuid4(),
+            to_email="collector@example.test",
+            subject="Confirmed",
+            template="booking-confirmation",
+            status="sent",
+            courier_message_id=message.id,
             courier_attempt=1,
-            created_at=now + timedelta(seconds=3), updated_at=now + timedelta(seconds=3),
+            created_at=now + timedelta(seconds=3),
+            updated_at=now + timedelta(seconds=3),
         )
 
         def projection_db():
@@ -534,15 +637,25 @@ class BookyProjectionTests(unittest.IsolatedAsyncioTestCase):
             metadata_json='{"delivery_status":"failed","delivery_attempts":1}',
         )
         intent = BookingLifecycleEvent(
-            id=uuid4(), booking_id=booking.id, artist_id=booking.artist_id,
-            event_type="booky_delivery_intent", source="booky", summary="queued",
-            details={"courier_message_id": str(message.id)}, created_at=now,
+            id=uuid4(),
+            booking_id=booking.id,
+            artist_id=booking.artist_id,
+            event_type="booky_delivery_intent",
+            source="booky",
+            summary="queued",
+            details={"courier_message_id": str(message.id)},
+            created_at=now,
         )
         email_log = EmailLog(
-            id=uuid4(), to_email="collector@example.test", subject="Confirmed",
-            template="booking-confirmation", status="failed", courier_message_id=message.id,
+            id=uuid4(),
+            to_email="collector@example.test",
+            subject="Confirmed",
+            template="booking-confirmation",
+            status="failed",
+            courier_message_id=message.id,
             courier_attempt=1,
-            created_at=now, updated_at=now,
+            created_at=now,
+            updated_at=now,
         )
         db = SimpleNamespace(
             execute=AsyncMock(side_effect=[_Result([intent]), _Result(scalar=email_log)]),
@@ -611,7 +724,8 @@ class BookyRetryTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(bookings_endpoint, "get_availability", new=AsyncMock(return_value=busy)),
             patch.object(
-                bookings_endpoint, "_schedule_blocking_reasons",
+                bookings_endpoint,
+                "_schedule_blocking_reasons",
                 new=AsyncMock(return_value=["google_calendar_conflict"]),
             ) as blocker_call,
         ):
@@ -645,7 +759,9 @@ class BookyRetryTests(unittest.IsolatedAsyncioTestCase):
         confirmation = SimpleNamespace(details={"conference_url": None})
         db = SimpleNamespace(
             execute=AsyncMock(side_effect=[_Result(scalar=booking), _Result(scalar=0), _Result(scalar=confirmation)]),
-            get=AsyncMock(return_value=artist), commit=AsyncMock(), refresh=AsyncMock(),
+            get=AsyncMock(return_value=artist),
+            commit=AsyncMock(),
+            refresh=AsyncMock(),
         )
         founder = SimpleNamespace(id=uuid4(), role="founder")
         receipts = AsyncMock()
@@ -666,7 +782,9 @@ class BookyRetryTests(unittest.IsolatedAsyncioTestCase):
             patch.object(bookings_endpoint, "_booky_delivery_message", new=AsyncMock(return_value=courier_message)),
             patch.object(bookings_endpoint, "_booking_contact", new=AsyncMock(return_value=("Collector", "c@test"))),
             patch.object(bookings_endpoint, "_add_booky_receipt_once", new=receipts),
-            patch.object(bookings_endpoint, "process_booky_courier_outbox_once", new=AsyncMock(side_effect=run_staff_recovery)) as send_call,
+            patch.object(
+                bookings_endpoint, "process_booky_courier_outbox_once", new=AsyncMock(side_effect=run_staff_recovery)
+            ) as send_call,
             patch.object(bookings_endpoint, "create_booking_event", new=AsyncMock()) as create_call,
             patch.object(bookings_endpoint, "update_booking_event", new=AsyncMock()) as update_call,
         ):
@@ -683,9 +801,14 @@ class BookyRetryTests(unittest.IsolatedAsyncioTestCase):
     async def test_active_retry_lease_blocks_a_second_provider_attempt(self):
         booking = _booking()
         active = BookingLifecycleEvent(
-            id=uuid4(), booking_id=booking.id, artist_id=booking.artist_id,
-            event_type="booky_retry_started", source="booky", summary="active",
-            details={"retry_number": 1}, created_at=datetime.now(UTC),
+            id=uuid4(),
+            booking_id=booking.id,
+            artist_id=booking.artist_id,
+            event_type="booky_retry_started",
+            source="booky",
+            summary="active",
+            details={"retry_number": 1},
+            created_at=datetime.now(UTC),
         )
         db = SimpleNamespace(execute=AsyncMock(return_value=_Result([active])))
         with self.assertRaises(HTTPException) as conflict:
@@ -779,9 +902,7 @@ class BookyRetryTests(unittest.IsolatedAsyncioTestCase):
                 {
                     "delivery_status": "failed",
                     "delivery_attempts": email_service.BOOKY_COURIER_MAX_ATTEMPTS,
-                    "delivery_staff_recovery_attempts": (
-                        email_service.BOOKY_COURIER_STAFF_RECOVERY_MAX_ATTEMPTS
-                    ),
+                    "delivery_staff_recovery_attempts": (email_service.BOOKY_COURIER_STAFF_RECOVERY_MAX_ATTEMPTS),
                     "delivery_to": "collector@example.test",
                 }
             ),
@@ -840,9 +961,7 @@ class BookyCourierOutboxTests(unittest.IsolatedAsyncioTestCase):
                     "delivery_status": "sending",
                     "delivery_attempts": 2,
                     "delivery_attempt_id": "booky:concurrency:courier-attempt:2",
-                    "delivery_attempt_started_at": (
-                        datetime.now(UTC) - timedelta(minutes=20)
-                    ).isoformat(),
+                    "delivery_attempt_started_at": (datetime.now(UTC) - timedelta(minutes=20)).isoformat(),
                     "delivery_updated_at": (datetime.now(UTC) - timedelta(minutes=20)).isoformat(),
                     "delivery_staff_recovery_attempts": 1,
                     "action_id": "concurrency",
@@ -924,20 +1043,33 @@ class BookyCourierOutboxTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_stale_queued_message_is_delivered_after_restart(self):
         message = Message(
-            id=uuid4(), conversation_id=uuid4(), sender_id=uuid4(),
-            content="Confirmed", message_type="booky_confirmation",
-            metadata_json=json.dumps({
-                "delivery_status": "queued", "delivery_attempts": 0,
-                "delivery_updated_at": (datetime.now(UTC) - timedelta(minutes=20)).isoformat(),
-                "delivery_to": "collector@example.test", "client_name": "Collector",
-                "artist_name": "Justin", "description": "Consultation", "placement": None,
-                "reference_code": "BKG-OUTBOX", "consultation_method": "meet",
-                "scheduled_date": "2026-08-28", "scheduled_time": "10:00", "conference_url": "meet-url",
-            }),
+            id=uuid4(),
+            conversation_id=uuid4(),
+            sender_id=uuid4(),
+            content="Confirmed",
+            message_type="booky_confirmation",
+            metadata_json=json.dumps(
+                {
+                    "delivery_status": "queued",
+                    "delivery_attempts": 0,
+                    "delivery_updated_at": (datetime.now(UTC) - timedelta(minutes=20)).isoformat(),
+                    "delivery_to": "collector@example.test",
+                    "client_name": "Collector",
+                    "artist_name": "Justin",
+                    "description": "Consultation",
+                    "placement": None,
+                    "reference_code": "BKG-OUTBOX",
+                    "consultation_method": "meet",
+                    "scheduled_date": "2026-08-28",
+                    "scheduled_time": "10:00",
+                    "conference_url": "meet-url",
+                }
+            ),
         )
         session = SimpleNamespace(
             execute=AsyncMock(side_effect=[_Result([message]), _Result()]),
-            commit=AsyncMock(), get=AsyncMock(return_value=message),
+            commit=AsyncMock(),
+            get=AsyncMock(return_value=message),
         )
 
         class SessionContext:
@@ -1015,21 +1147,33 @@ class BookyCourierOutboxTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_stale_sending_reconciles_email_log_without_duplicate_send(self):
         message = Message(
-            id=uuid4(), conversation_id=uuid4(), sender_id=uuid4(),
-            content="Confirmed", message_type="booky_confirmation",
-            metadata_json=json.dumps({
-                "delivery_status": "sending", "delivery_attempts": 1,
-                "delivery_updated_at": (datetime.now(UTC) - timedelta(minutes=20)).isoformat(),
-            }),
+            id=uuid4(),
+            conversation_id=uuid4(),
+            sender_id=uuid4(),
+            content="Confirmed",
+            message_type="booky_confirmation",
+            metadata_json=json.dumps(
+                {
+                    "delivery_status": "sending",
+                    "delivery_attempts": 1,
+                    "delivery_updated_at": (datetime.now(UTC) - timedelta(minutes=20)).isoformat(),
+                }
+            ),
         )
         log = EmailLog(
-            id=uuid4(), to_email="collector@example.test", subject="Confirmed",
-            template="booking-confirmation", status="sent", courier_message_id=message.id,
-            created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
+            id=uuid4(),
+            to_email="collector@example.test",
+            subject="Confirmed",
+            template="booking-confirmation",
+            status="sent",
+            courier_message_id=message.id,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         session = SimpleNamespace(
             execute=AsyncMock(side_effect=[_Result([message]), _Result(scalar=log)]),
-            commit=AsyncMock(), get=AsyncMock(return_value=message),
+            commit=AsyncMock(),
+            get=AsyncMock(return_value=message),
         )
 
         class SessionContext:
@@ -1053,9 +1197,7 @@ class BookyCourierOutboxTests(unittest.IsolatedAsyncioTestCase):
 class ResendDeliveryOrderingTests(unittest.IsolatedAsyncioTestCase):
     async def _dispatch(self, event_type: str, email_log: EmailLog, message: Message):
         db = SimpleNamespace(
-            execute=AsyncMock(
-                side_effect=[_Result(scalar=email_log), _Result(scalar=message)]
-            ),
+            execute=AsyncMock(side_effect=[_Result(scalar=email_log), _Result(scalar=message)]),
             commit=AsyncMock(),
         )
         with patch.object(
@@ -1078,9 +1220,7 @@ class ResendDeliveryOrderingTests(unittest.IsolatedAsyncioTestCase):
             sender_id=uuid4(),
             content="Confirmed",
             message_type="booky_confirmation",
-            metadata_json=json.dumps(
-                {"delivery_status": "opened", "delivery_attempts": 2}
-            ),
+            metadata_json=json.dumps({"delivery_status": "opened", "delivery_attempts": 2}),
         )
         email_log = EmailLog(
             id=uuid4(),
@@ -1119,9 +1259,7 @@ class ResendDeliveryOrderingTests(unittest.IsolatedAsyncioTestCase):
             sender_id=uuid4(),
             content="Confirmed",
             message_type="booky_confirmation",
-            metadata_json=json.dumps(
-                {"delivery_status": "delivered", "delivery_attempts": 1}
-            ),
+            metadata_json=json.dumps({"delivery_status": "delivered", "delivery_attempts": 1}),
         )
         email_log = EmailLog(
             id=uuid4(),
@@ -1151,9 +1289,7 @@ class ResendDeliveryOrderingTests(unittest.IsolatedAsyncioTestCase):
             sender_id=uuid4(),
             content="Confirmed",
             message_type="booky_confirmation",
-            metadata_json=json.dumps(
-                {"delivery_status": "sent", "delivery_attempts": 2}
-            ),
+            metadata_json=json.dumps({"delivery_status": "sent", "delivery_attempts": 2}),
         )
         email_log = EmailLog(
             id=uuid4(),
@@ -1196,9 +1332,7 @@ class SessionDefaultsTests(unittest.TestCase):
 
 class BookyMigrationTests(unittest.TestCase):
     def test_email_log_model_defines_non_unique_attempt_lookup_index(self):
-        indexes = {
-            index.name: index for index in EmailLog.__table__.indexes
-        }
+        indexes = {index.name: index for index in EmailLog.__table__.indexes}
         attempt_index = indexes["ix_bttco_email_log_courier_message_attempt"]
         self.assertFalse(bool(attempt_index.unique))
         self.assertEqual(
@@ -1206,55 +1340,22 @@ class BookyMigrationTests(unittest.TestCase):
             ["courier_message_id", "courier_attempt"],
         )
 
-    def test_upgrade_adds_exact_courier_attempt_evidence_column(self):
-        migration_path = Path(__file__).parents[1] / "alembic" / "versions" / "20260820_booky_readiness.py"
-        spec = importlib.util.spec_from_file_location("booky_readiness_upgrade", migration_path)
-        assert spec and spec.loader
-        migration = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(migration)
-        add_column = MagicMock()
-        add_index = MagicMock()
-        with (
-            patch.object(migration, "_add_column_if_missing", add_column),
-            patch.object(migration, "_add_index_if_missing", add_index),
-            patch.object(migration, "seed_default_session_types"),
-            patch.object(migration.op, "get_bind", return_value=object()),
-        ):
-            migration.upgrade()
-        email_log_calls = [
-            call for call in add_column.call_args_list if call.args[0] == "bttco_email_log"
-        ]
-        self.assertEqual(len(email_log_calls), 1)
-        self.assertEqual(email_log_calls[0].args[1].name, "courier_attempt")
-        add_index.assert_called_once_with(
-            "bttco_email_log",
-            "ix_bttco_email_log_courier_message_attempt",
-            ["courier_message_id", "courier_attempt"],
-        )
+    def test_baseline_carries_the_attempt_lookup_index(self):
+        from app.core.schema_compare import BASELINE_SQL_PATH
 
-    def test_downgrade_disables_mode_without_dropping_consent_evidence(self):
-        migration_path = Path(__file__).parents[1] / "alembic" / "versions" / "20260820_booky_readiness.py"
-        spec = importlib.util.spec_from_file_location("booky_readiness_migration", migration_path)
-        assert spec and spec.loader
-        migration = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(migration)
-        execute = MagicMock()
-        with (
-            patch.object(migration, "_has_column", return_value=True),
-            patch.object(migration.op, "execute", execute),
-            patch.object(migration.op, "drop_column") as drop_column,
-        ):
-            migration.downgrade()
-        execute.assert_called_once()
-        self.assertIn("booky_mode = 'manual'", str(execute.call_args.args[0]))
-        drop_column.assert_not_called()
+        self.assertIn(
+            "CREATE INDEX ix_bttco_email_log_courier_message_attempt ON public.bttco_email_log "
+            "USING btree (courier_message_id, courier_attempt);",
+            BASELINE_SQL_PATH.read_text(encoding="utf-8"),
+        )
 
 
 class BookyCalendarRetryTests(unittest.IsolatedAsyncioTestCase):
     async def test_calendar_update_adds_attendee_and_meet_request(self):
         patch_call = MagicMock()
         patch_call.execute.return_value = {
-            "id": "calendar-event", "htmlLink": "https://calendar.example.test/event",
+            "id": "calendar-event",
+            "htmlLink": "https://calendar.example.test/event",
             "hangoutLink": "https://meet.google.com/test-room",
         }
         events = MagicMock()
@@ -1262,10 +1363,15 @@ class BookyCalendarRetryTests(unittest.IsolatedAsyncioTestCase):
         service = MagicMock()
         service.events.return_value = events
         updates = {
-            "client_name": "Collector", "client_email": "collector@example.test",
-            "description": "Consultation", "reference_code": "BKG-BOOKY",
-            "scheduled_date": "2026-08-28", "scheduled_time": "10:00", "duration_minutes": 30,
-            "booking_kind": "consultation", "consultation_method": "meet",
+            "client_name": "Collector",
+            "client_email": "collector@example.test",
+            "description": "Consultation",
+            "reference_code": "BKG-BOOKY",
+            "scheduled_date": "2026-08-28",
+            "scheduled_time": "10:00",
+            "duration_minutes": 30,
+            "booking_kind": "consultation",
+            "consultation_method": "meet",
             "conference_request_id": "bttcomeetstable",
         }
         with (
