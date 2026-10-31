@@ -331,7 +331,7 @@ function UpkeepSection() {
     const loaded = new Set<string>()
     try {
       for (const q of UPKEEP_QUESTS) {
-        const key = `bttco_quest_${userId}_${q.id}_${q.period()}`
+        const key = `ryozan_quest_${userId}_${q.id}_${q.period()}`
         const stored = localStorage.getItem(key)
         if (stored) JSON.parse(stored).forEach((id: string) => loaded.add(`${q.id}:${id}`))
       }
@@ -345,7 +345,7 @@ function UpkeepSection() {
       const next = new Set(prev)
       if (next.has(key)) next.delete(key); else next.add(key)
       const done = quest.steps.filter(s => next.has(`${quest.id}:${s.id}`)).map(s => s.id)
-      localStorage.setItem(`bttco_quest_${userId}_${quest.id}_${quest.period()}`, JSON.stringify(done))
+      localStorage.setItem(`ryozan_quest_${userId}_${quest.id}_${quest.period()}`, JSON.stringify(done))
       return next
     })
   }, [userId])

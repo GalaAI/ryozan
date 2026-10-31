@@ -57,9 +57,9 @@ interface ConnectionCardProps {
 
 function ConnectionCard({ name, mark, tone, status, detail, action, children }: ConnectionCardProps) {
   return (
-    <article className={`bttco-artist-connection bttco-artist-connection--${tone}`} data-connection={name.toLowerCase().replace(/\s+/g, '-')}>
-      <div className="bttco-artist-connection__mark" aria-hidden="true">{mark}</div>
-      <div className="bttco-artist-connection__copy">
+    <article className={`ryozan-artist-connection ryozan-artist-connection--${tone}`} data-connection={name.toLowerCase().replace(/\s+/g, '-')}>
+      <div className="ryozan-artist-connection__mark" aria-hidden="true">{mark}</div>
+      <div className="ryozan-artist-connection__copy">
         <header>
           <strong>{name}</strong>
           <span>{status}</span>
@@ -361,7 +361,7 @@ export default function ArtistConnections() {
   const noneShown = ![showStripe, showGoogle, showGoogleSignin, showPinterest, showEmail, showPush].some(Boolean)
 
   return (
-    <section className="bttco-hub-workflow-card bttco-artist-connections" aria-label="Connections">
+    <section className="ryozan-hub-workflow-card ryozan-artist-connections" aria-label="Connections">
       <header>
         <span>Shishin · Your services</span>
         <strong>Connections</strong>
@@ -369,18 +369,18 @@ export default function ArtistConnections() {
       </header>
 
       {stripeReturn === 'refresh' ? (
-        <div className="bttco-artist-connections__notice is-warning" role="status">
+        <div className="ryozan-artist-connections__notice is-warning" role="status">
           That Stripe setup link expired. Opening a fresh secure link now.
         </div>
       ) : stripeReturn === 'return' ? (
-        <div className="bttco-artist-connections__notice is-success" role="status">
+        <div className="ryozan-artist-connections__notice is-success" role="status">
           Welcome back from Stripe. The readiness state below was refreshed from your account.
         </div>
       ) : null}
 
-      {actionError ? <div className="bttco-artist-connections__notice is-error" role="alert">{actionError}</div> : null}
+      {actionError ? <div className="ryozan-artist-connections__notice is-error" role="alert">{actionError}</div> : null}
 
-      <div className="bttco-artist-connections__toolbar">
+      <div className="ryozan-artist-connections__toolbar">
         <span>{allLoading ? 'Checking your services' : 'Your connections'}</span>
         <button type="button" disabled={allLoading || Boolean(acting)} onClick={() => void loadStatuses()}>Refresh</button>
       </div>
@@ -392,7 +392,7 @@ export default function ArtistConnections() {
             : 'This server has no third-party connections configured for your account. Booking, Courier and the agents work without them.'}
         </p>
       )}
-      <div className="bttco-artist-connections__list">
+      <div className="ryozan-artist-connections__list">
         {showStripe && (
           <ConnectionCard
             name="Stripe"
@@ -411,7 +411,7 @@ export default function ArtistConnections() {
                   : { label: 'Checking...', onClick: () => undefined, disabled: true }}
           >
             {stripe.state === 'ready' && stripe.value.connected ? (
-              <div className="bttco-artist-connection__checks" aria-label="Stripe capability readiness">
+              <div className="ryozan-artist-connection__checks" aria-label="Stripe capability readiness">
                 <span className={stripe.value.charges_enabled ? 'is-ready' : undefined}>Payments {stripe.value.charges_enabled ? 'ready' : 'needed'}</span>
                 <span className={stripe.value.payouts_enabled ? 'is-ready' : undefined}>Payouts {stripe.value.payouts_enabled ? 'ready' : 'needed'}</span>
               </div>
@@ -487,7 +487,7 @@ export default function ArtistConnections() {
                   } }}
           >
             {emailExpanded ? (
-              <div className="bttco-artist-connection__email" data-testid="artist-email-connection">
+              <div className="ryozan-artist-connection__email" data-testid="artist-email-connection">
                 <EmailConnectQuest mode="full" />
               </div>
             ) : null}

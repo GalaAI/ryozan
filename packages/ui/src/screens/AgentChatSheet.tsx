@@ -8,7 +8,7 @@ import { ChatBubble } from '../components/ChatBubble';
  * the shell's own minimum so the sheet still clears the nav if it is mounted
  * outside PortalShell.
  */
-const NAV_CLEARANCE = 'var(--bttco-portal-nav-height, calc(78px + env(safe-area-inset-bottom, 0px)))';
+const NAV_CLEARANCE = 'var(--ryozan-portal-nav-height, calc(78px + env(safe-area-inset-bottom, 0px)))';
 
 export interface ChatLine {
   id: string;
@@ -74,7 +74,7 @@ export function AgentChatSheet({
     <>
       {scrim ? (
         <div
-          className="bttco-agent-chat-scrim"
+          className="ryozan-agent-chat-scrim"
           onClick={onClose}
           aria-hidden="true"
           style={{
@@ -97,10 +97,10 @@ export function AgentChatSheet({
         role={docked ? 'region' : 'dialog'}
         aria-label={ariaLabel ?? `${agentName} chat`}
         aria-modal={!docked && scrim ? true : undefined}
-        className="bttco-agent-chat-sheet"
+        className="ryozan-agent-chat-sheet"
         style={{
-          '--bttco-agent-accent': accent,
-          '--bttco-agent-rgb': accentRgb,
+          '--ryozan-agent-accent': accent,
+          '--ryozan-agent-rgb': accentRgb,
           position: 'absolute',
           ...(docked
             ? { top: dockedTop, right: 0, bottom: dockedBottom, left: 0 }
@@ -127,7 +127,7 @@ export function AgentChatSheet({
           }}
         >
           <span
-            className="bttco-tab-bar__sweep"
+            className="ryozan-tab-bar__sweep"
             style={{
               position: 'absolute',
               top: 0,
@@ -140,7 +140,7 @@ export function AgentChatSheet({
           />
         </span>
         <div
-          className="bttco-agent-chat-header"
+          className="ryozan-agent-chat-header"
           style={{
             flexShrink: 0,
             display: 'flex',
@@ -196,7 +196,7 @@ export function AgentChatSheet({
         </div>
 
         <div
-          className="bttco-agent-chat-thread"
+          className="ryozan-agent-chat-thread"
           style={{
             flex: 1,
             minHeight: 0,
@@ -222,7 +222,7 @@ export function AgentChatSheet({
           }}
         >
           {lines.map((line) => line.presentation === 'card' ? (
-            <div key={line.id} className="bttco-agent-chat-line" style={{ width: '100%', flexShrink: 0 }}>
+            <div key={line.id} className="ryozan-agent-chat-line" style={{ width: '100%', flexShrink: 0 }}>
               {line.body}
             </div>
           ) : (
@@ -231,7 +231,7 @@ export function AgentChatSheet({
               from={line.from}
               glyph={line.from === 'agent' ? agentGlyph : undefined}
               accent={accent}
-              className={`bttco-agent-chat-line${line.animateReply ? ' bttco-agent-chat-line--typed' : ''}`}
+              className={`ryozan-agent-chat-line${line.animateReply ? ' ryozan-agent-chat-line--typed' : ''}`}
               data-chat-line-id={line.id}
             >
               {line.body}
@@ -265,12 +265,12 @@ export function AgentChatSheet({
           ) : null}
 
           {working ? (
-            <div className="bttco-agent-thinking" role="status" aria-label={`${agentName} is thinking`}>
+            <div className="ryozan-agent-thinking" role="status" aria-label={`${agentName} is thinking`}>
               <AgentMark
                 glyph={agentGlyph}
                 accent={accent}
                 scale={22}
-                className="bttco-agent-thinking-mark"
+                className="ryozan-agent-thinking-mark"
                 style={{ width: 30, height: 30 }}
               />
             </div>
@@ -278,14 +278,14 @@ export function AgentChatSheet({
         </div>
 
         {floatingAction ? (
-          <div className="bttco-agent-chat-floating-action" style={{ position: 'absolute', right: 14, bottom: 14, zIndex: 2 }}>
+          <div className="ryozan-agent-chat-floating-action" style={{ position: 'absolute', right: 14, bottom: 14, zIndex: 2 }}>
             {floatingAction}
           </div>
         ) : null}
 
         {dock ? (
           <div
-            className="bttco-agent-chat-dock"
+            className="ryozan-agent-chat-dock"
             style={{
               flexShrink: 0,
               maxHeight: '48%',
@@ -302,7 +302,7 @@ export function AgentChatSheet({
 
         {composer ? (
           <div
-            className="bttco-agent-chat-composer"
+            className="ryozan-agent-chat-composer"
             style={{
               position: 'absolute',
               right: 12,

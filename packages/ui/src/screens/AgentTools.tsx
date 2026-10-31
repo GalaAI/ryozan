@@ -144,7 +144,7 @@ export function AgentTools({
       <div
         role={docked ? 'region' : 'dialog'}
         aria-label={`${agentName} tools`}
-        className="bttco-agent-tools"
+        className="ryozan-agent-tools"
         style={docked
           ? {
               position: 'relative',
@@ -161,12 +161,12 @@ export function AgentTools({
           : { position: 'absolute', left: 0, right: 0, bottom: 78, zIndex: 78, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 10, pointerEvents: 'none' }}
       >
         {docked ? (
-          <div className="bttco-agent-sparkles-layer" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <div className="ryozan-agent-sparkles-layer" aria-hidden="true" style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
             <AgentSparkles accentRgb={accentRgb} density={7} speed={1.8} origin="bottom" />
           </div>
         ) : null}
         {activeTab === 'upload' ? (
-          <div className="bttco-agent-tool-layer bttco-agent-tool-layer--upload" style={{ position: 'relative', zIndex: 1, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '13px 26px', pointerEvents: 'none' }}>
+          <div className="ryozan-agent-tool-layer ryozan-agent-tool-layer--upload" style={{ position: 'relative', zIndex: 1, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '13px 26px', pointerEvents: 'none' }}>
             <label aria-label={`Upload to ${agentName}`} style={{ pointerEvents: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 7, minHeight: 116, border: `1px dashed ${accent}`, borderRadius: 14, background: 'rgba(19,20,19,.60)', boxShadow: `inset 0 1px 0 rgba(var(--cream-rgb),.045), inset 0 -22px 34px rgba(0,0,0,.42), inset 0 0 24px rgba(${accentRgb},.055), 0 12px 28px -20px rgba(0,0,0,.95)`, cursor: 'pointer' }}>
               <input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) onUpload?.(file); }} style={{ display: 'none' }} />
               <span aria-hidden="true" style={{ fontSize: 24, color: accent, opacity: .5 }}>＋</span>
@@ -176,7 +176,7 @@ export function AgentTools({
         ) : null}
 
         {activeTab === 'memory' ? (
-          <div className="bttco-agent-tool-layer bttco-agent-tool-layer--memory" style={{ position: 'relative', zIndex: 1, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden', pointerEvents: 'none' }}>
+          <div className="ryozan-agent-tool-layer ryozan-agent-tool-layer--memory" style={{ position: 'relative', zIndex: 1, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden', pointerEvents: 'none' }}>
             <div style={{ pointerEvents: 'auto', margin: '0 12px', display: 'flex', flexDirection: 'column', gap: 7, maxHeight: 340, overflowY: 'auto', padding: 13, border: `1px solid ${accent}`, borderRadius: 18, background: 'linear-gradient(180deg,rgba(24,23,21,.995),rgba(11,12,11,1))' }}>
               {!memory.length ? <span style={{ fontFamily: font.body, fontSize: 12, lineHeight: 1.5, color: color.textMuted }}>Nothing remembered yet. Close a thread and what was said gets compacted here.</span> : null}
               {memory.map((item, index) => (
@@ -197,7 +197,7 @@ export function AgentTools({
         ) : null}
 
         {activeTab === 'cards' ? (
-          <div className="bttco-agent-tool-layer bttco-agent-tool-layer--cards" style={{ position: 'relative', zIndex: 1, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'visible', pointerEvents: 'none' }}>
+          <div className="ryozan-agent-tool-layer ryozan-agent-tool-layer--cards" style={{ position: 'relative', zIndex: 1, flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'visible', pointerEvents: 'none' }}>
             <div style={{ position: 'relative', pointerEvents: 'auto', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '30px 4px 2px', perspective: 900 }}>
               {cards.map((card, index) => {
                 const selectedCard = selectedId === card.id;
@@ -249,11 +249,11 @@ export function AgentTools({
                     aria-pressed={selectedCard}
                     style={{ position: 'relative', flex: '0 0 auto', width: 72, height: 104, marginLeft: index === 0 ? 0 : -22, padding: 0, border: `1px solid ${selectedCard ? accent : 'rgba(var(--cream-rgb),.14)'}`, borderRadius: 9, background: 'linear-gradient(160deg,#1b1a18,#0d0e0d)', cursor: castingId ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transformOrigin: '50% 140%', transformStyle: 'preserve-3d', transform: `translateY(${selectedCard ? -18 + dragY : 0}px) rotate(${rotation}deg)`, transition: dragRef.current?.cardId === card.id ? 'border-color .22s ease' : 'transform .28s cubic-bezier(.16,1,.3,1), border-color .22s ease', boxShadow: '0 12px 24px -14px rgba(0,0,0,.95)', touchAction: selectedCard ? 'none' : 'manipulation' }}
                   >
-                    <span className={`bttco-agent-card-rim${selectedCard ? ' bttco-agent-card-rim--selected' : ''}`} aria-hidden="true" style={{ position: 'absolute', inset: -1, zIndex: -1, borderRadius: 10, pointerEvents: 'none', boxShadow: selectedCard ? `0 0 0 1px rgba(${accentRgb},.55), 0 0 9px rgba(${accentRgb},.45), 0 0 22px rgba(${accentRgb},.22), 0 0 44px rgba(${accentRgb},.1)` : 'none' }} />
+                    <span className={`ryozan-agent-card-rim${selectedCard ? ' ryozan-agent-card-rim--selected' : ''}`} aria-hidden="true" style={{ position: 'absolute', inset: -1, zIndex: -1, borderRadius: 10, pointerEvents: 'none', boxShadow: selectedCard ? `0 0 0 1px rgba(${accentRgb},.55), 0 0 9px rgba(${accentRgb},.45), 0 0 22px rgba(${accentRgb},.22), 0 0 44px rgba(${accentRgb},.1)` : 'none' }} />
                     <span aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'block', borderRadius: 8, background: 'linear-gradient(165deg,#171817,#0b0c0b)', transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}>
                       <ActionCardFace shell={card.shell} accent={accent} />
                     </span>
-                    <span className={`bttco-agent-card-emblem${selectedCard ? ' bttco-agent-card-emblem--selected' : ''}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backfaceVisibility: 'hidden', fontSize: 30, lineHeight: 1, color: 'rgba(0,0,0,.55)', textShadow: `0 1px 0 ${selectedCard ? 'rgba(var(--cream-rgb),.16)' : 'rgba(var(--cream-rgb),.08)'}, 0 -1px 1px rgba(0,0,0,.6)` }}>{agentGlyph}</span>
+                    <span className={`ryozan-agent-card-emblem${selectedCard ? ' ryozan-agent-card-emblem--selected' : ''}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backfaceVisibility: 'hidden', fontSize: 30, lineHeight: 1, color: 'rgba(0,0,0,.55)', textShadow: `0 1px 0 ${selectedCard ? 'rgba(var(--cream-rgb),.16)' : 'rgba(var(--cream-rgb),.08)'}, 0 -1px 1px rgba(0,0,0,.6)` }}>{agentGlyph}</span>
                   </button>
                 );
               })}

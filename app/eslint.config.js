@@ -5,10 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
-// ── BTTCO Modern Classic adherence gate ─────────────────────────────
+// ── Ryozan Modern Classic adherence gate ─────────────────────────────
 // Raw hex, raw px and off-system fonts in app code are errors. The design
 // system owns every value: use var(--token) or the `token` export of
-// @bttco/ui. The files in DS_LEGACY_DEBT predate the gate; remove a file
+// @ryozan/ui. The files in DS_LEGACY_DEBT predate the gate; remove a file
 // from that list once it is token-clean. New files are gated immediately.
 const DS_ADHERENCE_RULES = {
   'no-restricted-syntax': [
@@ -36,7 +36,7 @@ const DS_LEGACY_DEBT = [
   'src/components/desktop-portal/**',
   'src/pages/dashboard/DesktopPortalPage.tsx',
   'src/lib/agent-card-hands.ts',
-  'src/components/ui/**', // shadcn primitives; replaced by @bttco/ui over time
+  'src/components/ui/**', // shadcn primitives; replaced by @ryozan/ui over time
   'src/pages/dashboard/ClientsPage.tsx',
   'src/App.tsx',
   'src/components/ArtistScroll.tsx',

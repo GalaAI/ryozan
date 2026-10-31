@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════
-   Artist Scroll - BTTCO Compliance Document Package
+   Artist Scroll - Ryozan Compliance Document Package
    Brand: charcoal surfaces, cream hierarchy, Inter/JetBrains/IBM Plex Sans
    ═══════════════════════════════════════════════ */
 
@@ -38,7 +38,7 @@
   padding-right: 0;
 }
 
-.bttco-spyder-artist-scroll-card {
+.ryozan-spyder-artist-scroll-card {
   width: 100%;
   min-width: 0;
   padding: 1rem;
@@ -48,13 +48,13 @@
   box-shadow: inset 0 1px 0 rgba(226, 218, 194, 0.04);
 }
 
-.bttco-spyder-artist-scroll-card__intro {
+.ryozan-spyder-artist-scroll-card__intro {
   display: grid;
   gap: 0.35rem;
   padding: 0 0 1rem;
 }
 
-.bttco-spyder-artist-scroll-card__intro span {
+.ryozan-spyder-artist-scroll-card__intro span {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.6rem;
   font-weight: 700;
@@ -63,13 +63,13 @@
   color: var(--muted);
 }
 
-.bttco-spyder-artist-scroll-card__intro strong {
+.ryozan-spyder-artist-scroll-card__intro strong {
   font-family: 'Inter Sans', 'Inter', sans-serif;
   font-size: 1rem;
   color: var(--bone-white);
 }
 
-.bttco-spyder-artist-scroll-card__intro p {
+.ryozan-spyder-artist-scroll-card__intro p {
   margin: 0;
   font-family: 'IBM Plex Sans', sans-serif;
   font-size: 0.76rem;
@@ -739,7 +739,7 @@
     grid-template-columns: 1fr;
   }
 
-  .bttco-spyder-artist-scroll-card {
+  .ryozan-spyder-artist-scroll-card {
     padding: 0.85rem;
   }
 

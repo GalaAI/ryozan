@@ -1,3 +1,4 @@
+import './lib/legacy-storage'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -7,9 +8,9 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider } from './components/Toast'
 import { useAuthStore } from './stores/auth'
 import './index.css'
-import '@bttco/ui/fonts.css'
-import '@bttco/ui/tokens.css'
-import '@bttco/ui/scene-compat.css'
+import '@ryozan/ui/fonts.css'
+import '@ryozan/ui/tokens.css'
+import '@ryozan/ui/scene-compat.css'
 import App from './App'
 
 function getJamSurface(pathname: string): 'dashboard' | 'portal' | 'public' {

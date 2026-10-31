@@ -35,14 +35,14 @@ export function AgentGlow({
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const setPosition = (clientX: number, clientY: number) => {
       const bounds = owner.getBoundingClientRect();
-      glow.style.setProperty('--bttco-agent-glow-x', `${clientX - bounds.left}px`);
-      glow.style.setProperty('--bttco-agent-glow-y', `${clientY - bounds.top}px`);
+      glow.style.setProperty('--ryozan-agent-glow-x', `${clientX - bounds.left}px`);
+      glow.style.setProperty('--ryozan-agent-glow-y', `${clientY - bounds.top}px`);
     };
-    const setOpacity = (value: number) => glow.style.setProperty('--bttco-agent-glow-opacity', String(value));
+    const setOpacity = (value: number) => glow.style.setProperty('--ryozan-agent-glow-opacity', String(value));
 
     if (reducedMotion) {
-      glow.style.setProperty('--bttco-agent-glow-x', '50%');
-      glow.style.setProperty('--bttco-agent-glow-y', '50%');
+      glow.style.setProperty('--ryozan-agent-glow-x', '50%');
+      glow.style.setProperty('--ryozan-agent-glow-y', '50%');
       setOpacity(ambientOpacity);
       return;
     }
@@ -106,12 +106,12 @@ export function AgentGlow({
         borderRadius: 'inherit',
         padding: 1,
         pointerEvents: 'none',
-        background: `radial-gradient(${spread}px circle at var(--bttco-agent-glow-x,50%) var(--bttco-agent-glow-y,50%),rgba(${accentRgb},.98) 0%,rgba(${accentRgb},.62) 34%,rgba(${accentRgb},.18) 56%,rgba(${accentRgb},0) 76%)`,
+        background: `radial-gradient(${spread}px circle at var(--ryozan-agent-glow-x,50%) var(--ryozan-agent-glow-y,50%),rgba(${accentRgb},.98) 0%,rgba(${accentRgb},.62) 34%,rgba(${accentRgb},.18) 56%,rgba(${accentRgb},0) 76%)`,
         WebkitMask: 'linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0)',
         WebkitMaskComposite: 'xor',
         mask: 'linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0)',
         maskComposite: 'exclude',
-        opacity: 'var(--bttco-agent-glow-opacity,.2)',
+        opacity: 'var(--ryozan-agent-glow-opacity,.2)',
         filter: `drop-shadow(0 0 7px rgba(${accentRgb},.58))`,
         transition: 'opacity .24s ease',
         willChange: 'opacity,background',

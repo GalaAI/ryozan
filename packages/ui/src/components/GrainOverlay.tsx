@@ -13,7 +13,7 @@ export interface GrainOverlayProps {
  * pointer-events none, overlay blend. Absolutely positioned — the parent
  * must establish a positioning context (Panel already does).
  */
-export function GrainOverlay({ id = 'bttcoGrain', opacity = 0.22, baseFrequency = 0.65 }: GrainOverlayProps) {
+export function GrainOverlay({ id = 'ryozanGrain', opacity = 0.22, baseFrequency = 0.65 }: GrainOverlayProps) {
   return (
     <svg
       aria-hidden="true"

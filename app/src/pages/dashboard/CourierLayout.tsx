@@ -870,7 +870,7 @@ export default function CourierLayout() {
   )
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('bttco:nexus-toolbar-register', {
+    window.dispatchEvent(new CustomEvent('ryozan:nexus-toolbar-register', {
       detail: {
         items: visibleToolbar.map((tool) => ({
           id: tool.id,
@@ -883,7 +883,7 @@ export default function CourierLayout() {
     }))
 
     return () => {
-      window.dispatchEvent(new CustomEvent('bttco:nexus-toolbar-clear'))
+      window.dispatchEvent(new CustomEvent('ryozan:nexus-toolbar-clear'))
     }
   }, [activeCharm, visibleToolbar])
 
@@ -1651,7 +1651,7 @@ export default function CourierLayout() {
       canUseCourierTools,
     } : { active: false }
 
-    window.dispatchEvent(new CustomEvent('bttco:courier-workspace', { detail }))
+    window.dispatchEvent(new CustomEvent('ryozan:courier-workspace', { detail }))
   }, [
     activeConversation,
     bookingContext,
@@ -1687,15 +1687,15 @@ export default function CourierLayout() {
     }
     const summarizeHandler = () => handleSummarizeToNotes()
 
-    window.addEventListener('bttco:courier-workspace-note-change', noteHandler)
-    window.addEventListener('bttco:courier-use-suggestion', suggestionHandler)
-    window.addEventListener('bttco:courier-save-note-context', summarizeHandler)
+    window.addEventListener('ryozan:courier-workspace-note-change', noteHandler)
+    window.addEventListener('ryozan:courier-use-suggestion', suggestionHandler)
+    window.addEventListener('ryozan:courier-save-note-context', summarizeHandler)
 
     return () => {
-      window.removeEventListener('bttco:courier-workspace-note-change', noteHandler)
-      window.removeEventListener('bttco:courier-use-suggestion', suggestionHandler)
-      window.removeEventListener('bttco:courier-save-note-context', summarizeHandler)
-      window.dispatchEvent(new CustomEvent('bttco:courier-workspace', { detail: { active: false } }))
+      window.removeEventListener('ryozan:courier-workspace-note-change', noteHandler)
+      window.removeEventListener('ryozan:courier-use-suggestion', suggestionHandler)
+      window.removeEventListener('ryozan:courier-save-note-context', summarizeHandler)
+      window.dispatchEvent(new CustomEvent('ryozan:courier-workspace', { detail: { active: false } }))
     }
   }, [handleSummarizeToNotes, handleUseSuggestion])
 

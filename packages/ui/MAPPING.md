@@ -37,7 +37,7 @@ inbox, Gala workspace.
 | Topbar (title, exit-preview pill, inbox, avatar) | desktop | `TopBar` + `Button` + `IconButton` + `Avatar` |
 | Bottom tab bar (5 tabs, badges, agent hairline) | mobile | `TabBar` |
 | Nav rail: gold trim, chevron cut, grain, vertical nav | desktop | `NavRail` |
-| Rail vertical BTTCO wordmark | desktop | `Wordmark` |
+| Rail vertical Ryozan wordmark | desktop | `Wordmark` |
 | Rail medallion (dashed-ring profile) | desktop | `Avatar` `dashed` |
 | Tiger mark at rail crown | desktop | `NavRail` `markSrc` prop |
 | Account popover (identity, view-as, links, sign out) | both | `AccountMenu` (+ `Chip` for view-as) |

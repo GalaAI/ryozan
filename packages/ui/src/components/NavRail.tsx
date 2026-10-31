@@ -64,7 +64,7 @@ export function NavRail({
             background: color.smoke,
           }}
         >
-          <GrainOverlay id="bttcoGrainRail" opacity={0.3} />
+          <GrainOverlay id="ryozanGrainRail" opacity={0.3} />
           <div style={{ width: 76, height: 56, flexShrink: 0 }} />
           <nav style={{ position: 'relative', zIndex: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-5)', marginTop: 'var(--space-6)', width: 56, flexShrink: 0 }}>
             {tabs.map((t) => {

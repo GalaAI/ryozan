@@ -35,23 +35,23 @@ export default function ApiStatusBanner() {
   if (isDev && !wasEverReachable) return null
 
   return (
-    <aside className="bttco-api-status" role="status" aria-live="polite">
-      <span className="bttco-api-status__mark" aria-hidden="true">!</span>
-      <span className="bttco-api-status__copy">
+    <aside className="ryozan-api-status" role="status" aria-live="polite">
+      <span className="ryozan-api-status__mark" aria-hidden="true">!</span>
+      <span className="ryozan-api-status__copy">
         {status.db === 'unreachable'
           ? 'Unable to reach the server. Some features may not work.'
           : 'Server is experiencing issues. We\'re working on it.'}
       </span>
       <button
         type="button"
-        className="bttco-api-status__action"
+        className="ryozan-api-status__action"
         onClick={() => setDismissed(true)}
       >
         Dismiss
       </button>
       <button
         type="button"
-        className="bttco-api-status__action"
+        className="ryozan-api-status__action"
         onClick={poll}
       >
         Retry

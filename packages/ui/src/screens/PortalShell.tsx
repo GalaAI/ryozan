@@ -92,7 +92,7 @@ export function PortalShell({
         overflow: 'hidden',
         '--portal-agent-accent': agentAccent,
         '--portal-agent-rgb': agentBloomRgb,
-        '--bttco-portal-nav-height': 'calc(var(--touch-min) + var(--space-2) + max(var(--space-3), env(safe-area-inset-bottom, 0px)) + 2px)',
+        '--ryozan-portal-nav-height': 'calc(var(--touch-min) + var(--space-2) + max(var(--space-3), env(safe-area-inset-bottom, 0px)) + 2px)',
       } as React.CSSProperties}
     >
       {field ? (
@@ -105,7 +105,7 @@ export function PortalShell({
       ) : null}
       <span
         aria-hidden="true"
-        className="bttco-portal-ambient-bloom bttco-portal-ambient-bloom--from"
+        className="ryozan-portal-ambient-bloom ryozan-portal-ambient-bloom--from"
         style={{
           ...ambientBloomLayer,
           background: ambientBloom(bloomLayers.colors[0]),
@@ -114,7 +114,7 @@ export function PortalShell({
       />
       <span
         aria-hidden="true"
-        className="bttco-portal-ambient-bloom bttco-portal-ambient-bloom--to"
+        className="ryozan-portal-ambient-bloom ryozan-portal-ambient-bloom--to"
         style={{
           ...ambientBloomLayer,
           background: ambientBloom(bloomLayers.colors[1]),
@@ -133,9 +133,9 @@ export function PortalShell({
       />
       <EdgeDissolveRail
         rail={header}
-        className="bttco-portal-scroll-stage"
-        railClassName="bttco-portal-fixed-header"
-        viewportClassName="bttco-portal-scroll"
+        className="ryozan-portal-scroll-stage"
+        railClassName="ryozan-portal-fixed-header"
+        viewportClassName="ryozan-portal-scroll"
         style={{
           position: 'relative',
           display: 'flex',

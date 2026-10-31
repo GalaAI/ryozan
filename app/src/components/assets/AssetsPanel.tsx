@@ -45,7 +45,7 @@ const STATUS_COLOR: Record<string, string> = {
   delivered: '#6dbf7e', bounced: '#e05c5c', opened: 'var(--gold)', clicked: 'var(--gold)',
 }
 
-const COLOR_SAVE_KEY = 'bttco_color_overrides'
+const COLOR_SAVE_KEY = 'ryozan_color_overrides'
 // ── CSS token groups for Colors tab ──────────────────────────────────────
 const COLOR_GROUPS = [
   {
@@ -111,7 +111,7 @@ const CSS_SNIPPETS = [
 ]
 
 interface LibraryAsset { id: string; name: string; category: string; url: string; createdAt: number }
-const LIBRARY_KEY = 'bttco_asset_library'
+const LIBRARY_KEY = 'ryozan_asset_library'
 const LIBRARY_CATS = ['all', 'logos', 'icons', 'banners', 'art', 'stickers']
 
 function loadLibrary(): LibraryAsset[] {
@@ -324,7 +324,7 @@ export default function AssetsPanel({ token }: Props) {
   const applyCSS = () => {
     if (!cssStyleRef.current) {
       const el = document.createElement('style')
-      el.id = 'bttco-custom-css'
+      el.id = 'ryozan-custom-css'
       document.head.appendChild(el)
       cssStyleRef.current = el
     }

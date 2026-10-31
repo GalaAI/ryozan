@@ -76,20 +76,20 @@ export default function EmailFoundryFrame({ surface = 'mobile' }: { surface?: Em
   }, [surface])
 
   return (
-    <section className="bttco-email-foundry-frame" aria-label="Email Foundry">
+    <section className="ryozan-email-foundry-frame" aria-label="Email Foundry">
       {error ? (
-        <div className="bttco-email-foundry-frame__status" role="alert">
+        <div className="ryozan-email-foundry-frame__status" role="alert">
           Email Foundry could not be loaded. Close and reopen this panel.
         </div>
       ) : documentSource ? (
         <iframe
-          className="bttco-email-foundry-frame__iframe"
+          className="ryozan-email-foundry-frame__iframe"
           srcDoc={documentSource}
           title={`Email Foundry ${surface}`}
           sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
         />
       ) : (
-        <div className="bttco-email-foundry-frame__status" role="status">Loading Email Foundry</div>
+        <div className="ryozan-email-foundry-frame__status" role="status">Loading Email Foundry</div>
       )}
     </section>
   )

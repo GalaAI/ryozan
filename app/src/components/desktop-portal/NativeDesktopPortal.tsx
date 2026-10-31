@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { ChatBubble } from '@bttco/ui'
+import { ChatBubble } from '@ryozan/ui'
 import { compileTemplate, type Values } from './template'
 import { RailMotion } from './rail-motion.js'
 import { start as startField } from './relic-field.js'

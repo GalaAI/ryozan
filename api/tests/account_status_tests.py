@@ -247,7 +247,7 @@ class AccountStatusFrontendTests(unittest.TestCase):
         self.assertIn("if (isOwner)", page)
         self.assertIn("usersApi.artistAccountStatus()", page)
         self.assertIn("{isOwner && <th>Artist account</th>}", page)
-        self.assertIn("import { Button, ReceiptBlock } from '@bttco/ui'", page)
+        self.assertIn("import { Button, ReceiptBlock } from '@ryozan/ui'", page)
         for label in (
             "Setup/change required",
             "User-set password",

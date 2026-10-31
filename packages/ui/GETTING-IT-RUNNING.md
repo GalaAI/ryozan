@@ -1,13 +1,13 @@
-# Getting this into BTTCO and running
+# Getting this into Ryozan and running
 
 Vite + React 19 + TypeScript. Four steps, then a screen renders.
 
 ## 1 · Copy the package in
 
-Put the whole `packages/bttco-ui/` folder at the repo root:
+Put the whole `packages/ui/` folder at the repo root:
 
 ```
-<user-home>\.ark\solatree\augments\GalaAI\BTTCO\packages\bttco-ui\
+<user-home>\.ark\solatree\augments\GalaAI\Ryozan\packages\ryozan-ui\
 ```
 
 If the repo has no workspace yet, add one at the root `package.json`:
@@ -20,7 +20,7 @@ Then from the repo root:
 
 ```bash
 npm install
-npm install @bttco/ui --workspace app
+npm install @ryozan/ui --workspace app
 ```
 
 No build step for the package — it ships `.tsx` source and Vite compiles it
@@ -31,9 +31,9 @@ with the app.
 In the app entry (`app/src/main.tsx`), **above** any app styles:
 
 ```ts
-import '@bttco/ui/fonts.css';
-import '@bttco/ui/tokens.css';
-import '@bttco/ui/scene-compat.css';   // ← do not skip this one
+import '@ryozan/ui/fonts.css';
+import '@ryozan/ui/tokens.css';
+import '@ryozan/ui/scene-compat.css';   // ← do not skip this one
 import './styles/app.css';
 ```
 
@@ -53,7 +53,7 @@ Google faces still load in `index.html`:
 Screens are assembled already. This is a complete working phone home:
 
 ```tsx
-import { PortalShell, HomeScreen, BookingSheet, token } from '@bttco/ui';
+import { PortalShell, HomeScreen, BookingSheet, token } from '@ryozan/ui';
 
 const TABS = [
   { id: 'home', label: 'Home' },
@@ -120,7 +120,7 @@ shells contain no media queries.
 ## 4 · Lint the app, not just the package
 
 ```bash
-npx oxlint --config packages/bttco-ui/.oxlintrc.json app/src
+npx oxlint --config packages/ui/.oxlintrc.json app/src
 ```
 
 This flags raw hex, raw px and off-system fonts in **app code**. That is the
@@ -147,7 +147,7 @@ In order of likelihood:
 It has no reason to now — the screens exist. Point it at the assembled screens,
 not the primitives, and hold it to this:
 
-> `@bttco/ui` exports the screens. Use `HomeScreen`, `PortalShell`,
+> `@ryozan/ui` exports the screens. Use `HomeScreen`, `PortalShell`,
 > `BookingSheet`, `AgentChatSheet`, `DesktopShell`. Do not write JSX that
 > reimplements a screen. If a screen needs a block that does not exist, stop and
 > ask. Run the oxlint config on `app/src` before you call anything done.

@@ -1,5 +1,5 @@
 /**
- * Token handles for @bttco/ui.
+ * Token handles for @ryozan/ui.
  *
  * Every value is a `var(--token)` reference — NOT a literal. The literals
  * live in exactly one place (tokens.css, derived from the _ds bundle), so a

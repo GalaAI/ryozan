@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════
-   BTTCO App: application layout and infrastructure tokens
+   Ryozan App: application layout and infrastructure tokens
    Brand tokens (colour, type, spacing, radius, shadow, motion) come from
-   @bttco/ui/tokens.css (BTTCO Modern Classic), loaded in main.tsx.
+   @ryozan/ui/tokens.css (Ryozan Modern Classic), loaded in main.tsx.
    This file holds only app-shell dimensions, z-index, nav-arrow and
    tooltip infrastructure, plus the global rules that used to sit in tokens.css.
    ══════════════════════════════════════════════════════ */
@@ -72,7 +72,7 @@ h4 {
 }
 
 /* ══════════════════════════════════════════════════════
-   BTTCO Global Tooltip System
+   Ryozan Global Tooltip System
    Replaces OS-native title= bubbles with styled tooltips.
    Applies to any element with a title attribute.
    Uses ::before (bubble) + ::after (arrow).

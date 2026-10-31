@@ -19,16 +19,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <style>
-      html[data-bttco-app-route] { background: #0b0c0b; }
-      html[data-bttco-app-route] #root { min-height: 100dvh; background: #0b0c0b; }
-      html[data-bttco-app-route] [data-static-public-fallback] { display: none !important; }
+      html[data-ryozan-app-route] { background: #0b0c0b; }
+      html[data-ryozan-app-route] #root { min-height: 100dvh; background: #0b0c0b; }
+      html[data-ryozan-app-route] [data-static-public-fallback] { display: none !important; }
       [data-static-app-shell] { display: none; }
-      html[data-bttco-app-route] [data-static-app-shell] { display: grid; place-items: center; min-height: 100dvh; background: #0b0c0b; }
+      html[data-ryozan-app-route] [data-static-app-shell] { display: grid; place-items: center; min-height: 100dvh; background: #0b0c0b; }
       [data-static-app-shell] img { width: 88px; height: 88px; opacity: .9; }
     </style>
     <script>
       if (/^\/(dashboard|portal|login|account)(\/|$)/.test(window.location.pathname)) {
-        document.documentElement.setAttribute('data-bttco-app-route', '');
+        document.documentElement.setAttribute('data-ryozan-app-route', '');
       }
     </script>
 

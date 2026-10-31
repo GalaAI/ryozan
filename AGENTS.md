@@ -56,9 +56,9 @@ Before claiming a change is safe: run the same checks locally (`cd app && npm ru
 
 ## Design system
 
-- The only UI source is `packages/ui` (published internally as `@bttco/ui`, a legacy package name). Consumers import from `@bttco/ui`; nobody authors new UI components or inline styled elements. Read `packages/ui/README.md` before touching any UI.
+- The only UI source is `packages/ui` (published internally as `@ryozan/ui`). Consumers import from `@ryozan/ui`; nobody authors new UI components or inline styled elements. Read `packages/ui/README.md` before touching any UI.
 - No hex, no px literals, no fonts outside the allowlist in app code. `npm run lint:adherence:src` in `app/` enforces it and runs in CI.
-- Editing `packages/ui/src` changes nothing in the app until you repack and relock (`cd packages/ui && npm run pack:app`, then in `app/` run `npm install --package-lock-only "@bttco/ui@file:vendor/bttco-ui-<version>.tgz"`); `npm run check:ui-tarball` fails otherwise.
+- Editing `packages/ui/src` changes nothing in the app until you repack and relock (`cd packages/ui && npm run pack:app`, then in `app/` run `npm install --package-lock-only "@ryozan/ui@file:vendor/ryozan-ui-<version>.tgz"`); `npm run check:ui-tarball` fails otherwise.
 - Source of record is the Ryozan Studio Design System artifact (claude.ai artifact id 35f92e5b-ae2d-4c67-a4e1-ec118dfe929e). A need the package cannot express is a design request upstream, never an improvised screen.
 
 ## Agent behavior
@@ -67,9 +67,9 @@ Before claiming a change is safe: run the same checks locally (`cd app && npm ru
 - After API or schema changes, consider Alembic migrations in `api/` if the project uses them for the change.
 - For frontend, respect React 19 + Vite 7 + Tailwind v4 conventions already in the tree.
 
-## Claude Code skill: `bttco-design-canon`
+## Claude Code skill: `ryozan-design-canon`
 
-`.claude/skills/bttco-design-canon/SKILL.md` is the design canon as a skill: read order, build rules, gates and the never list. Claude Code loads it in this repo; other agents read the file directly before any UI work. It restates the Design system section above; when the two disagree, the artifact wins and both get corrected.
+`.claude/skills/ryozan-design-canon/SKILL.md` is the design canon as a skill: read order, build rules, gates and the never list. Claude Code loads it in this repo; other agents read the file directly before any UI work. It restates the Design system section above; when the two disagree, the artifact wins and both get corrected.
 
 ## Cursor project rules
 

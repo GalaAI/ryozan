@@ -120,7 +120,7 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
   }
 
   return (
-    <section className="bttco-agent-evolution" aria-label="Bella and Gala agent settings">
+    <section className="ryozan-agent-evolution" aria-label="Bella and Gala agent settings">
       <header>
         <button type="button" onClick={onBack} aria-label="Back to Hub">← Hub</button>
         <div><span>Agent settings</span><h2>Bella and Gala</h2></div>
@@ -133,12 +133,12 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
         </select>
       </header>
 
-      {state === 'loading' ? <p className="bttco-agent-evolution__empty">Loading the current Apex profile.</p> : null}
-      {state === 'failed' ? <button type="button" className="bttco-agent-evolution__empty" onClick={load}>Apex profile unavailable · retry</button> : null}
+      {state === 'loading' ? <p className="ryozan-agent-evolution__empty">Loading the current Apex profile.</p> : null}
+      {state === 'failed' ? <button type="button" className="ryozan-agent-evolution__empty" onClick={load}>Apex profile unavailable · retry</button> : null}
 
       {state === 'ready' && profile ? (
         <>
-          <div className="bttco-agent-evolution__status">
+          <div className="ryozan-agent-evolution__status">
             <strong>{profile.displayName}</strong>
             <span>{profile.status.replaceAll('_', ' ')}</span>
             <small>v{profile.version} · revision {profile.revision}</small>
@@ -146,7 +146,7 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
             {agentId === 'bella' ? <small>Phone profile {profile.providerBinding.syncStatus.replaceAll('_', ' ')}</small> : null}
           </div>
 
-          <div className="bttco-agent-evolution__traits">
+          <div className="ryozan-agent-evolution__traits">
             {traitControls.map((trait) => (
               <label key={trait.key}>
                 <span>{trait.label}</span><output>{profile.traits[trait.key]}</output>
@@ -163,7 +163,7 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
             </label>
           </div>
 
-          <div className="bttco-agent-evolution__actions">
+          <div className="ryozan-agent-evolution__actions">
             <button
               type="button"
               disabled={busy}
@@ -202,11 +202,11 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
             >Recover learning captures</button>
           </div>
 
-          <div className="bttco-agent-evolution__workbench">
+          <div className="ryozan-agent-evolution__workbench">
             <article>
               <span>Conversational training</span>
               <textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder={`Tell Apex how ${profile.displayName} should act. Say “remember that …” for durable memory.`} />
-              <label className="bttco-agent-evolution__file">
+              <label className="ryozan-agent-evolution__file">
                 <span>{attachment ? attachment.name : 'Attach audio, image, video, or document'}</span>
                 <input type="file" onChange={(event: ChangeEvent<HTMLInputElement>) => setAttachment(event.target.files?.[0] ?? null)} />
               </label>
@@ -247,7 +247,7 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
             </article>
           </div>
 
-          {notice ? <p className="bttco-agent-evolution__notice" role="status">{notice}</p> : null}
+          {notice ? <p className="ryozan-agent-evolution__notice" role="status">{notice}</p> : null}
         </>
       ) : null}
     </section>

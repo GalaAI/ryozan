@@ -514,7 +514,7 @@ function MemoryShard(props: ActionCardProps) {
     card,
     agentName,
     accent = 'var(--ukiyoe-kin-gold, #cba15b)',
-    accentRgb = 'var(--bttco-agent-rgb, 203,161,91)',
+    accentRgb = 'var(--ryozan-agent-rgb, 203,161,91)',
     onCommit,
     commitLabel = 'Commit to memory',
   } = props;

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   BTTCO — DESIGN SYSTEM REALIGNMENT
+   Ryozan — DESIGN SYSTEM REALIGNMENT
    Drop at: app/src/styles/scene-compat.css
    Import in app/src/index.css IMMEDIATELY AFTER tokens.css:
 
@@ -169,7 +169,7 @@
 /* ══════════════════════════════════════════════════════
    NEXUS UWC PANEL — pulled into the brand
    That panel shipped with its own token set lifted from GalaX, so it ignored
-   BTTCO colours entirely and the global realignment could not reach it. These
+   Ryozan colours entirely and the global realignment could not reach it. These
    overrides repoint it at the real tokens. Nothing structural changes.
    ══════════════════════════════════════════════════════ */
 

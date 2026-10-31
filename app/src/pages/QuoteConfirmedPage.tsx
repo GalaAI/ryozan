@@ -75,7 +75,7 @@ function downloadIcs(details: BookingDetails) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'bttco-appointment.ics'
+  a.download = 'ryozan-appointment.ics'
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -107,18 +107,18 @@ function loadGoogleScript(): Promise<void> {
 
 /* ── CSS keyframes (injected once) ─────────────────────── */
 
-const STYLE_ID = 'bttco-confirmed-anims'
+const STYLE_ID = 'ryozan-confirmed-anims'
 function injectAnimations() {
   if (document.getElementById(STYLE_ID)) return
   const style = document.createElement('style')
   style.id = STYLE_ID
   style.textContent = `
-    @keyframes bttco-fade-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    @keyframes bttco-fade-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95) translateY(10px); } }
-    @keyframes bttco-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes bttco-backdrop-out { from { opacity: 1; } to { opacity: 0; } }
-    @keyframes bttco-check-pop { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.3); } 100% { transform: scale(1); opacity: 1; } }
-    @keyframes bttco-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes ryozan-fade-in { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes ryozan-fade-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95) translateY(10px); } }
+    @keyframes ryozan-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes ryozan-backdrop-out { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes ryozan-check-pop { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.3); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes ryozan-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   `
   document.head.appendChild(style)
 }
@@ -272,8 +272,8 @@ export default function QuoteConfirmedPage() {
           background: 'rgba(0,0,0,0.82)',
           backdropFilter: 'blur(8px)',
           animation: modalPhase === 'closing'
-            ? 'bttco-backdrop-out 0.4s ease forwards'
-            : 'bttco-backdrop-in 0.4s ease forwards',
+            ? 'ryozan-backdrop-out 0.4s ease forwards'
+            : 'ryozan-backdrop-in 0.4s ease forwards',
         }}>
           <div
             ref={modalRef}
@@ -287,8 +287,8 @@ export default function QuoteConfirmedPage() {
               textAlign: 'center',
               boxShadow: '0 25px 60px rgba(0,0,0,0.75), 0 0 35px rgba(211,138,104,0.12)',
               animation: modalPhase === 'closing'
-                ? 'bttco-fade-out 0.35s ease forwards'
-                : 'bttco-fade-in 0.5s ease forwards',
+                ? 'ryozan-fade-out 0.35s ease forwards'
+                : 'ryozan-fade-in 0.5s ease forwards',
             }}
           >
             {modalPhase === 'intro' && (
@@ -408,7 +408,7 @@ export default function QuoteConfirmedPage() {
                       width: '64px',
                       height: '64px',
                       margin: '0 auto 16px',
-                      animation: 'bttco-check-pop 0.6s ease forwards',
+                      animation: 'ryozan-check-pop 0.6s ease forwards',
                     }}>
                       <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" width="64" height="64">
                         <circle cx="32" cy="32" r="30" fill="rgba(250,174,21,0.12)" stroke="#faae15" strokeWidth="2" />
@@ -427,7 +427,7 @@ export default function QuoteConfirmedPage() {
                       textTransform: 'uppercase',
                       letterSpacing: '1px',
                       margin: '0 0 8px',
-                      animation: 'bttco-slide-up 0.4s ease 0.3s both',
+                      animation: 'ryozan-slide-up 0.4s ease 0.3s both',
                     }}>
                       Welcome to the Club!
                     </h3>
@@ -435,7 +435,7 @@ export default function QuoteConfirmedPage() {
                       color: 'var(--text, #e8dfcf)',
                       fontSize: '0.9rem',
                       margin: 0,
-                      animation: 'bttco-slide-up 0.4s ease 0.5s both',
+                      animation: 'ryozan-slide-up 0.4s ease 0.5s both',
                     }}>
                       Your account has been created. Let's see your appointment.
                     </p>
@@ -447,7 +447,7 @@ export default function QuoteConfirmedPage() {
                       width: '56px',
                       height: '56px',
                       margin: '0 auto 16px',
-                      animation: 'bttco-check-pop 0.5s ease forwards',
+                      animation: 'ryozan-check-pop 0.5s ease forwards',
                     }}>
                       <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="56" height="56">
                         <circle cx="28" cy="28" r="26" fill="rgba(185,173,150,0.08)" stroke="var(--muted, #b9ad96)" strokeWidth="2" strokeDasharray="4 3" />
@@ -461,7 +461,7 @@ export default function QuoteConfirmedPage() {
                       textTransform: 'uppercase',
                       letterSpacing: '1px',
                       margin: '0 0 6px',
-                      animation: 'bttco-slide-up 0.4s ease 0.2s both',
+                      animation: 'ryozan-slide-up 0.4s ease 0.2s both',
                     }}>
                       Ouch, rejected...
                     </h3>
@@ -470,7 +470,7 @@ export default function QuoteConfirmedPage() {
                       fontSize: '0.85rem',
                       margin: 0,
                       opacity: 0.7,
-                      animation: 'bttco-slide-up 0.4s ease 0.4s both',
+                      animation: 'ryozan-slide-up 0.4s ease 0.4s both',
                     }}>
                       No worries, you can always join later!
                     </p>
@@ -497,7 +497,7 @@ export default function QuoteConfirmedPage() {
           alignItems: 'center',
           gap: '12px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          animation: 'bttco-slide-up 0.4s ease forwards',
+          animation: 'ryozan-slide-up 0.4s ease forwards',
           maxWidth: '340px',
         }}>
           <div style={{

@@ -4,7 +4,7 @@
  * Single source of truth for all internal navigation URLs.
  * When a route changes, update it here and every reference picks it up.
  *
- * Mirrors backend: bttco-api/app/core/routes.py
+ * Mirrors backend: api/app/core/routes.py
  *
  * Usage:
  *   import { ROUTES } from '../lib/routes'

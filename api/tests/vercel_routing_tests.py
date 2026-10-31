@@ -94,7 +94,7 @@ class VercelRoutingTests(unittest.TestCase):
         self.assertIn("@media (display-mode: standalone)", root_css)
         self.assertRegex(
             root_css,
-            r"html:root\[data-bttco-app-route\][\s\S]*?height:\s*100lvh",
+            r"html:root\[data-ryozan-app-route\][\s\S]*?height:\s*100lvh",
         )
         self.assertRegex(
             login_css,
@@ -102,7 +102,7 @@ class VercelRoutingTests(unittest.TestCase):
         )
         self.assertRegex(
             dashboard_css,
-            r"\.bttco-mobile-portal-home\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0",
+            r"\.ryozan-mobile-portal-home\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0",
         )
         self.assertEqual(len(re.findall(r'<meta\s+name="viewport"', index_html)), 1)
         self.assertNotRegex(
@@ -120,10 +120,10 @@ class VercelRoutingTests(unittest.TestCase):
         tab_bar_path = repo_root / "packages" / "ui" / "src" / "components" / "TabBar.tsx"
         portal_shell_path = repo_root / "packages" / "ui" / "src" / "screens" / "PortalShell.tsx"
         app_package = json.loads((repo_root / "app" / "package.json").read_text(encoding="utf-8"))
-        vendor_name = "bttco-ui-0.2.0.tgz"
+        vendor_name = "ryozan-ui-0.2.1.tgz"
         vendor_path = repo_root / "app" / "vendor" / vendor_name
 
-        self.assertEqual(app_package["dependencies"]["@bttco/ui"], f"file:vendor/{vendor_name}")
+        self.assertEqual(app_package["dependencies"]["@ryozan/ui"], f"file:vendor/{vendor_name}")
 
         with tarfile.open(vendor_path, "r:gz") as archive:
             vendored_tab_bar = archive.extractfile("package/src/components/TabBar.tsx")

@@ -69,7 +69,7 @@ Also: `--tiger-orange` #faae15 now resolves to the warm tan, so any yellow
 `--sig-warn` (terracotta).
 
 **The Nexus UWC panel is handled too.** It shipped with its own token set lifted
-from GalaX, so it ignored BTTCO colours and the global realignment could not
+from GalaX, so it ignored Ryozan colours and the global realignment could not
 reach it. `scene-compat.css` now repoints `--nuwc-*` at the real tokens, moves
 its theme presets onto the heritage palette, and lifts its 7–9px uppercase mono
 up to the 10.5px floor. Structure untouched.
@@ -113,7 +113,7 @@ The portal's background is a drifting dot-wave with stars, rendered to canvas.
 It is a real system, not decoration, and it exists nowhere in your repo — without
 it the portal sits on a flat dead backdrop.
 
-Copy `packages/bttco-ui/src/field/relic-field-gsap.js` to
+Copy `packages/ui/src/field/relic-field-gsap.js` to
 `app/public/vendor/relic-field.js`, then in `app/index.html` before the bundle:
 
 ```html
@@ -170,7 +170,7 @@ never did.
 
 ## Step 3 · Add the package
 
-Copy `packages/bttco-ui/` to the repo root. Root `package.json`:
+Copy `packages/ui/` to the repo root. Root `package.json`:
 
 ```json
 { "workspaces": ["app", "packages/*"] }
@@ -178,10 +178,10 @@ Copy `packages/bttco-ui/` to the repo root. Root `package.json`:
 
 ```bash
 npm install
-npm install @bttco/ui --workspace app
+npm install @ryozan/ui --workspace app
 ```
 
-**Do NOT import `@bttco/ui/tokens.css` or `@bttco/ui/fonts.css` in this repo.**
+**Do NOT import `@ryozan/ui/tokens.css` or `@ryozan/ui/fonts.css` in this repo.**
 The app already defines those tokens and already loads KC Tallboy and
 KC SimpleSans from `/assets/fonts/`. Importing the package's copies would
 create two competing `:root` blocks — exactly the fight to avoid. Those exports
@@ -194,7 +194,7 @@ Vite compiles the package's `.tsx` with the app. No build step.
 No wrapper needed — the tokens are global now:
 
 ```tsx
-import { PortalShell, HomeScreen, token } from '@bttco/ui';
+import { PortalShell, HomeScreen, token } from '@ryozan/ui';
 
 <div style={{ height: '100dvh' }}>
   <PortalShell tabs={TABS} activeTab={tab} onSelectTab={setTab}>
@@ -222,7 +222,7 @@ the one sanctioned exception.
 ## Step 5 · Lint the app
 
 ```bash
-npx oxlint --config packages/bttco-ui/.oxlintrc.json app/src
+npx oxlint --config packages/ui/.oxlintrc.json app/src
 ```
 
 Flags raw hex, raw px and off-system fonts **in app code**. Expect a large

@@ -1,11 +1,11 @@
 #!/bin/sh
-# BTTCO App pre-push quality gate
+# Ryozan App pre-push quality gate
 # Blocks push if type check, lint, or build fails
 #
 # INSTALL: cp hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
 
 echo ""
-echo "=== BTTCO App Pre-Push Checks ==="
+echo "=== Ryozan App Pre-Push Checks ==="
 echo ""
 
 echo "[1/3] Running ESLint..."

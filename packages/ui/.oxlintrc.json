@@ -37,7 +37,7 @@
       },
       {
         "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Poppins|Space Grotesk|JetBrains Mono|Bebas Neue|KC Tallboy|KC Tallboy Inked|KC SimpleSans|KC SimpleSans Inked|Suti|Courier New|Courier|Oswald|Inter|IBM Plex Mono|Aero Wolves|Aero Wolves Outline|Aero Wolves Stamp))/i]",
-        "message": "Font not provided by the design system (BTTCO Modern Classic). Available: Poppins (display), Space Grotesk (body), JetBrains Mono (labels), Bebas Neue (content overlay only), KC Tallboy (poster), KC SimpleSans (print), Suti (print flourish), Courier New / Courier (typewriter); legacy website faces kept for existing pages: Oswald, Inter, IBM Plex Mono; under evaluation, not approved for production: Aero Wolves, Aero Wolves Outline, Aero Wolves Stamp."
+        "message": "Font not provided by the design system (Ryozan Modern Classic). Available: Poppins (display), Space Grotesk (body), JetBrains Mono (labels), Bebas Neue (content overlay only), KC Tallboy (poster), KC SimpleSans (print), Suti (print flourish), Courier New / Courier (typewriter); legacy website faces kept for existing pages: Oswald, Inter, IBM Plex Mono; under evaluation, not approved for production: Aero Wolves, Aero Wolves Outline, Aero Wolves Stamp."
       }
     ]
   },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { ActionCard, type AgentActionCard } from '@bttco/ui'
+import { ActionCard, type AgentActionCard } from '@ryozan/ui'
 import { agentCardHands, getBanditMember, RYOZAN_BANDIT_ORCHESTRA } from '../../lib/agent-card-hands'
 import { gala, type AgentAccess, type ApexAgentEvolutionResponse, type BenchPreviewRequest, type BenchPreviewResponse, type OrchestraRouting, type User } from '../../lib/api'
 import { compileTemplate } from './template'

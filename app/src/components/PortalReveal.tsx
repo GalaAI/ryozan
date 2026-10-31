@@ -44,6 +44,6 @@ export default function PortalReveal() {
   if (!revealing) return null
 
   return (
-    <div className="bttco-portal-reveal" aria-hidden="true" />
+    <div className="ryozan-portal-reveal" aria-hidden="true" />
   )
 }

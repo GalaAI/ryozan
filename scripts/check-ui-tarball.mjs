@@ -7,13 +7,13 @@
  * script.
  *
  * ============================================================================
- * WHY THIS EXISTS: the @bttco/ui vendoring contract
+ * WHY THIS EXISTS: the @ryozan/ui vendoring contract
  * ============================================================================
  *
  * `app/` does NOT consume `packages/ui/` as a workspace. It installs a
  * committed tarball:
  *
- *     app/package.json   "@bttco/ui": "file:vendor/bttco-ui-<version>.tgz"
+ *     app/package.json   "@ryozan/ui": "file:vendor/ryozan-ui-<version>.tgz"
  *
  * Two consequences, both of which have already bitten this repo:
  *
@@ -36,15 +36,15 @@
  *   1. Edit the source:      packages/ui/src/**
  *   2. Repack the tarball:   cd packages/ui && npm run pack:app
  *   3. Relock the integrity: cd app && npm install --package-lock-only \
- *                              "@bttco/ui@file:vendor/bttco-ui-<version>.tgz"
+ *                              "@ryozan/ui@file:vendor/ryozan-ui-<version>.tgz"
  *
- * Step 3 needs the explicit `@bttco/ui@file:...` argument. A bare
+ * Step 3 needs the explicit `@ryozan/ui@file:...` argument. A bare
  * `npm install --package-lock-only` reports "up to date" and leaves the stale
  * integrity hash in place, which is exactly the state this check exists to
  * catch. Naming the spec forces npm to re-resolve the tarball and rewrite the
  * hash -- a one-line lockfile diff.
  *
- *   Commit all three: the source files, app/vendor/bttco-ui-<version>.tgz,
+ *   Commit all three: the source files, app/vendor/ryozan-ui-<version>.tgz,
  *   and app/package-lock.json. Commit ecb0ace is a correct example.
  *
  * Prose version of the same procedure: docs/release/UI_TARBALL_VENDORING.md
@@ -198,12 +198,12 @@ function remedy(tarballName) {
     '  2. Refresh the integrity hash in the lockfile (the explicit spec is',
     '     required -- a bare --package-lock-only says "up to date" and does',
     '     nothing):',
-    `       cd app && npm install --package-lock-only "@bttco/ui@file:${tarballRelative}"`,
+    `       cd app && npm install --package-lock-only "@ryozan/ui@file:${tarballRelative}"`,
     '',
     `  3. Commit app/vendor/${tarballName} AND app/package-lock.json together`,
     '     with the packages/ui source change.',
     '',
-    'Step 2 is the one people skip. `npm ci` restores @bttco/ui from the npm',
+    'Step 2 is the one people skip. `npm ci` restores @ryozan/ui from the npm',
     'cache keyed by the `integrity` hash in app/package-lock.json, not by the',
     'bytes of the tarball. Repack without relocking and a clean `npm ci` will',
     'silently reinstall the OLD component with no error.',
@@ -217,10 +217,10 @@ function remedy(tarballName) {
 const appPkg = readJson(path.join(appRoot, 'package.json'))
 const uiPkg = readJson(path.join(uiRoot, 'package.json'))
 
-const specifier = appPkg.dependencies?.['@bttco/ui']
+const specifier = appPkg.dependencies?.['@ryozan/ui']
 if (typeof specifier !== 'string' || !specifier.startsWith('file:')) {
   console.error(
-    `app/package.json no longer declares @bttco/ui as a file: dependency (found ${specifier}).\n` +
+    `app/package.json no longer declares @ryozan/ui as a file: dependency (found ${specifier}).\n` +
       'If the app moved to a workspace dependency, delete this check and its CI step ' +
       'instead of leaving it half-wired.',
   )
@@ -239,7 +239,7 @@ if (!fs.existsSync(tarballPath)) {
   process.exit(1)
 }
 
-const expectedName = `bttco-ui-${uiPkg.version}.tgz`
+const expectedName = `ryozan-ui-${uiPkg.version}.tgz`
 if (tarballName !== expectedName) {
   fail(
     `Version mismatch: packages/ui/package.json is ${uiPkg.version}, so the vendored tarball ` +
@@ -251,12 +251,12 @@ if (tarballName !== expectedName) {
 
 const lockPath = path.join(appRoot, 'package-lock.json')
 const lock = readJson(lockPath)
-const lockEntry = lock.packages?.['node_modules/@bttco/ui']
+const lockEntry = lock.packages?.['node_modules/@ryozan/ui']
 const tarballBytes = fs.readFileSync(tarballPath)
 const actualIntegrity = `sha512-${createHash('sha512').update(tarballBytes).digest('base64')}`
 
 if (!lockEntry) {
-  fail('app/package-lock.json has no "node_modules/@bttco/ui" entry.')
+  fail('app/package-lock.json has no "node_modules/@ryozan/ui" entry.')
 } else if (lockEntry.integrity !== actualIntegrity) {
   fail(
     'app/package-lock.json integrity does not match the tarball on disk.\n' +
@@ -317,13 +317,13 @@ if (extra.length) {
 // --- report ----------------------------------------------------------------
 
 if (failures.length) {
-  console.error(`@bttco/ui source and app/vendor/${tarballName} have DIVERGED.\n`)
+  console.error(`@ryozan/ui source and app/vendor/${tarballName} have DIVERGED.\n`)
   console.error(failures.join('\n\n'))
   console.error(remedy(tarballName))
   process.exit(1)
 }
 
 console.log(
-  `@bttco/ui is in sync: ${source.size} packed file(s) (markdown excluded) match ` +
+  `@ryozan/ui is in sync: ${source.size} packed file(s) (markdown excluded) match ` +
     `app/vendor/${tarballName}, and app/package-lock.json integrity matches the tarball.`,
 )

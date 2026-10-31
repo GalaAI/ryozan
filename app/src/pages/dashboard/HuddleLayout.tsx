@@ -190,10 +190,10 @@ interface ClientEntry {
   bookings: number
   lastBooking: string | null
   status: string
-  source: 'booking' | 'jwt' | 'bttco' | 'manual' | 'api'
+  source: 'booking' | 'jwt' | 'ryozan' | 'manual' | 'api'
 }
 
-type ClientTab = 'all' | 'jwt' | 'bttco'
+type ClientTab = 'all' | 'jwt' | 'ryozan'
 
 function parseCSV(text: string): ClientEntry[] {
   const lines = text.trim().split('\n')
@@ -241,7 +241,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
   const [contactsError, setContactsError] = useState<string | null>(null)
   const { settings: studioSettings } = useStudioSettings()
   const [jwtContacts, setJwtContacts] = useState<ClientEntry[]>([])
-  const [bttcoContacts, setBttcoContacts] = useState<ClientEntry[]>([])
+  const [ryozanContacts, setRyozanContacts] = useState<ClientEntry[]>([])
   const [selectedClientKey, setSelectedClientKey] = useState<string | null>(null)
 
   useEffect(() => {
@@ -285,7 +285,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
     return Array.from(map.values()).sort((a, b) => b.bookings - a.bookings)
   }, [bookings])
 
-  const handleUpload = (audience: 'jwt' | 'bttco') => {
+  const handleUpload = (audience: 'jwt' | 'ryozan') => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.csv,.txt'
@@ -299,8 +299,8 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
           const merged = [...jwtContacts, ...contacts]
           setJwtContacts(merged)
         } else {
-          const merged = [...bttcoContacts, ...contacts]
-          setBttcoContacts(merged)
+          const merged = [...ryozanContacts, ...contacts]
+          setRyozanContacts(merged)
         }
       }
       reader.readAsText(file)
@@ -317,15 +317,15 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
       return a.name.localeCompare(b.name)
     }
     if (tab === 'jwt') return [...jwtContacts].sort(alphaSort)
-    if (tab === 'bttco') return [...apiContacts, ...bttcoContacts].sort(alphaSort)
+    if (tab === 'ryozan') return [...apiContacts, ...ryozanContacts].sort(alphaSort)
     // All: merge API contacts, booking clients, and imported contacts, dedupe by email/name.
     const map = new Map<string, ClientEntry>()
     for (const c of apiContacts) map.set(c.email || c.name, c)
     for (const c of bookingClients) map.set(c.email || c.name, c)
     for (const c of jwtContacts) if (!map.has(c.email)) map.set(c.email, c)
-    for (const c of bttcoContacts) if (!map.has(c.email)) map.set(c.email, c)
+    for (const c of ryozanContacts) if (!map.has(c.email)) map.set(c.email, c)
     return Array.from(map.values()).sort(alphaSort)
-  }, [tab, apiContacts, bookingClients, jwtContacts, bttcoContacts])
+  }, [tab, apiContacts, bookingClients, jwtContacts, ryozanContacts])
 
   const [visibleCount, setVisibleCount] = useState(50)
 
@@ -345,7 +345,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
   const hasMore = filtered.length > visibleCount
   const clientKey = (client: ClientEntry) => client.email || client.name
   const selectedClient = filtered.find((client) => clientKey(client) === selectedClientKey) || visibleClients[0] || null
-  const importedCount = jwtContacts.length + bttcoContacts.length
+  const importedCount = jwtContacts.length + ryozanContacts.length
   const activeProducts = [
     { label: 'Courier', detail: selectedClient?.email ? 'message routing ready' : 'needs email' },
     { label: 'Huddl', detail: selectedClient?.bookings ? `${selectedClient.bookings} booking touchpoints` : 'no booking history' },
@@ -364,7 +364,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
   const TABS: { key: ClientTab; label: string; count: number }[] = [
     { key: 'all', label: 'All', count: allClients.length },
     { key: 'jwt', label: studioSettings.owner_name || 'Owner', count: jwtContacts.length },
-    { key: 'bttco', label: 'Ryozan', count: apiContacts.length + bttcoContacts.length },
+    { key: 'ryozan', label: 'Ryozan', count: apiContacts.length + ryozanContacts.length },
   ]
 
   return (
@@ -376,7 +376,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
           <p>Client memory for Courier, Huddl, Hustl, Herald, Guild, and future Ark products.</p>
         </div>
         <div className="rolodex-actions">
-          <button className="btn btn-outline btn-sm" onClick={() => handleUpload(tab === 'bttco' ? 'bttco' : 'jwt')}>
+          <button className="btn btn-outline btn-sm" onClick={() => handleUpload(tab === 'ryozan' ? 'ryozan' : 'jwt')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Import
           </button>
@@ -385,7 +385,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
 
       <section className="rolodex-metrics" aria-label="Rolodex coverage">
         <div><span>Total</span><strong>{allClients.length}</strong></div>
-        <div><span>Ryozan</span><strong>{apiContacts.length + bttcoContacts.length}</strong></div>
+        <div><span>Ryozan</span><strong>{apiContacts.length + ryozanContacts.length}</strong></div>
         <div><span>Booking-linked</span><strong>{bookingClients.length}</strong></div>
         <div><span>Imported</span><strong>{importedCount}</strong></div>
       </section>
@@ -944,7 +944,7 @@ export default function HuddleLayout() {
   }
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('bttco:nexus-toolbar-register', {
+    window.dispatchEvent(new CustomEvent('ryozan:nexus-toolbar-register', {
       detail: {
         items: TOOL_BELT.map((tool) => ({
           id: tool.id,
@@ -957,7 +957,7 @@ export default function HuddleLayout() {
     }))
 
     return () => {
-      window.dispatchEvent(new CustomEvent('bttco:nexus-toolbar-clear'))
+      window.dispatchEvent(new CustomEvent('ryozan:nexus-toolbar-clear'))
     }
   }, [activePanel])
 

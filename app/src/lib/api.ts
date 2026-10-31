@@ -2056,7 +2056,7 @@ export const mailchimp = {
 
 // ── RYO / Economy ────────────────────────────────
 
-export interface BTTCoinTransaction {
+export interface RyoCoinTransaction {
   id: string
   user_id: string
   amount: number
@@ -2067,18 +2067,18 @@ export interface BTTCoinTransaction {
   created_at: string
 }
 
-export interface BTTCoinWallet {
+export interface RyoCoinWallet {
   balance: number
   total_earned: number
   total_spent: number
-  transactions: BTTCoinTransaction[]
+  transactions: RyoCoinTransaction[]
   conversion_rate: number // RYO per $1 USD
 }
 
-export const bttcoin = {
+export const ryoCoin = {
   /** Get wallet details for current user */
   getWallet: () =>
-    request<BTTCoinWallet>('/bttcoin/wallet'),
+    request<RyoCoinWallet>('/bttcoin/wallet'),
 
   /** List transaction history */
   getTransactions: (params?: { type?: string; skip?: number; limit?: number }) => {
@@ -2087,21 +2087,21 @@ export const bttcoin = {
     if (params?.skip) query.set('skip', String(params.skip))
     if (params?.limit) query.set('limit', String(params.limit))
     const qs = query.toString()
-    return request<{ transactions: BTTCoinTransaction[]; total: number }>(
+    return request<{ transactions: RyoCoinTransaction[]; total: number }>(
       `/bttcoin/transactions${qs ? `?${qs}` : ''}`
     )
   },
 
   /** Admin: award RYO to a user */
   award: (userId: string, amount: number, description: string) =>
-    request<BTTCoinTransaction>('/bttcoin/award', {
+    request<RyoCoinTransaction>('/bttcoin/award', {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, amount, description }),
     }),
 
   /** Spend RYO (e.g., redeem for reward) */
   spend: (amount: number, description: string) =>
-    request<BTTCoinTransaction>('/bttcoin/spend', {
+    request<RyoCoinTransaction>('/bttcoin/spend', {
       method: 'POST',
       body: JSON.stringify({ amount, description }),
     }),

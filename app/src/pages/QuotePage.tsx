@@ -88,7 +88,7 @@ export default function QuotePage() {
   if (loading) return <PageShell><p>Loading your quote...</p></PageShell>
   if (error || !quote) return <PageShell><h2>Quote Not Found</h2><p>{error || 'This quote link may have expired or is invalid.'}</p></PageShell>
   if (quote.expired) return <PageShell><h2>Quote Expired</h2><p>This quote has expired. Please contact your artist for a new quote.</p></PageShell>
-  if (quote.status === 'accepted') return <PageShell><span className="bttco-state-check" aria-hidden="true">&#10003;</span><h2>You're Booked!</h2><p>Your deposit has been paid and your appointment is confirmed.</p></PageShell>
+  if (quote.status === 'accepted') return <PageShell><span className="ryozan-state-check" aria-hidden="true">&#10003;</span><h2>You're Booked!</h2><p>Your deposit has been paid and your appointment is confirmed.</p></PageShell>
 
   const slot = quote.available_slots[0]
   const slotDate = slot ? new Date(slot.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : null
@@ -163,7 +163,7 @@ export default function QuotePage() {
 
               {/* Reply sent */}
               {replySent && (
-                <div style={{ animation: 'bttco-slide-up 0.4s ease forwards' }}>
+                <div style={{ animation: 'ryozan-slide-up 0.4s ease forwards' }}>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
                     <div style={{
                       padding: '9px 12px', maxWidth: '80%',
@@ -403,8 +403,8 @@ export default function QuotePage() {
 /* Shell for loading/error/accepted states */
 function PageShell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="bttco-error-boundary bttco-state-boundary">
-      <section className="bttco-error-boundary__panel">
+    <main className="ryozan-error-boundary ryozan-state-boundary">
+      <section className="ryozan-error-boundary__panel">
         {children}
       </section>
     </main>

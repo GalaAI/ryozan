@@ -45,15 +45,15 @@ export function EdgeDissolveRail({
   };
 
   return (
-    <div className={classes('bttco-edge-dissolve-rail', className)} style={style}>
+    <div className={classes('ryozan-edge-dissolve-rail', className)} style={style}>
       {rail ? (
-        <div className={classes('bttco-edge-dissolve-rail__rail', railClassName)} style={railStyle}>
+        <div className={classes('ryozan-edge-dissolve-rail__rail', railClassName)} style={railStyle}>
           {rail}
         </div>
       ) : null}
       <div
         className={classes(
-          'bttco-edge-dissolve-rail__viewport',
+          'ryozan-edge-dissolve-rail__viewport',
           isTopScrolled && 'is-top-scrolled',
           viewportClassName,
         )}

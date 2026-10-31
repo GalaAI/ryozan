@@ -14,7 +14,7 @@ MOBILE_PORTAL = ROOT / "app" / "src" / "pages" / "dashboard" / "MobilePortalHome
 GALA_PANEL = ROOT / "app" / "src" / "components" / "GalaPanel.tsx"
 API_CLIENT = ROOT / "app" / "src" / "lib" / "api.ts"
 DASHBOARD_STYLES = ROOT / "app" / "src" / "styles" / "dashboard.css"
-UI_ARCHIVE = ROOT / "app" / "vendor" / "bttco-ui-0.2.0.tgz"
+UI_ARCHIVE = ROOT / "app" / "vendor" / "ryozan-ui-0.2.1.tgz"
 DASHBOARD_HOME = ROOT / "app" / "src" / "pages" / "dashboard" / "DashboardHome.tsx"
 
 
@@ -36,7 +36,7 @@ class MobilePortalNavTourFrontendTests(unittest.TestCase):
 
     def test_phone_nav_caps_badge_data_and_fixes_its_visual_footprint(self):
         self.assertEqual(self.portal.count("badge: visibleUnreadCount"), 2)
-        self.assertIn('className="bttco-tab-bar__badge"', self.tab_bar)
+        self.assertIn('className="ryozan-tab-bar__badge"', self.tab_bar)
         self.assertIn("width: '24px'", self.tab_bar)
         self.assertIn("maxWidth: '24px'", self.tab_bar)
         self.assertIn("padding: 0", self.tab_bar)
@@ -60,13 +60,13 @@ class MobilePortalNavTourFrontendTests(unittest.TestCase):
         self.assertIn("const pass: ComponentProps<typeof SessionPass> = loading", self.portal)
 
     def test_artist_tour_is_contained_above_the_shared_nav(self):
-        self.assertIn('<div className="bttco-artist-tour-layer">', self.portal)
-        self.assertIn('<aside className="bttco-artist-tour"', self.portal)
-        self.assertIn(".bttco-artist-tour-layer {", self.styles)
-        self.assertIn("inset: 0 0 var(--bttco-portal-nav-height) 0", self.styles)
+        self.assertIn('<div className="ryozan-artist-tour-layer">', self.portal)
+        self.assertIn('<aside className="ryozan-artist-tour"', self.portal)
+        self.assertIn(".ryozan-artist-tour-layer {", self.styles)
+        self.assertIn("inset: 0 0 var(--ryozan-portal-nav-height) 0", self.styles)
         self.assertIn("overflow: hidden", self.styles)
         self.assertIn("pointer-events: none", self.styles)
-        self.assertIn(".bttco-artist-tour {", self.styles)
+        self.assertIn(".ryozan-artist-tour {", self.styles)
         self.assertIn("max-height: calc(100% - 24px)", self.styles)
         self.assertIn("pointer-events: auto", self.styles)
 
@@ -75,11 +75,11 @@ class MobilePortalNavTourFrontendTests(unittest.TestCase):
         self.assertNotIn("dockedTop=", self.portal)
         self.assertNotIn("compactAgentWorkflow", self.portal)
         self.assertNotIn(
-            ".bttco-agent-chat-sheet:has(.bttco-hub-workflow-card--pos) {",
+            ".ryozan-agent-chat-sheet:has(.ryozan-hub-workflow-card--pos) {",
             self.styles,
         )
         self.assertNotIn(
-            ".bttco-agent-chat-sheet:has(.bttco-hub-workflow-card--pos .pos-numpad-wrap)",
+            ".ryozan-agent-chat-sheet:has(.ryozan-hub-workflow-card--pos .pos-numpad-wrap)",
             self.styles,
         )
 

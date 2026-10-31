@@ -59,7 +59,7 @@ export function TabBar({
         }}
       >
         <span
-          className="bttco-tab-bar__sweep"
+          className="ryozan-tab-bar__sweep"
           style={{
             position: 'absolute',
             top: 0,
@@ -119,7 +119,7 @@ export function TabBar({
             {t.badge ? (
               <span
                 aria-hidden="true"
-                className="bttco-tab-bar__badge"
+                className="ryozan-tab-bar__badge"
                 style={{
                   position: 'absolute',
                   top: 'var(--space-0)',

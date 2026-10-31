@@ -6441,7 +6441,7 @@ body:has(.bkm-lightbox) .hotbar {
   margin: 0 0 0.15rem;
   font-size: 0.78rem;
 }
-.nexus-bttco-label {
+.nexus-ryozan-label {
   display: inline-flex;
   align-items: center;
   font-family: 'KC Tallboy', var(--font-heading);
@@ -16228,34 +16228,34 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
   text-overflow: ellipsis;
 }
 
-/* BTTcoin section */
-.vault-bttcoin-hero {
+/* RYO section */
+.vault-ryo-hero {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.2rem;
   padding: var(--space-3) 0;
 }
-.vault-bttcoin-balance {
+.vault-ryo-balance {
   font-family: 'JetBrains Mono', monospace;
   font-size: 2rem;
   font-weight: 700;
   color: var(--gold);
   line-height: 1;
 }
-.vault-bttcoin-label {
+.vault-ryo-label {
   font-size: 0.7rem;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
-.vault-bttcoin-usd {
+.vault-ryo-usd {
   font-size: 0.78rem;
   color: var(--muted);
   font-family: 'JetBrains Mono', monospace;
   margin-top: var(--space-1);
 }
-.vault-bttcoin-actions {
+.vault-ryo-actions {
   display: flex;
   justify-content: center;
   margin-top: var(--space-2);
@@ -27623,7 +27623,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
     display: inline-flex;
   }
 
-  .nexus-bttco-label {
+  .nexus-ryozan-label {
     display: block;
     min-width: 0;
     max-width: 124px;
@@ -27950,7 +27950,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 }
 
 @media (max-width: 430px) {
-  .nexus-bttco-label {
+  .nexus-ryozan-label {
     max-width: 112px;
     font-size: clamp(1.36rem, 8vw, 1.78rem);
   }
@@ -28032,18 +28032,18 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
   line-height: 1.45;
 }
 
-/* BTTCO Portal mobile home. Structure and proportions are copied from
+/* Ryozan Portal mobile home. Structure and proportions are copied from
    Portal Mobile v2; the legacy dashboard remains available above 720px. */
-.bttco-mobile-portal-home {
+.ryozan-mobile-portal-home {
   --accent-cream: var(--cream);
-  --bttco-portal-agent-fab-size: 54px;
-  --bttco-portal-nav-height-roomy: calc(
+  --ryozan-portal-agent-fab-size: 54px;
+  --ryozan-portal-nav-height-roomy: calc(
     var(--touch-min)
     + var(--space-3)
     + max(var(--space-4), calc(env(safe-area-inset-bottom, 0px) + var(--space-1)))
     + 2px
   );
-  --bttco-portal-agent-content-gap: 10px;
+  --ryozan-portal-agent-content-gap: 10px;
   position: relative;
   width: 100%;
   height: 100%;
@@ -28055,18 +28055,18 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 
 /* Courier owns the fixed header rail, so give its title, account action, and
    search controls the same top safe-area gutter as the scrolling pages. */
-.bttco-mobile-portal-home .bttco-portal-fixed-header {
+.ryozan-mobile-portal-home .ryozan-portal-fixed-header {
   padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
 }
 
 /* Keep the shared nav and every page agent on one spacing contract. */
-.bttco-mobile-portal-home > div:has(> .bttco-portal-scroll-stage) {
-  --bttco-portal-nav-height: var(--bttco-portal-nav-height-roomy) !important;
-  --bttco-portal-agent-fab-bottom: calc(var(--bttco-portal-nav-height) + var(--space-3)) !important;
+.ryozan-mobile-portal-home > div:has(> .ryozan-portal-scroll-stage) {
+  --ryozan-portal-nav-height: var(--ryozan-portal-nav-height-roomy) !important;
+  --ryozan-portal-agent-fab-bottom: calc(var(--ryozan-portal-nav-height) + var(--space-3)) !important;
 }
 
-.bttco-mobile-portal-home nav[aria-label="Portal navigation"],
-body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
+.ryozan-mobile-portal-home nav[aria-label="Portal navigation"],
+body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   padding: var(--space-3) var(--space-1)
     max(var(--space-4), calc(env(safe-area-inset-bottom, 0px) + var(--space-1))) !important;
 }
@@ -28074,15 +28074,15 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 /* PortalShell renders overlays after the in-flow nav. The tour therefore
    needs its own absolute layer bounded above that nav, or it becomes another
    flex child below the viewport. */
-.bttco-artist-tour-layer {
+.ryozan-artist-tour-layer {
   position: absolute;
-  inset: 0 0 var(--bttco-portal-nav-height) 0;
+  inset: 0 0 var(--ryozan-portal-nav-height) 0;
   z-index: 60;
   overflow: hidden;
   pointer-events: none;
 }
 
-.bttco-artist-tour {
+.ryozan-artist-tour {
   position: absolute;
   right: 12px;
   bottom: 12px;
@@ -28103,7 +28103,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   overscroll-behavior: contain;
 }
 
-.bttco-artist-tour > span {
+.ryozan-artist-tour > span {
   display: block;
   color: var(--portal-agent-accent);
   font-family: var(--font-btn);
@@ -28113,7 +28113,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-transform: uppercase;
 }
 
-.bttco-artist-tour > strong {
+.ryozan-artist-tour > strong {
   display: block;
   margin-top: 5px;
   color: var(--ink);
@@ -28124,7 +28124,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-transform: uppercase;
 }
 
-.bttco-artist-tour > p {
+.ryozan-artist-tour > p {
   margin: 7px 0 13px;
   color: var(--ink-dim);
   font-family: var(--font-body);
@@ -28132,13 +28132,13 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   line-height: 1.45;
 }
 
-.bttco-artist-tour > div {
+.ryozan-artist-tour > div {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.bttco-artist-tour button {
+.ryozan-artist-tour button {
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid rgba(var(--cream-rgb), 0.2);
@@ -28153,52 +28153,52 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   cursor: pointer;
 }
 
-.bttco-artist-tour button:first-child {
+.ryozan-artist-tour button:first-child {
   margin-right: auto;
 }
 
-.bttco-artist-tour button:last-child {
+.ryozan-artist-tour button:last-child {
   border-color: color-mix(in srgb, var(--portal-agent-accent) 55%, transparent);
   background: color-mix(in srgb, var(--portal-agent-accent) 14%, transparent);
   color: var(--portal-agent-accent);
 }
 
-.bttco-artist-tour button:focus-visible {
+.ryozan-artist-tour button:focus-visible {
   outline: 2px solid var(--portal-agent-accent);
   outline-offset: 2px;
 }
 
-.bttco-artist-tour-target {
+.ryozan-artist-tour-target {
   position: relative;
   z-index: 4;
   outline: 2px solid var(--portal-agent-accent);
   outline-offset: 3px;
-  scroll-margin-block: 24px calc(var(--bttco-portal-nav-height) + 220px);
+  scroll-margin-block: 24px calc(var(--ryozan-portal-nav-height) + 220px);
 }
 
-.bttco-mobile-portal-home button[aria-label^="Open "][aria-label$=" chat"] {
-  bottom: var(--bttco-portal-agent-fab-bottom) !important;
+.ryozan-mobile-portal-home button[aria-label^="Open "][aria-label$=" chat"] {
+  bottom: var(--ryozan-portal-agent-fab-bottom) !important;
 }
 
 /* Keep the final scrollable element above the floating agent mark. The
    clearance is derived from the shared PortalShell FAB and nav contracts so
    every portal page preserves the same visible stage boundary. */
-.bttco-mobile-portal-home .bttco-portal-scroll {
+.ryozan-mobile-portal-home .ryozan-portal-scroll {
   padding-bottom: max(24px, calc(
-    var(--bttco-portal-agent-fab-bottom)
-    + var(--bttco-portal-agent-fab-size)
-    - var(--bttco-portal-nav-height)
-    + var(--bttco-portal-agent-content-gap)
+    var(--ryozan-portal-agent-fab-bottom)
+    + var(--ryozan-portal-agent-fab-size)
+    - var(--ryozan-portal-nav-height)
+    + var(--ryozan-portal-agent-content-gap)
   )) !important;
   scroll-padding-bottom: max(24px, calc(
-    var(--bttco-portal-agent-fab-bottom)
-    + var(--bttco-portal-agent-fab-size)
-    - var(--bttco-portal-nav-height)
-    + var(--bttco-portal-agent-content-gap)
+    var(--ryozan-portal-agent-fab-bottom)
+    + var(--ryozan-portal-agent-fab-size)
+    - var(--ryozan-portal-nav-height)
+    + var(--ryozan-portal-agent-content-gap)
   ));
 }
 
-.bttco-portal-welcome {
+.ryozan-portal-welcome {
   position: absolute;
   inset: 0;
   z-index: 120;
@@ -28211,7 +28211,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   isolation: isolate;
 }
 
-.bttco-portal-welcome-field {
+.ryozan-portal-welcome-field {
   position: absolute;
   inset: -5%;
   z-index: 0;
@@ -28221,7 +28221,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   pointer-events: none;
 }
 
-.bttco-portal-welcome-mark {
+.ryozan-portal-welcome-mark {
   position: relative;
   z-index: 4;
   display: grid;
@@ -28230,7 +28230,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   height: 112px;
 }
 
-.bttco-portal-welcome-halo {
+.ryozan-portal-welcome-halo {
   position: absolute;
   inset: 1px 7px;
   border-radius: 50%;
@@ -28238,35 +28238,35 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   filter: blur(9px);
 }
 
-.bttco-portal-welcome-ghost,
-.bttco-portal-welcome-logo {
+.ryozan-portal-welcome-ghost,
+.ryozan-portal-welcome-logo {
   position: absolute;
   width: 98px;
   height: 98px;
   object-fit: contain;
 }
 
-.bttco-portal-welcome-ghost {
+.ryozan-portal-welcome-ghost {
   z-index: 1;
   opacity: 0;
   mix-blend-mode: screen;
   filter: saturate(0) contrast(1.15) brightness(1.28);
 }
 
-.bttco-portal-welcome-ghost.is-left {
+.ryozan-portal-welcome-ghost.is-left {
   filter: sepia(1) saturate(0.45) brightness(1.25);
 }
 
-.bttco-portal-welcome-ghost.is-right {
+.ryozan-portal-welcome-ghost.is-right {
   filter: saturate(0) brightness(1.38);
 }
 
-.bttco-portal-welcome-logo {
+.ryozan-portal-welcome-logo {
   z-index: 2;
   filter: drop-shadow(0 0 7px rgba(226, 218, 194, 0.22)) drop-shadow(0 0 20px rgba(183, 142, 70, 0.12));
 }
 
-.bttco-portal-welcome-rule {
+.ryozan-portal-welcome-rule {
   position: relative;
   z-index: 3;
   width: clamp(126px, 38vw, 210px);
@@ -28275,7 +28275,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   box-shadow: 0 0 14px rgba(226, 218, 194, 0.22);
 }
 
-.bttco-portal-welcome-copy {
+.ryozan-portal-welcome-copy {
   position: relative;
   z-index: 4;
   display: flex;
@@ -28286,7 +28286,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   pointer-events: none;
 }
 
-.bttco-portal-welcome-copy strong {
+.ryozan-portal-welcome-copy strong {
   color: var(--accent-cream);
   font-family: var(--font-script);
   font-size: clamp(34px, 9.5vw, 54px);
@@ -28300,35 +28300,35 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 /* The Portal consumer owns sheet and state transforms through GSAP. Disable
    the package fallback keyframes here so one element never has two transform
    writers competing during the same entrance. */
-.bttco-mobile-portal-home .bttco-agent-chat-sheet,
-.bttco-mobile-portal-home .bttco-agent-chat-line {
+.ryozan-mobile-portal-home .ryozan-agent-chat-sheet,
+.ryozan-mobile-portal-home .ryozan-agent-chat-line {
   animation: none;
 }
 
-.bttco-mobile-portal-home .bttco-agent-chat-line[data-chat-line-id][data-chat-from="agent"],
-.bttco-mobile-portal-home .bttco-agent-chat-line[data-chat-line-id]:has(> span[aria-hidden="true"]) {
+.ryozan-mobile-portal-home .ryozan-agent-chat-line[data-chat-line-id][data-chat-from="agent"],
+.ryozan-mobile-portal-home .ryozan-agent-chat-line[data-chat-line-id]:has(> span[aria-hidden="true"]) {
   max-width: 84% !important;
 }
 
-.bttco-mobile-portal-home .bttco-agent-chat-line[data-chat-line-id][data-chat-from="user"],
-.bttco-mobile-portal-home .bttco-agent-chat-line[data-chat-line-id]:not(:has(> span[aria-hidden="true"])) {
+.ryozan-mobile-portal-home .ryozan-agent-chat-line[data-chat-line-id][data-chat-from="user"],
+.ryozan-mobile-portal-home .ryozan-agent-chat-line[data-chat-line-id]:not(:has(> span[aria-hidden="true"])) {
   max-width: 78% !important;
 }
 
-.bttco-agent-message-copy {
+.ryozan-agent-message-copy {
   display: inline;
 }
 
-.bttco-agent-message-word {
+.ryozan-agent-message-word {
   display: inline-block;
 }
 
-.bttco-mobile-portal-home .bttco-agent-chat-sheet:has(.bttco-agent-chat-composer) .bttco-agent-chat-thread {
+.ryozan-mobile-portal-home .ryozan-agent-chat-sheet:has(.ryozan-agent-chat-composer) .ryozan-agent-chat-thread {
   padding: 14px 15px calc(94px + env(safe-area-inset-bottom, 0px)) !important;
   scroll-padding-bottom: calc(94px + env(safe-area-inset-bottom, 0px));
 }
 
-.bttco-mobile-portal-home .bttco-agent-chat-composer {
+.ryozan-mobile-portal-home .ryozan-agent-chat-composer {
   position: absolute !important;
   right: 12px !important;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
@@ -28340,32 +28340,32 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   filter: drop-shadow(0 12px 18px rgba(0, 0, 0, .42));
 }
 
-.bttco-mobile-portal-home .bttco-agent-chat-sheet:has(.bttco-agent-chat-composer) .bttco-agent-chat-dock {
+.ryozan-mobile-portal-home .ryozan-agent-chat-sheet:has(.ryozan-agent-chat-composer) .ryozan-agent-chat-dock {
   margin-bottom: calc(66px + env(safe-area-inset-bottom, 0px));
 }
 
-.bttco-mobile-portal-home .bttco-agent-sparkles-layer {
+.ryozan-mobile-portal-home .ryozan-agent-sparkles-layer {
   position: absolute !important;
   inset: 0 0 calc(-96px - env(safe-area-inset-bottom, 0px)) !important;
   overflow: hidden;
   clip-path: inset(86% 0 0 0);
-  animation: bttco-agent-sparkles-rise-from-bottom 1.65s cubic-bezier(.45, 0, .55, 1) forwards;
+  animation: ryozan-agent-sparkles-rise-from-bottom 1.65s cubic-bezier(.45, 0, .55, 1) forwards;
 }
 
-@keyframes bttco-agent-sparkles-rise-from-bottom {
+@keyframes ryozan-agent-sparkles-rise-from-bottom {
   from { clip-path: inset(86% 0 0 0); opacity: .35; }
   to { clip-path: inset(0 0 0 0); opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-mobile-portal-home .bttco-agent-sparkles-layer {
+  .ryozan-mobile-portal-home .ryozan-agent-sparkles-layer {
     animation: none;
     clip-path: none;
     opacity: .55;
   }
 }
 
-.bttco-agent-thinking {
+.ryozan-agent-thinking {
   width: 34px;
   height: 34px;
   display: grid;
@@ -28373,12 +28373,12 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   overflow: visible;
 }
 
-.bttco-agent-thinking-mark {
+.ryozan-agent-thinking-mark {
   transform-origin: 50% 50%;
   will-change: transform, filter;
 }
 
-.bttco-mobile-account {
+.ryozan-mobile-account {
   flex-shrink: 0;
   width: 52px;
   height: 52px;
@@ -28393,7 +28393,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   justify-content: center;
 }
 
-.bttco-mobile-account img {
+.ryozan-mobile-account img {
   width: 50px;
   height: 50px;
   object-fit: contain;
@@ -28401,21 +28401,21 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
 }
 
-.bttco-account-menu-scrim {
+.ryozan-account-menu-scrim {
   position: absolute;
   inset: 0;
   z-index: 58;
   background: transparent;
 }
 
-.bttco-account-menu-position {
+.ryozan-account-menu-position {
   position: absolute;
   top: 110px;
   right: 16px;
   z-index: 60;
 }
 
-.bttco-collector-shop-links {
+.ryozan-collector-shop-links {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -28428,17 +28428,17 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: var(--ink-ghost);
 }
 
-.bttco-collector-shop-links a {
+.ryozan-collector-shop-links a {
   color: var(--gold);
   text-decoration: none;
 }
 
-.bttco-huddl-pass {
+.ryozan-huddl-pass {
   width: 100%;
   flex-shrink: 0;
 }
 
-.bttco-huddl-booking-prompt {
+.ryozan-huddl-booking-prompt {
   width: 100%;
   flex-shrink: 0;
   display: flex;
@@ -28452,7 +28452,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   box-shadow: inset 5px 0 0 var(--brick-red), 0 18px 34px rgba(0, 0, 0, .3);
 }
 
-.bttco-huddl-booking-prompt > span {
+.ryozan-huddl-booking-prompt > span {
   font-family: var(--font-btn);
   font-size: 9.5px;
   font-weight: 700;
@@ -28461,7 +28461,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: var(--brick-red);
 }
 
-.bttco-huddl-booking-prompt > strong {
+.ryozan-huddl-booking-prompt > strong {
   font-family: var(--font-display);
   font-size: 20px;
   line-height: 1.08;
@@ -28469,14 +28469,14 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: #181411;
 }
 
-.bttco-huddl-booking-prompt > p {
+.ryozan-huddl-booking-prompt > p {
   margin: 0;
   font-family: var(--font-body);
   font-size: 13px;
   color: #6f5f55;
 }
 
-.bttco-huddl-booking-prompt > button {
+.ryozan-huddl-booking-prompt > button {
   width: 100%;
   min-height: 44px;
   margin-top: 6px;
@@ -28492,11 +28492,11 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   cursor: pointer;
 }
 
-.bttco-account-menu {
-  animation: bttco-account-menu-in 0.18s ease both;
+.ryozan-account-menu {
+  animation: ryozan-account-menu-in 0.18s ease both;
 }
 
-.bttco-portal-account-settings {
+.ryozan-portal-account-settings {
   width: min(390px, calc(100vw - 32px));
   overflow: hidden;
   border: 1px solid rgba(226, 218, 194, 0.24);
@@ -28504,10 +28504,10 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   background: linear-gradient(155deg, #181a19 0%, #0c0e0d 72%);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62), 0 0 28px rgba(183, 138, 64, 0.08);
   color: var(--ink);
-  animation: bttco-account-menu-in 0.2s ease both;
+  animation: ryozan-account-menu-in 0.2s ease both;
 }
 
-.bttco-portal-account-settings--thread {
+.ryozan-portal-account-settings--thread {
   width: 100%;
   border-color: color-mix(in srgb, var(--account-accent) 58%, transparent);
   background:
@@ -28516,14 +28516,14 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.38), 0 0 28px color-mix(in srgb, var(--account-accent) 12%, transparent);
 }
 
-.bttco-portal-account-settings__thread-header {
+.ryozan-portal-account-settings__thread-header {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 16px 18px 0;
 }
 
-.bttco-portal-account-settings__thread-header span {
+.ryozan-portal-account-settings__thread-header span {
   color: var(--account-accent);
   font-family: var(--font-btn);
   font-size: 9px;
@@ -28532,7 +28532,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-transform: uppercase;
 }
 
-.bttco-portal-account-settings__thread-header strong {
+.ryozan-portal-account-settings__thread-header strong {
   color: var(--accent-cream);
   font-family: var(--font-display);
   font-size: 20px;
@@ -28540,20 +28540,20 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-transform: uppercase;
 }
 
-.bttco-portal-account-settings__thread-header p {
+.ryozan-portal-account-settings__thread-header p {
   margin: 0;
   color: var(--ink-mute);
   font: 400 11.5px/1.45 var(--font-body);
 }
 
-.bttco-hub-configuration-action__body {
+.ryozan-hub-configuration-action__body {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 16px 18px 18px;
 }
 
-.bttco-hub-configuration-action__body > div {
+.ryozan-hub-configuration-action__body > div {
   display: flex;
   min-height: 46px;
   align-items: center;
@@ -28565,7 +28565,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   background: rgba(var(--cream-rgb), 0.025);
 }
 
-.bttco-hub-configuration-action__body span {
+.ryozan-hub-configuration-action__body span {
   color: var(--ink-mute);
   font-family: var(--font-btn);
   font-size: 9px;
@@ -28574,27 +28574,27 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-transform: uppercase;
 }
 
-.bttco-hub-configuration-action__body strong {
+.ryozan-hub-configuration-action__body strong {
   color: var(--cream);
   font: 700 11.5px/1.35 var(--font-body);
   text-align: right;
 }
 
-.bttco-portal-account-settings--thread .bttco-portal-account-settings__consent input {
+.ryozan-portal-account-settings--thread .ryozan-portal-account-settings__consent input {
   accent-color: var(--account-accent);
 }
 
-.bttco-portal-account-settings--thread .bttco-portal-account-settings__save {
+.ryozan-portal-account-settings--thread .ryozan-portal-account-settings__save {
   border-color: var(--account-accent);
   background: var(--account-accent);
 }
 
-.bttco-portal-account-settings--thread input:focus-visible,
-.bttco-portal-account-settings--thread .bttco-portal-account-settings__save:focus-visible {
+.ryozan-portal-account-settings--thread input:focus-visible,
+.ryozan-portal-account-settings--thread .ryozan-portal-account-settings__save:focus-visible {
   outline-color: var(--account-accent);
 }
 
-.bttco-portal-account-settings__header {
+.ryozan-portal-account-settings__header {
   display: grid;
   grid-template-columns: 42px 1fr 42px;
   align-items: center;
@@ -28604,7 +28604,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   background: linear-gradient(180deg, rgba(226, 218, 194, 0.065), transparent);
 }
 
-.bttco-portal-account-settings__header button {
+.ryozan-portal-account-settings__header button {
   width: 42px;
   height: 42px;
   padding: 0;
@@ -28617,22 +28617,22 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   line-height: 1;
 }
 
-.bttco-portal-account-settings__header button:focus-visible,
-.bttco-portal-account-settings input:focus-visible,
-.bttco-portal-account-settings__save:focus-visible {
+.ryozan-portal-account-settings__header button:focus-visible,
+.ryozan-portal-account-settings input:focus-visible,
+.ryozan-portal-account-settings__save:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 
-.bttco-portal-account-settings__header div {
+.ryozan-portal-account-settings__header div {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.bttco-portal-account-settings__header span,
-.bttco-portal-account-settings__field > span,
-.bttco-portal-account-settings__facts span {
+.ryozan-portal-account-settings__header span,
+.ryozan-portal-account-settings__field > span,
+.ryozan-portal-account-settings__facts span {
   font-family: var(--font-btn);
   font-size: 9px;
   font-weight: 700;
@@ -28641,27 +28641,27 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: var(--ink-mute);
 }
 
-.bttco-portal-account-settings__header strong {
+.ryozan-portal-account-settings__header strong {
   font-family: var(--font-display);
   font-size: 20px;
   text-transform: uppercase;
   color: var(--cream, #e2dac2);
 }
 
-.bttco-portal-account-settings form {
+.ryozan-portal-account-settings form {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 18px;
 }
 
-.bttco-portal-account-settings__field {
+.ryozan-portal-account-settings__field {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
-.bttco-portal-account-settings__field input {
+.ryozan-portal-account-settings__field input {
   width: 100%;
   min-height: 48px;
   padding: 0 14px;
@@ -28672,13 +28672,13 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   font: 600 15px/1.2 var(--font-body);
 }
 
-.bttco-portal-account-settings__facts {
+.ryozan-portal-account-settings__facts {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.bttco-portal-account-settings__facts div {
+.ryozan-portal-account-settings__facts div {
   display: flex;
   min-width: 0;
   flex-direction: column;
@@ -28689,7 +28689,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   background: rgba(226, 218, 194, 0.025);
 }
 
-.bttco-portal-account-settings__facts strong {
+.ryozan-portal-account-settings__facts strong {
   overflow: hidden;
   color: var(--cream, #e2dac2);
   font: 700 12px/1.25 var(--font-body);
@@ -28697,7 +28697,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   white-space: nowrap;
 }
 
-.bttco-portal-account-settings__consent {
+.ryozan-portal-account-settings__consent {
   display: flex;
   align-items: flex-start;
   gap: 11px;
@@ -28708,31 +28708,31 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   cursor: pointer;
 }
 
-.bttco-portal-account-settings__consent input {
+.ryozan-portal-account-settings__consent input {
   width: 18px;
   height: 18px;
   margin: 1px 0 0;
   accent-color: var(--gold);
 }
 
-.bttco-portal-account-settings__consent span {
+.ryozan-portal-account-settings__consent span {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 4px;
 }
 
-.bttco-portal-account-settings__consent strong {
+.ryozan-portal-account-settings__consent strong {
   color: var(--cream, #e2dac2);
   font: 700 13px/1.2 var(--font-body);
 }
 
-.bttco-portal-account-settings__consent small {
+.ryozan-portal-account-settings__consent small {
   color: var(--ink-mute);
   font: 400 11px/1.4 var(--font-body);
 }
 
-.bttco-portal-account-settings__save {
+.ryozan-portal-account-settings__save {
   min-height: 46px;
   border: 1px solid var(--gold);
   border-radius: 999px;
@@ -28746,12 +28746,12 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-transform: uppercase;
 }
 
-.bttco-portal-account-settings__save:disabled {
+.ryozan-portal-account-settings__save:disabled {
   cursor: default;
   opacity: 0.48;
 }
 
-.bttco-portal-account-settings__status {
+.ryozan-portal-account-settings__status {
   min-height: 16px;
   margin: -5px 0 0;
   text-align: center;
@@ -28759,15 +28759,15 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   font: 600 11px/1.4 var(--font-body);
 }
 
-.bttco-portal-account-settings__status.is-saved {
+.ryozan-portal-account-settings__status.is-saved {
   color: #8fcba4;
 }
 
-.bttco-portal-account-settings__status.is-failed {
+.ryozan-portal-account-settings__status.is-failed {
   color: #dd664e;
 }
 
-.bttco-account-menu-view-label {
+.ryozan-account-menu-view-label {
   font-family: var(--font-btn);
   font-size: 10px;
   font-weight: 700;
@@ -28776,13 +28776,13 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: var(--gold);
 }
 
-.bttco-account-menu-view-roles {
+.ryozan-account-menu-view-roles {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.bttco-account-menu-view-roles button {
+.ryozan-account-menu-view-roles button {
   flex: 1;
   min-height: 32px;
   padding: 0 7px;
@@ -28798,13 +28798,13 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-transform: uppercase;
 }
 
-.bttco-account-menu-view-roles button.is-active {
+.ryozan-account-menu-view-roles button.is-active {
   border-color: var(--gold);
   background: var(--gold);
   color: #121312;
 }
 
-@keyframes bttco-account-menu-in {
+@keyframes ryozan-account-menu-in {
   from {
     opacity: 0;
     transform: translateY(-6px) scale(0.985);
@@ -28816,12 +28816,12 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-account-menu {
+  .ryozan-account-menu {
     animation: none;
   }
 }
 
-.bttco-portal-page {
+.ryozan-portal-page {
   width: 100%;
   min-height: 0;
   display: flex;
@@ -28829,19 +28829,19 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   gap: 13px;
 }
 
-.bttco-mobile-portal-home .bttco-page-title {
+.ryozan-mobile-portal-home .ryozan-page-title {
   padding-top: 25px;
 }
 
-.bttco-home-screen {
+.ryozan-home-screen {
   display: contents;
 }
 
-.bttco-home-screen > div:first-child {
+.ryozan-home-screen > div:first-child {
   padding-top: 25px;
 }
 
-.bttco-herald-mark {
+.ryozan-herald-mark {
   display: inline-block;
   width: 1.35em;
   height: 1.35em;
@@ -28849,10 +28849,10 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: inherit;
   filter: drop-shadow(0 0 3px currentColor) drop-shadow(0 0 9px currentColor);
   opacity: 0.92;
-  animation: bttco-herald-swell 4.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: ryozan-herald-swell 4.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.bttco-pulse-mark, .bttco-mercury-mark {
+.ryozan-pulse-mark, .ryozan-mercury-mark {
   position: relative;
   display: inline-block;
   width: 1em;
@@ -28861,7 +28861,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   vertical-align: middle;
 }
 
-.bttco-pulse-mark, .bttco-mercury-mark > svg {
+.ryozan-pulse-mark, .ryozan-mercury-mark > svg {
   width: 2.25em;
   height: 2.25em;
   position: absolute;
@@ -28871,7 +28871,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   transform: translate(-50%, -50%);
 }
 
-.bttco-herald-mark > span {
+.ryozan-herald-mark > span {
   display: block;
   width: 100%;
   height: 100%;
@@ -28881,23 +28881,23 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   transform: scaleX(-1);
 }
 
-@keyframes bttco-herald-swell {
+@keyframes ryozan-herald-swell {
   0%, 100% { transform: scale(0.96); opacity: 0.74; }
   50% { transform: scale(1.04); opacity: 1; }
 }
 
-.bttco-books-calendar,
-.bttco-portal-list,
-.bttco-portal-empty-card,
-.bttco-quest-card,
-.bttco-membership-card,
-.bttco-club-story {
+.ryozan-books-calendar,
+.ryozan-portal-list,
+.ryozan-portal-empty-card,
+.ryozan-quest-card,
+.ryozan-membership-card,
+.ryozan-club-story {
   background: linear-gradient(180deg, rgba(28, 29, 28, 0.9), rgba(13, 14, 13, 0.96));
   border: 1px solid var(--line-2);
   box-shadow: var(--shadow-lift);
 }
 
-.bttco-books-calendar {
+.ryozan-books-calendar {
   width: 100%;
   height: 336px;
   flex-shrink: 0;
@@ -28910,7 +28910,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   border-radius: 36px;
 }
 
-.bttco-books-calendar > strong {
+.ryozan-books-calendar > strong {
   margin-left: 25px;
   font-family: var(--font-btn);
   font-size: 19.5px;
@@ -28919,7 +28919,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: var(--ink-mute);
 }
 
-.bttco-calendar-rule {
+.ryozan-calendar-rule {
   position: absolute;
   top: 39px;
   left: 1px;
@@ -28928,23 +28928,23 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   background: var(--portal-agent-accent);
 }
 
-.bttco-calendar-grid {
+.ryozan-calendar-grid {
   width: 100%;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
 }
 
-.bttco-calendar-grid:not(.bttco-calendar-weekdays) {
+.ryozan-calendar-grid:not(.ryozan-calendar-weekdays) {
   height: 239px;
   grid-template-rows: repeat(6, minmax(0, 1fr));
 }
 
-.bttco-calendar-weekdays {
+.ryozan-calendar-weekdays {
   margin-top: 12px;
 }
 
-.bttco-calendar-weekdays span {
+.ryozan-calendar-weekdays span {
   text-align: center;
   font-family: var(--font-btn);
   font-size: 11px;
@@ -28953,7 +28953,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: var(--ink-ghost);
 }
 
-.bttco-calendar-grid button {
+.ryozan-calendar-grid button {
   min-width: 0;
   height: 100%;
   position: relative;
@@ -28970,8 +28970,8 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   cursor: pointer;
 }
 
-.bttco-calendar-grid button.outside { color: var(--ink-ghost); opacity: 0.36; }
-.bttco-calendar-grid button.today {
+.ryozan-calendar-grid button.outside { color: var(--ink-ghost); opacity: 0.36; }
+.ryozan-calendar-grid button.today {
   width: 44px;
   height: 44px;
   justify-self: center;
@@ -28981,12 +28981,12 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   box-shadow: 0 0 16px rgba(var(--portal-agent-rgb), 0.36);
 }
 
-.bttco-calendar-grid button.today.schedule-cue {
+.ryozan-calendar-grid button.today.schedule-cue {
   z-index: 2;
-  animation: bttco-calendar-schedule-cue 900ms ease-in-out both;
+  animation: ryozan-calendar-schedule-cue 900ms ease-in-out both;
 }
 
-@keyframes bttco-calendar-schedule-cue {
+@keyframes ryozan-calendar-schedule-cue {
   0%, 50% {
     box-shadow: 0 0 8px rgba(var(--portal-agent-rgb), 0.16);
   }
@@ -29001,13 +29001,13 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-calendar-grid button.today.schedule-cue {
+  .ryozan-calendar-grid button.today.schedule-cue {
     animation: none;
     box-shadow: 0 0 16px rgba(var(--portal-agent-rgb), 0.36);
   }
 }
 
-.bttco-calendar-grid button.selected:not(.today) {
+.ryozan-calendar-grid button.selected:not(.today) {
   width: 44px;
   height: 44px;
   justify-self: center;
@@ -29016,7 +29016,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   color: #161512;
   opacity: 1;
 }
-.bttco-calendar-grid button i {
+.ryozan-calendar-grid button i {
   position: absolute;
   bottom: 2px;
   left: calc(50% - 2px);
@@ -29026,7 +29026,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   background: var(--gold);
 }
 
-.bttco-portal-list {
+.ryozan-portal-list {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -29034,7 +29034,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   overflow: hidden;
 }
 
-.bttco-book-row {
+.ryozan-book-row {
   width: 100%;
   min-height: 56px;
   display: flex;
@@ -29049,8 +29049,8 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   cursor: pointer;
 }
 
-.bttco-book-row__details,
-.bttco-thread-row__open > span {
+.ryozan-book-row__details,
+.ryozan-thread-row__open > span {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -29058,8 +29058,8 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   gap: 2px;
 }
 
-.bttco-book-row strong,
-.bttco-thread-row strong {
+.ryozan-book-row strong,
+.ryozan-thread-row strong {
   overflow: hidden;
   color: var(--ink);
   font-family: var(--font-body);
@@ -29069,8 +29069,8 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   white-space: nowrap;
 }
 
-.bttco-book-row small,
-.bttco-thread-row small {
+.ryozan-book-row small,
+.ryozan-thread-row small {
   overflow: hidden;
   color: var(--ink-mute);
   font-family: var(--font-btn);
@@ -29080,7 +29080,7 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   white-space: nowrap;
 }
 
-.bttco-book-row__action {
+.ryozan-book-row__action {
   flex: 0 0 auto;
   min-height: 32px;
   display: grid;
@@ -29098,62 +29098,62 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   transition: box-shadow 120ms ease, transform 120ms ease;
 }
 
-.bttco-book-row:active .bttco-book-row__action {
+.ryozan-book-row:active .ryozan-book-row__action {
   box-shadow: 0 0 12px rgba(239, 231, 211, 0.72), 0 0 28px rgba(239, 231, 211, 0.42);
   transform: scale(0.97);
 }
 
-.bttco-book-row:focus-visible {
+.ryozan-book-row:focus-visible {
   outline: 2px solid var(--brick-red);
   outline-offset: -2px;
 }
 
-.bttco-booky-booking-card {
+.ryozan-booky-booking-card {
   min-width: 0;
 }
 
-.bttco-books-page {
+.ryozan-books-page {
   display: contents;
 }
 
-.bttco-books-page .bttco-books-calendar,
-.bttco-books-page .bttco-portal-list {
+.ryozan-books-page .ryozan-books-calendar,
+.ryozan-books-page .ryozan-portal-list {
   border-color: rgba(var(--brick-red-rgb), .4);
   background: var(--cream);
   box-shadow: inset 5px 0 0 var(--brick-red), var(--shadow-lift);
 }
 
-.bttco-books-page .bttco-books-calendar > strong,
-.bttco-books-page .bttco-calendar-grid button,
-.bttco-books-page .bttco-book-row strong {
+.ryozan-books-page .ryozan-books-calendar > strong,
+.ryozan-books-page .ryozan-calendar-grid button,
+.ryozan-books-page .ryozan-book-row strong {
   color: #181411;
 }
 
-.bttco-books-page .bttco-calendar-rule,
-.bttco-books-page .bttco-calendar-grid button i {
+.ryozan-books-page .ryozan-calendar-rule,
+.ryozan-books-page .ryozan-calendar-grid button i {
   background: var(--brick-red);
 }
 
-.bttco-books-page .bttco-calendar-weekdays span,
-.bttco-books-page .bttco-book-row small {
+.ryozan-books-page .ryozan-calendar-weekdays span,
+.ryozan-books-page .ryozan-book-row small {
   color: #6f5f55;
 }
 
-.bttco-books-page .bttco-calendar-grid button.today,
-.bttco-books-page .bttco-calendar-grid button.selected:not(.today),
-.bttco-books-page .bttco-book-row__action {
+.ryozan-books-page .ryozan-calendar-grid button.today,
+.ryozan-books-page .ryozan-calendar-grid button.selected:not(.today),
+.ryozan-books-page .ryozan-book-row__action {
   border-color: var(--brick-red);
   background: var(--brick-red);
   color: var(--cream);
   box-shadow: 0 0 16px rgba(var(--brick-red-rgb), .24);
 }
 
-.bttco-books-page .bttco-book-row {
+.ryozan-books-page .ryozan-book-row {
   border-bottom-color: rgba(24, 20, 17, .12);
 }
 
-.bttco-portal-empty,
-.bttco-portal-empty-card {
+.ryozan-portal-empty,
+.ryozan-portal-empty-card {
   width: 100%;
   min-height: 72px;
   display: grid;
@@ -29166,13 +29166,13 @@ body:has(.bttco-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   text-align: center;
 }
 
-button.bttco-portal-empty {
+button.ryozan-portal-empty {
   border: 0;
   background: transparent;
   cursor: pointer;
 }
 
-.bttco-courier-commandbar {
+.ryozan-courier-commandbar {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -29182,11 +29182,11 @@ button.bttco-portal-empty {
 
 /* The fixed Courier rail already owns the display's top safe area. Do not
    repeat that inset between its command bar and the first message thread. */
-.bttco-portal-scroll-stage:has(.bttco-courier-commandbar) .bttco-portal-scroll {
+.ryozan-portal-scroll-stage:has(.ryozan-courier-commandbar) .ryozan-portal-scroll {
   padding-top: 0 !important;
 }
 
-.bttco-courier-commandbar > label {
+.ryozan-courier-commandbar > label {
   min-width: 0;
   min-height: 44px;
   flex: 1;
@@ -29200,7 +29200,7 @@ button.bttco-portal-empty {
   color: var(--ink-mute);
 }
 
-.bttco-courier-commandbar svg {
+.ryozan-courier-commandbar svg {
   width: 19px;
   height: 19px;
   flex-shrink: 0;
@@ -29211,7 +29211,7 @@ button.bttco-portal-empty {
   stroke-linejoin: round;
 }
 
-.bttco-courier-commandbar input {
+.ryozan-courier-commandbar input {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -29221,9 +29221,9 @@ button.bttco-portal-empty {
   font: 12.5px var(--font-body);
 }
 
-.bttco-courier-commandbar input::placeholder { color: var(--ink-ghost); }
+.ryozan-courier-commandbar input::placeholder { color: var(--ink-ghost); }
 
-.bttco-courier-commandbar label > button {
+.ryozan-courier-commandbar label > button {
   width: 24px;
   height: 24px;
   padding: 0;
@@ -29234,7 +29234,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-courier-commandbar__action {
+.ryozan-courier-commandbar__action {
   width: 44px !important;
   height: 44px !important;
   border-color: rgba(183, 149, 232, 0.34) !important;
@@ -29243,7 +29243,7 @@ button.bttco-portal-empty {
   color: #c7a6ee !important;
 }
 
-.bttco-pulse-action-card, .bttco-mercury-action-card {
+.ryozan-pulse-action-card, .ryozan-mercury-action-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -29253,27 +29253,27 @@ button.bttco-portal-empty {
   background: linear-gradient(160deg, rgba(30, 28, 34, 0.96), rgba(13, 14, 15, 0.98));
 }
 
-.bttco-pulse-action-card, .bttco-mercury-action-card > header {
+.ryozan-pulse-action-card, .ryozan-mercury-action-card > header {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 3px 10px;
 }
 
-.bttco-pulse-action-card, .bttco-mercury-action-card > header span,
-.bttco-pulse-action-card, .bttco-mercury-action-card > header small,
-.bttco-pulse-compose-contact, .bttco-mercury-compose-contact > span {
+.ryozan-pulse-action-card, .ryozan-mercury-action-card > header span,
+.ryozan-pulse-action-card, .ryozan-mercury-action-card > header small,
+.ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact > span {
   color: #b795e8;
   font: 700 9px var(--font-btn);
   letter-spacing: .15em;
   text-transform: uppercase;
 }
 
-.bttco-pulse-action-card, .bttco-mercury-action-card > header strong { color: var(--ink); font: 800 18px var(--font-display); text-transform: uppercase; }
-.bttco-pulse-action-card, .bttco-mercury-action-card > header small { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--ink-ghost); }
+.ryozan-pulse-action-card, .ryozan-mercury-action-card > header strong { color: var(--ink); font: 800 18px var(--font-display); text-transform: uppercase; }
+.ryozan-pulse-action-card, .ryozan-mercury-action-card > header small { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--ink-ghost); }
 
-.bttco-pulse-contact-list, .bttco-mercury-contact-list { display: flex; flex-direction: column; gap: 7px; max-height: 330px; overflow-y: auto; }
-.bttco-pulse-contact-list, .bttco-mercury-contact-list > p { color: var(--ink-mute); font: 13px var(--font-body); text-align: center; }
-.bttco-pulse-contact-list, .bttco-mercury-contact-list > button {
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list { display: flex; flex-direction: column; gap: 7px; max-height: 330px; overflow-y: auto; }
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list > p { color: var(--ink-mute); font: 13px var(--font-body); text-align: center; }
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list > button {
   min-height: 56px;
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) auto;
@@ -29287,20 +29287,20 @@ button.bttco-portal-empty {
   text-align: left;
   cursor: pointer;
 }
-.bttco-pulse-contact-list, .bttco-mercury-contact-list i { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid rgba(183,149,232,.48); border-radius: 50%; color: #c7a6ee; font: 700 13px var(--font-btn); font-style: normal; }
-.bttco-pulse-contact-list, .bttco-mercury-contact-list span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.bttco-pulse-contact-list, .bttco-mercury-contact-list strong { overflow: hidden; color: var(--ink); font: 700 13px var(--font-body); text-overflow: ellipsis; white-space: nowrap; }
-.bttco-pulse-contact-list, .bttco-mercury-contact-list small { overflow: hidden; color: var(--ink-mute); font: 10.5px var(--font-body); text-overflow: ellipsis; white-space: nowrap; }
-.bttco-pulse-contact-list, .bttco-mercury-contact-list b { color: #c7a6ee; font: 700 8px var(--font-btn); letter-spacing: .12em; text-transform: uppercase; }
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list i { width: 36px; height: 36px; display: grid; place-items: center; border: 1px solid rgba(183,149,232,.48); border-radius: 50%; color: #c7a6ee; font: 700 13px var(--font-btn); font-style: normal; }
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list span { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list strong { overflow: hidden; color: var(--ink); font: 700 13px var(--font-body); text-overflow: ellipsis; white-space: nowrap; }
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list small { overflow: hidden; color: var(--ink-mute); font: 10.5px var(--font-body); text-overflow: ellipsis; white-space: nowrap; }
+.ryozan-pulse-contact-list, .ryozan-mercury-contact-list b { color: #c7a6ee; font: 700 8px var(--font-btn); letter-spacing: .12em; text-transform: uppercase; }
 
-.bttco-pulse-compose-channels, .bttco-mercury-compose-channels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.bttco-pulse-compose-channels, .bttco-mercury-compose-channels button { min-height: 36px; border: 1px solid var(--line-2); border-radius: 99px; background: transparent; color: var(--ink-ghost); font: 700 9px var(--font-btn); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
-.bttco-pulse-compose-channels, .bttco-mercury-compose-channels button.active { border-color: #b795e8; background: rgba(183,149,232,.13); color: var(--ink); box-shadow: 0 0 14px rgba(183,149,232,.16); }
-.bttco-pulse-compose-contact, .bttco-mercury-compose-contact { display: flex; flex-direction: column; gap: 6px; }
-.bttco-pulse-compose-contact, .bttco-mercury-compose-contact select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: #101111; color: var(--ink); font: 13px var(--font-body); outline: none; }
-.bttco-pulse-compose-start, .bttco-mercury-compose-start { border-color: #b795e8 !important; color: #c7a6ee !important; }
+.ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels button { min-height: 36px; border: 1px solid var(--line-2); border-radius: 99px; background: transparent; color: var(--ink-ghost); font: 700 9px var(--font-btn); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels button.active { border-color: #b795e8; background: rgba(183,149,232,.13); color: var(--ink); box-shadow: 0 0 14px rgba(183,149,232,.16); }
+.ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact { display: flex; flex-direction: column; gap: 6px; }
+.ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: #101111; color: var(--ink); font: 13px var(--font-body); outline: none; }
+.ryozan-pulse-compose-start, .ryozan-mercury-compose-start { border-color: #b795e8 !important; color: #c7a6ee !important; }
 
-.bttco-thread-row {
+.ryozan-thread-row {
   width: 100%;
   min-height: 72px;
   display: flex;
@@ -29312,7 +29312,7 @@ button.bttco-portal-empty {
   overflow: hidden;
 }
 
-.bttco-thread-row__open {
+.ryozan-thread-row__open {
   width: 100%;
   min-height: 70px;
   display: flex;
@@ -29326,7 +29326,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-thread-row__open > i {
+.ryozan-thread-row__open > i {
   flex-shrink: 0;
   width: 7px;
   height: 7px;
@@ -29338,20 +29338,20 @@ button.bttco-portal-empty {
 /* Read state fades rather than snaps. The row never changes position, so the
    light going out is the only signal that a thread has been opened, and a hard
    cut reads as a glitch. */
-.bttco-thread-row { transition: border-color 420ms cubic-bezier(.16, 1, .3, 1); }
-.bttco-thread-row__open > i { transition: background 420ms cubic-bezier(.16, 1, .3, 1), box-shadow 420ms cubic-bezier(.16, 1, .3, 1); }
+.ryozan-thread-row { transition: border-color 420ms cubic-bezier(.16, 1, .3, 1); }
+.ryozan-thread-row__open > i { transition: background 420ms cubic-bezier(.16, 1, .3, 1), box-shadow 420ms cubic-bezier(.16, 1, .3, 1); }
 
-.bttco-thread-row.unread { border-color: rgba(183, 149, 232, 0.45); }
-.bttco-thread-row.unread .bttco-thread-row__open > i { background: #b795e8; box-shadow: 0 0 10px rgba(183, 149, 232, 0.55); }
+.ryozan-thread-row.unread { border-color: rgba(183, 149, 232, 0.45); }
+.ryozan-thread-row.unread .ryozan-thread-row__open > i { background: #b795e8; box-shadow: 0 0 10px rgba(183, 149, 232, 0.55); }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-thread-row,
-  .bttco-thread-row__open > i { transition: none; }
+  .ryozan-thread-row,
+  .ryozan-thread-row__open > i { transition: none; }
 }
-.bttco-thread-row small { font-family: var(--font-body); font-size: 12px; line-height: 1.45; }
-.bttco-thread-row__open time { flex-shrink: 0; color: var(--ink-ghost); font-family: var(--font-btn); font-size: 10.5px; }
+.ryozan-thread-row small { font-family: var(--font-body); font-size: 12px; line-height: 1.45; }
+.ryozan-thread-row__open time { flex-shrink: 0; color: var(--ink-ghost); font-family: var(--font-btn); font-size: 10.5px; }
 
-.bttco-thread-row__actions {
+.ryozan-thread-row__actions {
   align-self: stretch;
   display: flex;
   justify-content: flex-end;
@@ -29365,8 +29365,8 @@ button.bttco-portal-empty {
   transition: max-height 180ms ease, padding 180ms ease, opacity 140ms ease, transform 180ms ease, border-color 180ms ease;
 }
 
-.bttco-thread-row:focus-within .bttco-thread-row__actions,
-.bttco-thread-row:hover .bttco-thread-row__actions {
+.ryozan-thread-row:focus-within .ryozan-thread-row__actions,
+.ryozan-thread-row:hover .ryozan-thread-row__actions {
   max-height: 48px;
   padding: 6px 10px 8px;
   border-top-color: var(--line);
@@ -29374,7 +29374,7 @@ button.bttco-portal-empty {
   transform: translateY(0);
 }
 
-.bttco-thread-row__actions button {
+.ryozan-thread-row__actions button {
   width: 32px !important;
   min-width: 32px !important;
   height: 32px !important;
@@ -29383,7 +29383,7 @@ button.bttco-portal-empty {
   color: #c7a6ee !important;
 }
 
-.bttco-thread-row__actions svg {
+.ryozan-thread-row__actions svg {
   width: 15px;
   height: 15px;
   fill: none;
@@ -29394,7 +29394,7 @@ button.bttco-portal-empty {
 }
 
 @media (hover: none) {
-  .bttco-thread-row__actions {
+  .ryozan-thread-row__actions {
     max-height: 44px;
     padding: 4px 10px 7px;
     border-top-color: var(--line);
@@ -29409,27 +29409,27 @@ button.bttco-portal-empty {
    inside it and the composer stays put, so the reply field never scrolls away
    mid-sentence. Staff are untouched and keep the panel. */
 
-.bttco-mobile-portal-home.has-courier-thread .bttco-portal-scroll {
+.ryozan-mobile-portal-home.has-courier-thread .ryozan-portal-scroll {
   /* The shell reserves bottom room for the floating agent mark. That mark is
      hidden on this screen, and the composer needs the space instead. */
   padding-bottom: 0 !important;
   scroll-padding-bottom: 0;
 }
 
-.bttco-mobile-portal-home.has-courier-thread .bttco-portal-page {
+.ryozan-mobile-portal-home.has-courier-thread .ryozan-portal-page {
   flex: 1;
   min-height: 0;
   gap: 0;
 }
 
-.bttco-collector-thread {
+.ryozan-collector-thread {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-.bttco-collector-thread__transcript {
+.ryozan-collector-thread__transcript {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -29442,7 +29442,7 @@ button.bttco-portal-empty {
   scrollbar-color: rgba(183, 149, 232, 0.36) transparent;
 }
 
-.bttco-collector-thread__empty {
+.ryozan-collector-thread__empty {
   margin: auto 0;
   padding: 22px 13px;
   color: var(--ink-ghost);
@@ -29451,13 +29451,13 @@ button.bttco-portal-empty {
   text-align: center;
 }
 
-.bttco-collector-thread__retry {
+.ryozan-collector-thread__retry {
   border: 1px solid var(--line-2);
   background: transparent;
   cursor: pointer;
 }
 
-.bttco-collector-message {
+.ryozan-collector-message {
   max-width: 84%;
   display: grid;
   gap: 4px;
@@ -29467,20 +29467,20 @@ button.bttco-portal-empty {
   background: linear-gradient(180deg, rgba(25, 26, 25, 0.96), rgba(12, 13, 12, 0.98));
 }
 
-.bttco-collector-message.is-mine {
+.ryozan-collector-message.is-mine {
   align-self: flex-end;
   border-color: rgba(183, 149, 232, 0.46);
   border-radius: 14px 14px 4px 14px;
   background: linear-gradient(180deg, rgba(37, 31, 46, 0.96), rgba(16, 14, 20, 0.98));
 }
 
-.bttco-collector-message > header {
+.ryozan-collector-message > header {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 
-.bttco-collector-message > header > strong {
+.ryozan-collector-message > header > strong {
   flex: 1;
   min-width: 0;
   color: var(--accent-cream);
@@ -29488,9 +29488,9 @@ button.bttco-portal-empty {
   font-size: 11px;
 }
 
-.bttco-collector-message.is-mine > header > strong { color: #c7a6ee; }
+.ryozan-collector-message.is-mine > header > strong { color: #c7a6ee; }
 
-.bttco-collector-message > header > time {
+.ryozan-collector-message > header > time {
   flex-shrink: 0;
   color: var(--ink-ghost);
   font-family: var(--font-btn);
@@ -29498,7 +29498,7 @@ button.bttco-portal-empty {
   letter-spacing: 0.08em;
 }
 
-.bttco-collector-message > p {
+.ryozan-collector-message > p {
   margin: 0;
   color: var(--ink-mute);
   font-family: var(--font-body);
@@ -29508,7 +29508,7 @@ button.bttco-portal-empty {
   overflow-wrap: anywhere;
 }
 
-.bttco-collector-thread__composer {
+.ryozan-collector-thread__composer {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -29520,13 +29520,13 @@ button.bttco-portal-empty {
   background: linear-gradient(180deg, rgba(9, 10, 9, 0.72), rgba(9, 10, 9, 0.97) 30%);
 }
 
-.bttco-collector-thread__composer > div {
+.ryozan-collector-thread__composer > div {
   display: flex;
   align-items: flex-end;
   gap: 8px;
 }
 
-.bttco-collector-thread__composer textarea {
+.ryozan-collector-thread__composer textarea {
   flex: 1;
   min-width: 0;
   min-height: 44px;
@@ -29544,11 +29544,11 @@ button.bttco-portal-empty {
   line-height: 1.45;
 }
 
-.bttco-collector-thread__composer textarea::placeholder { color: var(--ink-ghost); }
-.bttco-collector-thread__composer textarea:focus-visible { border-color: rgba(183, 149, 232, 0.5); }
-.bttco-collector-thread__composer textarea:disabled { opacity: 0.5; }
+.ryozan-collector-thread__composer textarea::placeholder { color: var(--ink-ghost); }
+.ryozan-collector-thread__composer textarea:focus-visible { border-color: rgba(183, 149, 232, 0.5); }
+.ryozan-collector-thread__composer textarea:disabled { opacity: 0.5; }
 
-.bttco-collector-thread__composer button {
+.ryozan-collector-thread__composer button {
   flex-shrink: 0;
   min-height: 44px;
   padding: 0 18px;
@@ -29566,31 +29566,31 @@ button.bttco-portal-empty {
   transition: opacity 180ms ease, box-shadow 180ms ease;
 }
 
-.bttco-collector-thread__composer button:disabled {
+.ryozan-collector-thread__composer button:disabled {
   box-shadow: none;
   opacity: 0.45;
   cursor: default;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-collector-thread__composer button { transition: none; }
+  .ryozan-collector-thread__composer button { transition: none; }
 }
 
-.bttco-collector-thread__error {
+.ryozan-collector-thread__error {
   margin: 0;
   color: var(--accent-coral);
   font-family: var(--font-body);
   font-size: 11.5px;
 }
 
-.bttco-collector-thread-bar {
+.ryozan-collector-thread-bar {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 2px 0 10px;
 }
 
-.bttco-collector-thread-bar__back {
+.ryozan-collector-thread-bar__back {
   flex-shrink: 0;
   min-height: 34px;
   padding: 0 12px;
@@ -29605,14 +29605,14 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-collector-thread-bar > span {
+.ryozan-collector-thread-bar > span {
   flex: 1;
   min-width: 0;
   display: grid;
   gap: 1px;
 }
 
-.bttco-collector-thread-bar strong {
+.ryozan-collector-thread-bar strong {
   overflow: hidden;
   color: var(--ink);
   font-family: var(--font-display);
@@ -29621,7 +29621,7 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-collector-thread-bar small {
+.ryozan-collector-thread-bar small {
   color: var(--ink-ghost);
   font-family: var(--font-btn);
   font-size: 8px;
@@ -29629,18 +29629,18 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-actions {
+.ryozan-hub-actions {
   flex-shrink: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 11px;
 }
 
-.bttco-hub-upload-stack {
+.ryozan-hub-upload-stack {
   grid-column: 1 / -1;
 }
 
-.bttco-hub-upload-toggle {
+.ryozan-hub-upload-toggle {
   width: 100%;
   min-height: 58px;
   display: grid;
@@ -29657,14 +29657,14 @@ button.bttco-portal-empty {
   transition: border-radius 260ms ease, border-color 260ms ease, box-shadow 260ms ease;
 }
 
-.bttco-hub-upload-toggle > span {
+.ryozan-hub-upload-toggle > span {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.bttco-hub-upload-toggle > span > small {
+.ryozan-hub-upload-toggle > span > small {
   color: #6b5147;
   font-family: var(--font-btn);
   font-size: 8.5px;
@@ -29673,7 +29673,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-upload-toggle > span > strong {
+.ryozan-hub-upload-toggle > span > strong {
   font-family: var(--font-display);
   font-size: 21px;
   font-weight: 800;
@@ -29681,7 +29681,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-upload-toggle > b {
+.ryozan-hub-upload-toggle > b {
   overflow: hidden;
   font-family: var(--font-body);
   font-size: 11px;
@@ -29690,38 +29690,38 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-hub-upload-chevron {
+.ryozan-hub-upload-chevron {
   transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.bttco-hub-upload-stack.is-open .bttco-hub-upload-toggle {
+.ryozan-hub-upload-stack.is-open .ryozan-hub-upload-toggle {
   border-radius: 14px 14px 9px 9px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32), 0 0 24px rgba(211, 138, 104, 0.1);
 }
 
-.bttco-hub-upload-stack.is-open .bttco-hub-upload-chevron {
+.ryozan-hub-upload-stack.is-open .ryozan-hub-upload-chevron {
   transform: rotate(180deg);
 }
 
-.bttco-hub-upload-stack .bttco-club-actions-inner {
+.ryozan-hub-upload-stack .ryozan-club-actions-inner {
   border-color: rgba(211, 138, 104, 0.5);
   background: linear-gradient(180deg, rgba(31, 25, 22, 0.98), rgba(11, 9, 8, 0.99));
 }
 
-.bttco-hub-upload-stack .bttco-club-actions-inner > button {
+.ryozan-hub-upload-stack .ryozan-club-actions-inner > button {
   border-color: rgba(211, 138, 104, 0.22);
   background: rgba(211, 138, 104, 0.05);
   color: var(--accent-coral);
 }
 
-.bttco-hub-upload-stack .bttco-club-actions-inner > button:hover,
-.bttco-hub-upload-stack .bttco-club-actions-inner > button:focus-visible {
+.ryozan-hub-upload-stack .ryozan-club-actions-inner > button:hover,
+.ryozan-hub-upload-stack .ryozan-club-actions-inner > button:focus-visible {
   border-color: rgba(211, 138, 104, 0.66);
   background: rgba(211, 138, 104, 0.12);
 }
 
-.bttco-hub-options,
-.bttco-hub-pos {
+.ryozan-hub-options,
+.ryozan-hub-pos {
   width: 100%;
   min-height: 48px;
   display: flex;
@@ -29736,8 +29736,8 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-options > strong,
-.bttco-hub-pos > strong {
+.ryozan-hub-options > strong,
+.ryozan-hub-pos > strong {
   flex-shrink: 0;
   color: var(--bg-dark);
   font-family: var(--font-btn);
@@ -29747,8 +29747,8 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-options > span,
-.bttco-hub-pos > span {
+.ryozan-hub-options > span,
+.ryozan-hub-pos > span {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -29760,7 +29760,7 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-hub-codex {
+.ryozan-hub-codex {
   width: 100%;
   min-height: 48px;
   display: flex;
@@ -29776,7 +29776,7 @@ button.bttco-portal-empty {
   box-shadow: inset 0 1px rgba(var(--cream-rgb), 0.035), 0 8px 22px rgba(0, 0, 0, 0.22);
 }
 
-.bttco-hub-codex > strong {
+.ryozan-hub-codex > strong {
   flex-shrink: 0;
   font-family: var(--font-btn);
   font-size: 15.5px;
@@ -29785,7 +29785,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-codex > span {
+.ryozan-hub-codex > span {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -29797,8 +29797,8 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-hub-pos,
-.bttco-hub-codex {
+.ryozan-hub-pos,
+.ryozan-hub-codex {
   min-width: 0;
   min-height: 66px;
   flex-direction: column;
@@ -29808,13 +29808,13 @@ button.bttco-portal-empty {
   padding: 12px 15px;
 }
 
-.bttco-hub-pos > span,
-.bttco-hub-codex > span {
+.ryozan-hub-pos > span,
+.ryozan-hub-codex > span {
   width: 100%;
   text-align: left;
 }
 
-.bttco-hub-codex--agents {
+.ryozan-hub-codex--agents {
   grid-column: 1 / -1;
   height: 50px;
   min-height: 50px;
@@ -29824,11 +29824,11 @@ button.bttco-portal-empty {
   padding: 0 15px;
 }
 
-.bttco-hub-codex--agents > span {
+.ryozan-hub-codex--agents > span {
   width: auto;
 }
 
-.bttco-hub-codex--connections {
+.ryozan-hub-codex--connections {
   grid-column: 1 / -1;
   min-height: 54px;
   flex-direction: row;
@@ -29838,11 +29838,11 @@ button.bttco-portal-empty {
   background: linear-gradient(105deg, rgba(143, 184, 154, 0.17), rgba(15, 15, 14, 0.98) 68%);
 }
 
-.bttco-hub-codex--connections > span {
+.ryozan-hub-codex--connections > span {
   width: auto;
 }
 
-.bttco-codex-back {
+.ryozan-codex-back {
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
@@ -29859,7 +29859,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-mobile-codex {
+.ryozan-mobile-codex {
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -29867,74 +29867,74 @@ button.bttco-portal-empty {
   overflow: hidden;
 }
 
-.bttco-mobile-codex > div {
+.ryozan-mobile-codex > div {
   padding: 12px 10px 24px !important;
 }
 
-.bttco-mobile-codex .scroll-subtabs {
+.ryozan-mobile-codex .scroll-subtabs {
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.bttco-mobile-codex .scroll-subtabs::-webkit-scrollbar {
+.ryozan-mobile-codex .scroll-subtabs::-webkit-scrollbar {
   display: none;
 }
 
-.bttco-mobile-codex .scroll-tile-grid {
+.ryozan-mobile-codex .scroll-tile-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.bttco-hub-workflow-codex .scroll-tile-grid {
+.ryozan-hub-workflow-codex .scroll-tile-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-wrapper {
+.ryozan-hub-workflow-codex .scroll-tile-wrapper {
   border-radius: 34px 34px 10px 10px;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-wrapper > .scroll-tile {
+.ryozan-hub-workflow-codex .scroll-tile-wrapper > .scroll-tile {
   min-height: 86px;
   gap: 4px;
   padding: 10px 4px 8px;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-avatar {
+.ryozan-hub-workflow-codex .scroll-tile-avatar {
   width: 30px;
   height: 30px;
   font-size: 0.72rem;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-name {
+.ryozan-hub-workflow-codex .scroll-tile-name {
   font-size: 0.6rem;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-desc {
+.ryozan-hub-workflow-codex .scroll-tile-desc {
   font-size: 0.43rem;
   letter-spacing: 0.035em;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-actions {
+.ryozan-hub-workflow-codex .scroll-tile-actions {
   min-height: 30px;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-action-btn {
+.ryozan-hub-workflow-codex .scroll-tile-action-btn {
   min-height: 30px;
   padding: 4px 0;
 }
 
-.bttco-hub-workflow-codex .scroll-tile-action-btn svg {
+.ryozan-hub-workflow-codex .scroll-tile-action-btn svg {
   width: 11px;
   height: 11px;
 }
 
 @media (max-width: 365px) {
-  .bttco-hub-workflow-codex .scroll-tile-grid {
+  .ryozan-hub-workflow-codex .scroll-tile-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-.bttco-hub-workflow-card {
+.ryozan-hub-workflow-card {
   --workflow-accent: var(--gold);
   width: 100%;
   min-width: 0;
@@ -29944,13 +29944,13 @@ button.bttco-portal-empty {
   color: var(--ink);
 }
 
-.bttco-hub-workflow-card > header {
+.ryozan-hub-workflow-card > header {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.bttco-hub-workflow-card > header > span {
+.ryozan-hub-workflow-card > header > span {
   color: var(--workflow-accent);
   font-family: var(--font-btn);
   font-size: 10px;
@@ -29959,7 +29959,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-workflow-card > header > strong {
+.ryozan-hub-workflow-card > header > strong {
   color: var(--ink);
   font-family: var(--font-display);
   font-size: 17px;
@@ -29968,29 +29968,29 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-workflow-card--merch {
+.ryozan-hub-workflow-card--merch {
   --workflow-accent: var(--accent-coral);
 }
 
-.bttco-hub-workflow-card--options {
+.ryozan-hub-workflow-card--options {
   --workflow-accent: var(--alt-sage);
 }
 
-.bttco-hub-workflow-card--codex {
+.ryozan-hub-workflow-card--codex {
   --workflow-accent: var(--gold);
 }
 
-.bttco-hub-workflow-card--gallery {
+.ryozan-hub-workflow-card--gallery {
   --workflow-accent: var(--gold);
 }
 
-.bttco-artist-connections {
+.ryozan-artist-connections {
   --workflow-accent: var(--alt-spring);
   gap: 14px;
   padding-bottom: 8px;
 }
 
-.bttco-artist-connections > header > p {
+.ryozan-artist-connections > header > p {
   margin: 5px 0 0;
   color: var(--ink-dim);
   font-family: var(--font-body);
@@ -29998,7 +29998,7 @@ button.bttco-portal-empty {
   line-height: 1.45;
 }
 
-.bttco-artist-connections__notice {
+.ryozan-artist-connections__notice {
   padding: 10px 12px;
   border: 1px solid rgba(226, 210, 177, 0.24);
   border-radius: 12px;
@@ -30009,29 +30009,29 @@ button.bttco-portal-empty {
   line-height: 1.45;
 }
 
-.bttco-artist-connections__notice.is-warning {
+.ryozan-artist-connections__notice.is-warning {
   border-color: rgba(217, 191, 149, 0.48);
   color: var(--gold);
 }
 
-.bttco-artist-connections__notice.is-success {
+.ryozan-artist-connections__notice.is-success {
   border-color: rgba(143, 184, 154, 0.48);
   color: var(--alt-spring);
 }
 
-.bttco-artist-connections__notice.is-error {
+.ryozan-artist-connections__notice.is-error {
   border-color: rgba(211, 138, 104, 0.52);
   color: var(--accent-coral);
 }
 
-.bttco-artist-connections__toolbar {
+.ryozan-artist-connections__toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.bttco-artist-connections__toolbar > span {
+.ryozan-artist-connections__toolbar > span {
   color: var(--ink-ghost);
   font-family: var(--font-btn);
   font-size: 9px;
@@ -30040,7 +30040,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-artist-connections__toolbar > button {
+.ryozan-artist-connections__toolbar > button {
   min-height: 44px;
   padding: 0 13px;
   border: 1px solid rgba(226, 210, 177, 0.28);
@@ -30055,18 +30055,18 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-artist-connections__toolbar > button:disabled {
+.ryozan-artist-connections__toolbar > button:disabled {
   cursor: wait;
   opacity: 0.5;
 }
 
-.bttco-artist-connections__list {
+.ryozan-artist-connections__list {
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 
-.bttco-artist-connection {
+.ryozan-artist-connection {
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
@@ -30077,19 +30077,19 @@ button.bttco-portal-empty {
   box-shadow: inset 0 1px rgba(var(--cream-rgb), 0.03);
 }
 
-.bttco-artist-connection--ready {
+.ryozan-artist-connection--ready {
   border-color: rgba(143, 184, 154, 0.44);
 }
 
-.bttco-artist-connection--incomplete {
+.ryozan-artist-connection--incomplete {
   border-color: rgba(217, 191, 149, 0.42);
 }
 
-.bttco-artist-connection--failed {
+.ryozan-artist-connection--failed {
   border-color: rgba(211, 138, 104, 0.42);
 }
 
-.bttco-artist-connection__mark {
+.ryozan-artist-connection__mark {
   width: 38px;
   height: 38px;
   display: grid;
@@ -30103,18 +30103,18 @@ button.bttco-portal-empty {
   font-weight: 800;
 }
 
-.bttco-artist-connection__copy {
+.ryozan-artist-connection__copy {
   min-width: 0;
 }
 
-.bttco-artist-connection__copy > header {
+.ryozan-artist-connection__copy > header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.bttco-artist-connection__copy > header > strong {
+.ryozan-artist-connection__copy > header > strong {
   color: var(--ink);
   font-family: var(--font-display);
   font-size: 13px;
@@ -30123,7 +30123,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-artist-connection__copy > header > span {
+.ryozan-artist-connection__copy > header > span {
   color: var(--ink-ghost);
   font-family: var(--font-btn);
   font-size: 8px;
@@ -30133,19 +30133,19 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-artist-connection--ready .bttco-artist-connection__copy > header > span {
+.ryozan-artist-connection--ready .ryozan-artist-connection__copy > header > span {
   color: var(--alt-spring);
 }
 
-.bttco-artist-connection--incomplete .bttco-artist-connection__copy > header > span {
+.ryozan-artist-connection--incomplete .ryozan-artist-connection__copy > header > span {
   color: var(--gold);
 }
 
-.bttco-artist-connection--failed .bttco-artist-connection__copy > header > span {
+.ryozan-artist-connection--failed .ryozan-artist-connection__copy > header > span {
   color: var(--accent-coral);
 }
 
-.bttco-artist-connection__copy > p {
+.ryozan-artist-connection__copy > p {
   margin: 4px 0 10px;
   color: var(--ink-dim);
   font-family: var(--font-body);
@@ -30153,7 +30153,7 @@ button.bttco-portal-empty {
   line-height: 1.4;
 }
 
-.bttco-artist-connection__copy > button {
+.ryozan-artist-connection__copy > button {
   width: 100%;
   min-height: 44px;
   padding: 0 12px;
@@ -30169,30 +30169,30 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-artist-connection__copy > button.is-danger {
+.ryozan-artist-connection__copy > button.is-danger {
   border-color: rgba(211, 138, 104, 0.32);
   background: rgba(211, 138, 104, 0.08);
   color: var(--accent-coral);
 }
 
-.bttco-artist-connection__copy > button:disabled {
+.ryozan-artist-connection__copy > button:disabled {
   cursor: wait;
   opacity: 0.52;
 }
 
-.bttco-artist-connections button:focus-visible {
+.ryozan-artist-connections button:focus-visible {
   outline: 2px solid var(--workflow-accent);
   outline-offset: 2px;
 }
 
-.bttco-artist-connection__checks {
+.ryozan-artist-connection__checks {
   grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
 
-.bttco-artist-connection__checks > span {
+.ryozan-artist-connection__checks > span {
   padding: 4px 7px;
   border: 1px solid rgba(217, 191, 149, 0.28);
   border-radius: 99px;
@@ -30203,12 +30203,12 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-artist-connection__checks > span.is-ready {
+.ryozan-artist-connection__checks > span.is-ready {
   border-color: rgba(143, 184, 154, 0.3);
   color: var(--alt-spring);
 }
 
-.bttco-artist-connection__email {
+.ryozan-artist-connection__email {
   grid-column: 1 / -1;
   min-width: 0;
   padding-top: 4px;
@@ -30216,38 +30216,38 @@ button.bttco-portal-empty {
 }
 
 @media (max-width: 365px) {
-  .bttco-artist-connection {
+  .ryozan-artist-connection {
     grid-template-columns: 34px minmax(0, 1fr);
     padding: 10px;
   }
 
-  .bttco-artist-connection__mark {
+  .ryozan-artist-connection__mark {
     width: 34px;
     height: 34px;
   }
 
-  .bttco-artist-connection__copy > header {
+  .ryozan-artist-connection__copy > header {
     align-items: flex-start;
     flex-direction: column;
     gap: 2px;
   }
 
-  .bttco-artist-connection__copy > header > span {
+  .ryozan-artist-connection__copy > header > span {
     text-align: left;
   }
 }
 
-.bttco-hub-workflow-codex > div {
+.ryozan-hub-workflow-codex > div {
   padding-bottom: 12px !important;
 }
 
-.bttco-hub-workflow-steps {
+.ryozan-hub-workflow-steps {
   display: flex;
   gap: 6px;
 }
 
-.bttco-hub-workflow-steps > span,
-.bttco-hub-workflow-steps > button {
+.ryozan-hub-workflow-steps > span,
+.ryozan-hub-workflow-steps > button {
   flex: 1;
   min-width: 0;
   min-height: 32px;
@@ -30263,27 +30263,27 @@ button.bttco-portal-empty {
   transition: color 180ms ease, opacity 180ms ease, text-shadow 180ms ease;
 }
 
-.bttco-hub-workflow-steps > button {
+.ryozan-hub-workflow-steps > button {
   padding: 0;
   border: 0;
   background: transparent;
   cursor: pointer;
 }
 
-.bttco-hub-workflow-steps > span.active,
-.bttco-hub-workflow-steps > span.complete,
-.bttco-hub-workflow-steps > button.active,
-.bttco-hub-workflow-steps > button.complete {
+.ryozan-hub-workflow-steps > span.active,
+.ryozan-hub-workflow-steps > span.complete,
+.ryozan-hub-workflow-steps > button.active,
+.ryozan-hub-workflow-steps > button.complete {
   color: var(--workflow-accent);
   text-shadow: 0 0 10px color-mix(in srgb, var(--workflow-accent) 70%, transparent);
 }
 
-.bttco-hub-workflow-steps > span.complete,
-.bttco-hub-workflow-steps > button.complete {
+.ryozan-hub-workflow-steps > span.complete,
+.ryozan-hub-workflow-steps > button.complete {
   opacity: 0.62;
 }
 
-.bttco-hub-workflow-drop {
+.ryozan-hub-workflow-drop {
   min-height: 150px;
   display: flex;
   flex-direction: column;
@@ -30298,32 +30298,32 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-workflow-drop > b {
+.ryozan-hub-workflow-drop > b {
   color: var(--workflow-accent);
   font-family: var(--font-btn);
   font-size: 22px;
 }
 
-.bttco-hub-workflow-drop > strong {
+.ryozan-hub-workflow-drop > strong {
   color: var(--ink);
   font-family: var(--font-display);
   font-size: 15px;
   text-transform: uppercase;
 }
 
-.bttco-hub-workflow-drop > span,
-.bttco-hub-workflow-card > small {
+.ryozan-hub-workflow-drop > span,
+.ryozan-hub-workflow-card > small {
   color: var(--ink-ghost);
   font-family: var(--font-body);
   font-size: 12px;
 }
 
-.bttco-hub-workflow-drop.is-disabled {
+.ryozan-hub-workflow-drop.is-disabled {
   cursor: wait;
   opacity: 0.62;
 }
 
-.bttco-hub-gallery-manager {
+.ryozan-hub-gallery-manager {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
@@ -30332,7 +30332,7 @@ button.bttco-portal-empty {
   scrollbar-width: thin;
 }
 
-.bttco-hub-gallery-manager > figure {
+.ryozan-hub-gallery-manager > figure {
   position: relative;
   min-width: 0;
   aspect-ratio: 1;
@@ -30343,14 +30343,14 @@ button.bttco-portal-empty {
   background: var(--well);
 }
 
-.bttco-hub-gallery-manager > figure > img {
+.ryozan-hub-gallery-manager > figure > img {
   width: 100%;
   height: 100%;
   display: block;
   object-fit: cover;
 }
 
-.bttco-hub-gallery-manager > figure > button {
+.ryozan-hub-gallery-manager > figure > button {
   position: absolute;
   right: 5px;
   bottom: 5px;
@@ -30368,13 +30368,13 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-gallery-manager > figure > button:disabled {
+.ryozan-hub-gallery-manager > figure > button:disabled {
   cursor: wait;
   opacity: 0.6;
 }
 
-.bttco-hub-gallery-manager-empty,
-.bttco-hub-gallery-notice {
+.ryozan-hub-gallery-manager-empty,
+.ryozan-hub-gallery-notice {
   margin: 0;
   color: var(--ink-mute);
   font-family: var(--font-body);
@@ -30382,26 +30382,26 @@ button.bttco-portal-empty {
   line-height: 1.45;
 }
 
-.bttco-hub-gallery-manager-empty {
+.ryozan-hub-gallery-manager-empty {
   padding: 13px;
   border: 1px solid var(--line);
   border-radius: 12px;
   text-align: center;
 }
 
-.bttco-hub-gallery-notice {
+.ryozan-hub-gallery-notice {
   min-height: 18px;
 }
 
-.bttco-hub-gallery-notice.is-success {
+.ryozan-hub-gallery-notice.is-success {
   color: var(--alt-sage);
 }
 
-.bttco-hub-gallery-notice.is-error {
+.ryozan-hub-gallery-notice.is-error {
   color: var(--accent-coral);
 }
 
-.bttco-hub-gallery-live-link {
+.ryozan-hub-gallery-live-link {
   min-height: 40px;
   display: grid;
   place-items: center;
@@ -30416,13 +30416,13 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-workflow-form {
+.ryozan-hub-workflow-form {
   display: grid;
   grid-template-columns: 78px minmax(0, 1fr);
   gap: 10px;
 }
 
-.bttco-hub-workflow-form > img {
+.ryozan-hub-workflow-form > img {
   width: 78px;
   height: 96px;
   border: 1px solid var(--line);
@@ -30430,13 +30430,13 @@ button.bttco-portal-empty {
   object-fit: cover;
 }
 
-.bttco-hub-workflow-form > div {
+.ryozan-hub-workflow-form > div {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.bttco-hub-workflow-form input {
+.ryozan-hub-workflow-form input {
   width: 100%;
   min-height: 36px;
   box-sizing: border-box;
@@ -30449,8 +30449,8 @@ button.bttco-portal-empty {
   outline: none;
 }
 
-.bttco-hub-workflow-form > button,
-.bttco-hub-workflow-summary > button {
+.ryozan-hub-workflow-form > button,
+.ryozan-hub-workflow-summary > button {
   grid-column: 1 / -1;
   min-height: 44px;
   border: 0;
@@ -30465,12 +30465,12 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-workflow-form > button:disabled {
+.ryozan-hub-workflow-form > button:disabled {
   opacity: 0.38;
   cursor: not-allowed;
 }
 
-.bttco-hub-workflow-summary {
+.ryozan-hub-workflow-summary {
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -30480,14 +30480,14 @@ button.bttco-portal-empty {
   background: color-mix(in srgb, var(--workflow-accent) 7%, transparent);
 }
 
-.bttco-hub-workflow-summary > strong {
+.ryozan-hub-workflow-summary > strong {
   font-family: var(--font-display);
   font-size: 15px;
   text-transform: uppercase;
 }
 
-.bttco-hub-workflow-summary > span,
-.bttco-hub-workflow-summary > p {
+.ryozan-hub-workflow-summary > span,
+.ryozan-hub-workflow-summary > p {
   margin: 0;
   color: var(--ink-mute);
   font-family: var(--font-body);
@@ -30495,13 +30495,13 @@ button.bttco-portal-empty {
   line-height: 1.45;
 }
 
-.bttco-hub-option-list {
+.ryozan-hub-option-list {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
-.bttco-hub-option-list > button {
+.ryozan-hub-option-list > button {
   min-height: 58px;
   display: flex;
   flex-direction: column;
@@ -30517,30 +30517,30 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-option-list > button:disabled {
+.ryozan-hub-option-list > button:disabled {
   opacity: 0.42;
   cursor: not-allowed;
 }
 
-.bttco-hub-option-list strong {
+.ryozan-hub-option-list strong {
   font-family: var(--font-display);
   font-size: 13px;
   text-transform: uppercase;
 }
 
-.bttco-hub-option-list span {
+.ryozan-hub-option-list span {
   color: var(--ink-ghost);
   font-family: var(--font-body);
   font-size: 11.5px;
 }
 
-.bttco-hub-workflow-card--flash .flash-manager--compact {
+.ryozan-hub-workflow-card--flash .flash-manager--compact {
   width: 100%;
   min-width: 0;
   padding: 0;
 }
 
-.bttco-flash-stage-header {
+.ryozan-flash-stage-header {
   width: 100%;
   box-sizing: border-box;
   display: grid !important;
@@ -30551,7 +30551,7 @@ button.bttco-portal-empty {
   text-align: center;
 }
 
-.bttco-hub-workflow-card > .bttco-flash-stage-header > span {
+.ryozan-hub-workflow-card > .ryozan-flash-stage-header > span {
   width: 100%;
   color: var(--ink);
   font-family: var(--font-display);
@@ -30563,19 +30563,19 @@ button.bttco-portal-empty {
   transition: color var(--transition-fast), opacity var(--transition-fast), text-shadow var(--transition-fast);
 }
 
-.bttco-hub-workflow-card > .bttco-flash-stage-header > span.active {
+.ryozan-hub-workflow-card > .ryozan-flash-stage-header > span.active {
   color: var(--cream);
   opacity: 1;
   text-shadow: 0 0 10px rgba(196, 166, 106, 0.72);
 }
 
-.bttco-hub-retry {
+.ryozan-hub-retry {
   border: 1px solid var(--sig-err);
   background: linear-gradient(180deg, rgba(28, 29, 28, 0.9), rgba(13, 14, 13, 0.96));
   cursor: pointer;
 }
 
-.bttco-hub-profile-card {
+.ryozan-hub-profile-card {
   flex-shrink: 0;
   min-height: 0;
   display: flex;
@@ -30587,20 +30587,20 @@ button.bttco-portal-empty {
   box-shadow: var(--shadow-lift);
 }
 
-.bttco-hub-profile-main {
+.ryozan-hub-profile-main {
   display: flex;
   flex-direction: column;
   gap: 9px;
   padding: 13px 15px 12px;
 }
 
-.bttco-hub-profile-heading {
+.ryozan-hub-profile-heading {
   display: flex;
   align-items: center;
   gap: 9px;
 }
 
-.bttco-hub-avatar {
+.ryozan-hub-avatar {
   flex-shrink: 0;
   width: 52px;
   height: 52px;
@@ -30612,7 +30612,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-avatar > img {
+.ryozan-hub-avatar > img {
   width: 100%;
   height: 100%;
   display: block;
@@ -30620,7 +30620,7 @@ button.bttco-portal-empty {
   object-fit: cover;
 }
 
-.bttco-hub-avatar > i {
+.ryozan-hub-avatar > i {
   width: 16px;
   height: 16px;
   position: absolute;
@@ -30638,7 +30638,7 @@ button.bttco-portal-empty {
   font-weight: 700;
 }
 
-.bttco-hub-profile-heading > h2 {
+.ryozan-hub-profile-heading > h2 {
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -30653,7 +30653,7 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-hub-copy {
+.ryozan-hub-copy {
   flex-shrink: 0;
   min-height: 28px;
   margin-left: auto;
@@ -30668,7 +30668,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-bio {
+.ryozan-hub-bio {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -30679,7 +30679,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-bio > span {
+.ryozan-hub-bio > span {
   color: var(--ink-mute);
   font-family: var(--font-body);
   font-size: 12.5px;
@@ -30687,10 +30687,10 @@ button.bttco-portal-empty {
   text-wrap: pretty;
 }
 
-.bttco-hub-bio > strong,
-.bttco-hub-specialties > span,
-.bttco-hub-specialties > button,
-.bttco-hub-socials > span {
+.ryozan-hub-bio > strong,
+.ryozan-hub-specialties > span,
+.ryozan-hub-specialties > button,
+.ryozan-hub-socials > span {
   font-family: var(--font-btn);
   font-size: 10px;
   font-weight: 700;
@@ -30698,36 +30698,36 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-hub-bio > strong { color: var(--ink-ghost); letter-spacing: 0.16em; }
+.ryozan-hub-bio > strong { color: var(--ink-ghost); letter-spacing: 0.16em; }
 
-.bttco-hub-specialties {
+.ryozan-hub-specialties {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
 
-.bttco-hub-specialties > span,
-.bttco-hub-specialties > button {
+.ryozan-hub-specialties > span,
+.ryozan-hub-specialties > button {
   min-height: 26px;
   padding: 0 11px;
   border-radius: 99px;
 }
 
-.bttco-hub-specialties > span {
+.ryozan-hub-specialties > span {
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--gold-decor);
   color: var(--gold);
 }
 
-.bttco-hub-specialties > button {
+.ryozan-hub-specialties > button {
   border: 1px dashed var(--line-2);
   background: transparent;
   color: var(--ink-ghost);
   cursor: pointer;
 }
 
-.bttco-hub-profile-contact {
+.ryozan-hub-profile-contact {
   min-height: 0;
   display: flex;
   flex: 0 0 auto;
@@ -30736,7 +30736,7 @@ button.bttco-portal-empty {
   padding: 0 15px 16px;
 }
 
-.bttco-hub-socials {
+.ryozan-hub-socials {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -30747,7 +30747,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-socials > i {
+.ryozan-hub-socials > i {
   width: 36px;
   height: 36px;
   display: grid;
@@ -30763,9 +30763,9 @@ button.bttco-portal-empty {
   letter-spacing: 0.04em;
 }
 
-.bttco-hub-socials > span { color: var(--ink-ghost); }
+.ryozan-hub-socials > span { color: var(--ink-ghost); }
 
-.bttco-pulse-thread-card, .bttco-mercury-thread-card {
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card {
   width: 100%;
   overflow: hidden;
   border: 1px solid rgba(183, 149, 232, .58);
@@ -30775,7 +30775,7 @@ button.bttco-portal-empty {
   box-shadow: 0 14px 32px rgba(0, 0, 0, .38), 0 0 24px rgba(183, 149, 232, .08);
 }
 
-.bttco-pulse-thread-card, .bttco-mercury-thread-card > header {
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header {
   display: grid;
   gap: 2px;
   padding: 12px 13px 11px;
@@ -30783,19 +30783,19 @@ button.bttco-portal-empty {
   background: radial-gradient(120% 140% at 0 0, rgba(183, 149, 232, .16), transparent 62%);
 }
 
-.bttco-pulse-thread-card, .bttco-mercury-thread-card > header > span,
-.bttco-pulse-thread-card, .bttco-mercury-thread-card > header > small {
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > span,
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > small {
   font-family: var(--font-btn);
   font-size: 8px;
   letter-spacing: .15em;
   text-transform: uppercase;
 }
 
-.bttco-pulse-thread-card, .bttco-mercury-thread-card > header > span { color: #b795e8; }
-.bttco-pulse-thread-card, .bttco-mercury-thread-card > header > strong { font-size: 15px; }
-.bttco-pulse-thread-card, .bttco-mercury-thread-card > header > small { color: var(--ink-ghost); }
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > span { color: #b795e8; }
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > strong { font-size: 15px; }
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > small { color: var(--ink-ghost); }
 
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky {
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky {
   gap: 2px;
   overflow: visible;
   border: 0;
@@ -30804,29 +30804,29 @@ button.bttco-portal-empty {
   box-shadow: none;
 }
 
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky > header {
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky > header {
   border: 1px solid rgba(168, 68, 51, .58);
   border-radius: 17px;
   border-bottom-color: rgba(168, 68, 51, .58);
   background: radial-gradient(130% 150% at 0 0, rgba(168, 68, 51, .24), transparent 62%), linear-gradient(180deg, rgba(34, 31, 29, .99), rgba(24, 22, 21, .99));
 }
 
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky > header > strong { color: #f3ead8; font-size: 24px; line-height: 1.05; }
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky > header > small { color: rgba(255, 255, 255, .58); }
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky > header > strong { color: #f3ead8; font-size: 24px; line-height: 1.05; }
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky > header > small { color: rgba(255, 255, 255, .58); }
 
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky > .courier-booking-context {
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky > .courier-booking-context {
   border-color: rgba(243, 234, 216, .3);
   border-radius: 19px;
   background: rgba(20, 21, 21, .82);
 }
 
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky .courier-booking-huddle-title > .bkm-client { display: none; }
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky .bkm-meta-item,
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky .courier-booking-written-request p { color: rgba(255, 255, 255, .74); }
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky .courier-booking-written-request { background: rgba(50, 46, 43, .72); }
-.bttco-pulse-thread-card--booky, .bttco-mercury-thread-card--booky .bkm-indicator { background: #a84433; box-shadow: 0 0 12px rgba(168, 68, 51, .58); }
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky .courier-booking-huddle-title > .bkm-client { display: none; }
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky .bkm-meta-item,
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky .courier-booking-written-request p { color: rgba(255, 255, 255, .74); }
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky .courier-booking-written-request { background: rgba(50, 46, 43, .72); }
+.ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky .bkm-indicator { background: #a84433; box-shadow: 0 0 12px rgba(168, 68, 51, .58); }
 
-.bttco-pulse-thread-card__messages, .bttco-mercury-thread-card__messages {
+.ryozan-pulse-thread-card__messages, .ryozan-mercury-thread-card__messages {
   max-height: 340px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -30834,21 +30834,21 @@ button.bttco-portal-empty {
   scrollbar-color: rgba(183, 149, 232, .36) transparent;
 }
 
-.bttco-pulse-thread-card__messages, .bttco-mercury-thread-card__messages > article {
+.ryozan-pulse-thread-card__messages, .ryozan-mercury-thread-card__messages > article {
   display: grid;
   gap: 5px;
   padding: 10px 13px;
   border-bottom: 1px solid var(--line);
 }
 
-.bttco-pulse-thread-card__messages, .bttco-mercury-thread-card__messages > article:last-child { border-bottom: 0; }
-.bttco-pulse-thread-card__messages, .bttco-mercury-thread-card__messages > article > header { display: flex; align-items: baseline; gap: 8px; }
-.bttco-pulse-thread-card__messages, .bttco-mercury-thread-card__messages > article > header > strong { flex: 1; font-size: 11px; color: var(--accent-cream); }
-.bttco-pulse-thread-card__messages, .bttco-mercury-thread-card__messages > article > header > time { font-family: var(--font-btn); font-size: 8px; letter-spacing: .08em; color: var(--ink-ghost); }
-.bttco-pulse-thread-card__messages, .bttco-mercury-thread-card__messages > article > p { margin: 0; font-size: 12px; line-height: 1.48; color: var(--ink-mute); white-space: pre-wrap; }
-.bttco-pulse-thread-card__empty, .bttco-mercury-thread-card__empty { margin: 0; padding: 22px 13px; color: var(--ink-ghost); font-size: 12px; text-align: center; }
+.ryozan-pulse-thread-card__messages, .ryozan-mercury-thread-card__messages > article:last-child { border-bottom: 0; }
+.ryozan-pulse-thread-card__messages, .ryozan-mercury-thread-card__messages > article > header { display: flex; align-items: baseline; gap: 8px; }
+.ryozan-pulse-thread-card__messages, .ryozan-mercury-thread-card__messages > article > header > strong { flex: 1; font-size: 11px; color: var(--accent-cream); }
+.ryozan-pulse-thread-card__messages, .ryozan-mercury-thread-card__messages > article > header > time { font-family: var(--font-btn); font-size: 8px; letter-spacing: .08em; color: var(--ink-ghost); }
+.ryozan-pulse-thread-card__messages, .ryozan-mercury-thread-card__messages > article > p { margin: 0; font-size: 12px; line-height: 1.48; color: var(--ink-mute); white-space: pre-wrap; }
+.ryozan-pulse-thread-card__empty, .ryozan-mercury-thread-card__empty { margin: 0; padding: 22px 13px; color: var(--ink-ghost); font-size: 12px; text-align: center; }
 
-.bttco-pulse-reference-viewer, .bttco-mercury-reference-viewer {
+.ryozan-pulse-reference-viewer, .ryozan-mercury-reference-viewer {
   position: fixed;
   inset: 0;
   z-index: 9999;
@@ -30859,14 +30859,14 @@ button.bttco-portal-empty {
   backdrop-filter: blur(8px);
 }
 
-.bttco-pulse-reference-viewer, .bttco-mercury-reference-viewer > div {
+.ryozan-pulse-reference-viewer, .ryozan-mercury-reference-viewer > div {
   width: 100%;
   height: 100%;
   display: grid;
   place-items: center;
 }
 
-.bttco-pulse-reference-viewer, .bttco-mercury-reference-viewer img {
+.ryozan-pulse-reference-viewer, .ryozan-mercury-reference-viewer img {
   display: block;
   max-width: 100%;
   max-height: 100%;
@@ -30874,7 +30874,7 @@ button.bttco-portal-empty {
   image-rendering: auto;
 }
 
-.bttco-pulse-reference-viewer, .bttco-mercury-reference-viewer > button {
+.ryozan-pulse-reference-viewer, .ryozan-mercury-reference-viewer > button {
   position: fixed;
   top: max(16px, env(safe-area-inset-top));
   right: 16px;
@@ -30889,7 +30889,7 @@ button.bttco-portal-empty {
   line-height: 1;
 }
 
-.bttco-pulse-thread-loading, .bttco-mercury-thread-loading {
+.ryozan-pulse-thread-loading, .ryozan-mercury-thread-loading {
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -30898,12 +30898,12 @@ button.bttco-portal-empty {
   color: rgba(228, 218, 194, .52);
 }
 
-.bttco-pulse-thread-loading, .bttco-mercury-thread-loading .bttco-pulse-mark, .bttco-mercury-mark {
+.ryozan-pulse-thread-loading, .ryozan-mercury-thread-loading .ryozan-pulse-mark, .ryozan-mercury-mark {
   flex: 0 0 auto;
-  animation: bttco-pulse-action-spin 1.65s cubic-bezier(.65, 0, .35, 1) infinite;
+  animation: ryozan-pulse-action-spin 1.65s cubic-bezier(.65, 0, .35, 1) infinite;
 }
 
-.bttco-pulse-thread-loading, .bttco-mercury-thread-loading em {
+.ryozan-pulse-thread-loading, .ryozan-mercury-thread-loading em {
   max-width: min(72vw, 320px);
   overflow: hidden;
   font-family: var(--font-body);
@@ -30912,32 +30912,32 @@ button.bttco-portal-empty {
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
-  animation: bttco-pulse-action-breathe 1.65s ease-in-out infinite;
+  animation: ryozan-pulse-action-breathe 1.65s ease-in-out infinite;
 }
 
-@keyframes bttco-pulse-action-spin {
+@keyframes ryozan-pulse-action-spin {
   0%, 16% { transform: rotate(0deg); }
   54%, 72% { transform: rotate(180deg); }
   100% { transform: rotate(360deg); }
 }
 
-@keyframes bttco-pulse-action-breathe {
+@keyframes ryozan-pulse-action-breathe {
   0%, 100% { opacity: .44; }
   55% { opacity: .72; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-pulse-thread-loading, .bttco-mercury-thread-loading .bttco-pulse-mark, .bttco-mercury-mark,
-  .bttco-pulse-thread-loading, .bttco-mercury-thread-loading em { animation: none; }
+  .ryozan-pulse-thread-loading, .ryozan-mercury-thread-loading .ryozan-pulse-mark, .ryozan-mercury-mark,
+  .ryozan-pulse-thread-loading, .ryozan-mercury-thread-loading em { animation: none; }
 }
 
-.bttco-hub-profile-actions {
+.ryozan-hub-profile-actions {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.bttco-hub-live-page {
+.ryozan-hub-live-page {
   flex: 1 1 auto;
   width: auto;
   min-height: 36px;
@@ -30958,7 +30958,7 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-profile-options {
+.ryozan-hub-profile-options {
   flex: 0 0 auto;
   min-height: 36px;
   padding: 0 15px;
@@ -30974,13 +30974,13 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-hub-workflow-card--pos {
+.ryozan-hub-workflow-card--pos {
   gap: 6px;
   padding: 0;
   overflow: hidden;
 }
 
-.bttco-pos-connections-entry {
+.ryozan-pos-connections-entry {
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -30995,22 +30995,22 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-pos-connections-entry > span {
+.ryozan-pos-connections-entry > span {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.bttco-pos-connections-entry strong,
-.bttco-pos-connections-entry > b {
+.ryozan-pos-connections-entry strong,
+.ryozan-pos-connections-entry > b {
   font-family: var(--font-btn);
   font-size: 9px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
 
-.bttco-pos-connections-entry small {
+.ryozan-pos-connections-entry small {
   overflow: hidden;
   color: var(--ink-ghost);
   font-family: var(--font-body);
@@ -31019,99 +31019,99 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-pos-connections-entry > b {
+.ryozan-pos-connections-entry > b {
   flex-shrink: 0;
 }
 
-.bttco-hub-workflow-card--pos .pos-modal-embedded {
+.ryozan-hub-workflow-card--pos .pos-modal-embedded {
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 
-.bttco-hub-workflow-card--pos .pos-header {
+.ryozan-hub-workflow-card--pos .pos-header {
   min-height: 46px;
   margin-top: 2px;
   padding: 9px 14px;
 }
 
-.bttco-hub-workflow-card--pos .pos-body {
+.ryozan-hub-workflow-card--pos .pos-body {
   height: 355px;
   margin-top: 10px;
   padding: 10px 14px 12px;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-wrap {
+.ryozan-hub-workflow-card--pos .pos-numpad-wrap {
   gap: 7px;
   max-width: none;
   padding: 0;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-display {
+.ryozan-hub-workflow-card--pos .pos-numpad-display {
   min-height: 70px;
   padding: 8px 12px;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-dollar {
+.ryozan-hub-workflow-card--pos .pos-numpad-dollar {
   font-size: 1.35rem;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-value {
+.ryozan-hub-workflow-card--pos .pos-numpad-value {
   min-width: 120px;
   font-size: 2.25rem;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-grid {
+.ryozan-hub-workflow-card--pos .pos-numpad-grid {
   gap: 6px;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-key {
+.ryozan-hub-workflow-card--pos .pos-numpad-key {
   height: 46px;
   border-radius: 9px;
   font-size: 1.15rem;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-actions {
+.ryozan-hub-workflow-card--pos .pos-numpad-actions {
   margin-top: 1px;
 }
 
-.bttco-hub-workflow-card--pos .pos-numpad-clear,
-.bttco-hub-workflow-card--pos .pos-numpad-continue {
+.ryozan-hub-workflow-card--pos .pos-numpad-clear,
+.ryozan-hub-workflow-card--pos .pos-numpad-continue {
   min-height: 40px;
   padding: 7px 10px;
 }
 
 /* Keep the collapsed rail intact when Membership or Herald consumes the
    neighboring accordion space. The page scroll owner absorbs overflow. */
-.bttco-quest-card { min-height: 50px; display: flex; flex: 0 0 auto; flex-direction: column; padding: 0; overflow: hidden; border-radius: 16px; transition: border-radius 280ms ease, border-color 280ms ease, box-shadow 280ms ease; }
-.bttco-quest-toggle { width: 100%; min-height: 50px; display: grid; grid-template-columns: minmax(0, 1fr) auto 18px; align-items: center; gap: 10px; padding: 11px 15px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.bttco-quest-toggle:focus-visible { outline: 0; }
-.bttco-quest-card:has(.bttco-quest-toggle:hover),
-.bttco-quest-card:has(.bttco-quest-toggle:focus-visible) { border-color: rgba(143, 184, 154, 0.68); box-shadow: var(--shadow-lift), 0 0 0 2px rgba(143, 184, 154, 0.1); }
-.bttco-quest-toggle > strong { color: var(--ink-dim); font-family: var(--font-display); font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-.bttco-quest-toggle > span,
-.bttco-quest-body-inner > button > b { color: var(--portal-agent-accent, var(--alt-spring)); font-family: var(--font-btn); font-size: 10px; letter-spacing: 0.1em; }
-.bttco-quest-chevron { color: var(--portal-agent-accent, var(--alt-spring)); transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
-.bttco-quest-card.is-open { border-color: rgba(143, 184, 154, 0.62); border-radius: 16px 16px 20px 20px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32), 0 0 24px rgba(143, 184, 154, 0.08); }
-.bttco-quest-card.is-open .bttco-quest-chevron { transform: rotate(180deg); }
-.bttco-quest-body { display: grid; grid-template-rows: 0fr; overflow: hidden; opacity: 0; transform: translateY(-9px) scale(0.985, 0.9); transform-origin: 50% 0; pointer-events: none; transition: grid-template-rows 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1); }
-.bttco-quest-card.is-open .bttco-quest-body { grid-template-rows: 1fr; opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-.bttco-quest-body-inner { min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 0 13px 10px; }
-.bttco-quest-body-inner > p { margin: 8px 2px; color: var(--ink-mute); font-family: var(--font-body); font-size: 12px; }
-.bttco-quest-body-inner > button { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 7px 2px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
-.bttco-quest-body-inner > button > i { flex-shrink: 0; width: 16px; height: 16px; border: 1.5px solid var(--portal-agent-accent, var(--alt-spring)); border-radius: 50%; }
-.bttco-quest-body-inner > button > i.done { background: var(--portal-agent-accent, var(--alt-spring)); }
-.bttco-quest-body-inner > button > span { flex: 1; min-width: 0; font-family: var(--font-body); font-size: 12.5px; line-height: 1.4; }
-.bttco-quest-body-inner > button > span.done { color: var(--ink-ghost); text-decoration: line-through; }
+.ryozan-quest-card { min-height: 50px; display: flex; flex: 0 0 auto; flex-direction: column; padding: 0; overflow: hidden; border-radius: 16px; transition: border-radius 280ms ease, border-color 280ms ease, box-shadow 280ms ease; }
+.ryozan-quest-toggle { width: 100%; min-height: 50px; display: grid; grid-template-columns: minmax(0, 1fr) auto 18px; align-items: center; gap: 10px; padding: 11px 15px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.ryozan-quest-toggle:focus-visible { outline: 0; }
+.ryozan-quest-card:has(.ryozan-quest-toggle:hover),
+.ryozan-quest-card:has(.ryozan-quest-toggle:focus-visible) { border-color: rgba(143, 184, 154, 0.68); box-shadow: var(--shadow-lift), 0 0 0 2px rgba(143, 184, 154, 0.1); }
+.ryozan-quest-toggle > strong { color: var(--ink-dim); font-family: var(--font-display); font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.ryozan-quest-toggle > span,
+.ryozan-quest-body-inner > button > b { color: var(--portal-agent-accent, var(--alt-spring)); font-family: var(--font-btn); font-size: 10px; letter-spacing: 0.1em; }
+.ryozan-quest-chevron { color: var(--portal-agent-accent, var(--alt-spring)); transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+.ryozan-quest-card.is-open { border-color: rgba(143, 184, 154, 0.62); border-radius: 16px 16px 20px 20px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32), 0 0 24px rgba(143, 184, 154, 0.08); }
+.ryozan-quest-card.is-open .ryozan-quest-chevron { transform: rotate(180deg); }
+.ryozan-quest-body { display: grid; grid-template-rows: 0fr; overflow: hidden; opacity: 0; transform: translateY(-9px) scale(0.985, 0.9); transform-origin: 50% 0; pointer-events: none; transition: grid-template-rows 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1); }
+.ryozan-quest-card.is-open .ryozan-quest-body { grid-template-rows: 1fr; opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.ryozan-quest-body-inner { min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 0 13px 10px; }
+.ryozan-quest-body-inner > p { margin: 8px 2px; color: var(--ink-mute); font-family: var(--font-body); font-size: 12px; }
+.ryozan-quest-body-inner > button { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 7px 2px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.ryozan-quest-body-inner > button > i { flex-shrink: 0; width: 16px; height: 16px; border: 1.5px solid var(--portal-agent-accent, var(--alt-spring)); border-radius: 50%; }
+.ryozan-quest-body-inner > button > i.done { background: var(--portal-agent-accent, var(--alt-spring)); }
+.ryozan-quest-body-inner > button > span { flex: 1; min-width: 0; font-family: var(--font-body); font-size: 12.5px; line-height: 1.4; }
+.ryozan-quest-body-inner > button > span.done { color: var(--ink-ghost); text-decoration: line-through; }
 
-.bttco-membership-stack {
+.ryozan-membership-stack {
   position: relative;
   z-index: 2;
   isolation: isolate;
 }
 
-.bttco-membership-card {
+.ryozan-membership-card {
   width: 100%;
   min-height: 82px;
   display: grid;
@@ -31126,20 +31126,20 @@ button.bttco-portal-empty {
   transition: border-radius 260ms ease, border-color 260ms ease, box-shadow 260ms ease;
 }
 
-.bttco-membership-card:hover,
-.bttco-membership-card:focus-visible {
+.ryozan-membership-card:hover,
+.ryozan-membership-card:focus-visible {
   border-color: rgba(143, 184, 154, 0.68);
   outline: 0;
   box-shadow: var(--shadow-lift), 0 0 0 2px rgba(143, 184, 154, 0.1);
 }
 
-.bttco-membership-stack.is-open .bttco-membership-card {
+.ryozan-membership-stack.is-open .ryozan-membership-card {
   border-color: rgba(143, 184, 154, 0.62);
   border-radius: 18px 18px 9px 9px;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32), 0 0 24px rgba(143, 184, 154, 0.08);
 }
 
-.bttco-membership-avatar {
+.ryozan-membership-avatar {
   width: 52px;
   height: 52px;
   display: grid;
@@ -31154,26 +31154,26 @@ button.bttco-portal-empty {
   box-shadow: inset 0 0 18px rgba(143, 184, 154, 0.08), 0 0 16px rgba(143, 184, 154, 0.08);
 }
 
-.bttco-membership-avatar > img {
+.ryozan-membership-avatar > img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.bttco-membership-avatar > svg {
+.ryozan-membership-avatar > svg {
   width: 28px;
   height: 28px;
 }
 
-.bttco-membership-copy {
+.ryozan-membership-copy {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.bttco-membership-copy > span,
-.bttco-membership-wallet > small {
+.ryozan-membership-copy > span,
+.ryozan-membership-wallet > small {
   color: var(--ink-mute);
   font-family: var(--font-btn);
   font-size: 9px;
@@ -31182,7 +31182,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-membership-copy > strong {
+.ryozan-membership-copy > strong {
   overflow: hidden;
   color: #8fb89a;
   font-family: var(--font-display);
@@ -31193,7 +31193,7 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-membership-copy > small {
+.ryozan-membership-copy > small {
   overflow: hidden;
   color: var(--ink-ghost);
   font-family: var(--font-btn);
@@ -31204,7 +31204,7 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-membership-wallet {
+.ryozan-membership-wallet {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -31213,7 +31213,7 @@ button.bttco-portal-empty {
   border-left: 1px solid rgba(143, 184, 154, 0.17);
 }
 
-.bttco-membership-wallet > strong {
+.ryozan-membership-wallet > strong {
   color: var(--accent-cream);
   font-family: var(--font-btn);
   font-size: 15px;
@@ -31221,16 +31221,16 @@ button.bttco-portal-empty {
   letter-spacing: 0.06em;
 }
 
-.bttco-membership-chevron {
+.ryozan-membership-chevron {
   color: #8fb89a;
   transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.bttco-membership-stack.is-open .bttco-membership-chevron {
+.ryozan-membership-stack.is-open .ryozan-membership-chevron {
   transform: rotate(180deg);
 }
 
-.bttco-club-actions {
+.ryozan-club-actions {
   max-height: 0;
   overflow: hidden;
   opacity: 0;
@@ -31240,14 +31240,14 @@ button.bttco-portal-empty {
   transition: max-height 360ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.bttco-membership-stack.is-open .bttco-club-actions {
+.ryozan-membership-stack.is-open .ryozan-club-actions {
   max-height: 280px;
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0) scale(1);
 }
 
-.bttco-club-actions-inner {
+.ryozan-club-actions-inner {
   position: relative;
   display: grid;
   gap: 3px;
@@ -31261,7 +31261,7 @@ button.bttco-portal-empty {
   box-shadow: 0 16px 28px rgba(0, 0, 0, 0.28), inset 0 1px rgba(var(--cream-rgb), 0.025);
 }
 
-.bttco-club-actions-inner > button {
+.ryozan-club-actions-inner > button {
   width: 100%;
   min-height: 44px;
   display: flex;
@@ -31278,22 +31278,22 @@ button.bttco-portal-empty {
   transition: background 180ms ease, border-color 180ms ease, transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.bttco-membership-stack.is-open .bttco-club-actions-inner > button {
+.ryozan-membership-stack.is-open .ryozan-club-actions-inner > button {
   transform: translateY(0);
 }
 
-.bttco-club-actions-inner > button:nth-child(2) { transition-delay: 24ms; }
-.bttco-club-actions-inner > button:nth-child(3) { transition-delay: 48ms; }
-.bttco-club-actions-inner > button:nth-child(4) { transition-delay: 72ms; }
+.ryozan-club-actions-inner > button:nth-child(2) { transition-delay: 24ms; }
+.ryozan-club-actions-inner > button:nth-child(3) { transition-delay: 48ms; }
+.ryozan-club-actions-inner > button:nth-child(4) { transition-delay: 72ms; }
 
-.bttco-club-actions-inner > button:hover,
-.bttco-club-actions-inner > button:focus-visible {
+.ryozan-club-actions-inner > button:hover,
+.ryozan-club-actions-inner > button:focus-visible {
   border-color: rgba(143, 184, 154, 0.62);
   background: rgba(143, 184, 154, 0.1);
   outline: 0;
 }
 
-.bttco-club-actions-inner > button > strong {
+.ryozan-club-actions-inner > button > strong {
   flex-shrink: 0;
   font-family: var(--font-btn);
   font-size: 13.5px;
@@ -31302,7 +31302,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-club-actions-inner > button > span {
+.ryozan-club-actions-inner > button > span {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -31314,7 +31314,7 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-club-tool {
+.ryozan-club-tool {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -31325,27 +31325,27 @@ button.bttco-portal-empty {
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28), inset 0 1px rgba(var(--cream-rgb), 0.025);
 }
 
-.bttco-club-tool > header {
+.ryozan-club-tool > header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
 
-.bttco-club-tool > header span,
-.bttco-club-tool > header strong {
+.ryozan-club-tool > header span,
+.ryozan-club-tool > header strong {
   font-family: var(--font-display);
   text-transform: uppercase;
 }
 
-.bttco-club-tool > header span { color: #9bd4aa; font-size: 16px; }
-.bttco-club-tool > header strong { color: var(--ink-mute); font-size: 11px; letter-spacing: 0.08em; }
-.bttco-club-tool > small { color: var(--ink-ghost); font-family: var(--font-body); font-size: 10.5px; line-height: 1.45; }
-.bttco-club-tool-empty,
-.bttco-club-tool-error { margin: 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 12px; line-height: 1.45; }
-.bttco-club-tool-error { color: var(--accent-coral); }
+.ryozan-club-tool > header span { color: #9bd4aa; font-size: 16px; }
+.ryozan-club-tool > header strong { color: var(--ink-mute); font-size: 11px; letter-spacing: 0.08em; }
+.ryozan-club-tool > small { color: var(--ink-ghost); font-family: var(--font-body); font-size: 10.5px; line-height: 1.45; }
+.ryozan-club-tool-empty,
+.ryozan-club-tool-error { margin: 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 12px; line-height: 1.45; }
+.ryozan-club-tool-error { color: var(--accent-coral); }
 
-.bttco-loot-minigame {
+.ryozan-loot-minigame {
   display: grid;
   gap: 8px;
   padding: 12px;
@@ -31354,16 +31354,16 @@ button.bttco-portal-empty {
   background: rgba(5, 6, 6, 0.66);
 }
 
-.bttco-loot-minigame > strong,
-.bttco-loot-minigame > small { text-align: center; }
+.ryozan-loot-minigame > strong,
+.ryozan-loot-minigame > small { text-align: center; }
 
-.bttco-loot-minigame > div {
+.ryozan-loot-minigame > div {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.bttco-loot-minigame button {
+.ryozan-loot-minigame button {
   min-height: 58px;
   border: 1px solid color-mix(in srgb, var(--agent-color) 36%, transparent);
   border-radius: 10px;
@@ -31372,13 +31372,13 @@ button.bttco-portal-empty {
   box-shadow: inset 0 0 18px rgba(var(--cream-rgb), 0.025);
 }
 
-.bttco-loot-summary {
+.ryozan-loot-summary {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
-.bttco-loot-summary span {
+.ryozan-loot-summary span {
   display: flex;
   align-items: baseline;
   gap: 6px;
@@ -31392,23 +31392,23 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-loot-summary b { color: #9bd4aa; font-size: 16px; }
+.ryozan-loot-summary b { color: #9bd4aa; font-size: 16px; }
 
-.bttco-loot-cabinet {
+.ryozan-loot-cabinet {
   display: grid;
   grid-template-columns: minmax(0, .86fr) minmax(0, 1.34fr);
   gap: 10px;
   min-height: 166px;
 }
 
-.bttco-loot-preview,
-.bttco-loot-slot-bank {
+.ryozan-loot-preview,
+.ryozan-loot-slot-bank {
   min-width: 0;
   border: 1px solid rgba(143, 184, 154, 0.24);
   background: rgba(2, 4, 3, 0.48);
 }
 
-.bttco-loot-preview {
+.ryozan-loot-preview {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -31419,8 +31419,8 @@ button.bttco-portal-empty {
   clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
 }
 
-.bttco-loot-preview > span,
-.bttco-loot-slot-bank > header {
+.ryozan-loot-preview > span,
+.ryozan-loot-slot-bank > header {
   color: var(--ink-ghost);
   font-family: var(--font-btn);
   font-size: 7.5px;
@@ -31429,7 +31429,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-loot-preview > div {
+.ryozan-loot-preview > div {
   position: relative;
   display: grid;
   place-items: center;
@@ -31444,7 +31444,7 @@ button.bttco-portal-empty {
   transform: rotate(45deg) scale(.76);
 }
 
-.bttco-loot-preview > div i {
+.ryozan-loot-preview > div i {
   color: rgba(143, 184, 154, 0.32);
   font-size: 30px;
   font-style: normal;
@@ -31452,15 +31452,15 @@ button.bttco-portal-empty {
   transform: rotate(-45deg);
 }
 
-.bttco-loot-preview.has-item > div {
+.ryozan-loot-preview.has-item > div {
   border-color: rgba(143, 184, 154, 0.68);
   background: radial-gradient(circle, rgba(143, 184, 154, 0.2), rgba(143, 184, 154, 0.035) 58%, transparent 72%);
   box-shadow: inset 0 0 26px rgba(0, 0, 0, 0.5), 0 0 20px rgba(143, 184, 154, 0.13);
 }
 
-.bttco-loot-preview.has-item > div i { color: #9bd4aa; }
+.ryozan-loot-preview.has-item > div i { color: #9bd4aa; }
 
-.bttco-loot-preview > strong {
+.ryozan-loot-preview > strong {
   max-width: 100%;
   overflow: hidden;
   color: var(--accent-cream);
@@ -31472,7 +31472,7 @@ button.bttco-portal-empty {
   white-space: nowrap;
 }
 
-.bttco-loot-preview > small {
+.ryozan-loot-preview > small {
   color: var(--ink-ghost);
   font-family: var(--font-btn);
   font-size: 7.5px;
@@ -31481,7 +31481,7 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-loot-slot-bank {
+.ryozan-loot-slot-bank {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -31489,23 +31489,23 @@ button.bttco-portal-empty {
   border-radius: 10px;
 }
 
-.bttco-loot-slot-bank > header {
+.ryozan-loot-slot-bank > header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.bttco-loot-slot-bank > header strong { color: var(--ink-mute); font: inherit; }
-.bttco-loot-slot-bank > header span { color: #9bd4aa; }
+.ryozan-loot-slot-bank > header strong { color: var(--ink-mute); font: inherit; }
+.ryozan-loot-slot-bank > header span { color: #9bd4aa; }
 
-.bttco-loot-slots {
+.ryozan-loot-slots {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
 }
 
-.bttco-loot-slots button {
+.ryozan-loot-slots button {
   position: relative;
   display: grid;
   place-items: center;
@@ -31524,8 +31524,8 @@ button.bttco-portal-empty {
   transition: border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
 }
 
-.bttco-loot-slots button::before,
-.bttco-loot-slots button::after {
+.ryozan-loot-slots button::before,
+.ryozan-loot-slots button::after {
   content: '';
   position: absolute;
   width: 5px;
@@ -31533,17 +31533,17 @@ button.bttco-portal-empty {
   pointer-events: none;
 }
 
-.bttco-loot-slots button::before { top: 3px; left: 3px; border-top: 1px solid currentColor; border-left: 1px solid currentColor; }
-.bttco-loot-slots button::after { right: 3px; bottom: 3px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; }
-.bttco-loot-slots button > span { font-size: 16px; text-shadow: 0 0 10px currentColor; }
-.bttco-loot-slots button > small { position: absolute; right: 4px; bottom: 2px; color: var(--ink-ghost); font: 6px var(--font-btn); }
-.bttco-loot-slots button.has-item { border-color: rgba(143, 184, 154, 0.44); color: #9bd4aa; }
-.bttco-loot-slots button[aria-pressed="true"] { border-color: #9bd4aa; color: #9bd4aa; box-shadow: inset 0 0 16px rgba(143, 184, 154, 0.08), 0 0 14px rgba(143, 184, 154, 0.16); transform: translateY(-1px); }
-.bttco-loot-slots button:focus-visible { box-shadow: 0 0 0 2px #111, 0 0 0 3px #9bd4aa, 0 0 14px rgba(143, 184, 154, 0.18); }
-.bttco-loot-slots button:disabled { cursor: wait; opacity: .58; }
+.ryozan-loot-slots button::before { top: 3px; left: 3px; border-top: 1px solid currentColor; border-left: 1px solid currentColor; }
+.ryozan-loot-slots button::after { right: 3px; bottom: 3px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+.ryozan-loot-slots button > span { font-size: 16px; text-shadow: 0 0 10px currentColor; }
+.ryozan-loot-slots button > small { position: absolute; right: 4px; bottom: 2px; color: var(--ink-ghost); font: 6px var(--font-btn); }
+.ryozan-loot-slots button.has-item { border-color: rgba(143, 184, 154, 0.44); color: #9bd4aa; }
+.ryozan-loot-slots button[aria-pressed="true"] { border-color: #9bd4aa; color: #9bd4aa; box-shadow: inset 0 0 16px rgba(143, 184, 154, 0.08), 0 0 14px rgba(143, 184, 154, 0.16); transform: translateY(-1px); }
+.ryozan-loot-slots button:focus-visible { box-shadow: 0 0 0 2px #111, 0 0 0 3px #9bd4aa, 0 0 14px rgba(143, 184, 154, 0.18); }
+.ryozan-loot-slots button:disabled { cursor: wait; opacity: .58; }
 
-.bttco-loot-items { display: flex; flex-direction: column; }
-.bttco-loot-items > div {
+.ryozan-loot-items { display: flex; flex-direction: column; }
+.ryozan-loot-items > div {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
@@ -31551,15 +31551,15 @@ button.bttco-portal-empty {
   min-height: 52px;
   border-top: 1px solid var(--line-1);
 }
-.bttco-loot-items > div:first-child { border-top: 0; }
-.bttco-loot-items > div > span { color: #9bd4aa; text-shadow: 0 0 12px rgba(117, 211, 145, 0.38); }
-.bttco-loot-items p { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin: 0; }
-.bttco-loot-items p strong { overflow: hidden; color: var(--ink); font-family: var(--font-body); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.bttco-loot-items p small { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 8px; letter-spacing: 0.08em; }
-.bttco-loot-items > div > b { color: var(--ink-mute); font-family: var(--font-btn); font-size: 9px; text-transform: uppercase; }
-.bttco-loot-items button,
-.bttco-genesis-locked button,
-.bttco-genesis-complete button {
+.ryozan-loot-items > div:first-child { border-top: 0; }
+.ryozan-loot-items > div > span { color: #9bd4aa; text-shadow: 0 0 12px rgba(117, 211, 145, 0.38); }
+.ryozan-loot-items p { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin: 0; }
+.ryozan-loot-items p strong { overflow: hidden; color: var(--ink); font-family: var(--font-body); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.ryozan-loot-items p small { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 8px; letter-spacing: 0.08em; }
+.ryozan-loot-items > div > b { color: var(--ink-mute); font-family: var(--font-btn); font-size: 9px; text-transform: uppercase; }
+.ryozan-loot-items button,
+.ryozan-genesis-locked button,
+.ryozan-genesis-complete button {
   min-height: 32px;
   padding: 0 12px;
   border: 1px solid #78bd8a;
@@ -31573,28 +31573,28 @@ button.bttco-portal-empty {
   text-transform: uppercase;
   cursor: pointer;
 }
-.bttco-loot-items button:disabled { opacity: 0.55; cursor: wait; }
+.ryozan-loot-items button:disabled { opacity: 0.55; cursor: wait; }
 
-.bttco-genesis-locked,
-.bttco-genesis-complete {
+.ryozan-genesis-locked,
+.ryozan-genesis-complete {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);
   gap: 11px;
   align-items: center;
 }
-.bttco-genesis-locked > div,
-.bttco-genesis-complete > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.bttco-genesis-locked small,
-.bttco-genesis-complete small,
-.bttco-genesis-session > small { color: #9bd4aa; font-family: var(--font-btn); font-size: 8px; letter-spacing: 0.13em; text-transform: uppercase; }
-.bttco-genesis-locked strong,
-.bttco-genesis-complete strong,
-.bttco-genesis-session > strong { color: var(--accent-cream); font-family: var(--font-display); font-size: 16px; line-height: 1.05; text-transform: uppercase; }
-.bttco-genesis-locked p,
-.bttco-genesis-complete p { margin: 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 11px; line-height: 1.4; }
-.bttco-genesis-locked button,
-.bttco-genesis-complete button { grid-column: 1 / -1; }
-.bttco-genesis-sprite {
+.ryozan-genesis-locked > div,
+.ryozan-genesis-complete > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ryozan-genesis-locked small,
+.ryozan-genesis-complete small,
+.ryozan-genesis-session > small { color: #9bd4aa; font-family: var(--font-btn); font-size: 8px; letter-spacing: 0.13em; text-transform: uppercase; }
+.ryozan-genesis-locked strong,
+.ryozan-genesis-complete strong,
+.ryozan-genesis-session > strong { color: var(--accent-cream); font-family: var(--font-display); font-size: 16px; line-height: 1.05; text-transform: uppercase; }
+.ryozan-genesis-locked p,
+.ryozan-genesis-complete p { margin: 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 11px; line-height: 1.4; }
+.ryozan-genesis-locked button,
+.ryozan-genesis-complete button { grid-column: 1 / -1; }
+.ryozan-genesis-sprite {
   display: grid;
   place-items: center;
   width: 46px;
@@ -31607,10 +31607,10 @@ button.bttco-portal-empty {
   box-shadow: 0 0 18px rgba(117, 211, 145, 0.16);
   clip-path: polygon(14% 0, 86% 0, 100% 14%, 100% 86%, 86% 100%, 14% 100%, 0 86%, 0 14%);
 }
-.bttco-genesis-sprite.is-gala { color: var(--accent-gold); border-color: rgba(188, 138, 60, 0.56); background: rgba(188, 138, 60, 0.09); box-shadow: 0 0 18px rgba(188, 138, 60, 0.2); }
-.bttco-genesis-session { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 7px 11px; align-items: center; }
-.bttco-genesis-session > div { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.bttco-genesis-session > div button {
+.ryozan-genesis-sprite.is-gala { color: var(--accent-gold); border-color: rgba(188, 138, 60, 0.56); background: rgba(188, 138, 60, 0.09); box-shadow: 0 0 18px rgba(188, 138, 60, 0.2); }
+.ryozan-genesis-session { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 7px 11px; align-items: center; }
+.ryozan-genesis-session > div { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.ryozan-genesis-session > div button {
   min-height: 38px;
   padding: 6px;
   border: 1px solid var(--line-2);
@@ -31624,13 +31624,13 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-club-chat-compose {
+.ryozan-club-chat-compose {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: end;
 }
-.bttco-club-chat-compose textarea {
+.ryozan-club-chat-compose textarea {
   min-height: 54px;
   resize: vertical;
   padding: 10px 11px;
@@ -31641,9 +31641,9 @@ button.bttco-portal-empty {
   color: var(--ink);
   font: 12px/1.4 var(--font-body);
 }
-.bttco-club-chat-compose textarea:focus { border-color: #78bd8a; box-shadow: 0 0 0 2px rgba(117, 211, 145, 0.1); }
-.bttco-club-chat-compose button,
-.bttco-club-chat-retry {
+.ryozan-club-chat-compose textarea:focus { border-color: #78bd8a; box-shadow: 0 0 0 2px rgba(117, 211, 145, 0.1); }
+.ryozan-club-chat-compose button,
+.ryozan-club-chat-retry {
   min-height: 40px;
   padding: 0 13px;
   border: 0;
@@ -31657,26 +31657,26 @@ button.bttco-portal-empty {
   text-transform: uppercase;
   cursor: pointer;
 }
-.bttco-club-chat-compose button:disabled { opacity: 0.45; cursor: default; }
-.bttco-club-chat-retry { align-self: flex-start; border: 1px solid #78bd8a; background: transparent; color: #9bd4aa; }
-.bttco-club-tool--chat article { padding: 10px 0; border-top: 1px solid var(--line-1); }
-.bttco-club-tool--chat article strong { color: var(--ink); font-family: var(--font-body); font-size: 12px; }
-.bttco-club-tool--chat article p { margin: 4px 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 12px; line-height: 1.45; }
-.bttco-club-tool--chat article small { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
+.ryozan-club-chat-compose button:disabled { opacity: 0.45; cursor: default; }
+.ryozan-club-chat-retry { align-self: flex-start; border: 1px solid #78bd8a; background: transparent; color: #9bd4aa; }
+.ryozan-club-tool--chat article { padding: 10px 0; border-top: 1px solid var(--line-1); }
+.ryozan-club-tool--chat article strong { color: var(--ink); font-family: var(--font-body); font-size: 12px; }
+.ryozan-club-tool--chat article p { margin: 4px 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 12px; line-height: 1.45; }
+.ryozan-club-tool--chat article small { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 8px; letter-spacing: 0.06em; text-transform: uppercase; }
 
-.bttco-founder-content { gap: 10px; }
+.ryozan-founder-content { gap: 10px; }
 
-.bttco-content-brand-tabs,
-.bttco-content-view-tabs {
+.ryozan-content-brand-tabs,
+.ryozan-content-view-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
-.bttco-content-view-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ryozan-content-view-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-.bttco-content-brand-tabs button,
-.bttco-content-view-tabs button {
+.ryozan-content-brand-tabs button,
+.ryozan-content-view-tabs button {
   min-height: 32px;
   border: 1px solid var(--line-1);
   border-radius: 999px;
@@ -31690,26 +31690,26 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-content-brand-tabs button[aria-pressed="true"],
-.bttco-content-view-tabs button[aria-pressed="true"] {
+.ryozan-content-brand-tabs button[aria-pressed="true"],
+.ryozan-content-view-tabs button[aria-pressed="true"] {
   border-color: rgba(143, 184, 154, 0.72);
   background: rgba(143, 184, 154, 0.09);
   color: #9bd4aa;
   box-shadow: 0 0 16px rgba(143, 184, 154, 0.08);
 }
 
-.bttco-content-feed,
-.bttco-content-pipeline,
-.bttco-content-connectors {
+.ryozan-content-feed,
+.ryozan-content-pipeline,
+.ryozan-content-connectors {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.bttco-content-feed > button,
-.bttco-content-pipeline > div,
-.bttco-content-connectors > div,
-.bttco-content-inspector {
+.ryozan-content-feed > button,
+.ryozan-content-pipeline > div,
+.ryozan-content-connectors > div,
+.ryozan-content-inspector {
   min-height: 52px;
   padding: 9px 10px;
   border: 1px solid var(--line-1);
@@ -31717,7 +31717,7 @@ button.bttco-portal-empty {
   background: rgba(3, 5, 4, 0.34);
 }
 
-.bttco-content-feed > button {
+.ryozan-content-feed > button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 2px 10px;
@@ -31726,13 +31726,13 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-content-feed > button[aria-pressed="true"] {
+.ryozan-content-feed > button[aria-pressed="true"] {
   border-color: rgba(143, 184, 154, 0.62);
   box-shadow: inset 3px 0 #8fb89a, 0 0 14px rgba(143, 184, 154, 0.07);
 }
 
-.bttco-content-feed > button span,
-.bttco-content-inspector span {
+.ryozan-content-feed > button span,
+.ryozan-content-inspector span {
   grid-column: 1 / -1;
   color: var(--ink-ghost);
   font-family: var(--font-btn);
@@ -31741,18 +31741,18 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-content-feed > button strong,
-.bttco-content-inspector strong,
-.bttco-content-pipeline strong,
-.bttco-content-connectors strong {
+.ryozan-content-feed > button strong,
+.ryozan-content-inspector strong,
+.ryozan-content-pipeline strong,
+.ryozan-content-connectors strong {
   color: var(--accent-cream);
   font-family: var(--font-body);
   font-size: 11.5px;
 }
 
-.bttco-content-feed > button small,
-.bttco-content-pipeline small,
-.bttco-content-connectors small {
+.ryozan-content-feed > button small,
+.ryozan-content-pipeline small,
+.ryozan-content-connectors small {
   color: #9bd4aa;
   font-family: var(--font-btn);
   font-size: 7.5px;
@@ -31760,39 +31760,39 @@ button.bttco-portal-empty {
   text-transform: uppercase;
 }
 
-.bttco-content-inspector {
+.ryozan-content-inspector {
   display: flex;
   flex-direction: column;
   gap: 4px;
   border-color: rgba(217, 191, 149, 0.28);
 }
 
-.bttco-content-inspector small,
-.bttco-content-pipeline span,
-.bttco-content-connectors span {
+.ryozan-content-inspector small,
+.ryozan-content-pipeline span,
+.ryozan-content-connectors span {
   color: var(--ink-mute);
   font-family: var(--font-body);
   font-size: 10px;
   line-height: 1.35;
 }
 
-.bttco-content-pipeline > div,
-.bttco-content-connectors > div {
+.ryozan-content-pipeline > div,
+.ryozan-content-connectors > div {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
 }
 
-.bttco-content-pipeline i {
+.ryozan-content-pipeline i {
   color: #9bd4aa;
   font-family: var(--font-btn);
   font-size: 9px;
   font-style: normal;
 }
 
-.bttco-content-pipeline p,
-.bttco-content-connectors p {
+.ryozan-content-pipeline p,
+.ryozan-content-connectors p {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -31800,9 +31800,9 @@ button.bttco-portal-empty {
   margin: 0;
 }
 
-.bttco-content-connectors > div { grid-template-columns: minmax(0, 1fr) auto; }
+.ryozan-content-connectors > div { grid-template-columns: minmax(0, 1fr) auto; }
 
-.bttco-content-brief {
+.ryozan-content-brief {
   min-height: 38px;
   border: 1px solid #78bd8a;
   border-radius: 999px;
@@ -31816,13 +31816,13 @@ button.bttco-portal-empty {
   cursor: pointer;
 }
 
-.bttco-club-story { display: flex; flex-direction: column; gap: 7px; padding: 14px 15px; border-radius: 16px; text-align: left; cursor: pointer; }
-.bttco-club-story > header { display: flex; align-items: baseline; gap: 8px; }
-.bttco-club-story > header strong { flex: 1; color: #8fb89a; font-family: var(--font-btn); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
-.bttco-club-story > header time { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 10px; }
-.bttco-club-story h2 { margin: 0; color: var(--accent-cream); font-family: var(--font-display); font-size: 17px; line-height: 1.1; text-transform: uppercase; }
-.bttco-club-story p { margin: 0; display: -webkit-box; overflow: hidden; color: var(--ink-mute); font-family: var(--font-body); font-size: 12.5px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
-.bttco-herald-feed {
+.ryozan-club-story { display: flex; flex-direction: column; gap: 7px; padding: 14px 15px; border-radius: 16px; text-align: left; cursor: pointer; }
+.ryozan-club-story > header { display: flex; align-items: baseline; gap: 8px; }
+.ryozan-club-story > header strong { flex: 1; color: #8fb89a; font-family: var(--font-btn); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
+.ryozan-club-story > header time { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 10px; }
+.ryozan-club-story h2 { margin: 0; color: var(--accent-cream); font-family: var(--font-display); font-size: 17px; line-height: 1.1; text-transform: uppercase; }
+.ryozan-club-story p { margin: 0; display: -webkit-box; overflow: hidden; color: var(--ink-mute); font-family: var(--font-body); font-size: 12.5px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.ryozan-herald-feed {
   height: 56px;
   min-height: 56px;
   max-height: 56px;
@@ -31841,32 +31841,32 @@ button.bttco-portal-empty {
 }
 /* Roomy is the only feed size tall enough to reach the tab bar, so it is the
    only one that needs trimming. 460 leaves a visible gap above the nav. */
-.bttco-herald-feed.is-roomy.is-open { height: 460px; min-height: 460px; max-height: 460px; }
-.bttco-herald-feed.is-standard.is-open { height: 320px; min-height: 320px; max-height: 320px; }
-.bttco-herald-feed.is-compacted { height: 160px; min-height: 160px; max-height: 160px; }
-.bttco-herald-feed.is-roomy.is-open,
-.bttco-herald-feed.is-standard.is-open { border-color: rgba(143, 184, 154, 0.58); box-shadow: inset 0 1px 0 rgba(226, 218, 194, 0.04), 0 18px 38px rgba(0, 0, 0, 0.24), 0 0 24px rgba(143, 184, 154, 0.06); }
-.bttco-herald-feed-heading { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 12px 13px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.bttco-herald-feed-heading:disabled { opacity: 1; cursor: default; }
-.bttco-herald-feed-heading:focus-visible { outline: 2px solid rgba(143, 184, 154, 0.72); outline-offset: -3px; }
-.bttco-herald-feed-heading > .bttco-herald-mark { width: 30px; height: 30px; color: #8fb89a; flex: 0 0 auto; }
-.bttco-herald-feed-heading > span { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 1px; }
-.bttco-herald-feed-heading small,
-.bttco-herald-feed-heading b { color: #8fb89a; font-family: var(--font-btn); font-size: 9px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
-.bttco-herald-feed-heading strong { color: var(--accent-cream); font-family: var(--font-display); font-size: 18px; line-height: 1; text-transform: uppercase; }
-.bttco-herald-feed-heading b { color: var(--ink-ghost); font-size: 8px; }
-.bttco-herald-feed-chevron { color: #8fb89a; transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
-.bttco-herald-feed.is-open .bttco-herald-feed-chevron { transform: rotate(180deg); }
-.bttco-herald-compact-notice { min-height: 76px; display: flex; align-items: center; gap: 10px; margin: 0 13px 8px; padding: 10px 12px; overflow: hidden; border: 1px solid rgba(143, 184, 154, 0.16); border-radius: 13px; background: rgba(8, 11, 9, 0.56); }
-.bttco-herald-compact-notice > .bttco-herald-mark { width: 22px; height: 22px; flex: 0 0 auto; color: #8fb89a; opacity: 0.72; }
-.bttco-herald-compact-notice > span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.bttco-herald-compact-notice strong,
-.bttco-herald-compact-notice small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bttco-herald-compact-notice strong { color: var(--accent-cream); font-family: var(--font-body); font-size: 12px; }
-.bttco-herald-compact-notice small { color: var(--ink-mute); font-family: var(--font-body); font-size: 11px; }
-.bttco-herald-feed-body { min-height: 0; display: flex; flex: 1; flex-direction: column; gap: 10px; padding: 0 13px 13px; overflow: hidden; opacity: 0; transform: translateY(-8px) scale(0.99, 0.94); transform-origin: 50% 0; pointer-events: none; transition: opacity 180ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1); }
-.bttco-herald-feed.is-open .bttco-herald-feed-body { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
-.bttco-herald-feed-tabs {
+.ryozan-herald-feed.is-roomy.is-open { height: 460px; min-height: 460px; max-height: 460px; }
+.ryozan-herald-feed.is-standard.is-open { height: 320px; min-height: 320px; max-height: 320px; }
+.ryozan-herald-feed.is-compacted { height: 160px; min-height: 160px; max-height: 160px; }
+.ryozan-herald-feed.is-roomy.is-open,
+.ryozan-herald-feed.is-standard.is-open { border-color: rgba(143, 184, 154, 0.58); box-shadow: inset 0 1px 0 rgba(226, 218, 194, 0.04), 0 18px 38px rgba(0, 0, 0, 0.24), 0 0 24px rgba(143, 184, 154, 0.06); }
+.ryozan-herald-feed-heading { width: 100%; min-height: 56px; display: flex; align-items: center; gap: 10px; padding: 12px 13px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.ryozan-herald-feed-heading:disabled { opacity: 1; cursor: default; }
+.ryozan-herald-feed-heading:focus-visible { outline: 2px solid rgba(143, 184, 154, 0.72); outline-offset: -3px; }
+.ryozan-herald-feed-heading > .ryozan-herald-mark { width: 30px; height: 30px; color: #8fb89a; flex: 0 0 auto; }
+.ryozan-herald-feed-heading > span { min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 1px; }
+.ryozan-herald-feed-heading small,
+.ryozan-herald-feed-heading b { color: #8fb89a; font-family: var(--font-btn); font-size: 9px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; }
+.ryozan-herald-feed-heading strong { color: var(--accent-cream); font-family: var(--font-display); font-size: 18px; line-height: 1; text-transform: uppercase; }
+.ryozan-herald-feed-heading b { color: var(--ink-ghost); font-size: 8px; }
+.ryozan-herald-feed-chevron { color: #8fb89a; transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1); }
+.ryozan-herald-feed.is-open .ryozan-herald-feed-chevron { transform: rotate(180deg); }
+.ryozan-herald-compact-notice { min-height: 76px; display: flex; align-items: center; gap: 10px; margin: 0 13px 8px; padding: 10px 12px; overflow: hidden; border: 1px solid rgba(143, 184, 154, 0.16); border-radius: 13px; background: rgba(8, 11, 9, 0.56); }
+.ryozan-herald-compact-notice > .ryozan-herald-mark { width: 22px; height: 22px; flex: 0 0 auto; color: #8fb89a; opacity: 0.72; }
+.ryozan-herald-compact-notice > span { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ryozan-herald-compact-notice strong,
+.ryozan-herald-compact-notice small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ryozan-herald-compact-notice strong { color: var(--accent-cream); font-family: var(--font-body); font-size: 12px; }
+.ryozan-herald-compact-notice small { color: var(--ink-mute); font-family: var(--font-body); font-size: 11px; }
+.ryozan-herald-feed-body { min-height: 0; display: flex; flex: 1; flex-direction: column; gap: 10px; padding: 0 13px 13px; overflow: hidden; opacity: 0; transform: translateY(-8px) scale(0.99, 0.94); transform-origin: 50% 0; pointer-events: none; transition: opacity 180ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1); }
+.ryozan-herald-feed.is-open .ryozan-herald-feed-body { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.ryozan-herald-feed-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
@@ -31875,7 +31875,7 @@ button.bttco-portal-empty {
   border-radius: 999px;
   background: rgba(4, 7, 5, 0.5);
 }
-.bttco-herald-feed-tabs button {
+.ryozan-herald-feed-tabs button {
   min-height: 32px;
   border: 0;
   border-radius: 999px;
@@ -31889,15 +31889,15 @@ button.bttco-portal-empty {
   text-transform: uppercase;
   transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
-.bttco-herald-feed-tabs button[aria-selected="true"] {
+.ryozan-herald-feed-tabs button[aria-selected="true"] {
   background: rgba(143, 184, 154, 0.13);
   color: #a8d8b4;
   box-shadow: inset 0 0 0 1px rgba(143, 184, 154, 0.28), 0 0 16px rgba(143, 184, 154, 0.08);
 }
-.bttco-herald-feed-tabs button:focus-visible { outline: 2px solid #8fb89a; outline-offset: 2px; }
-.bttco-herald-feed-list { display: flex; flex: 1; flex-direction: column; gap: 9px; }
-.bttco-herald-feed-chat { display: flex; flex: 1; min-height: 0; }
-.bttco-club-tool--chat.is-embedded {
+.ryozan-herald-feed-tabs button:focus-visible { outline: 2px solid #8fb89a; outline-offset: 2px; }
+.ryozan-herald-feed-list { display: flex; flex: 1; flex-direction: column; gap: 9px; }
+.ryozan-herald-feed-chat { display: flex; flex: 1; min-height: 0; }
+.ryozan-club-tool--chat.is-embedded {
   width: 100%;
   padding: 4px 1px 1px;
   border: 0;
@@ -31905,32 +31905,32 @@ button.bttco-portal-empty {
   background: transparent;
   box-shadow: none;
 }
-.bttco-herald-feed .bttco-club-story { width: 100%; color: inherit; }
-.bttco-club-story footer { display: flex; align-items: center; gap: 8px; padding-top: 2px; }
-.bttco-club-story footer span,
-.bttco-club-story footer b { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 8px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
-.bttco-club-story footer span { flex: 1; }
-.bttco-club-story footer b { color: #8fb89a; }
-.bttco-herald-feed-state { min-height: 210px; display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; }
-.bttco-herald-feed-state > .bttco-herald-mark { width: 38px; height: 38px; color: #8fb89a; }
-.bttco-herald-feed-state strong { color: var(--accent-cream); font-family: var(--font-display); font-size: 18px; text-transform: uppercase; }
-.bttco-herald-feed-state p { max-width: 260px; margin: 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 12.5px; line-height: 1.5; }
-.bttco-herald-feed-state button { min-height: 38px; padding: 0 18px; border: 1px solid rgba(143, 184, 154, 0.65); border-radius: 999px; background: rgba(143, 184, 154, 0.08); color: #9bd4aa; font-family: var(--font-btn); font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
-.bttco-herald-feed-state.is-failed > .bttco-herald-mark { opacity: 0.62; }
+.ryozan-herald-feed .ryozan-club-story { width: 100%; color: inherit; }
+.ryozan-club-story footer { display: flex; align-items: center; gap: 8px; padding-top: 2px; }
+.ryozan-club-story footer span,
+.ryozan-club-story footer b { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 8px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.ryozan-club-story footer span { flex: 1; }
+.ryozan-club-story footer b { color: #8fb89a; }
+.ryozan-herald-feed-state { min-height: 210px; display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; }
+.ryozan-herald-feed-state > .ryozan-herald-mark { width: 38px; height: 38px; color: #8fb89a; }
+.ryozan-herald-feed-state strong { color: var(--accent-cream); font-family: var(--font-display); font-size: 18px; text-transform: uppercase; }
+.ryozan-herald-feed-state p { max-width: 260px; margin: 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 12.5px; line-height: 1.5; }
+.ryozan-herald-feed-state button { min-height: 38px; padding: 0 18px; border: 1px solid rgba(143, 184, 154, 0.65); border-radius: 999px; background: rgba(143, 184, 154, 0.08); color: #9bd4aa; font-family: var(--font-btn); font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
+.ryozan-herald-feed-state.is-failed > .ryozan-herald-mark { opacity: 0.62; }
 
-.bttco-portal-skeleton {
+.ryozan-portal-skeleton {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 
-.bttco-portal-skeleton [data-slot="skeleton"] {
+.ryozan-portal-skeleton [data-slot="skeleton"] {
   background: rgba(226, 218, 194, 0.105);
   box-shadow: inset 0 1px rgba(var(--cream-rgb), 0.025);
 }
 
-.bttco-portal-skeleton__row {
+.ryozan-portal-skeleton__row {
   min-height: 60px;
   display: flex;
   align-items: center;
@@ -31941,7 +31941,7 @@ button.bttco-portal-empty {
   background: rgba(15, 17, 16, 0.68);
 }
 
-.bttco-portal-skeleton__row > span {
+.ryozan-portal-skeleton__row > span {
   min-width: 0;
   display: flex;
   flex: 1;
@@ -31949,59 +31949,59 @@ button.bttco-portal-empty {
   gap: 8px;
 }
 
-.bttco-portal-skeleton__line { width: 68%; height: 8px; }
-.bttco-portal-skeleton__line.is-title { width: 44%; height: 11px; }
-.bttco-portal-skeleton__line.is-wide { width: 92%; height: 10px; }
-.bttco-portal-skeleton__line.is-medium { width: 64%; height: 10px; }
-.bttco-portal-skeleton__pill { width: 58px; height: 30px; flex: 0 0 auto; border-radius: 999px; }
-.bttco-portal-skeleton__dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.ryozan-portal-skeleton__line { width: 68%; height: 8px; }
+.ryozan-portal-skeleton__line.is-title { width: 44%; height: 11px; }
+.ryozan-portal-skeleton__line.is-wide { width: 92%; height: 10px; }
+.ryozan-portal-skeleton__line.is-medium { width: 64%; height: 10px; }
+.ryozan-portal-skeleton__pill { width: 58px; height: 30px; flex: 0 0 auto; border-radius: 999px; }
+.ryozan-portal-skeleton__dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
 
-.bttco-portal-skeleton--profile,
-.bttco-portal-skeleton--panel {
+.ryozan-portal-skeleton--profile,
+.ryozan-portal-skeleton--panel {
   padding: 16px;
   border: 1px solid rgba(226, 218, 194, 0.1);
   border-radius: 18px;
   background: rgba(14, 16, 15, 0.78);
 }
 
-.bttco-portal-skeleton__profile-head { display: flex; align-items: center; gap: 11px; }
-.bttco-portal-skeleton__avatar { width: 54px; height: 54px; flex: 0 0 auto; border-radius: 50%; }
-.bttco-portal-skeleton__title { width: 42%; height: 20px; }
-.bttco-portal-skeleton__profile-head .bttco-portal-skeleton__pill { margin-left: auto; }
-.bttco-portal-skeleton__chips { display: flex; gap: 7px; }
-.bttco-portal-skeleton__chips > [data-slot="skeleton"] { width: 74px; height: 27px; border-radius: 999px; }
-.bttco-portal-skeleton__gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
-.bttco-portal-skeleton__gallery > [data-slot="skeleton"] { aspect-ratio: 1; border-radius: 9px; }
-.bttco-portal-skeleton__panel-body { width: 100%; min-height: 148px; margin-top: 3px; }
-.bttco-quest-body-inner > .bttco-portal-skeleton { margin-top: 3px; }
-.bttco-herald-feed .bttco-portal-skeleton__row { background: rgba(7, 10, 8, 0.54); }
+.ryozan-portal-skeleton__profile-head { display: flex; align-items: center; gap: 11px; }
+.ryozan-portal-skeleton__avatar { width: 54px; height: 54px; flex: 0 0 auto; border-radius: 50%; }
+.ryozan-portal-skeleton__title { width: 42%; height: 20px; }
+.ryozan-portal-skeleton__profile-head .ryozan-portal-skeleton__pill { margin-left: auto; }
+.ryozan-portal-skeleton__chips { display: flex; gap: 7px; }
+.ryozan-portal-skeleton__chips > [data-slot="skeleton"] { width: 74px; height: 27px; border-radius: 999px; }
+.ryozan-portal-skeleton__gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.ryozan-portal-skeleton__gallery > [data-slot="skeleton"] { aspect-ratio: 1; border-radius: 9px; }
+.ryozan-portal-skeleton__panel-body { width: 100%; min-height: 148px; margin-top: 3px; }
+.ryozan-quest-body-inner > .ryozan-portal-skeleton { margin-top: 3px; }
+.ryozan-herald-feed .ryozan-portal-skeleton__row { background: rgba(7, 10, 8, 0.54); }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-herald-mark { animation: none; }
-  .bttco-portal-skeleton [data-slot="skeleton"] { animation: none; }
-  .bttco-membership-card,
-  .bttco-membership-chevron,
-  .bttco-club-actions,
-  .bttco-club-actions-inner > button,
-  .bttco-quest-card,
-  .bttco-quest-chevron,
-  .bttco-quest-body,
-  .bttco-herald-feed,
-  .bttco-herald-feed-chevron,
-  .bttco-herald-feed-body { transition: none; }
+  .ryozan-herald-mark { animation: none; }
+  .ryozan-portal-skeleton [data-slot="skeleton"] { animation: none; }
+  .ryozan-membership-card,
+  .ryozan-membership-chevron,
+  .ryozan-club-actions,
+  .ryozan-club-actions-inner > button,
+  .ryozan-quest-card,
+  .ryozan-quest-chevron,
+  .ryozan-quest-body,
+  .ryozan-herald-feed,
+  .ryozan-herald-feed-chevron,
+  .ryozan-herald-feed-body { transition: none; }
 }
 
 @media (max-width: 720px) {
-  html[data-bttco-app-route],
-  html[data-bttco-app-route] body,
-  html[data-bttco-app-route] #root {
+  html[data-ryozan-app-route],
+  html[data-ryozan-app-route] body,
+  html[data-ryozan-app-route] #root {
     background: var(--well, #0b0c0b);
     color-scheme: dark;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
 
-  .bttco-mobile-portal-home :where(
+  .ryozan-mobile-portal-home :where(
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
     textarea,
     select
@@ -32009,7 +32009,7 @@ button.bttco-portal-empty {
     font-size: 16px !important;
   }
 
-  .app-view--portal-home .bttco-mobile-portal-home {
+  .app-view--portal-home .ryozan-mobile-portal-home {
     position: relative;
     width: 100% !important;
     margin: 0 !important;

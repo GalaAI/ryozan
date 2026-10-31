@@ -34,7 +34,7 @@ type FilterMode = 'all' | 'club' | 'guests'
 // ── Collectors Club localStorage helpers ─────────────
 
 function clubStorageKey(userId: string): string {
-  return `bttco_collectors_club_${userId}`
+  return `ryozan_collectors_club_${userId}`
 }
 
 function loadClubMembers(userId: string): Set<string> {

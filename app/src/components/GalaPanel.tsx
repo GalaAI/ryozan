@@ -308,11 +308,11 @@ function CourierWorkspaceModule({
   ]
 
   const sendSuggestion = (text: string) => {
-    window.dispatchEvent(new CustomEvent('bttco:courier-use-suggestion', { detail: { text } }))
+    window.dispatchEvent(new CustomEvent('ryozan:courier-use-suggestion', { detail: { text } }))
   }
 
   const updateNote = (note: string) => {
-    window.dispatchEvent(new CustomEvent('bttco:courier-workspace-note-change', { detail: { note } }))
+    window.dispatchEvent(new CustomEvent('ryozan:courier-workspace-note-change', { detail: { note } }))
   }
 
   return (
@@ -363,7 +363,7 @@ function CourierWorkspaceModule({
             <button
               type="button"
               className="gala-courier-action"
-              onClick={() => window.dispatchEvent(new CustomEvent('bttco:courier-save-note-context'))}
+              onClick={() => window.dispatchEvent(new CustomEvent('ryozan:courier-save-note-context'))}
             >
               Save note context
             </button>
@@ -616,8 +616,8 @@ export default function GalaPanel({ className, onClose, onCollapse, composeReque
       setCourierWorkspace(detail?.active ? detail : null)
     }
 
-    window.addEventListener('bttco:courier-workspace', handler)
-    return () => window.removeEventListener('bttco:courier-workspace', handler)
+    window.addEventListener('ryozan:courier-workspace', handler)
+    return () => window.removeEventListener('ryozan:courier-workspace', handler)
   }, [])
 
   const addGalaMessage = useCallback((text: string) => {

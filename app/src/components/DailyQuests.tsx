@@ -99,7 +99,7 @@ export default function DailyQuests() {
   const todayKey = getTodaySeed().toString()
 
   const [questSalts, setQuestSalts] = useState<[number, number, number]>(() => {
-    const saved = localStorage.getItem(`bttco_quest_salts_${todayKey}`)
+    const saved = localStorage.getItem(`ryozan_quest_salts_${todayKey}`)
     if (saved) {
       try { return JSON.parse(saved) } catch { /* fall through */ }
     }
@@ -107,7 +107,7 @@ export default function DailyQuests() {
   })
 
   const [refreshedSlots, setRefreshedSlots] = useState<Set<number>>(() => {
-    const saved = localStorage.getItem(`bttco_quest_refreshed_${todayKey}`)
+    const saved = localStorage.getItem(`ryozan_quest_refreshed_${todayKey}`)
     if (saved) {
       try { return new Set(JSON.parse(saved)) } catch { /* fall through */ }
     }
@@ -121,13 +121,13 @@ export default function DailyQuests() {
     setQuestSalts((prev) => {
       const next = [...prev] as [number, number, number]
       next[slotIndex] = prev[slotIndex] + 1000 + Math.floor(Math.random() * 500)
-      localStorage.setItem(`bttco_quest_salts_${todayKey}`, JSON.stringify(next))
+      localStorage.setItem(`ryozan_quest_salts_${todayKey}`, JSON.stringify(next))
       return next
     })
     setRefreshedSlots((prev) => {
       const next = new Set(prev)
       next.add(slotIndex)
-      localStorage.setItem(`bttco_quest_refreshed_${todayKey}`, JSON.stringify([...next]))
+      localStorage.setItem(`ryozan_quest_refreshed_${todayKey}`, JSON.stringify([...next]))
       return next
     })
   }, [refreshedSlots, todayKey])

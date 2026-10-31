@@ -38,7 +38,7 @@ function setup(messages = []) {
     if (name === 'react-dom') return { createPortal: node => node }
     if (name === './template') return { compileTemplate: () => ({ css:'', render: data => { if ('nativeThread' in data) values = data; return null } }) }
     if (name === './source-icons') return { sourceIcons:{}, sourceAgentMarks:{gala:''} }
-    if (name === '@bttco/ui') return { ChatBubble:'bubble' }
+    if (name === '@ryozan/ui') return { ChatBubble:'bubble' }
     return {}
   } })
   const props = { role:'founder',agentId:'gala',activeTab:'pit',actions:[],user:{name:'Test'},unreadCount:0,onSelectTab:()=>{},onSend:text=>sent.push(text),messages }

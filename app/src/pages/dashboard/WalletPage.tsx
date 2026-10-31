@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../../stores/auth'
-import { bttcoin, type BTTCoinTransaction, type BTTCoinWallet } from '../../lib/api'
+import { ryoCoin, type RyoCoinTransaction, type RyoCoinWallet } from '../../lib/api'
 
 const TX_TYPE_LABELS: Record<string, { label: string; color: string; sign: string }> = {
   earn: { label: 'Earned', color: 'var(--ok)', sign: '+' },
@@ -18,8 +18,8 @@ const TX_TYPE_LABELS: Record<string, { label: string; color: string; sign: strin
 
 export default function WalletPage() {
   const user = useAuthStore((s) => s.user)
-  const [wallet, setWallet] = useState<BTTCoinWallet | null>(null)
-  const [transactions, setTransactions] = useState<BTTCoinTransaction[]>([])
+  const [wallet, setWallet] = useState<RyoCoinWallet | null>(null)
+  const [transactions, setTransactions] = useState<RyoCoinTransaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [txFilter, setTxFilter] = useState<string>('all')
   const [apiAvailable, setApiAvailable] = useState(true)
@@ -27,7 +27,7 @@ export default function WalletPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const w = await bttcoin.getWallet()
+        const w = await ryoCoin.getWallet()
         setWallet(w)
         setTransactions(w.transactions || [])
       } catch {

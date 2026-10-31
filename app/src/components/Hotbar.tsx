@@ -166,7 +166,7 @@ const ALL_ACTIONS: HotbarAction[] = [
 
 const DEFAULT_SLOTS = ['aftercare', 'new-booking', 'schedule', 'message', 'clients', 'documents', 'charge', 'availability', 'portfolio']
 
-const STORAGE_KEY = 'bttco_hotbar'
+const STORAGE_KEY = 'ryozan_hotbar'
 
 function loadSlots(): string[] {
   try {

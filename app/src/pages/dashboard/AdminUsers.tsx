@@ -7,7 +7,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Button, ReceiptBlock } from '@bttco/ui'
+import { Button, ReceiptBlock } from '@ryozan/ui'
 import { users as usersApi, auth as authApi, type User, type ArtistAccountStatus } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
 import { CustomSelect } from '../../components/CustomSelect'

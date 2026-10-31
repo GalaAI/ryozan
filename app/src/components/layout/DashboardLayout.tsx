@@ -411,7 +411,7 @@ function PasswordResetBanner() {
 
 /* ── Onboarding Banner ─────────────────────────── */
 
-const ONBOARDING_DISMISS_KEY = 'bttco_onboarding_dismissed'
+const ONBOARDING_DISMISS_KEY = 'ryozan_onboarding_dismissed'
 
 function OnboardingBanner() {
   const { user } = useAuthStore()
@@ -658,8 +658,8 @@ export default function DashboardLayout() {
   // Listen for POS open event from toolkit charm
   useEffect(() => {
     const handler = () => setPosModalOpen(true)
-    window.addEventListener('bttco:open-pos', handler)
-    return () => window.removeEventListener('bttco:open-pos', handler)
+    window.addEventListener('ryozan:open-pos', handler)
+    return () => window.removeEventListener('ryozan:open-pos', handler)
   }, [])
 
   // Time-based greeting for nexus header
@@ -707,11 +707,11 @@ export default function DashboardLayout() {
       setNexusToolbarItems(Array.isArray(detail?.items) ? detail.items : [])
     }
     const clear = () => setNexusToolbarItems([])
-    window.addEventListener('bttco:nexus-toolbar-register', register)
-    window.addEventListener('bttco:nexus-toolbar-clear', clear)
+    window.addEventListener('ryozan:nexus-toolbar-register', register)
+    window.addEventListener('ryozan:nexus-toolbar-clear', clear)
     return () => {
-      window.removeEventListener('bttco:nexus-toolbar-register', register)
-      window.removeEventListener('bttco:nexus-toolbar-clear', clear)
+      window.removeEventListener('ryozan:nexus-toolbar-register', register)
+      window.removeEventListener('ryozan:nexus-toolbar-clear', clear)
     }
   }, [])
 
@@ -950,7 +950,7 @@ export default function DashboardLayout() {
                 {icons.back}
               </button>
             )}
-            <span className="nexus-bttco-label">Ryozan</span>
+            <span className="nexus-ryozan-label">Ryozan</span>
             {devModeMeta && (
               <span className={`topbar-env-chip topbar-env-chip--${devModeMeta.tone}`} title={`${devModeMeta.label} • ${devModeMeta.detail}`}>
                 <strong>{devModeMeta.label}</strong>

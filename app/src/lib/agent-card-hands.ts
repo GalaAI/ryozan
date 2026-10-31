@@ -1,4 +1,4 @@
-import type { AgentActionCard } from '@bttco/ui'
+import type { AgentActionCard } from '@ryozan/ui'
 
 export type NemotronManaPip = '⚡ Nano' | '👁️ Super-VL' | '🔥 Super' | '👑 Ultra'
 

@@ -109,9 +109,9 @@ Copy the file from `_ds/.../patches/` into `app/src/styles/` first. Type-only, s
 the risk is low — but it will visibly change the legacy dashboard's headings.
 
 **4b · `nexus-uwc.css` is a second design system inside your app.** It declares
-its own token set lifted from GalaX and does not use BTTCO tokens at all:
+its own token set lifted from GalaX and does not use Ryozan tokens at all:
 
-| `nexus-uwc.css` | Value | BTTCO equivalent |
+| `nexus-uwc.css` | Value | Ryozan equivalent |
 |---|---|---|
 | `--nuwc-accent` | `#a6885d` (GalaX gold) | `--gold` `#a67d43` |
 | `--nuwc-cream` | `#f5f0e1` | `--text` `#e8dfcf` |
@@ -123,7 +123,7 @@ its own variables, so that panel keeps the GalaX look while the rest of the app
 moves to brand. Second, the brand rule against near-pure black
 (`#121312`, green undertone, never `#000`) is broken there by design.
 
-The fix is mechanical: repoint the `--nuwc-*` block at BTTCO tokens
+The fix is mechanical: repoint the `--nuwc-*` block at Ryozan tokens
 (`--nuwc-accent: var(--gold)` and so on). One block, ~14 lines, and that panel
 joins the system. The theme presets (blood/forest/ocean/ash) can stay — they are
 a real feature, and ocean's `#63badf` is already the heritage sky.
@@ -155,7 +155,7 @@ scene.
 1. Ship what is here — tokens, fonts, field, keyframes, screens. Verify one
    screen renders.
 2. Decide on #4a (import the type patch — one line, visible change to the legacy
-   dashboard) and #4b (repoint `--nuwc-*` at BTTCO tokens so that panel stops
+   dashboard) and #4b (repoint `--nuwc-*` at Ryozan tokens so that panel stops
    being a second design system).
 3. Point assets at the CDN (#5). Mechanical, and it makes the portal look right.
 4. Build the agent endpoint (#2). Nothing in the agent layer is real until this

@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   BTTCO App: Main CSS Entry Point
+   Ryozan App: Main CSS Entry Point
    Tailwind v4 + Brand Design Tokens
    ══════════════════════════════════════════════════════ */
 
@@ -30,7 +30,7 @@ h2, h3 {
   color: var(--text);
 }
 
-/* ── App layout + infrastructure tokens (brand tokens: @bttco/ui) ── */
+/* ── App layout + infrastructure tokens (brand tokens: @ryozan/ui) ── */
 @import "./styles/app-layout.css";
 
 /* ── Shared Component Library ────────────────────────── */
@@ -82,9 +82,9 @@ body {
    translucent status-bar region. Keep the application canvas on the full
    large viewport while browser tabs continue to follow dynamic chrome. */
 @media (display-mode: standalone) {
-  html:root[data-bttco-app-route],
-  html:root[data-bttco-app-route] body,
-  html:root[data-bttco-app-route] #root {
+  html:root[data-ryozan-app-route],
+  html:root[data-ryozan-app-route] body,
+  html:root[data-ryozan-app-route] #root {
     height: 100lvh;
   }
 }
@@ -111,7 +111,7 @@ body {
   --color-panel: var(--panel);
   --color-panel-border: var(--panel-border);
 
-  /* shadcn semantic bridge mapped onto BTTCO tokens */
+  /* shadcn semantic bridge mapped onto Ryozan tokens */
   --color-background: var(--bg);
   --color-foreground: var(--text);
   --color-card: var(--panel);

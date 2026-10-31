@@ -19,21 +19,21 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children
 
     return (
-      <main className="bttco-error-boundary" role="alert">
-        <section className="bttco-error-boundary__panel">
+      <main className="ryozan-error-boundary" role="alert">
+        <section className="ryozan-error-boundary__panel">
           <h1>Something went wrong</h1>
           <p>We hit an unexpected error. Try refreshing the page.</p>
-          <div className="bttco-error-boundary__actions">
+          <div className="ryozan-error-boundary__actions">
           <button
             type="button"
-            className="bttco-error-boundary__action bttco-error-boundary__action--primary"
+            className="ryozan-error-boundary__action ryozan-error-boundary__action--primary"
             onClick={() => window.location.reload()}
           >
             Refresh Page
           </button>
           <Link
             to="/"
-            className="bttco-error-boundary__action bttco-error-boundary__action--secondary"
+            className="ryozan-error-boundary__action ryozan-error-boundary__action--secondary"
             onClick={() => this.setState({ hasError: false, error: null })}
           >
             Back Home

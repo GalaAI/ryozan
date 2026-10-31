@@ -471,7 +471,7 @@ export default function PortalPage() {
               {fromWaiver && (
                 <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: '0.25rem 0 0', lineHeight: 1.5 }}>
                   Your waiver has been submitted. Create an account to track your bookings,
-                  earn BTTcoin, and access the Collector's Club.
+                  earn RYO, and access the Collector's Club.
                 </p>
               )}
 

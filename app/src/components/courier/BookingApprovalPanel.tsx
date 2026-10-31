@@ -9,11 +9,11 @@
  * artist's Stripe Connect account is ready; otherwise the card states that the
  * email carries the deposit due without a payment link.
  *
- * Built from @bttco/ui primitives and the existing Huddl slot styles
+ * Built from @ryozan/ui primitives and the existing Huddl slot styles
  * (.bkm-collector-*), so it adds no colours, sizes or fonts.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { Button, StatusText, TextField } from '@bttco/ui'
+import { Button, StatusText, TextField } from '@ryozan/ui'
 import {
   bookings as bookingsApi,
   type Booking,

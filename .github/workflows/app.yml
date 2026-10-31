@@ -34,12 +34,12 @@ jobs:
       # diverged, npm ci would install the stale component and every later step
       # would pass against code that is not what the source says. Node stdlib
       # only, so it needs no install.
-      - name: "@bttco/ui tarball parity"
+      - name: "@ryozan/ui tarball parity"
         run: npm run check:ui-tarball
 
       - run: npm ci
 
-      # BTTCO Modern Classic: lints app/src against the source config in
+      # Ryozan Modern Classic: lints app/src against the source config in
       # packages/ui (not the installed tarball) so a config change gates on the
       # same PR that makes it. Blocking: app/src reports zero errors today.
       - name: Design-system adherence lint

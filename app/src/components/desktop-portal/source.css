@@ -2,7 +2,7 @@
    Ryozan — Neo-Ukiyo-e Relic Phosphor Colors & Type
    Speakeasy palette: blackened bg, aged gold, bone white.
    Old-school traditional tattoo flash sensibility.
-   Lifted directly from BTTCO/app/src/styles/tokens.css
+   Lifted directly from app/src/styles/tokens.css
    ══════════════════════════════════════════════════════ */
 
 /* ── Webfonts ──────────────────────────────────────── */
@@ -502,9 +502,9 @@ a:hover { color: var(--bone-white); text-decoration: none; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   BTTCO — Nexus Dashboard: Design System Type Alignment
+   Ryozan — Nexus Dashboard: Design System Type Alignment
 
-   DROP-IN PATCH for: BTTCO/app/src/styles/dashboard.css
+   DROP-IN PATCH for: app/src/styles/dashboard.css
 
    HOW TO USE:
      Option A (recommended): @import this file at the BOTTOM of
@@ -959,7 +959,7 @@ input,textarea,select,button{max-width:100%;font:inherit}
 [data-card-workshop] dl > div{display:flex;justify-content:space-between;gap:var(--space-2,.5rem);border-bottom:1px solid var(--line)}
 [data-card-workshop] dd{margin:0;color:var(--gold)}
 /* Compact composer inspired by 21st Composer Input; latest-pair display and
-   bubble scroll reuse BTTCO's ChatBubble rather than a second chat library. */
+   bubble scroll reuse Ryozan's ChatBubble rather than a second chat library. */
 [data-chat-exchange]{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;padding:var(--space-2,.5rem) var(--space-3,.75rem);gap:var(--space-2,.5rem)}
 [data-chat-exchange] button{min-height:2.75rem;padding-inline:var(--space-2,.5rem);background:var(--surface);color:var(--ink);border:1px solid var(--line-2);border-radius:var(--radius-md,.5rem);cursor:pointer}
 [data-chat-pair]{display:flex;flex-direction:column;flex:1;min-height:0;gap:var(--space-2,.5rem);overflow:hidden}

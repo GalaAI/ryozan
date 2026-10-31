@@ -1,5 +1,5 @@
 {
-  "name": "bttco-app",
+  "name": "ryozan-app",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,13 +9,12 @@
     "build": "tsc -b && vite build",
     "check:ui-tarball": "node ../scripts/check-ui-tarball.mjs",
     "lint": "node --test booking-conversion.test.mjs booking-approval.test.mjs analytics-privacy.test.mjs && eslint .",
-    "lint:adherence": "oxlint --config node_modules/@bttco/ui/.oxlintrc.json src",
+    "lint:adherence": "oxlint --config node_modules/@ryozan/ui/.oxlintrc.json src",
     "lint:adherence:src": "oxlint --config ../packages/ui/.oxlintrc.json src",
-    "lint:ui": "oxlint --config node_modules/@bttco/ui/.oxlintrc.json node_modules/@bttco/ui/src",
+    "lint:ui": "oxlint --config node_modules/@ryozan/ui/.oxlintrc.json node_modules/@ryozan/ui/src",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@bttco/ui": "file:vendor/bttco-ui-0.2.0.tgz",
     "@gsap/react": "^2.1.2",
     "@jam.dev/sdk": "^1.0.1",
     "@radix-ui/react-dialog": "^1.1.23",
@@ -24,6 +23,7 @@
     "@radix-ui/react-select": "^2.4.1",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-tabs": "^1.1.21",
+    "@ryozan/ui": "file:vendor/ryozan-ui-0.2.1.tgz",
     "@streamdown/cjk": "^1.0.4",
     "@streamdown/code": "^1.1.1",
     "@streamdown/math": "^1.0.3",

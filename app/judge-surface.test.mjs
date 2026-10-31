@@ -74,7 +74,7 @@ test('first paint is branded: fonts never block it and app routes show the seal'
     if (!html.slice(html.indexOf(link) - 12, html.indexOf(link)).includes('<noscript>')) assert.match(link, /media="print" onload="this\.media='all'"/)
   }
   assert.match(html, /<div data-static-app-shell[^>]*><img src="\/assets\/brand\/ryozan-mark\.svg"/)
-  assert.match(html, /html\[data-bttco-app-route\] \[data-static-app-shell\] \{ display: grid/)
+  assert.match(html, /html\[data-ryozan-app-route\] \[data-static-app-shell\] \{ display: grid/)
 })
 
 test('mobile Connections opens for every signed-in role, collectors over You', () => {

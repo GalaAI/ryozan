@@ -2,12 +2,12 @@ import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useStat
 import { createPortal } from 'react-dom'
 import { useGSAP } from '@gsap/react'
 import { gsap } from 'gsap'
-import { AccountMenu, ActionCard, AgentChatSheet, AgentTools, Button, HomeScreen, IconButton, PageTitle as SharedPageTitle, PortalShell, ReceiptBlock, SectionLabel, SessionPass, type AgentActionCard, type ChatLine, type ScheduleEntry, type TabItem } from '@bttco/ui'
+import { AccountMenu, ActionCard, AgentChatSheet, AgentTools, Button, HomeScreen, IconButton, PageTitle as SharedPageTitle, PortalShell, ReceiptBlock, SectionLabel, SessionPass, type AgentActionCard, type ChatLine, type ScheduleEntry, type TabItem } from '@ryozan/ui'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   artists as artistsApi,
   bookings as bookingsApi,
-  bttcoin as bttcoinApi,
+  ryoCoin as ryoCoinApi,
   broadcasts as broadcastsApi,
   club as clubApi,
   contacts as contactsApi,
@@ -76,7 +76,7 @@ interface AgentChatOrigin {
   height: number
   borderRadius: number
 }
-type ContentBrandLane = 'jwt' | 'bttco'
+type ContentBrandLane = 'jwt' | 'ryozan'
 type ContentDeskView = 'feed' | 'pipeline' | 'connectors'
 
 const HUB_UPLOAD_AGENT_CONTEXT: Partial<Record<HubWorkflowKind, string>> = {
@@ -86,7 +86,7 @@ const HUB_UPLOAD_AGENT_CONTEXT: Partial<Record<HubWorkflowKind, string>> = {
 }
 
 function PageTitle({ className, ...props }: ComponentProps<typeof SharedPageTitle>) {
-  return <SharedPageTitle {...props} className={['bttco-page-title', className].filter(Boolean).join(' ')} />
+  return <SharedPageTitle {...props} className={['ryozan-page-title', className].filter(Boolean).join(' ')} />
 }
 
 interface GenesisProfile {
@@ -205,16 +205,16 @@ type PortalSkeletonVariant = 'list' | 'thread' | 'profile' | 'quest' | 'feed' | 
 function PortalContentSkeleton({ variant, rows = 3, label }: { variant: PortalSkeletonVariant; rows?: number; label: string }) {
   if (variant === 'profile') {
     return (
-      <div data-portal-enter className="bttco-portal-skeleton bttco-portal-skeleton--profile" role="status" aria-label={label}>
-        <div className="bttco-portal-skeleton__profile-head">
-          <Skeleton className="bttco-portal-skeleton__avatar" />
-          <Skeleton className="bttco-portal-skeleton__title" />
-          <Skeleton className="bttco-portal-skeleton__pill" />
+      <div data-portal-enter className="ryozan-portal-skeleton ryozan-portal-skeleton--profile" role="status" aria-label={label}>
+        <div className="ryozan-portal-skeleton__profile-head">
+          <Skeleton className="ryozan-portal-skeleton__avatar" />
+          <Skeleton className="ryozan-portal-skeleton__title" />
+          <Skeleton className="ryozan-portal-skeleton__pill" />
         </div>
-        <Skeleton className="bttco-portal-skeleton__line is-wide" />
-        <Skeleton className="bttco-portal-skeleton__line is-medium" />
-        <div className="bttco-portal-skeleton__chips">{[0, 1, 2].map((item) => <Skeleton key={item} />)}</div>
-        <div className="bttco-portal-skeleton__gallery">{[0, 1, 2, 3].map((item) => <Skeleton key={item} />)}</div>
+        <Skeleton className="ryozan-portal-skeleton__line is-wide" />
+        <Skeleton className="ryozan-portal-skeleton__line is-medium" />
+        <div className="ryozan-portal-skeleton__chips">{[0, 1, 2].map((item) => <Skeleton key={item} />)}</div>
+        <div className="ryozan-portal-skeleton__gallery">{[0, 1, 2, 3].map((item) => <Skeleton key={item} />)}</div>
         <span className="sr-only">{label}</span>
       </div>
     )
@@ -222,26 +222,26 @@ function PortalContentSkeleton({ variant, rows = 3, label }: { variant: PortalSk
 
   if (variant === 'panel') {
     return (
-      <div data-portal-enter className="bttco-portal-skeleton bttco-portal-skeleton--panel" role="status" aria-label={label}>
-        <Skeleton className="bttco-portal-skeleton__title" />
-        <Skeleton className="bttco-portal-skeleton__line is-wide" />
-        <Skeleton className="bttco-portal-skeleton__line is-medium" />
-        <Skeleton className="bttco-portal-skeleton__panel-body" />
+      <div data-portal-enter className="ryozan-portal-skeleton ryozan-portal-skeleton--panel" role="status" aria-label={label}>
+        <Skeleton className="ryozan-portal-skeleton__title" />
+        <Skeleton className="ryozan-portal-skeleton__line is-wide" />
+        <Skeleton className="ryozan-portal-skeleton__line is-medium" />
+        <Skeleton className="ryozan-portal-skeleton__panel-body" />
         <span className="sr-only">{label}</span>
       </div>
     )
   }
 
   return (
-    <div data-portal-enter className={`bttco-portal-skeleton bttco-portal-skeleton--${variant}`} role="status" aria-label={label}>
+    <div data-portal-enter className={`ryozan-portal-skeleton ryozan-portal-skeleton--${variant}`} role="status" aria-label={label}>
       {Array.from({ length: rows }, (_, index) => (
-        <div className="bttco-portal-skeleton__row" key={index}>
-          {variant === 'thread' ? <Skeleton className="bttco-portal-skeleton__dot" /> : null}
+        <div className="ryozan-portal-skeleton__row" key={index}>
+          {variant === 'thread' ? <Skeleton className="ryozan-portal-skeleton__dot" /> : null}
           <span>
-            <Skeleton className="bttco-portal-skeleton__line is-title" />
-            <Skeleton className="bttco-portal-skeleton__line" />
+            <Skeleton className="ryozan-portal-skeleton__line is-title" />
+            <Skeleton className="ryozan-portal-skeleton__line" />
           </span>
-          {variant === 'list' || variant === 'quest' ? <Skeleton className="bttco-portal-skeleton__pill" /> : null}
+          {variant === 'list' || variant === 'quest' ? <Skeleton className="ryozan-portal-skeleton__pill" /> : null}
         </div>
       ))}
       <span className="sr-only">{label}</span>
@@ -284,7 +284,7 @@ function SpyderMark({ size = 24, strongBloom = false }: { size?: number; strongB
 }
 
 function MercuryMark() {
-  const filterId = `bttco-mercury-glow-${useId().replace(/:/g, '')}`
+  const filterId = `ryozan-mercury-glow-${useId().replace(/:/g, '')}`
   const art = () => (
     <>
       <path d="M12 3.2V20.8" />
@@ -296,7 +296,7 @@ function MercuryMark() {
   )
 
   return (
-    <span className="bttco-mercury-mark" aria-hidden="true">
+    <span className="ryozan-mercury-mark" aria-hidden="true">
       <svg viewBox="-15 -15 54 54" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <defs>
           <filter id={filterId} x="-15" y="-15" width="54" height="54" filterUnits="userSpaceOnUse">
@@ -349,7 +349,7 @@ function MercuryConversationCard({ conversation, messages }: { conversation: Con
 
   return (
     <>
-      <section className={`bttco-mercury-thread-card${context ? ' bttco-mercury-thread-card--booky' : ''}`} aria-label={`${title} Courier thread`}>
+      <section className={`ryozan-mercury-thread-card${context ? ' ryozan-mercury-thread-card--booky' : ''}`} aria-label={`${title} Courier thread`}>
         <header>
           <strong>{title}</strong>
           <small>{meta}</small>
@@ -364,7 +364,7 @@ function MercuryConversationCard({ conversation, messages }: { conversation: Con
             onOpenImage={setReferencePreview}
           />
         ) : null}
-        <div className="bttco-mercury-thread-card__messages">
+        <div className="ryozan-mercury-thread-card__messages">
           {messages.filter((message) => message.message_type !== 'booking_intake').length ? messages.filter((message) => message.message_type !== 'booking_intake').map((message) => (
             <article key={message.id}>
               <header>
@@ -373,11 +373,11 @@ function MercuryConversationCard({ conversation, messages }: { conversation: Con
               </header>
               <p>{message.content || 'Attachment or action card'}</p>
             </article>
-          )) : context ? null : <p className="bttco-mercury-thread-card__empty">No messages are in this thread yet.</p>}
+          )) : context ? null : <p className="ryozan-mercury-thread-card__empty">No messages are in this thread yet.</p>}
         </div>
       </section>
       {referencePreview ? createPortal(
-        <div className="bttco-mercury-reference-viewer" role="dialog" aria-modal="true" aria-label="Full-resolution booking reference" onClick={() => setReferencePreview(null)}>
+        <div className="ryozan-mercury-reference-viewer" role="dialog" aria-modal="true" aria-label="Full-resolution booking reference" onClick={() => setReferencePreview(null)}>
           <button type="button" onClick={() => setReferencePreview(null)} aria-label="Close reference viewer">&times;</button>
           <div onClick={(event) => event.stopPropagation()}>
             <img src={referencePreview} alt="Full-resolution booking reference" />
@@ -391,7 +391,7 @@ function MercuryConversationCard({ conversation, messages }: { conversation: Con
 
 function HeraldMark() {
   return (
-    <span className="bttco-herald-mark" aria-hidden="true">
+    <span className="ryozan-herald-mark" aria-hidden="true">
       <span />
     </span>
   )
@@ -401,7 +401,7 @@ function AccountAction({ onOpen, expanded }: { onOpen: () => void; expanded: boo
   return (
     <button
       type="button"
-      className="bttco-mobile-account"
+      className="ryozan-mobile-account"
       onClick={onOpen}
       aria-label="Profile and settings"
       aria-haspopup="menu"
@@ -465,7 +465,7 @@ function PortalMotion({
       .set(elements, { clearProps: 'transform,opacity,visibility,willChange' })
   }, { scope, dependencies: [motionKey, exiting, onExitComplete], revertOnUpdate: true })
 
-  return <div ref={scope} className="bttco-portal-page" aria-busy={exiting} style={exiting ? { pointerEvents: 'none' } : undefined}>{children}</div>
+  return <div ref={scope} className="ryozan-portal-page" aria-busy={exiting} style={exiting ? { pointerEvents: 'none' } : undefined}>{children}</div>
 }
 
 type PortalThresholdMode = 'enter' | 'exit'
@@ -495,7 +495,7 @@ function PortalThresholdTransition({ mode, onComplete }: { mode: PortalThreshold
       return
     }
 
-    const ghosts = gsap.utils.toArray<HTMLElement>('.bttco-portal-welcome-ghost', scope.current)
+    const ghosts = gsap.utils.toArray<HTMLElement>('.ryozan-portal-welcome-ghost', scope.current)
     const threshold = [mark.current, rule.current, copy.current]
     const timeline = gsap.timeline({ defaults: { overwrite: 'auto' }, onComplete: finish })
 
@@ -593,16 +593,16 @@ function PortalThresholdTransition({ mode, onComplete }: { mode: PortalThreshold
   }, { scope, dependencies: [mode, onComplete], revertOnUpdate: true })
 
   return (
-    <div ref={scope} className={`bttco-portal-welcome is-${mode}`} role="status" aria-label={mode === 'enter' ? 'Welcome to the Ryozan portal' : 'Leaving the Ryozan portal'}>
-      <div ref={field} className="bttco-portal-welcome-field" aria-hidden="true" />
-      <div ref={mark} className="bttco-portal-welcome-mark">
-        <span className="bttco-portal-welcome-halo" aria-hidden="true" />
-        <img className="bttco-portal-welcome-ghost is-left" src="/assets/brand/ryozan-mark.svg" alt="" aria-hidden="true" />
-        <img className="bttco-portal-welcome-ghost is-right" src="/assets/brand/ryozan-mark.svg" alt="" aria-hidden="true" />
-        <img className="bttco-portal-welcome-logo" src="/assets/brand/ryozan-mark.svg" alt="" />
+    <div ref={scope} className={`ryozan-portal-welcome is-${mode}`} role="status" aria-label={mode === 'enter' ? 'Welcome to the Ryozan portal' : 'Leaving the Ryozan portal'}>
+      <div ref={field} className="ryozan-portal-welcome-field" aria-hidden="true" />
+      <div ref={mark} className="ryozan-portal-welcome-mark">
+        <span className="ryozan-portal-welcome-halo" aria-hidden="true" />
+        <img className="ryozan-portal-welcome-ghost is-left" src="/assets/brand/ryozan-mark.svg" alt="" aria-hidden="true" />
+        <img className="ryozan-portal-welcome-ghost is-right" src="/assets/brand/ryozan-mark.svg" alt="" aria-hidden="true" />
+        <img className="ryozan-portal-welcome-logo" src="/assets/brand/ryozan-mark.svg" alt="" />
       </div>
-      <span ref={rule} className="bttco-portal-welcome-rule" aria-hidden="true" />
-      <div ref={copy} className="bttco-portal-welcome-copy">
+      <span ref={rule} className="ryozan-portal-welcome-rule" aria-hidden="true" />
+      <div ref={copy} className="ryozan-portal-welcome-copy">
         <strong>{mode === 'enter' ? 'Welcome Stranger' : 'Goodbye Friend'}</strong>
       </div>
     </div>
@@ -736,7 +736,7 @@ function DailyDebriefCard({ dateLabel, bookings }: { dateLabel: string; bookings
 
 function WorkflowSteps({ labels, active, accent, onSelect }: { labels: string[]; active: number; accent: string; onSelect?: (index: number) => void }) {
   return (
-    <div className="bttco-hub-workflow-steps" aria-label="Workflow progress" role={onSelect ? 'tablist' : undefined}>
+    <div className="ryozan-hub-workflow-steps" aria-label="Workflow progress" role={onSelect ? 'tablist' : undefined}>
       {labels.map((label, index) => {
         const className = index === active ? 'active' : index < active ? 'complete' : ''
         const style = { '--workflow-accent': accent } as CSSProperties
@@ -773,17 +773,17 @@ function MerchWorkflowCard({ onOpenCrafts }: { onOpenCrafts: () => void }) {
   }
 
   return (
-    <section className="bttco-hub-workflow-card bttco-hub-workflow-card--merch" aria-label="Merch upload workflow">
+    <section className="ryozan-hub-workflow-card ryozan-hub-workflow-card--merch" aria-label="Merch upload workflow">
       <header><span>Merch drop</span><strong>{step === 0 ? 'Upload the product' : step === 1 ? 'Edit the listing' : 'Enrich the details'}</strong></header>
       <WorkflowSteps labels={['Upload', 'Edit', 'Enrich']} active={step} accent="var(--accent-coral)" />
       {step === 0 ? (
-        <label className="bttco-hub-workflow-drop">
+        <label className="ryozan-hub-workflow-drop">
           <b>↑</b><strong>Shoot it or upload it</strong><span>A product photo or the artwork file.</span>
           <input type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" hidden onChange={(event) => chooseFile(event.target.files?.[0])} />
         </label>
       ) : null}
       {step === 1 ? (
-        <div className="bttco-hub-workflow-form">
+        <div className="ryozan-hub-workflow-form">
           {previewUrl ? <img src={previewUrl} alt="Merch upload preview" /> : null}
           <div>
             <input aria-label="Product name" placeholder="Product name" value={name} onChange={(event) => setName(event.target.value)} />
@@ -794,7 +794,7 @@ function MerchWorkflowCard({ onOpenCrafts }: { onOpenCrafts: () => void }) {
         </div>
       ) : null}
       {step === 2 ? (
-        <div className="bttco-hub-workflow-summary">
+        <div className="ryozan-hub-workflow-summary">
           <strong>{name}</strong>
           <span>${price}{runSize ? ` · run of ${runSize}` : ''}</span>
           <p>This draft is staged locally. Crafts persistence is not connected yet, so nothing is published or charged.</p>
@@ -820,9 +820,9 @@ function OptionsWorkflowCard({ onNavigate, isFounderOrAdmin, canManageConnection
   ]
 
   return (
-    <section className="bttco-hub-workflow-card bttco-hub-workflow-card--options" aria-label="Hub options workflow">
+    <section className="ryozan-hub-workflow-card ryozan-hub-workflow-card--options" aria-label="Hub options workflow">
       <header><span>{isFounderOrAdmin ? 'Founder tools' : 'Your controls'}</span><strong>Choose where to work</strong></header>
-      <div className="bttco-hub-option-list">
+      <div className="ryozan-hub-option-list">
         {options.map((option) => (
           <button key={option.id} type="button" disabled={!option.available} onClick={() => onNavigate(option.id)}>
             <strong>{option.label}</strong><span>{option.detail}</span>
@@ -842,8 +842,8 @@ function FlashWorkflowCard({ artistId }: { artistId?: string }) {
   ]
 
   return (
-    <section className="bttco-hub-workflow-card bttco-hub-workflow-card--flash" aria-label="Flash upload workflow">
-      <header className="bttco-flash-stage-header" aria-label="Flash workflow stage">
+    <section className="ryozan-hub-workflow-card ryozan-hub-workflow-card--flash" aria-label="Flash upload workflow">
+      <header className="ryozan-flash-stage-header" aria-label="Flash workflow stage">
         {stages.map((item) => (
           <span key={item.id} className={stage === item.id ? 'active' : ''} aria-current={stage === item.id ? 'step' : undefined}>
             {item.label}
@@ -952,9 +952,9 @@ function GalleryWorkflowCard({ initialProfile, onProfileChange }: {
   const working = uploading || removingUrl !== null
 
   return (
-    <section className="bttco-hub-workflow-card bttco-hub-workflow-card--gallery" aria-label="Live gallery workflow">
+    <section className="ryozan-hub-workflow-card ryozan-hub-workflow-card--gallery" aria-label="Live gallery workflow">
       <header><span>Artist page</span><strong>Live gallery</strong></header>
-      <label className={`bttco-hub-workflow-drop${working ? ' is-disabled' : ''}`}>
+      <label className={`ryozan-hub-workflow-drop${working ? ' is-disabled' : ''}`}>
         <b aria-hidden="true">↑</b>
         <strong>{uploading ? 'Uploading artwork' : 'Add portfolio images'}</strong>
         <span>JPG, PNG, WebP, or GIF. Select more than one if needed.</span>
@@ -969,7 +969,7 @@ function GalleryWorkflowCard({ initialProfile, onProfileChange }: {
         />
       </label>
       {images.length ? (
-        <div className="bttco-hub-gallery-manager" aria-label="Current live gallery">
+        <div className="ryozan-hub-gallery-manager" aria-label="Current live gallery">
           {images.map((url, index) => (
             <figure key={`${url}-${index}`}>
               <img src={url} alt={`${profile.name} portfolio work ${index + 1}`} />
@@ -984,18 +984,18 @@ function GalleryWorkflowCard({ initialProfile, onProfileChange }: {
             </figure>
           ))}
         </div>
-      ) : <p className="bttco-hub-gallery-manager-empty">Your live artist page has no gallery images yet.</p>}
-      <div className={`bttco-hub-gallery-notice is-${notice.kind}`} aria-live="polite">{notice.text}</div>
+      ) : <p className="ryozan-hub-gallery-manager-empty">Your live artist page has no gallery images yet.</p>}
+      <div className={`ryozan-hub-gallery-notice is-${notice.kind}`} aria-live="polite">{notice.text}</div>
     </section>
   )
 }
 
 function CodexWorkflowCard() {
   return (
-    <section className="bttco-hub-workflow-card bttco-hub-workflow-card--codex" aria-label="Codex document library workflow">
+    <section className="ryozan-hub-workflow-card ryozan-hub-workflow-card--codex" aria-label="Codex document library workflow">
       <header><span>Document library</span><strong>Codex</strong></header>
-      <div className="bttco-mobile-codex bttco-hub-workflow-codex">
-        <Suspense fallback={<div className="bttco-portal-empty-card">Loading Codex</div>}>
+      <div className="ryozan-mobile-codex ryozan-hub-workflow-codex">
+        <Suspense fallback={<div className="ryozan-portal-empty-card">Loading Codex</div>}>
           <ScrollsPanel />
         </Suspense>
       </div>
@@ -1016,14 +1016,14 @@ function ArtistPortalTour({ onClose, onOpenScroll }: { onClose: () => void; onOp
 
   useEffect(() => {
     const target = document.querySelector<HTMLElement>(current.selector)
-    target?.classList.add('bttco-artist-tour-target')
+    target?.classList.add('ryozan-artist-tour-target')
     target?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-    return () => target?.classList.remove('bttco-artist-tour-target')
+    return () => target?.classList.remove('ryozan-artist-tour-target')
   }, [current])
 
   return (
-    <div className="bttco-artist-tour-layer">
-      <aside className="bttco-artist-tour" role="dialog" aria-label="Artist portal walkthrough">
+    <div className="ryozan-artist-tour-layer">
+      <aside className="ryozan-artist-tour" role="dialog" aria-label="Artist portal walkthrough">
         <span>{current.eyebrow}</span>
         <strong>{current.title}</strong>
         <p>{current.body}</p>
@@ -1041,7 +1041,7 @@ function ArtistPortalTour({ onClose, onOpenScroll }: { onClose: () => void; onOp
 
 function MercuryThreadLoading({ title }: { title: string }) {
   return (
-    <div className="bttco-mercury-thread-loading" role="status" aria-live="polite">
+    <div className="ryozan-mercury-thread-loading" role="status" aria-live="polite">
       <MercuryMark />
       <em>Opening {title}</em>
     </div>
@@ -1053,9 +1053,9 @@ type MercuryDraftChannel = 'courier' | 'social' | 'phone'
 
 function MercuryRolodexCard({ contacts, onCompose }: { contacts: MercuryContact[]; onCompose: (contact: MercuryContact) => void }) {
   return (
-    <section className="bttco-mercury-action-card" aria-label="Courier Rolodex">
+    <section className="ryozan-mercury-action-card" aria-label="Courier Rolodex">
       <header><span>Rolodex</span><strong>Contacts</strong><small>{contacts.length} saved</small></header>
-      <div className="bttco-mercury-contact-list">
+      <div className="ryozan-mercury-contact-list">
         {contacts.length ? contacts.map((contact) => (
           <button type="button" key={contact.id} onClick={() => onCompose(contact)}>
             <i>{contact.name?.trim().charAt(0) || '?'}</i>
@@ -1078,9 +1078,9 @@ function MercuryComposeCard({ contacts, initialContact, onStart }: {
   const selected = contacts.find((contact) => contact.id === selectedId)
 
   return (
-    <section className="bttco-mercury-action-card" aria-label="Compose a Courier draft">
+    <section className="ryozan-mercury-action-card" aria-label="Compose a Courier draft">
       <header><span>New draft</span><strong>Compose</strong><small>Taisō assisted</small></header>
-      <div className="bttco-mercury-compose-channels" role="group" aria-label="Delivery service">
+      <div className="ryozan-mercury-compose-channels" role="group" aria-label="Delivery service">
         {(['courier', 'social', 'phone'] as const).map((option) => (
           <button
             type="button"
@@ -1096,14 +1096,14 @@ function MercuryComposeCard({ contacts, initialContact, onStart }: {
         ))}
       </div>
       <p>Courier drafts stay inside Ryozan. Social and phone delivery switch on once a studio connects its own Instagram, Facebook, WhatsApp or SMS account in Settings; this demo has none connected.</p>
-      <label className="bttco-mercury-compose-contact">
+      <label className="ryozan-mercury-compose-contact">
         <span>Contact</span>
         <select value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
           {contacts.map((contact) => <option value={contact.id} key={contact.id}>{contact.name || contact.email}</option>)}
         </select>
       </label>
       {!contacts.length && <p>No contacts yet. Conversations you start with the studio show up here.</p>}
-      <Button className="bttco-mercury-compose-start" variant="outline" fullWidth disabled={!selected} onClick={() => selected && onStart(selected, channel)}>
+      <Button className="ryozan-mercury-compose-start" variant="outline" fullWidth disabled={!selected} onClick={() => selected && onStart(selected, channel)}>
         Start draft
       </Button>
     </section>
@@ -1112,8 +1112,8 @@ function MercuryComposeCard({ contacts, initialContact, onStart }: {
 
 function ArtistScrollWorkflowCard({ artistName, preview = false }: { artistName: string; preview?: boolean }) {
   return (
-    <section className="bttco-spyder-artist-scroll-card" aria-label={`${artistName} Artist Scroll`}>
-      <header className="bttco-spyder-artist-scroll-card__intro">
+    <section className="ryozan-spyder-artist-scroll-card" aria-label={`${artistName} Artist Scroll`}>
+      <header className="ryozan-spyder-artist-scroll-card__intro">
         <span>Assigned by Ryozan</span>
         <strong>Complete your Artist Scroll</strong>
         <p>{preview ? 'Founder preview. Work through the exact artist experience without saving a submission.' : 'This is one continuous record bound to your account. Fill and sign it yourself, or ask Spyder below for guidance. Spyder cannot accept terms, sign, or submit on your behalf.'}</p>
@@ -1127,9 +1127,9 @@ function ArtistScrollWorkflowCard({ artistName, preview = false }: { artistName:
 
 function POSWorkflowCard({ onClose, onOpenConnections }: { onClose: () => void; onOpenConnections?: () => void }) {
   return (
-    <section className="bttco-hub-workflow-card bttco-hub-workflow-card--pos" aria-label="Point of sale workflow">
+    <section className="ryozan-hub-workflow-card ryozan-hub-workflow-card--pos" aria-label="Point of sale workflow">
       {onOpenConnections ? (
-        <button type="button" className="bttco-pos-connections-entry" onClick={onOpenConnections}>
+        <button type="button" className="ryozan-pos-connections-entry" onClick={onOpenConnections}>
           <span><strong>Stripe setup</strong><small>Connection and payout readiness</small></span>
           <b>Open Connections</b>
         </button>
@@ -1154,13 +1154,13 @@ function PortalCalendar({ bookings, nowMs, selectedDate, cueDate = null, onSelec
   const scheduledDates = new Set(bookings.map((booking) => booking.scheduled_date ?? booking.preferred_date).filter(Boolean))
 
   return (
-    <div ref={calendarRef} data-portal-calendar data-portal-enter className="bttco-books-calendar" aria-label={label}>
+    <div ref={calendarRef} data-portal-calendar data-portal-enter className="ryozan-books-calendar" aria-label={label}>
       <strong>{currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }).toUpperCase()}</strong>
-      <div className="bttco-calendar-rule" />
-      <div className="bttco-calendar-grid bttco-calendar-weekdays">
+      <div className="ryozan-calendar-rule" />
+      <div className="ryozan-calendar-grid ryozan-calendar-weekdays">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}
       </div>
-      <div className="bttco-calendar-grid">
+      <div className="ryozan-calendar-grid">
         {monthCells(currentDate).map((cell) => (
           <button
             type="button"
@@ -1208,11 +1208,11 @@ function CollectorHuddlPage({ bookings, nowMs, selectedDate, pass, onSelectDate,
         label="Choose an appointment date"
       />
       {pass ? (
-        <div data-portal-enter className="bttco-huddl-pass">
+        <div data-portal-enter className="ryozan-huddl-pass">
           <SessionPass {...pass} brand={BRAND.product.toUpperCase()} />
         </div>
       ) : (
-        <section data-portal-enter className="bttco-huddl-booking-prompt" aria-live="polite">
+        <section data-portal-enter className="ryozan-huddl-booking-prompt" aria-live="polite">
           <span>{selectedLabel}</span>
           <strong>No session pass for this date.</strong>
           <p>Want to book your next tattoo?</p>
@@ -1242,28 +1242,28 @@ function BooksPage({ bookings, loading, loadError, nowMs, selectedDate, cueDate,
     .slice(0, 3)
 
   return (
-    <section className="bttco-books-page">
+    <section className="ryozan-books-page">
       <PageTitle action={headerAction}>The Books</PageTitle>
       <PortalCalendar bookings={bookings} nowMs={nowMs} selectedDate={selectedDate} cueDate={cueDate} onSelectDate={onOpenDay} label="Shop booking calendar" />
       <SectionLabel>Booking inquiries</SectionLabel>
-      <div data-portal-enter className="bttco-portal-list">
+      <div data-portal-enter className="ryozan-portal-list">
         {loading ? <PortalContentSkeleton variant="list" label="Loading live bookings" /> : null}
-        {loadError ? <button type="button" className="bttco-portal-empty" onClick={() => window.location.reload()}>Bookings unavailable. Retry</button> : null}
-        {!loading && !loadError && queue.length === 0 ? <button type="button" className="bttco-portal-empty" onClick={onOpenBooks}>No active booking inquiries. Open books</button> : null}
+        {loadError ? <button type="button" className="ryozan-portal-empty" onClick={() => window.location.reload()}>Bookings unavailable. Retry</button> : null}
+        {!loading && !loadError && queue.length === 0 ? <button type="button" className="ryozan-portal-empty" onClick={onOpenBooks}>No active booking inquiries. Open books</button> : null}
         {!loading && !loadError ? queue.map((booking) => (
           <button
             type="button"
-            className="bttco-book-row"
+            className="ryozan-book-row"
             key={booking.id}
             data-booking-id={booking.id}
             aria-label={`Open ${bookingTitle(booking)} with Booky`}
             onClick={(event) => onOpenBooking(booking, event.currentTarget)}
           >
-            <span className="bttco-book-row__details">
+            <span className="ryozan-book-row__details">
               <strong>{bookingTitle(booking)}</strong>
               <small>{bookingSubject(booking)} · {formatWhen(booking)}</small>
             </span>
-            <span className="bttco-book-row__action" aria-hidden="true">Open</span>
+            <span className="ryozan-book-row__action" aria-hidden="true">Open</span>
           </button>
         )) : null}
       </div>
@@ -1279,16 +1279,16 @@ function CourierCommandbar({ query, onQueryChange, onOpenRolodex, onCompose, act
   actionsAvailable: boolean
 }) {
   return (
-    <div data-portal-enter className="bttco-courier-commandbar">
+    <div data-portal-enter className="ryozan-courier-commandbar">
       <label>
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" /><path d="m16 16 4 4" /></svg>
         <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search Courier" aria-label="Search Courier threads" />
         {query ? <button type="button" onClick={() => onQueryChange('')} aria-label="Clear search">×</button> : null}
       </label>
-      <IconButton className="bttco-courier-commandbar__action" label={actionsAvailable ? 'Open Rolodex' : 'Contact discovery unavailable for assistants'} onClick={onOpenRolodex} disabled={!actionsAvailable} style={!actionsAvailable ? { cursor: 'not-allowed', opacity: .45 } : undefined}>
+      <IconButton className="ryozan-courier-commandbar__action" label={actionsAvailable ? 'Open Rolodex' : 'Contact discovery unavailable for assistants'} onClick={onOpenRolodex} disabled={!actionsAvailable} style={!actionsAvailable ? { cursor: 'not-allowed', opacity: .45 } : undefined}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></svg>
       </IconButton>
-      <IconButton className="bttco-courier-commandbar__action" label={actionsAvailable ? 'Compose new message' : 'New contact conversations unavailable for assistants'} onClick={onCompose} disabled={!actionsAvailable} style={!actionsAvailable ? { cursor: 'not-allowed', opacity: .45 } : undefined}>
+      <IconButton className="ryozan-courier-commandbar__action" label={actionsAvailable ? 'Compose new message' : 'New contact conversations unavailable for assistants'} onClick={onCompose} disabled={!actionsAvailable} style={!actionsAvailable ? { cursor: 'not-allowed', opacity: .45 } : undefined}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" /></svg>
       </IconButton>
     </div>
@@ -1325,14 +1325,14 @@ function InboxPage({ conversations, state, query, onOpenConversation, onDeleteCo
   return (
     <>
       {state === 'loading' ? <PortalContentSkeleton variant="thread" rows={6} label="Loading live conversations" /> : null}
-      {state === 'failed' ? <div data-portal-enter className="bttco-portal-empty-card">Courier is unavailable right now</div> : null}
-      {state === 'ready' && conversations.length === 0 ? <div data-portal-enter className="bttco-portal-empty-card">No conversations are waiting</div> : null}
-      {state === 'ready' && conversations.length > 0 && filteredConversations.length === 0 ? <div data-portal-enter className="bttco-portal-empty-card">No Courier threads match that search</div> : null}
+      {state === 'failed' ? <div data-portal-enter className="ryozan-portal-empty-card">Courier is unavailable right now</div> : null}
+      {state === 'ready' && conversations.length === 0 ? <div data-portal-enter className="ryozan-portal-empty-card">No conversations are waiting</div> : null}
+      {state === 'ready' && conversations.length > 0 && filteredConversations.length === 0 ? <div data-portal-enter className="ryozan-portal-empty-card">No Courier threads match that search</div> : null}
       {state === 'ready' ? orderedConversations.map((conversation) => {
         const name = conversationTitle(conversation)
         return (
-          <article data-portal-enter className={`bttco-thread-row${conversation.is_unread ? ' unread' : ' read'}`} key={conversation.id}>
-            <button type="button" className="bttco-thread-row__open" onClick={(event) => onOpenConversation(conversation, event.currentTarget)}>
+          <article data-portal-enter className={`ryozan-thread-row${conversation.is_unread ? ' unread' : ' read'}`} key={conversation.id}>
+            <button type="button" className="ryozan-thread-row__open" onClick={(event) => onOpenConversation(conversation, event.currentTarget)}>
               <i />
               <span>
                 <strong>{name}</strong>
@@ -1340,7 +1340,7 @@ function InboxPage({ conversations, state, query, onOpenConversation, onDeleteCo
               </span>
               <time>{shortTime(conversation.updated_at)}</time>
             </button>
-            <span className="bttco-thread-row__actions">
+            <span className="ryozan-thread-row__actions">
               {canCreateMemory ? (
                 <IconButton label={`Create memory from ${name}`} onClick={() => onCreateMemory(conversation)}>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 8.5 8.5 3 12l5.5 3.5L12 21l3.5-5.5L21 12l-5.5-3.5Z" /><path d="M12 8v8M8 12h8" /></svg>
@@ -1438,8 +1438,8 @@ function CollectorThreadPage({
   const canSend = Boolean(draft.trim()) && !sending && state !== 'failed'
 
   return (
-    <section className="bttco-collector-thread" aria-label={`${title} conversation`}>
-      <div className="bttco-collector-thread__transcript" ref={transcriptRef}>
+    <section className="ryozan-collector-thread" aria-label={`${title} conversation`}>
+      <div className="ryozan-collector-thread__transcript" ref={transcriptRef}>
         {context ? (
           <CourierBookingInquiryCard
             booking={null}
@@ -1454,13 +1454,13 @@ function CollectorThreadPage({
         {state === 'loading' ? <PortalContentSkeleton variant="thread" rows={4} label={`Loading ${title}`} /> : null}
 
         {state === 'failed' ? (
-          <button type="button" className="bttco-portal-empty-card bttco-collector-thread__retry" onClick={onRetry}>
+          <button type="button" className="ryozan-portal-empty-card ryozan-collector-thread__retry" onClick={onRetry}>
             This conversation could not be loaded · retry
           </button>
         ) : null}
 
         {state === 'ready' && !visibleMessages.length ? (
-          <p className="bttco-collector-thread__empty">
+          <p className="ryozan-collector-thread__empty">
             No messages here yet. Yours will be the first.
           </p>
         ) : null}
@@ -1468,7 +1468,7 @@ function CollectorThreadPage({
         {state === 'ready' ? visibleMessages.map((message) => {
           const mine = Boolean(currentUserId) && message.sender_id === currentUserId
           return (
-            <article key={message.id} className={`bttco-collector-message${mine ? ' is-mine' : ''}`}>
+            <article key={message.id} className={`ryozan-collector-message${mine ? ' is-mine' : ''}`}>
               <header>
                 <strong>{mine ? 'You' : message.sender_name || 'Ryozan'}</strong>
                 <time dateTime={message.created_at}>{shortTime(message.created_at)}</time>
@@ -1480,13 +1480,13 @@ function CollectorThreadPage({
       </div>
 
       <form
-        className="bttco-collector-thread__composer"
+        className="ryozan-collector-thread__composer"
         onSubmit={(event) => {
           event.preventDefault()
           onSend()
         }}
       >
-        {sendError ? <p className="bttco-collector-thread__error" role="alert">{sendError}</p> : null}
+        {sendError ? <p className="ryozan-collector-thread__error" role="alert">{sendError}</p> : null}
         <div>
           <textarea
             ref={composerRef}
@@ -1508,7 +1508,7 @@ function CollectorThreadPage({
       </form>
 
       {referencePreview ? createPortal(
-        <div className="bttco-mercury-reference-viewer" role="dialog" aria-modal="true" aria-label="Full-resolution booking reference" onClick={() => setReferencePreview(null)}>
+        <div className="ryozan-mercury-reference-viewer" role="dialog" aria-modal="true" aria-label="Full-resolution booking reference" onClick={() => setReferencePreview(null)}>
           <button type="button" onClick={() => setReferencePreview(null)} aria-label="Close reference viewer">&times;</button>
           <div onClick={(event) => event.stopPropagation()}>
             <img src={referencePreview} alt="Full-resolution booking reference" />
@@ -1563,24 +1563,24 @@ function HubPage({ profile, state, onRetry, onOpenFlash, canUploadFlash, onOpenM
   return (
     <>
       <PageTitle action={headerAction}>Hub</PageTitle>
-      <div className="bttco-hub-actions">
-        <div data-portal-enter className={`bttco-membership-stack bttco-hub-upload-stack${uploadOpen ? ' is-open' : ''}`}>
+      <div className="ryozan-hub-actions">
+        <div data-portal-enter className={`ryozan-membership-stack ryozan-hub-upload-stack${uploadOpen ? ' is-open' : ''}`}>
           <button
             data-tour="flash"
             type="button"
-            className="bttco-hub-upload-toggle"
+            className="ryozan-hub-upload-toggle"
             aria-expanded={uploadOpen}
             aria-controls={uploadMenuId}
             onClick={() => setUploadOpen((current) => !current)}
           >
             <span><small>Publish</small><strong>+ Upload</strong></span>
             <b>Flash · Merch · Gallery</b>
-            <svg className="bttco-hub-upload-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <svg className="ryozan-hub-upload-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <path d="m4.5 7 4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <div id={uploadMenuId} className="bttco-club-actions bttco-hub-upload-menu" aria-label="Choose an upload workflow" aria-hidden={!uploadOpen}>
-            <div className="bttco-club-actions-inner">
+          <div id={uploadMenuId} className="ryozan-club-actions ryozan-hub-upload-menu" aria-label="Choose an upload workflow" aria-hidden={!uploadOpen}>
+            <div className="ryozan-club-actions-inner">
               {canUploadFlash ? <button type="button" tabIndex={uploadOpen ? 0 : -1} onClick={(event) => { setUploadOpen(false); onOpenFlash(event.currentTarget) }}><strong>Flash</strong><span>Identify · Price · Publish</span></button> : null}
               <button type="button" tabIndex={uploadOpen ? 0 : -1} onClick={(event) => { setUploadOpen(false); onOpenMerch(event.currentTarget) }}><strong>Merch</strong><span>Product · Listing · Inventory</span></button>
               <button type="button" tabIndex={uploadOpen ? 0 : -1} onClick={(event) => { setUploadOpen(false); onOpenGallery(event.currentTarget) }}><strong>Gallery</strong><span>Upload · Verify live page</span></button>
@@ -1588,27 +1588,27 @@ function HubPage({ profile, state, onRetry, onOpenFlash, canUploadFlash, onOpenM
           </div>
         </div>
         {canManageConnections ? (
-          <button data-portal-enter data-tour="connections" type="button" className="bttco-hub-codex bttco-hub-codex--connections" onClick={(event) => onOpenConnections(event.currentTarget)}>
+          <button data-portal-enter data-tour="connections" type="button" className="ryozan-hub-codex ryozan-hub-codex--connections" onClick={(event) => onOpenConnections(event.currentTarget)}>
             <strong>+Connections</strong>
             <span>Stripe · Google · Pinterest · Email</span>
           </button>
         ) : null}
         {canViewDeposits ? (
-          <button data-portal-enter type="button" className="bttco-hub-codex bttco-hub-codex--deposits" onClick={(event) => onOpenDeposits(event.currentTarget)}>
+          <button data-portal-enter type="button" className="ryozan-hub-codex ryozan-hub-codex--deposits" onClick={(event) => onOpenDeposits(event.currentTarget)}>
             <strong>+Deposits</strong>
             <span>Paid · Due · Booking history</span>
           </button>
         ) : null}
-        <button data-portal-enter data-tour="pos" type="button" className="bttco-hub-pos" onClick={(event) => onOpenPos(event.currentTarget)}>
+        <button data-portal-enter data-tour="pos" type="button" className="ryozan-hub-pos" onClick={(event) => onOpenPos(event.currentTarget)}>
           <strong>+POS</strong>
           <span>Stripe · QR · Card or cash</span>
         </button>
-        <button data-portal-enter data-tour="codex" type="button" className="bttco-hub-codex" onClick={(event) => onOpenCodex(event.currentTarget)}>
+        <button data-portal-enter data-tour="codex" type="button" className="ryozan-hub-codex" onClick={(event) => onOpenCodex(event.currentTarget)}>
           <strong>+Codex</strong>
           <span>Documents · Waivers · Scrolls</span>
         </button>
         {canManageAgents ? (
-          <button data-portal-enter type="button" className="bttco-hub-codex bttco-hub-codex--agents" onClick={onOpenAgentEvolution}>
+          <button data-portal-enter type="button" className="ryozan-hub-codex ryozan-hub-codex--agents" onClick={onOpenAgentEvolution}>
             <strong>+Agents</strong>
             <span>Bella · Gala · Phone behavior</span>
           </button>
@@ -1617,40 +1617,40 @@ function HubPage({ profile, state, onRetry, onOpenFlash, canUploadFlash, onOpenM
 
       {state === 'loading' || state === 'idle' ? <PortalContentSkeleton variant="profile" label="Loading your live artist page" /> : null}
       {state === 'failed' ? (
-        <button data-portal-enter type="button" className="bttco-portal-empty-card bttco-hub-retry" onClick={onRetry}>
+        <button data-portal-enter type="button" className="ryozan-portal-empty-card ryozan-hub-retry" onClick={onRetry}>
           Artist profile unavailable · retry
         </button>
       ) : null}
       {state === 'ready' && profile ? (
         <>
-          <section data-portal-enter data-tour="profile" className="bttco-hub-profile-card">
-            <div className="bttco-hub-profile-main">
-              <div className="bttco-hub-profile-heading">
-                <button type="button" className="bttco-hub-avatar" onClick={onEditProfile} aria-label="Edit profile icon">
+          <section data-portal-enter data-tour="profile" className="ryozan-hub-profile-card">
+            <div className="ryozan-hub-profile-main">
+              <div className="ryozan-hub-profile-heading">
+                <button type="button" className="ryozan-hub-avatar" onClick={onEditProfile} aria-label="Edit profile icon">
                   <img src={profile.avatar_url || '/assets/brand/ryozan-mark.svg'} alt="" />
                   <i aria-hidden="true">✎</i>
                 </button>
                 <h2>{profile.name}</h2>
-                <button type="button" className="bttco-hub-copy" onClick={copyPageLink}>{copied ? 'Link copied' : 'Copy link'}</button>
+                <button type="button" className="ryozan-hub-copy" onClick={copyPageLink}>{copied ? 'Link copied' : 'Copy link'}</button>
               </div>
-              <button type="button" className="bttco-hub-bio" onClick={onOpenBio}>
+              <button type="button" className="ryozan-hub-bio" onClick={onOpenBio}>
                 <span>{profile.bio || 'Add a bio to introduce your work and approach.'}</span>
                 <strong>+ Edit bio</strong>
               </button>
-              <div className="bttco-hub-specialties">
+              <div className="ryozan-hub-specialties">
                 {(profile.specialty || []).map((specialty) => <span key={specialty}>{specialty}</span>)}
                 <button type="button" onClick={onOpenSpecialties}>+ Edit</button>
               </div>
             </div>
-            <div className="bttco-hub-profile-contact">
-              <button type="button" className="bttco-hub-socials" onClick={onOpenSocials}>
+            <div className="ryozan-hub-profile-contact">
+              <button type="button" className="ryozan-hub-socials" onClick={onOpenSocials}>
                 {socials.map((social) => <i key={social.label} aria-label={social.label}>{social.tag}</i>)}
                 <span>+ Socials</span>
               </button>
             </div>
           </section>
-          <div data-portal-enter className="bttco-hub-profile-actions">
-            <button type="button" className="bttco-hub-profile-options" onClick={(event) => onOpenOptions(event.currentTarget)}>+ Options</button>
+          <div data-portal-enter className="ryozan-hub-profile-actions">
+            <button type="button" className="ryozan-hub-profile-options" onClick={(event) => onOpenOptions(event.currentTarget)}>+ Options</button>
           </div>
         </>
       ) : null}
@@ -1662,7 +1662,7 @@ function HubUnavailablePage({ headerAction }: { headerAction: ReactNode }) {
   return (
     <>
       <PageTitle action={headerAction}>Hub</PageTitle>
-      <div data-portal-enter className="bttco-portal-empty-card">
+      <div data-portal-enter className="ryozan-portal-empty-card">
         Hub publishing is available to artist, admin, and founder accounts. Books and Courier remain available for assistant work.
       </div>
     </>
@@ -1673,10 +1673,10 @@ function CodexPage({ onBack, headerAction }: { onBack: () => void; headerAction:
   return (
     <>
       <PageTitle action={headerAction}>Codex</PageTitle>
-      <button data-portal-enter type="button" className="bttco-codex-back" onClick={onBack}>
+      <button data-portal-enter type="button" className="ryozan-codex-back" onClick={onBack}>
         <span aria-hidden="true">←</span> Hub
       </button>
-      <section data-portal-enter className="bttco-mobile-codex" aria-label="Codex document library">
+      <section data-portal-enter className="ryozan-mobile-codex" aria-label="Codex document library">
         <Suspense fallback={<PortalContentSkeleton variant="panel" label="Loading Codex" />}>
           <ScrollsPanel />
         </Suspense>
@@ -1757,14 +1757,14 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
   }
 
   return (
-    <section className="bttco-club-tool bttco-club-tool--loot" aria-label="Loot inventory">
+    <section className="ryozan-club-tool ryozan-club-tool--loot" aria-label="Loot inventory">
       <header><span>Loot</span><strong>Your inventory</strong></header>
-      <div className="bttco-loot-summary">
+      <div className="ryozan-loot-summary">
         <span><b>{claimableQuests.length}</b> claimable</span>
         <span><b>{inventoryState === 'failed' ? '—' : inventory?.total_unlocks ?? claimedQuests.length}</b> collected</span>
       </div>
-      <div className="bttco-loot-cabinet">
-        <article className={`bttco-loot-preview${selectedLoot ? ' has-item' : ''}`} aria-live="polite">
+      <div className="ryozan-loot-cabinet">
+        <article className={`ryozan-loot-preview${selectedLoot ? ' has-item' : ''}`} aria-live="polite">
           <span>Selected item</span>
           <div aria-hidden="true"><i>{selectedLootGlyph}</i></div>
           <strong>{inventoryState === 'failed' ? 'Inventory unavailable' : inventoryState === 'loading' ? 'Checking inventory' : selectedLootName}</strong>
@@ -1776,9 +1776,9 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
                 ? selectedLoot.unlock_kind?.replace('_', ' ')
                 : `Slot ${selectedLootSlot + 1} · empty`}</small>
         </article>
-        <div className="bttco-loot-slot-bank">
+        <div className="ryozan-loot-slot-bank">
           <header><strong>Item slots</strong><span>{lootGrants.length}/{lootSlots.length}</span></header>
-          <div className="bttco-loot-slots" aria-label="Inventory item slots">
+          <div className="ryozan-loot-slots" aria-label="Inventory item slots">
             {lootSlots.map((loot, index) => {
               const glyph = loot?.unlock_kind === 'loot_pack' ? '▣' : loot?.unlock_kind === 'art' ? '✦' : loot?.unlock_kind === 'digital_merch' ? '◆' : '◇'
               return (
@@ -1799,7 +1799,7 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
           </div>
         </div>
       </div>
-      <div className="bttco-loot-items">
+      <div className="ryozan-loot-items">
         {quests.filter((item) => item.completed || item.claimed).slice(0, 4).map((item) => (
           <div key={item.quest.id}>
             <span aria-hidden="true">◆</span>
@@ -1811,7 +1811,7 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
             )}
           </div>
         ))}
-        {!claimableQuests.length && !claimedQuests.length && inventoryState === 'ready' ? <p className="bttco-club-tool-empty">Complete side quests to unlock rewards and collectibles.</p> : null}
+        {!claimableQuests.length && !claimedQuests.length && inventoryState === 'ready' ? <p className="ryozan-club-tool-empty">Complete side quests to unlock rewards and collectibles.</p> : null}
         {inventory?.grants.slice(0, 3).map((grant) => (
           <div key={grant.id}>
             <span aria-hidden="true">◆</span>
@@ -1828,7 +1828,7 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
         ))}
       </div>
       {activeOffer ? (
-        <div className="bttco-loot-minigame" aria-label="Tiger Draw minigame">
+        <div className="ryozan-loot-minigame" aria-label="Tiger Draw minigame">
           <strong>Tiger Draw</strong>
           <small>Pick one card. The earned drop is already sealed inside the offer.</small>
           <div>
@@ -1838,14 +1838,14 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
           </div>
         </div>
       ) : null}
-      {claimError ? <p className="bttco-club-tool-error">That reward could not be claimed. Try again.</p> : null}
+      {claimError ? <p className="ryozan-club-tool-error">That reward could not be claimed. Try again.</p> : null}
       <small>Art, digital merch, and Loot Packs collect here as off-chain ownership receipts.</small>
     </section>
   )
 }
 
 function ClubCampaignCard({ collectorId, onOpenHerald }: { collectorId: string; onOpenHerald: () => void }) {
-  const genesisStorageKey = `bttco.club.genesis.${collectorId}`
+  const genesisStorageKey = `ryozan.club.genesis.${collectorId}`
   const [genesisProfile, setGenesisProfile] = useState<GenesisProfile | null>(() => {
     try {
       const stored = window.localStorage.getItem(genesisStorageKey)
@@ -1890,24 +1890,24 @@ function ClubCampaignCard({ collectorId, onOpenHerald }: { collectorId: string; 
   }
 
   return (
-    <section className="bttco-club-tool bttco-club-tool--codex" aria-label="Campaign Codex">
+    <section className="ryozan-club-tool ryozan-club-tool--codex" aria-label="Campaign Codex">
       <header><span>Codex</span><strong>Campaign</strong></header>
       {genesisProfile ? (
-        <div className="bttco-genesis-complete">
-          <span className={`bttco-genesis-sprite is-${genesisProfile.sprite.toLowerCase()}`} aria-label={`${genesisProfile.sprite} Automaton`}>◆</span>
+        <div className="ryozan-genesis-complete">
+          <span className={`ryozan-genesis-sprite is-${genesisProfile.sprite.toLowerCase()}`} aria-label={`${genesisProfile.sprite} Automaton`}>◆</span>
           <div><small>Genesis sealed</small><strong>{genesisProfile.sprite} Automaton</strong><p>{genesisProfile.focus} path · {genesisProfile.cadence} nature</p></div>
           <button type="button" onClick={onOpenHerald}>Continue with Herald</button>
         </div>
       ) : activeGenesisQuestion ? (
-        <div className="bttco-genesis-session">
-          <span className="bttco-genesis-sprite is-gala" aria-label="Gala pixel guide">✦</span>
+        <div className="ryozan-genesis-session">
+          <span className="ryozan-genesis-sprite is-gala" aria-label="Gala pixel guide">✦</span>
           <small>Genesis {genesisStep + 1} of {genesisQuestions.length}</small>
           <strong>{activeGenesisQuestion.prompt}</strong>
           <div>{activeGenesisQuestion.options.map((option) => <button type="button" key={option} onClick={() => chooseGenesisAnswer(option)}>{option}</button>)}</div>
         </div>
       ) : (
-        <div className="bttco-genesis-locked">
-          <span className="bttco-genesis-sprite is-herald" aria-hidden="true">◆</span>
+        <div className="ryozan-genesis-locked">
+          <span className="ryozan-genesis-sprite is-herald" aria-hidden="true">◆</span>
           <div><small>Campaign locked</small><strong>Create your Genesis</strong><p>Herald introduces one private Gala session. Your answers shape a permanent Automaton guide.</p></div>
           <button type="button" onClick={() => setGenesisStep(0)}>Begin with Herald</button>
         </div>
@@ -1952,15 +1952,15 @@ function ClubChatCard({ embedded = false }: { embedded?: boolean }) {
   }
 
   return (
-    <section className={`bttco-club-tool bttco-club-tool--chat${embedded ? ' is-embedded' : ''}`} aria-label="Club Chat">
+    <section className={`ryozan-club-tool ryozan-club-tool--chat${embedded ? ' is-embedded' : ''}`} aria-label="Club Chat">
       {!embedded ? <header><span>Chat</span><strong>Club forum</strong></header> : null}
-      <div className="bttco-club-chat-compose">
+      <div className="ryozan-club-chat-compose">
         <textarea value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} placeholder="Share with the Club" maxLength={2000} rows={2} />
         <button type="button" disabled={!chatDraft.trim() || chatPosting} onClick={submitChatPost}>{chatPosting ? 'Posting' : 'Post'}</button>
       </div>
       {chatState === 'loading' ? <PortalContentSkeleton variant="thread" rows={3} label="Loading Club Chat" /> : null}
-      {chatState === 'failed' ? <button type="button" className="bttco-club-chat-retry" onClick={loadPosts}>Chat unavailable · retry</button> : null}
-      {chatState === 'ready' && chatPosts.length === 0 ? <p className="bttco-club-tool-empty">No Club posts yet.</p> : null}
+      {chatState === 'failed' ? <button type="button" className="ryozan-club-chat-retry" onClick={loadPosts}>Chat unavailable · retry</button> : null}
+      {chatState === 'ready' && chatPosts.length === 0 ? <p className="ryozan-club-tool-empty">No Club posts yet.</p> : null}
       {chatPosts.slice(0, 6).map((post) => (
         <article key={post.id}><strong>{post.author_name || 'Collector'}</strong><p>{post.body}</p><small>{shortDate(post.created_at)} · {post.likes_count} likes</small></article>
       ))}
@@ -1975,11 +1975,11 @@ const founderContentFeed: Record<ContentBrandLane, Array<{ id: string; title: st
     { id: 'jwt-painting', title: 'Monthly painting', kind: 'Long-form practice', state: 'Cadence needed', next: 'Set the monthly concept' },
     { id: 'jwt-ideas', title: 'Build and teaching ideas', kind: 'Opportunity bank', state: 'Draft only', next: 'Route research through Scout' },
   ],
-  bttco: [
-    { id: 'bttco-issue', title: 'Herald shop issue', kind: 'E-zine projection', state: 'Blueprint', next: 'Choose the collector lesson' },
-    { id: 'bttco-guild', title: 'Guild learning bulletin', kind: 'Scholar projection', state: 'Not configured', next: 'Ratify Smoku routing' },
-    { id: 'bttco-drop', title: 'Flash and shop drop', kind: 'Commerce story', state: 'Draft only', next: 'Attach approved art' },
-    { id: 'bttco-clips', title: 'Collector clips and stories', kind: 'Derivative set', state: 'Draft only', next: 'Select approved source media' },
+  ryozan: [
+    { id: 'ryozan-issue', title: 'Herald shop issue', kind: 'E-zine projection', state: 'Blueprint', next: 'Choose the collector lesson' },
+    { id: 'ryozan-guild', title: 'Guild learning bulletin', kind: 'Scholar projection', state: 'Not configured', next: 'Ratify Smoku routing' },
+    { id: 'ryozan-drop', title: 'Flash and shop drop', kind: 'Commerce story', state: 'Draft only', next: 'Attach approved art' },
+    { id: 'ryozan-clips', title: 'Collector clips and stories', kind: 'Derivative set', state: 'Draft only', next: 'Select approved source media' },
   ],
 }
 
@@ -2016,33 +2016,33 @@ function FounderHeraldContentDesk({ onBriefHerald }: { onBriefHerald: () => void
   }
 
   return (
-    <section className="bttco-club-tool bttco-founder-content" aria-label="Founder Herald content desk">
+    <section className="ryozan-club-tool ryozan-founder-content" aria-label="Founder Herald content desk">
       <header><span>Content</span><strong>Local blueprint · draft only</strong></header>
-      <div className="bttco-content-brand-tabs" aria-label="Content brand lane">
+      <div className="ryozan-content-brand-tabs" aria-label="Content brand lane">
         <button type="button" aria-pressed={brand === 'jwt'} onClick={() => selectBrand('jwt')}>JWT</button>
-        <button type="button" aria-pressed={brand === 'bttco'} onClick={() => selectBrand('bttco')}>Ryozan</button>
+        <button type="button" aria-pressed={brand === 'ryozan'} onClick={() => selectBrand('ryozan')}>Ryozan</button>
       </div>
-      <div className="bttco-content-view-tabs" aria-label="Content desk view">
+      <div className="ryozan-content-view-tabs" aria-label="Content desk view">
         {(['feed', 'pipeline', 'connectors'] as ContentDeskView[]).map((item) => (
           <button type="button" key={item} aria-pressed={view === item} onClick={() => setView(item)}>{item === 'connectors' ? 'I/O' : item}</button>
         ))}
       </div>
 
       {view === 'feed' ? (
-        <div className="bttco-content-feed">
+        <div className="ryozan-content-feed">
           {feed.map((item) => (
             <button type="button" key={item.id} aria-pressed={selected.id === item.id} onClick={() => setSelectedId(item.id)}>
               <span>{item.kind}</span><strong>{item.title}</strong><small>{item.state}</small>
             </button>
           ))}
-          <div className="bttco-content-inspector">
+          <div className="ryozan-content-inspector">
             <span>Next action</span><strong>{selected.next}</strong><small>No publishing or scheduling is enabled from this trial.</small>
           </div>
         </div>
       ) : null}
 
       {view === 'pipeline' ? (
-        <div className="bttco-content-pipeline">
+        <div className="ryozan-content-pipeline">
           {founderPipelineStages.map(([stage, owner, state], index) => (
             <div key={stage}><i>{String(index + 1).padStart(2, '0')}</i><p><strong>{stage}</strong><span>{owner}</span></p><small>{state}</small></div>
           ))}
@@ -2050,20 +2050,20 @@ function FounderHeraldContentDesk({ onBriefHerald }: { onBriefHerald: () => void
       ) : null}
 
       {view === 'connectors' ? (
-        <div className="bttco-content-connectors">
+        <div className="ryozan-content-connectors">
           {founderConnectors.map(([name, purpose, state]) => (
             <div key={name}><p><strong>{name}</strong><span>{purpose}</span></p><small>{state}</small></div>
           ))}
         </div>
       ) : null}
 
-      <button type="button" className="bttco-content-brief" onClick={onBriefHerald}>Brief Herald →</button>
+      <button type="button" className="ryozan-content-brief" onClick={onBriefHerald}>Brief Herald →</button>
       <small>JWT and Ryozan remain separate brand lanes. Collector surfaces receive approved Ryozan projections only.</small>
     </section>
   )
 }
 
-function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenClub, onOpenWorkflow, headerAction, collectorView, founderView, profileName, profileAvatar, bttcoinBalance }: {
+function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenClub, onOpenWorkflow, headerAction, collectorView, founderView, profileName, profileAvatar, ryoBalance }: {
   quests: QuestWithProgress[]
   broadcasts: BroadcastItem[]
   membership: UserMembership | null
@@ -2076,7 +2076,7 @@ function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenCl
   founderView: boolean
   profileName: string
   profileAvatar: string | null
-  bttcoinBalance: number | null
+  ryoBalance: number | null
 }) {
   const [openClubSections, setOpenClubSections] = useState<Array<'membership' | 'quests' | 'herald'>>([])
   const [heraldFeedTab, setHeraldFeedTab] = useState<'news' | 'chat'>('news')
@@ -2116,56 +2116,56 @@ function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenCl
   return (
     <>
       <PageTitle action={headerAction}>Club</PageTitle>
-      <div data-portal-enter className={`bttco-membership-stack${membershipOpen ? ' is-open' : ''}`}>
+      <div data-portal-enter className={`ryozan-membership-stack${membershipOpen ? ' is-open' : ''}`}>
           <button
             type="button"
-            className="bttco-membership-card"
+            className="ryozan-membership-card"
             aria-expanded={membershipOpen}
             aria-controls={membershipMenuId}
             onClick={() => toggleClubSection('membership')}
           >
-            <span className="bttco-membership-avatar" aria-hidden="true">
+            <span className="ryozan-membership-avatar" aria-hidden="true">
               {profileAvatar && profileAvatar !== failedProfileAvatar
                 ? <img src={profileAvatar} alt="" onError={() => setFailedProfileAvatar(profileAvatar)} />
                 : <SourceNavIcon paths={sourceIcons.profile} />}
             </span>
-            <span className="bttco-membership-copy">
+            <span className="ryozan-membership-copy">
               <span>Membership</span>
               <strong>{membershipTier}</strong>
               <small>{membershipStatus} · {membershipUsage}</small>
             </span>
-            <span className="bttco-membership-wallet">
+            <span className="ryozan-membership-wallet">
               <small>RYO</small>
-              <strong>{bttcoinBalance == null ? '—' : bttcoinBalance.toLocaleString()}</strong>
+              <strong>{ryoBalance == null ? '—' : ryoBalance.toLocaleString()}</strong>
             </span>
-            <svg className="bttco-membership-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <svg className="ryozan-membership-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
               <path d="m4.5 7 4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <div id={membershipMenuId} className="bttco-club-actions" aria-label={`${profileName} Club collection`} aria-hidden={!membershipOpen}>
-            <div className="bttco-club-actions-inner">
+          <div id={membershipMenuId} className="ryozan-club-actions" aria-label={`${profileName} Club collection`} aria-hidden={!membershipOpen}>
+            <div className="ryozan-club-actions-inner">
               <button type="button" tabIndex={membershipOpen ? 0 : -1} onClick={(event) => { closeClubSection('membership'); onOpenWorkflow('loot', event.currentTarget) }}><strong>Loot</strong><span>Rewards · Flash · Digital merch</span></button>
               <button type="button" tabIndex={membershipOpen ? 0 : -1} onClick={(event) => { closeClubSection('membership'); onOpenWorkflow('campaign', event.currentTarget) }}><strong>Codex</strong><span>Campaign · Quests · Tattoo journey</span></button>
               {founderView ? <button type="button" tabIndex={membershipOpen ? 0 : -1} onClick={(event) => { closeClubSection('membership'); onOpenWorkflow('content', event.currentTarget) }}><strong>Content</strong><span>JWT · Ryozan · Weekly engine</span></button> : null}
             </div>
           </div>
       </div>
-      <div data-portal-enter className={`bttco-quest-card${questsOpen ? ' is-open' : ''}`}>
+      <div data-portal-enter className={`ryozan-quest-card${questsOpen ? ' is-open' : ''}`}>
         <button
           type="button"
-          className="bttco-quest-toggle"
+          className="ryozan-quest-toggle"
           aria-expanded={questsOpen}
           aria-controls={questMenuId}
           onClick={() => toggleClubSection('quests')}
         >
           <strong>Side quests</strong>
           <span>{earnedXp} XP</span>
-          <svg className="bttco-quest-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <svg className="ryozan-quest-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
             <path d="m4.5 7 4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <div id={questMenuId} className="bttco-quest-body" aria-hidden={!questsOpen}>
-          <div className="bttco-quest-body-inner">
+        <div id={questMenuId} className="ryozan-quest-body" aria-hidden={!questsOpen}>
+          <div className="ryozan-quest-body-inner">
             {state === 'loading' ? <PortalContentSkeleton variant="quest" rows={4} label="Loading live quests" /> : null}
             {state === 'failed' ? <p>Club data is unavailable right now</p> : null}
             {state === 'ready' && quests.length === 0 ? <p>No active quests</p> : null}
@@ -2179,10 +2179,10 @@ function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenCl
           </div>
         </div>
       </div>
-      <section data-portal-enter className={`bttco-herald-feed ${heraldSizeClass}${heraldOpen ? ' is-open' : ''}`} aria-label="Herald newsfeed">
+      <section data-portal-enter className={`ryozan-herald-feed ${heraldSizeClass}${heraldOpen ? ' is-open' : ''}`} aria-label="Herald newsfeed">
         <button
           type="button"
-          className="bttco-herald-feed-heading"
+          className="ryozan-herald-feed-heading"
           aria-expanded={heraldOpen}
           aria-controls={heraldCompacted ? heraldMenuId : undefined}
           disabled={!heraldCompacted}
@@ -2193,12 +2193,12 @@ function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenCl
           <HeraldMark />
           <span><small>Herald</small><strong>Newsfeed</strong></span>
           <b>{heraldState === 'ready' ? `${broadcasts.length} ${broadcasts.length === 1 ? 'issue' : 'issues'}` : 'Club wire'}</b>
-          {heraldCompacted ? <svg className="bttco-herald-feed-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          {heraldCompacted ? <svg className="ryozan-herald-feed-chevron" width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
             <path d="m4.5 7 4.5 4 4.5-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg> : null}
         </button>
         {heraldCompacted ? (
-          <div className="bttco-herald-compact-notice" aria-live="polite">
+          <div className="ryozan-herald-compact-notice" aria-live="polite">
             <HeraldMark />
             <span>
               <strong>{heraldState === 'failed'
@@ -2214,20 +2214,20 @@ function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenCl
             </span>
           </div>
         ) : null}
-        <div id={heraldMenuId} className="bttco-herald-feed-body" aria-hidden={!heraldOpen} inert={!heraldOpen}>
-          <div className="bttco-herald-feed-tabs" role="tablist" aria-label="Herald newsfeed views">
+        <div id={heraldMenuId} className="ryozan-herald-feed-body" aria-hidden={!heraldOpen} inert={!heraldOpen}>
+          <div className="ryozan-herald-feed-tabs" role="tablist" aria-label="Herald newsfeed views">
             <button type="button" role="tab" tabIndex={heraldOpen ? 0 : -1} aria-selected={heraldFeedTab === 'news'} onClick={() => setHeraldFeedTab('news')}>News</button>
             <button type="button" role="tab" tabIndex={heraldOpen ? 0 : -1} aria-selected={heraldFeedTab === 'chat'} onClick={() => setHeraldFeedTab('chat')}>Chat</button>
           </div>
-          {heraldFeedTab === 'news' ? <div className="bttco-herald-feed-list" role="tabpanel" aria-label="Herald news">
+          {heraldFeedTab === 'news' ? <div className="ryozan-herald-feed-list" role="tabpanel" aria-label="Herald news">
             {heraldState === 'loading' || heraldState === 'idle' ? (
               <PortalContentSkeleton variant="feed" rows={3} label="Opening the Club wire" />
             ) : null}
             {heraldState === 'failed' ? (
-              <div className="bttco-herald-feed-state is-failed"><HeraldMark /><strong>The Club wire is unavailable</strong><p>Open Herald to ask what is waiting or try again.</p><button type="button" tabIndex={heraldOpen ? 0 : -1} onClick={onOpenClub}>Open Herald</button></div>
+              <div className="ryozan-herald-feed-state is-failed"><HeraldMark /><strong>The Club wire is unavailable</strong><p>Open Herald to ask what is waiting or try again.</p><button type="button" tabIndex={heraldOpen ? 0 : -1} onClick={onOpenClub}>Open Herald</button></div>
             ) : null}
             {heraldState === 'ready' ? broadcasts.map((item) => (
-              <button type="button" tabIndex={heraldOpen ? 0 : -1} className="bttco-club-story" key={item.id} onClick={onOpenClub}>
+              <button type="button" tabIndex={heraldOpen ? 0 : -1} className="ryozan-club-story" key={item.id} onClick={onOpenClub}>
                 <header>
                   <strong>{item.pinned ? 'Pinned · ' : ''}{item.broadcast_type || 'Club news'}</strong>
                   <time>{shortDate(item.created_at)}</time>
@@ -2238,9 +2238,9 @@ function ClubPage({ quests, broadcasts, membership, state, heraldState, onOpenCl
               </button>
             )) : null}
             {heraldState === 'ready' && broadcasts.length === 0 ? (
-              <div className="bttco-herald-feed-state"><HeraldMark /><strong>Nothing from Herald yet</strong><p>Published Club issues will appear here.</p><button type="button" tabIndex={heraldOpen ? 0 : -1} onClick={onOpenClub}>Open Herald</button></div>
+              <div className="ryozan-herald-feed-state"><HeraldMark /><strong>Nothing from Herald yet</strong><p>Published Club issues will appear here.</p><button type="button" tabIndex={heraldOpen ? 0 : -1} onClick={onOpenClub}>Open Herald</button></div>
             ) : null}
-          </div> : <div className="bttco-herald-feed-chat" role="tabpanel" aria-label="Club community conversations"><ClubChatCard embedded /></div>}
+          </div> : <div className="ryozan-herald-feed-chat" role="tabpanel" aria-label="Club community conversations"><ClubChatCard embedded /></div>}
         </div>
       </section>
     </>
@@ -2268,18 +2268,18 @@ function HubConfigurationActionCard({ target, agentName, accent, onOpenConfigura
   const augmentz = target === 'augmentz'
   return (
     <section
-      className="bttco-portal-account-settings bttco-portal-account-settings--thread bttco-hub-configuration-action"
+      className="ryozan-portal-account-settings ryozan-portal-account-settings--thread ryozan-hub-configuration-action"
       aria-label={`${augmentz ? 'Augmentz' : 'Tools'} configuration action card`}
       style={{ '--account-accent': accent } as CSSProperties}
     >
-      <header className="bttco-portal-account-settings__thread-header">
+      <header className="ryozan-portal-account-settings__thread-header">
         <span>{agentName} · Hub action</span>
         <strong>{augmentz ? 'Augmentz' : 'Tools'}</strong>
         <p>{augmentz
           ? 'Manage the services connected to commerce, workspace, storage, and shop operations.'
           : 'Manage the working surfaces for booking, communication, content, and the artist profile.'}</p>
       </header>
-      <div className="bttco-hub-configuration-action__body">
+      <div className="ryozan-hub-configuration-action__body">
         {(augmentz
           ? [
               ['Commerce', 'Clover · Mercury + Plaid'],
@@ -2294,7 +2294,7 @@ function HubConfigurationActionCard({ target, agentName, accent, onOpenConfigura
         ).map(([label, value]) => (
           <div key={label}><span>{label}</span><strong>{value}</strong></div>
         ))}
-        <button className="bttco-portal-account-settings__save" type="button" onClick={onOpenConfiguration}>
+        <button className="ryozan-portal-account-settings__save" type="button" onClick={onOpenConfiguration}>
           Open {augmentz ? 'Augmentz' : 'Tools'} configuration
         </button>
       </div>
@@ -2338,17 +2338,17 @@ function AccountSettingsActionCard({ agentName, accent }: AccountSettingsActionC
 
   return (
     <section
-      className="bttco-portal-account-settings bttco-portal-account-settings--thread"
+      className="ryozan-portal-account-settings ryozan-portal-account-settings--thread"
       aria-label="Account settings action card"
       style={{ '--account-accent': accent } as CSSProperties}
     >
-      <header className="bttco-portal-account-settings__thread-header">
+      <header className="ryozan-portal-account-settings__thread-header">
         <span>{agentName} · account action</span>
         <strong>Account settings</strong>
         <p>Name and contact preferences save to your Ryozan account.</p>
       </header>
       <form onSubmit={saveSettings}>
-        <label className="bttco-portal-account-settings__field">
+        <label className="ryozan-portal-account-settings__field">
           <span>Display name</span>
           <input
             type="text"
@@ -2361,11 +2361,11 @@ function AccountSettingsActionCard({ agentName, accent }: AccountSettingsActionC
             required
           />
         </label>
-        <div className="bttco-portal-account-settings__facts" aria-label="Account facts">
+        <div className="ryozan-portal-account-settings__facts" aria-label="Account facts">
           <div><span>Role</span><strong>{roleLabel}</strong></div>
           <div><span>Member since</span><strong>{memberSince}</strong></div>
         </div>
-        <label className="bttco-portal-account-settings__consent">
+        <label className="ryozan-portal-account-settings__consent">
           <input
             type="checkbox"
             checked={marketingDraft}
@@ -2376,10 +2376,10 @@ function AccountSettingsActionCard({ agentName, accent }: AccountSettingsActionC
           />
           <span><strong>Receive marketing emails</strong><small>Shop news, flash drops, and member updates.</small></span>
         </label>
-        <button className="bttco-portal-account-settings__save" type="submit" disabled={!nameDraft.trim() || saveState === 'saving'}>
+        <button className="ryozan-portal-account-settings__save" type="submit" disabled={!nameDraft.trim() || saveState === 'saving'}>
           {saveState === 'saving' ? 'Saving…' : 'Save account'}
         </button>
-        <p className={`bttco-portal-account-settings__status is-${saveState}`} aria-live="polite">
+        <p className={`ryozan-portal-account-settings__status is-${saveState}`} aria-live="polite">
           {saveState === 'saved' ? 'Account updated.' : saveState === 'failed' ? 'Could not save. Try again.' : ''}
         </p>
       </form>
@@ -2394,7 +2394,7 @@ function PortalViewportDebug({ enabled }: { enabled: boolean }) {
     if (!enabled) return
     const selectors = [
       'html', 'body', '#root', '.app-view--portal-home', '.main-area',
-      '.dash-content', '.nexus-body', '.nexus-canvas', '.bttco-mobile-portal-home',
+      '.dash-content', '.nexus-body', '.nexus-canvas', '.ryozan-mobile-portal-home',
       'nav[aria-label="Portal navigation"]',
     ]
     const update = () => {
@@ -2460,8 +2460,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   const artistScrollEligible = ['artist', 'admin', 'founder'].includes(role)
     && ['artist', 'admin', 'founder'].includes(user?.role ?? '')
   const forceArtistTour = initialSearchParams.get('tour') === '1'
-  const welcomeSessionKey = `bttco.portal.welcome.v1:${user?.id ?? role}`
-  const artistTourKey = `bttco.artist-tour.v1:${user?.id ?? role}`
+  const welcomeSessionKey = `ryozan.portal.welcome.v1:${user?.id ?? role}`
+  const artistTourKey = `ryozan.artist-tour.v1:${user?.id ?? role}`
   const availablePortalTabs = isCollector
     ? ['home', 'wall', 'table', 'club', 'you']
     : ['home', 'books', 'table', 'hub', 'club']
@@ -2478,7 +2478,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   const [questRows, setQuestRows] = useState<QuestWithProgress[]>([])
   const [clubRows, setClubRows] = useState<BroadcastItem[]>([])
   const [membership, setMembership] = useState<UserMembership | null>(null)
-  const [bttcoinBalance, setBttcoinBalance] = useState<number | null>(user?.bttcoin_balance ?? null)
+  const [ryoBalance, setRyoBalance] = useState<number | null>(user?.bttcoin_balance ?? null)
   const [profileState, setProfileState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
   const [artistProfile, setArtistProfile] = useState<ArtistDetail | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -2531,7 +2531,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const candidate = explicitAnchor ?? focused
     const insidePortal = Boolean(candidate && portalRootRef.current?.contains(candidate))
-    const insideOpenPanel = Boolean(candidate?.closest('.bttco-agent-chat-sheet'))
+    const insideOpenPanel = Boolean(candidate?.closest('.ryozan-agent-chat-sheet'))
     if (!candidate || !insidePortal || insideOpenPanel) {
       agentChatOriginRef.current = null
       setAgentChatLaunch('direct')
@@ -2881,7 +2881,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
     if (clubState !== 'idle') return
     setClubState('loading')
     setHeraldState('loading')
-    Promise.allSettled([questsApi.list(), broadcastsApi.list(10), usersApi.membership(), bttcoinApi.getWallet()])
+    Promise.allSettled([questsApi.list(), broadcastsApi.list(10), usersApi.membership(), ryoCoinApi.getWallet()])
       .then(([questResult, broadcastResult, membershipResult, walletResult]) => {
         if (questResult.status === 'fulfilled') setQuestRows(questResult.value.quests)
         if (broadcastResult.status === 'fulfilled') {
@@ -2891,14 +2891,14 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
           setHeraldState('failed')
         }
         if (membershipResult.status === 'fulfilled') setMembership(membershipResult.value)
-        if (walletResult.status === 'fulfilled') setBttcoinBalance(walletResult.value.balance)
+        if (walletResult.status === 'fulfilled') setRyoBalance(walletResult.value.balance)
         setClubState([questResult, broadcastResult, membershipResult].some((result) => result.status === 'fulfilled') ? 'ready' : 'failed')
       })
   }, [clubState])
 
   const claimClubQuest = useCallback(async (questId: string) => {
     const result = await questsApi.claim(questId)
-    setBttcoinBalance(result.new_bttcoin_balance)
+    setRyoBalance(result.new_bttcoin_balance)
     setQuestRows((rows) => rows.map((item) => (
       item.quest.id === questId
         ? { ...item, claimed: true, claimed_at: new Date().toISOString() }
@@ -3597,11 +3597,11 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
     return {
       ...line,
       body: (
-        <span className="bttco-agent-message-copy" aria-label={line.body}>
+        <span className="ryozan-agent-message-copy" aria-label={line.body}>
           <span aria-hidden="true">
             {words.map((word, index) => (
               <span key={`${line.id}-${index}`}>
-                <span className="bttco-agent-message-word">{word}</span>
+                <span className="ryozan-agent-message-word">{word}</span>
                 {index < words.length - 1 ? ' ' : null}
               </span>
             ))}
@@ -3735,17 +3735,17 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   useGSAP((_context, contextSafe) => {
     if (!agentChatOpen || agentChatClosing) return
     const root = portalRootRef.current
-    const sheet = root?.querySelector<HTMLElement>('.bttco-agent-chat-sheet')
+    const sheet = root?.querySelector<HTMLElement>('.ryozan-agent-chat-sheet')
     if (!root || !sheet) return
 
-    const header = sheet.querySelector<HTMLElement>('.bttco-agent-chat-header')
-    const scrim = root.querySelector<HTMLElement>('.bttco-agent-chat-scrim')
+    const header = sheet.querySelector<HTMLElement>('.ryozan-agent-chat-header')
+    const scrim = root.querySelector<HTMLElement>('.ryozan-agent-chat-scrim')
     const fab = root.querySelector<HTMLElement>(`button[aria-label="Open ${agent.name} chat"]`)
     const navigation = root.querySelector<HTMLElement>('nav[aria-label="Portal navigation"]')
-    const lines = gsap.utils.toArray<HTMLElement>('.bttco-agent-chat-line', sheet)
-    const messageWords = gsap.utils.toArray<HTMLElement>('.bttco-agent-message-word', sheet)
+    const lines = gsap.utils.toArray<HTMLElement>('.ryozan-agent-chat-line', sheet)
+    const messageWords = gsap.utils.toArray<HTMLElement>('.ryozan-agent-message-word', sheet)
     const stageContent = gsap.utils.toArray<HTMLElement>(
-      '.bttco-agent-chat-thread, .bttco-agent-chat-floating-action, .bttco-agent-chat-dock, .bttco-agent-chat-composer',
+      '.ryozan-agent-chat-thread, .ryozan-agent-chat-floating-action, .ryozan-agent-chat-dock, .ryozan-agent-chat-composer',
       sheet,
     )
     const sheetRect = sheet.getBoundingClientRect()
@@ -3866,15 +3866,15 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   useGSAP((_context, contextSafe) => {
     if (!agentChatOpen || !agentChatClosing) return
     const root = portalRootRef.current
-    const sheet = root?.querySelector<HTMLElement>('.bttco-agent-chat-sheet')
+    const sheet = root?.querySelector<HTMLElement>('.ryozan-agent-chat-sheet')
     if (!root || !sheet) return
 
-    const header = sheet.querySelector<HTMLElement>('.bttco-agent-chat-header')
-    const scrim = root.querySelector<HTMLElement>('.bttco-agent-chat-scrim')
+    const header = sheet.querySelector<HTMLElement>('.ryozan-agent-chat-header')
+    const scrim = root.querySelector<HTMLElement>('.ryozan-agent-chat-scrim')
     const fab = root.querySelector<HTMLElement>(`button[aria-label="Open ${agent.name} chat"]`)
     const navigation = root.querySelector<HTMLElement>('nav[aria-label="Portal navigation"]')
     const stageContent = gsap.utils.toArray<HTMLElement>(
-      '.bttco-agent-chat-thread, .bttco-agent-chat-floating-action, .bttco-agent-chat-dock, .bttco-agent-chat-composer',
+      '.ryozan-agent-chat-thread, .ryozan-agent-chat-floating-action, .ryozan-agent-chat-dock, .ryozan-agent-chat-composer',
       sheet,
     )
     const sheetRect = sheet.getBoundingClientRect()
@@ -3956,17 +3956,17 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
 
   useGSAP(() => {
     if (!agentChatOpen || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const sheet = portalRootRef.current?.querySelector<HTMLElement>('.bttco-agent-chat-sheet')
+    const sheet = portalRootRef.current?.querySelector<HTMLElement>('.ryozan-agent-chat-sheet')
     if (!sheet) return
 
     const stateSelector = [
-      '.bttco-agent-chat-line',
-      '.bttco-agent-tool-layer',
-      '.bttco-agent-tools > div:last-child',
-      '.bttco-hub-workflow-drop',
-      '.bttco-hub-workflow-form',
-      '.bttco-hub-workflow-summary',
-      '.bttco-hub-option-list',
+      '.ryozan-agent-chat-line',
+      '.ryozan-agent-tool-layer',
+      '.ryozan-agent-tools > div:last-child',
+      '.ryozan-hub-workflow-drop',
+      '.ryozan-hub-workflow-form',
+      '.ryozan-hub-workflow-summary',
+      '.ryozan-hub-option-list',
       '.flash-sheets-view',
       '.flash-review-view',
     ].join(',')
@@ -3993,8 +3993,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
         clearProps: 'transform,opacity,visibility,willChange',
       })
       tweens.push(tween)
-      if (element.matches('.bttco-agent-chat-line')) {
-        const words = gsap.utils.toArray<HTMLElement>('.bttco-agent-message-word', element)
+      if (element.matches('.ryozan-agent-chat-line')) {
+        const words = gsap.utils.toArray<HTMLElement>('.ryozan-agent-message-word', element)
         if (words.length) {
           tweens.push(gsap.fromTo(words, {
             y: 7,
@@ -4039,10 +4039,10 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
 
   useGSAP(() => {
     if (!agentChatOpen || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const sheet = portalRootRef.current?.querySelector<HTMLElement>('.bttco-agent-chat-sheet')
+    const sheet = portalRootRef.current?.querySelector<HTMLElement>('.ryozan-agent-chat-sheet')
     if (!sheet) return
 
-    const thinkingMark = sheet.querySelector<HTMLElement>('.bttco-agent-thinking-mark')
+    const thinkingMark = sheet.querySelector<HTMLElement>('.ryozan-agent-thinking-mark')
     if (agentChatWorking && thinkingMark) {
       const timeline = gsap.timeline({ repeat: -1, defaults: { overwrite: 'auto' } })
         .set(thinkingMark, { transformOrigin: '50% 50%', willChange: 'transform,filter' })
@@ -4080,12 +4080,12 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
 
   useGSAP(() => {
     if (!agentToolsOpen || !agentToolsClosing) return
-    const tools = portalRootRef.current?.querySelector<HTMLElement>('.bttco-agent-tools')
+    const tools = portalRootRef.current?.querySelector<HTMLElement>('.ryozan-agent-tools')
     if (!tools) {
       finalizeAgentToolsClose()
       return
     }
-    const layer = tools.querySelector<HTMLElement>('.bttco-agent-tool-layer')
+    const layer = tools.querySelector<HTMLElement>('.ryozan-agent-tool-layer')
     const tabs = tools.querySelector<HTMLElement>(':scope > div:last-child')
     const targets = [layer, tabs].filter((target): target is HTMLElement => Boolean(target))
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !targets.length) {
@@ -4397,7 +4397,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
       from: 'agent',
       presentation: 'card',
       body: (
-        <section className="bttco-booky-booking-card" aria-label={`${bookingTitle(booking)} booking inquiry`}>
+        <section className="ryozan-booky-booking-card" aria-label={`${bookingTitle(booking)} booking inquiry`}>
           <CourierBookingInquiryCard
             booking={booking}
             context={context}
@@ -4577,7 +4577,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
     setPendingTab(null)
     navigate(`${ROUTES.DASHBOARD}?portal=${encodeURIComponent(nextTab)}`, { replace: true })
     window.requestAnimationFrame(() => {
-      portalRootRef.current?.querySelector<HTMLElement>('.bttco-portal-scroll')?.scrollTo({ top: 0 })
+      portalRootRef.current?.querySelector<HTMLElement>('.ryozan-portal-scroll')?.scrollTo({ top: 0 })
     })
   }, [navigate, pendingTab])
 
@@ -4603,7 +4603,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
       setActiveTab(id)
       navigate(`${ROUTES.DASHBOARD}?portal=${encodeURIComponent(id)}`, { replace: true })
       window.requestAnimationFrame(() => {
-        portalRootRef.current?.querySelector<HTMLElement>('.bttco-portal-scroll')?.scrollTo({ top: 0 })
+        portalRootRef.current?.querySelector<HTMLElement>('.ryozan-portal-scroll')?.scrollTo({ top: 0 })
       })
       return
     }
@@ -4639,7 +4639,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
     page = (
       <>
         <PageTitle action={accountAction}>Shop</PageTitle>
-        <div className="bttco-collector-shop-links" data-portal-enter>
+        <div className="ryozan-collector-shop-links" data-portal-enter>
           <span>Flash from the card table</span>
         </div>
         <Suspense fallback={<PortalContentSkeleton variant="panel" label="Loading the shop" />}>
@@ -4752,12 +4752,12 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
         founderView={user?.role === 'founder' && !isCollector}
         profileName={user?.name || 'Ryozan member'}
         profileAvatar={user?.avatar_url ?? null}
-        bttcoinBalance={bttcoinBalance}
+        ryoBalance={ryoBalance}
       />
     )
   } else {
     page = (
-      <div className="bttco-home-screen">
+      <div className="ryozan-home-screen">
         <HomeScreen
           role={isCollector ? 'collector' : 'staff'}
           title="Home"
@@ -4821,13 +4821,13 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   const accountOverlay = accountOpen ? (
     <>
       <div
-        className="bttco-account-menu-scrim"
+        className="ryozan-account-menu-scrim"
         aria-hidden="true"
         onClick={closeAccount}
       />
-      <div ref={accountMenuRef} className="bttco-account-menu-position">
+      <div ref={accountMenuRef} className="ryozan-account-menu-position">
         <AccountMenu
-          className="bttco-account-menu"
+          className="ryozan-account-menu"
           userName={user?.name || 'Ryozan member'}
           roleLabel={roleLabels[realRole]}
           avatarSrc={user?.avatar_url || '/assets/brand/ryozan-mark.svg'}
@@ -4842,8 +4842,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
         >
           {user?.role === 'founder' ? (
             <>
-              <span className="bttco-account-menu-view-label">View as · founder tool</span>
-              <div className="bttco-account-menu-view-roles">
+              <span className="ryozan-account-menu-view-label">View as · founder tool</span>
+              <div className="ryozan-account-menu-view-roles">
                 {viewRoles.map(({ label, mode }) => {
                   const selected = viewAs === mode
                   return (
@@ -4867,7 +4867,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
   ) : null
 
   return (
-    <div ref={portalRootRef} className={`bttco-mobile-portal-home${collectorThread ? ' has-courier-thread' : ''}`}>
+    <div ref={portalRootRef} className={`ryozan-mobile-portal-home${collectorThread ? ' has-courier-thread' : ''}`}>
       <PortalViewportDebug enabled={viewportDebug} />
       {/* The enter threshold used to play here, which meant every login showed
           "Welcome Stranger" twice: once from LoginGate's LogoLoader on the way
@@ -4887,8 +4887,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
         onOpenAgent={openPageAgent}
         header={activeTab === 'table' ? (
           collectorThread ? (
-            <div className="bttco-collector-thread-bar">
-              <button type="button" className="bttco-collector-thread-bar__back" onClick={closeCollectorThread}>
+            <div className="ryozan-collector-thread-bar">
+              <button type="button" className="ryozan-collector-thread-bar__back" onClick={closeCollectorThread}>
                 <span aria-hidden="true">←</span> Inbox
               </button>
               <span>

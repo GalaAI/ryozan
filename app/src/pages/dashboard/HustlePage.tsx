@@ -962,7 +962,7 @@ export default function HustlePage() {
                           </select>
                         </label>
                       )}
-                      <button onClick={() => window.dispatchEvent(new CustomEvent('bttco:open-pos'))}>Open POS</button>
+                      <button onClick={() => window.dispatchEvent(new CustomEvent('ryozan:open-pos'))}>Open POS</button>
                       <button onClick={handleEconDiagnostics}>{econLoading ? 'Checking rails' : 'Check rails live'}</button>
                       <button onClick={handleEconSyncAll}>{econLoading ? 'Syncing rails' : 'Sync ready rails'}</button>
                       <button onClick={openArtistConnections}>Open artist Connections</button>

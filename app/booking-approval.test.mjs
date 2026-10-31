@@ -37,7 +37,7 @@ function loadPanel() {
   const panel = transpile('./src/components/courier/BookingApprovalPanel.tsx', {
     require: (name) => {
       if (name === 'react' || name === 'react/jsx-runtime') return nativeRequire(name)
-      if (name === '@bttco/ui') return ui
+      if (name === '@ryozan/ui') return ui
       if (name === '../../lib/api') return api
       if (name === '../../lib/format') return format
       return {}

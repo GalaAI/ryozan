@@ -167,7 +167,7 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route index element={<Suspended><PublicHome /></Suspended>} />
         {/* Booking requests use the signed-in booking page. The inherited standalone
-            booking canon was BTTCO-owned and is not part of Ryozan. */}
+            booking canon belonged to the legacy studio app and is not part of Ryozan. */}
         {['book/*', 'ask', 'booking', 'bookings', 'appointment', 'appointments', 'consultation', 'inquiry'].map(path => (
           <Route key={path} path={path} element={<Navigate to="/dashboard/book" replace />} />
         ))}

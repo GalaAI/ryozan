@@ -95,7 +95,7 @@ function isPdfType(mime: string): boolean {
   return mime === 'application/pdf'
 }
 
-const RECENTLY_VIEWED_KEY = 'bttco_ref_recently_viewed'
+const RECENTLY_VIEWED_KEY = 'ryozan_ref_recently_viewed'
 
 function getStoredRecentlyViewed(): string[] {
   try {

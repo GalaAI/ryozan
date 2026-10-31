@@ -1,5 +1,5 @@
 /**
- * BTTCO Service Worker — handles push notifications.
+ * Ryozan Service Worker — handles push notifications.
  *
  * - Displays push notifications with title, body, icon from payload
  * - Navigates to data.url on notification click
@@ -36,7 +36,7 @@ self.addEventListener('push', (event) => {
     icon: payload.icon || '/assets/images/logo-icon.png',
     badge: '/assets/images/logo-icon.png',
     data: payload.data || {},
-    tag: payload.tag || 'bttco-notification',
+    tag: payload.tag || 'ryozan-notification',
     renotify: true,
     vibrate: [200, 100, 200],
   }

@@ -11,7 +11,7 @@ export function deckMagnification(center: number, pointer: number | null, reduce
 }
 
 export interface DesktopDeckAction {
-  shell?: import('@bttco/ui').ActionCardShell
+  shell?: import('@ryozan/ui').ActionCardShell
   id: string
   title: string
   description: string

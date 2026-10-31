@@ -1,8 +1,8 @@
-# @bttco/ui
+# @ryozan/ui
 
 ## The one rule
 
-**Consumers import from `@bttco/ui`. Nobody authors new UI components.**
+**Consumers import from `@ryozan/ui`. Nobody authors new UI components.**
 
 If a screen needs an element this package does not export, that element has
 not been designed yet. Raise it and wait. Do not write a local component, do
@@ -13,7 +13,7 @@ Corollaries:
 
 - No hex values, no px literals in app code. Use `token.*` or `var(--*)`.
 - No new fonts. The stack is fixed (see `fonts/fonts.css` and CONFLICTS.md #4).
-- No component internals imports — `@bttco/ui` only. The lint config enforces this.
+- No component internals imports — `@ryozan/ui` only. The lint config enforces this.
 - Adjusting a component means changing it *here*, once, with the design owner's
   sign-off — never at the call site.
 
@@ -26,12 +26,12 @@ a complete working phone screen.
 ## Install
 
 `app/` does not consume this folder as a workspace. It installs a committed
-tarball, `app/vendor/bttco-ui-<version>.tgz`. Editing `src/` here therefore
+tarball, `app/vendor/ryozan-ui-<version>.tgz`. Editing `src/` here therefore
 changes nothing in the app until you repack **and** relock:
 
 ```bash
 cd packages/ui && npm run pack:app
-cd ../../app && npm install --package-lock-only "@bttco/ui@file:vendor/bttco-ui-<version>.tgz"
+cd ../../app && npm install --package-lock-only "@ryozan/ui@file:vendor/ryozan-ui-<version>.tgz"
 ```
 
 Read **[docs/release/UI_TARBALL_VENDORING.md](../../docs/release/UI_TARBALL_VENDORING.md)**
@@ -42,9 +42,9 @@ fails when the two have drifted.
 Then, in the app shell, in this order:
 
 ```ts
-import '@bttco/ui/fonts.css';   // KC, Suti, Aero Wolves faces
-import '@bttco/ui/tokens.css';       // the token source
-import '@bttco/ui/scene-compat.css'; // scene token vocabulary — REQUIRED
+import '@ryozan/ui/fonts.css';   // KC, Suti, Aero Wolves faces
+import '@ryozan/ui/tokens.css';       // the token source
+import '@ryozan/ui/scene-compat.css'; // scene token vocabulary — REQUIRED
 import './app.css';                  // your app styles, last
 ```
 
@@ -54,7 +54,7 @@ are not vendored — load them in the shell's `<head>`.
 ## Use
 
 ```tsx
-import { Panel, SessionPass, Button, Chip, ChipGroup, token } from '@bttco/ui';
+import { Panel, SessionPass, Button, Chip, ChipGroup, token } from '@ryozan/ui';
 
 <SessionPass
   eyebrow="Session pass"
@@ -78,7 +78,7 @@ your `mode` value. Components carry no page layout and no breakpoints.
 ## Lint
 
 ```bash
-pnpm --filter @bttco/ui lint
+pnpm --filter @ryozan/ui lint
 ```
 
 `.oxlintrc.json` is the design system's adherence config, carried over

@@ -100,10 +100,10 @@ class ArtistConnectionsFrontendTests(unittest.TestCase):
         self.assertIn("Stripe · Google · Pinterest · Email", self.portal)
 
     def test_connections_controls_are_phone_sized_and_pos_is_a_handoff(self):
-        self.assertIn(".bttco-artist-connections", self.styles)
-        self.assertIn(".bttco-artist-connection__copy > button", self.styles)
+        self.assertIn(".ryozan-artist-connections", self.styles)
+        self.assertIn(".ryozan-artist-connection__copy > button", self.styles)
         self.assertGreaterEqual(self.styles.count("min-height: 44px"), 2)
-        self.assertIn(".bttco-pos-connections-entry", self.styles)
+        self.assertIn(".ryozan-pos-connections-entry", self.styles)
         self.assertIn("Open Connections", self.portal)
 
     def test_legacy_artist_surfaces_route_to_the_single_owner(self):

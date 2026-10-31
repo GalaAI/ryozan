@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   BTTCO Shared Component Library
+   Ryozan Shared Component Library
    Reusable UI patterns built on design tokens.
    All values reference tokens.css. No hardcoded colors.
    These are ADDITIVE classes for use in new/refactored pages.
@@ -7,7 +7,7 @@
 
 /* ── Error boundary ─────────────────────────────────── */
 
-.bttco-error-boundary {
+.ryozan-error-boundary {
     position: fixed;
     inset: 0;
     z-index: 2147483646;
@@ -33,7 +33,7 @@
     text-align: center;
 }
 
-.bttco-error-boundary__panel {
+.ryozan-error-boundary__panel {
     width: min(100%, 26rem);
     box-sizing: border-box;
     padding: var(--space-8) var(--space-5);
@@ -43,7 +43,7 @@
     box-shadow: var(--shadow-lift);
 }
 
-.bttco-error-boundary h1 {
+.ryozan-error-boundary h1 {
     margin: 0;
     color: var(--accent-cream);
     font-family: var(--font-display);
@@ -53,11 +53,11 @@
     text-transform: uppercase;
 }
 
-.bttco-error-boundary--not-found h1 {
+.ryozan-error-boundary--not-found h1 {
     font-size: clamp(4rem, 18vw, 8rem);
 }
 
-.bttco-state-boundary h2 {
+.ryozan-state-boundary h2 {
     margin: 0;
     color: var(--accent-cream);
     font-family: var(--font-display);
@@ -66,11 +66,11 @@
     text-transform: uppercase;
 }
 
-.bttco-state-boundary p {
+.ryozan-state-boundary p {
     margin-bottom: 0;
 }
 
-.bttco-state-check {
+.ryozan-state-check {
     display: block;
     margin-bottom: var(--space-3);
     color: var(--sig-ok);
@@ -78,7 +78,7 @@
     font-size: var(--text-3xl);
 }
 
-.bttco-error-boundary p {
+.ryozan-error-boundary p {
     max-width: 30ch;
     margin: var(--space-3) auto var(--space-7);
     color: var(--ink-mute);
@@ -86,14 +86,14 @@
     line-height: 1.55;
 }
 
-.bttco-error-boundary__actions {
+.ryozan-error-boundary__actions {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: var(--space-3);
 }
 
-.bttco-error-boundary__action {
+.ryozan-error-boundary__action {
     min-height: var(--touch-min);
     box-sizing: border-box;
     display: inline-flex;
@@ -114,46 +114,46 @@
         border-color var(--transition-fast);
 }
 
-.bttco-error-boundary__action--primary {
+.ryozan-error-boundary__action--primary {
     border: 1px solid var(--accent-cream);
     color: var(--accent-ink);
     background: var(--accent-cream);
 }
 
-.bttco-error-boundary__action--secondary {
+.ryozan-error-boundary__action--secondary {
     border: 1px solid var(--line-2);
     color: var(--accent-cream);
     background: var(--surface-2);
 }
 
-.bttco-error-boundary__action:hover {
+.ryozan-error-boundary__action:hover {
     transform: translateY(-1px);
 }
 
-.bttco-error-boundary__action:focus-visible {
+.ryozan-error-boundary__action:focus-visible {
     outline: 2px solid var(--accent-cream);
     outline-offset: 3px;
 }
 
 @media (max-width: 26rem) {
-    .bttco-error-boundary__actions {
+    .ryozan-error-boundary__actions {
         flex-direction: column;
     }
 
-    .bttco-error-boundary__action {
+    .ryozan-error-boundary__action {
         width: 100%;
     }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .bttco-error-boundary__action {
+    .ryozan-error-boundary__action {
         transition: none;
     }
 }
 
 /* ── API outage state ──────────────────────────────── */
 
-.bttco-api-status {
+.ryozan-api-status {
     position: fixed;
     inset: 0 0 auto;
     z-index: var(--z-toast);
@@ -176,7 +176,7 @@
     font-size: var(--text-sm);
 }
 
-.bttco-api-status__mark {
+.ryozan-api-status__mark {
     flex: 0 0 auto;
     display: grid;
     place-items: center;
@@ -188,11 +188,11 @@
     font-weight: 800;
 }
 
-.bttco-api-status__copy {
+.ryozan-api-status__copy {
     max-width: 42rem;
 }
 
-.bttco-api-status__action {
+.ryozan-api-status__action {
     flex: 0 0 auto;
     min-height: var(--touch-min);
     padding: var(--space-2) var(--space-4);
@@ -209,12 +209,12 @@
 }
 
 @media (max-width: 36rem) {
-    .bttco-api-status {
+    .ryozan-api-status {
         align-items: flex-start;
         flex-wrap: wrap;
     }
 
-    .bttco-api-status__copy {
+    .ryozan-api-status__copy {
         flex: 1 1 calc(100% - var(--space-10));
     }
 }
@@ -2379,4 +2379,4 @@ body[data-gdt-draw='true'] *:not(#gdt-draw-overlay):not(.devbar):not(.devbar *) 
 }
 
 /* Animation utilities */
-@keyframes bttco-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ryozan-slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

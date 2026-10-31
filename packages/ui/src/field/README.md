@@ -31,7 +31,7 @@ pass/rest timing and the breathing crest.
 ## Mounting
 
 ```tsx
-import { BackgroundField } from '@bttco/ui';
+import { BackgroundField } from '@ryozan/ui';
 
 <div style={{ position: 'relative' }}>
   <BackgroundField position="fixed" />

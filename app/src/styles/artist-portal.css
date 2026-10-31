@@ -569,7 +569,7 @@ select {
     white-space: nowrap;
 }
 
-.nexus-bttco-label + .topbar-page-title::before {
+.nexus-ryozan-label + .topbar-page-title::before {
     content: '';
     display: inline-block;
     width: 1px;
@@ -640,7 +640,7 @@ select {
     color: var(--muted);
 }
 
-/* BTTCOIN + Level badges in topbar */
+/* RYO + Level badges in topbar */
 .topbar-stats {
     display: flex;
     gap: 0.75rem;

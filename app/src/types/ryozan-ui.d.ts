@@ -1,5 +1,5 @@
 /**
- * Consumer-only type boundary for the read-only @bttco/ui source package.
+ * Consumer-only type boundary for the read-only @ryozan/ui source package.
  * The supplied package currently exposes TSX whose DOM prop names conflict with React 19;
  * Vite still resolves and renders the package itself, while this file keeps app typechecking local.
  */

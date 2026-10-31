@@ -5,7 +5,7 @@
  * moment the loader iframe unmounts and this takes over is invisible.
  */
 
-.bttco-portal-reveal {
+.ryozan-portal-reveal {
   position: fixed;
   inset: 0;
   z-index: 2147483000;
@@ -13,13 +13,13 @@
   opacity: 1;
   pointer-events: none;
   will-change: opacity;
-  animation: bttcoPortalReveal 900ms cubic-bezier(.16, 1, .3, 1) 220ms forwards;
+  animation: ryozanPortalReveal 900ms cubic-bezier(.16, 1, .3, 1) 220ms forwards;
 }
 
-@keyframes bttcoPortalReveal { to { opacity: 0; } }
+@keyframes ryozanPortalReveal { to { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .bttco-portal-reveal {
+  .ryozan-portal-reveal {
     display: none;
   }
 }

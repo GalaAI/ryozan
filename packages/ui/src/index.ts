@@ -1,13 +1,13 @@
 /**
- * @bttco/ui — Ryozan Studio portal components.
+ * @ryozan/ui — Ryozan Studio portal components.
  *
  * Consumers import from HERE. Never from a component path, never a local
  * re-implementation. If a screen needs something this barrel does not export,
  * that component has not been designed yet — raise it, do not author it.
  *
  * Load order in the app shell:
- *   1. @bttco/ui/fonts.css
- *   2. @bttco/ui/tokens.css
+ *   1. @ryozan/ui/fonts.css
+ *   2. @ryozan/ui/tokens.css
  *   3. your app styles
  */
 
