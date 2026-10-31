@@ -1,8 +1,10 @@
 # Ryozan quickstart (local, about 10 minutes)
 
 Ryozan runs on your machine: a FastAPI API on port 18788, a Vite web app on
-port 15300, and PostgreSQL on 5433. Every agent calls NVIDIA Nemotron on Nebius
-Token Factory, so the only credential you need is a Token Factory API key.
+port 15300, and PostgreSQL on 5433. The agents call an OpenAI-compatible model
+endpoint. The default is NVIDIA Nemotron on Nebius Token Factory, so the only
+credential you need to start is a Token Factory API key. Without one the app
+still runs; agent chat answers with a 503 that says to set `NEBIUS_API_KEY`.
 
 ## 1. Configure
 
@@ -56,12 +58,16 @@ cd api && .venv/bin/python scripts/bootstrap_dev_login.py
 
 On Windows use `.venv\Scripts\python scripts\bootstrap_dev_login.py`. With
 Docker only, run `docker compose exec api python scripts/bootstrap_dev_login.py --allow-nonlocal-db`
-(inside compose the database host is `db`).
+(inside compose the database host is `db`, which the script does not treat as
+local without that flag).
 
-This creates `founder@ryozan.app` (display name "Studio Founder") and
-prints a generated password, also saved to `.dev/state/dev-login-password.txt`.
-Add `--with-admin` for a second staff account. The script refuses non-local
-databases.
+This creates `founder@ryozan.app` (display name "Studio Founder") and prints a
+generated password. A native run also saves it to
+`.dev/state/dev-login-password.txt` (gitignored); under Docker that file stays
+inside the container, so copy the printed password. Use `--email` and `--name`
+to pick your own founder login, and `--with-admin` to add a studio admin
+account. Without `--allow-nonlocal-db` the script refuses any database it does
+not recognize as local.
 
 ## 4. Use it
 
@@ -85,9 +91,14 @@ databases.
 | Vision critique (Rochishin) | `nvidia/Nemotron-3.5-Super-VL` |
 
 Each agent tries its own model first and falls back to the tier lane. Set
-`AI_*_PRIMARY_MODEL` in `api/.env` to change the tier default. All four ids are
-served by Token Factory (checked 2026-10-29 through the Ark gateway, which
-forwards these exact upstream names).
+`AI_*_PRIMARY_MODEL` and `AI_*_FALLBACK_MODEL` in `api/.env` to change the tier
+models. The per-agent ids live in `AGENT_PROFILES` in
+`api/app/api/v1/endpoints/gala_chat.py`.
+
+To use a different OpenAI-compatible provider, set `NEBIUS_BASE_URL` and
+`NEBIUS_API_KEY` to that provider's base URL and key, and set the tier models to
+ids it serves. Agents whose own model the provider does not serve fall back to
+the tier lane.
 
 ## Studio identity
 
@@ -97,7 +108,10 @@ address to email footers and PDFs; nothing prints when it is blank.
 
 ## Optional services
 
-Google sign-in, Stripe, email, SMS and Pinterest stay hidden until their keys
-are set in `api/.env`. Self-registration appears once an email provider is
-configured. An Ark Model Gateway can replace Token Factory by setting
-`ARK_MODEL_GATEWAY_BASE_URL`, `ARK_MODEL_GATEWAY_KEY` and `ark/*` model slugs.
+Each integration (Google Calendar, Pinterest, Plaid, Stripe Connect, Web Push,
+email forwarding) appears under Connections only when its keys are set in
+`api/.env`. The API reports which ones this install offers at
+`GET /api/v1/integrations/options`. Client self-registration sends a
+password-setting email, so it needs an email provider (Resend, SendGrid or
+SMTP). The full list of variables is in the Configuration section of the root
+`README.md`.

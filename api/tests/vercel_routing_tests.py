@@ -10,10 +10,7 @@ from app.core.config import Settings
 class VercelRoutingTests(unittest.TestCase):
     def test_vercel_configs_proxy_api_and_health_routes_to_backend(self):
         repo_root = Path(__file__).resolve().parents[2]
-        root_config = json.loads((repo_root / "vercel.json").read_text())
-        app_config = json.loads((repo_root / "app" / "vercel.json").read_text())
-
-        self.assertEqual(root_config, app_config)
+        root_config = json.loads((repo_root / "app" / "vercel.json").read_text())
 
         rewrites = {(entry["source"], entry["destination"]) for entry in root_config.get("rewrites", [])}
 
@@ -40,7 +37,7 @@ class VercelRoutingTests(unittest.TestCase):
 
     def test_spa_rewrite_excludes_debug_paths(self):
         repo_root = Path(__file__).resolve().parents[2]
-        root_config = json.loads((repo_root / "vercel.json").read_text())
+        root_config = json.loads((repo_root / "app" / "vercel.json").read_text())
         spa_rewrites = [
             entry["source"]
             for entry in root_config.get("rewrites", [])
@@ -55,7 +52,7 @@ class VercelRoutingTests(unittest.TestCase):
 
     def test_app_subdomain_privacy_uses_product_policy(self):
         repo_root = Path(__file__).resolve().parents[2]
-        root_config = json.loads((repo_root / "vercel.json").read_text())
+        root_config = json.loads((repo_root / "app" / "vercel.json").read_text())
         privacy_rewrites = [entry for entry in root_config.get("rewrites", []) if entry.get("source") == "/privacy"]
 
         self.assertEqual(

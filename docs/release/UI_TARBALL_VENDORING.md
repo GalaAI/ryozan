@@ -5,7 +5,7 @@ tarball:
 
 ```jsonc
 // app/package.json
-"@bttco/ui": "file:vendor/bttco-ui-0.1.7.tgz"
+"@bttco/ui": "file:vendor/bttco-ui-0.2.0.tgz"
 ```
 
 The source tree and the shipped artifact are two separate things. **Editing
@@ -30,7 +30,7 @@ npm install --package-lock-only "@bttco/ui@file:vendor/bttco-ui-<version>.tgz"
 
 Commit all three results together: the `packages/ui/src` change, the rebuilt
 `app/vendor/bttco-ui-<version>.tgz`, and the one-line `app/package-lock.json`
-diff. Commit `ecb0ace` is a correct example of the shape.
+diff.
 
 ## Why step 3 is not optional
 
@@ -42,14 +42,14 @@ recorded in `app/package-lock.json`:
 
 ```jsonc
 "node_modules/@bttco/ui": {
-  "version": "0.1.7",
-  "resolved": "file:vendor/bttco-ui-0.1.7.tgz",
+  "version": "0.2.0",
+  "resolved": "file:vendor/bttco-ui-0.2.0.tgz",
   "integrity": "sha512-Zrs+6zCk93TuoKq+..."
 }
 ```
 
 Repack the tarball but leave that hash alone and the hash still matches a cache
-entry — the *old* one. A completely clean `npm ci` then reinstalls the previous
+entry: the *old* one. A completely clean `npm ci` then reinstalls the previous
 component, with no warning, no error, and no visible difference in the install
 log. Only once `integrity` changes does npm treat it as a cache miss and unpack
 what you actually built.
@@ -72,10 +72,10 @@ diverged. It asserts three things:
 | Check | Catches |
 |---|---|
 | The `file:` spec resolves to a tarball that exists, and its version matches `packages/ui/package.json` | A version bump that was not vendored |
-| `app/package-lock.json` `integrity` equals the real sha512 of the tarball on disk | **Repacked but not relocked** — the silent one |
+| `app/package-lock.json` `integrity` equals the real sha512 of the tarball on disk | **Repacked but not relocked**, the silent one |
 | Every file npm would pack out of `packages/ui` is present in the tarball with matching content, and the tarball carries nothing extra | Edited source that was never repacked |
 
-Markdown is exempt from the parity comparison. It is packed but inert — nothing
+Markdown is exempt from the parity comparison. It is packed but inert: nothing
 imports it, so a stale copy inside the tarball cannot change behaviour, and
 failing a build over a doc typo would only teach people to ignore the check.
 
@@ -86,19 +86,3 @@ Fonts and other binaries are compared byte for byte.
 
 The check runs in `.github/workflows/app.yml` **before** `npm ci`, so a stale
 tarball is reported rather than quietly type-checked and built.
-
-## Known open drift
-
-As of this writing `packages/ui/src/tokens/tokens.css` on `main` is ahead of
-the vendored tarball. Commit `cbabfaf` ("feat(huddl): apply cream and brick
-Booky palette") added
-
-```css
---brick-red:       #a33a31;
---brick-red-rgb:   163,58,49;
-```
-
-to the package source and never repacked, so those tokens are not defined by
-`@bttco/ui` in the app. The app carries its own copy in
-`app/src/styles/tokens.css`, which is why nothing visibly broke. Running the
-procedure above closes it.

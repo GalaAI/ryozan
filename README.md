@@ -1,154 +1,215 @@
 # Ryozan (梁山泊)
 
-**A shop operating system for independent artists and studios, run by a crew of AI agents on NVIDIA Nemotron.**
+**A self-hosted shop operating system for tattoo studios and other artist businesses.**
 
-Ryozan is a full-stack app (FastAPI and React 19) for tattoo studios, barbershops and other creator businesses. The owner talks to a crew of eight agents, styled after the heroes of Ryōzanpaku in Kuniyoshi's *Suikoden* woodblock prints, coordinated by Gala. Each agent deals Action Cards for its part of the shop (bookings, messages, schedule, aftercare, social posts), and every agent turn runs on an NVIDIA Nemotron model served by Nebius Token Factory.
+Ryozan runs a studio's bookings, client messages, waivers, payments and flash in one web app. A crew of AI agents works alongside the staff. Each install serves one studio. The agents run on any OpenAI-compatible model endpoint; the default is NVIDIA Nemotron on Nebius Token Factory.
 
-> **Nebius x NVIDIA Global AI Hackathon** · Track: **Best Apps and Agents** · License: **Apache-2.0** ([`LICENSE`](LICENSE))
+License: Apache-2.0 ([`LICENSE`](LICENSE)).
 
 ### Why I built this
 
 > *"I needed help managing my business so I built my shop's app and website from scratch. I taught myself how to develop, build and ship full stack applications using AI. What I didn't expect was to fall in love with the process of architecting orchestrated software and now am founding a tech company called Ark Omnitek made by a tattooer, built for artists and creators. I also wanted to build something that would help other tattooers like my dad. But if it didn't help mine, what good would that do? Once my analytics proved it worked on my shop first, I knew I could confidently give him something that works and put it out there in the world."*
 > **Justin Walker**
 
----
+## Features
 
-## 1. Ryozan stands on its own
+Every item below points at the code that implements it.
 
-Ryozan is one of three entries by the same author. **Each one installs and runs by itself, and they do not call each other in this build.**
-
-| Repo | What it is | Relationship to Ryozan in this build |
+| Feature | What it does | Where |
 | --- | --- | --- |
-| **Ryozan** (this repo) | Shop operating system with an agent crew | Calls Nebius Token Factory directly with your `NEBIUS_API_KEY`. |
-| [Holodex](https://github.com/GalaAI/holodex) | Windows desktop companion: cursor, HUD, screen lasso | Separate app. Holodex does not call Ryozan. |
-| [Hivemind](https://github.com/GalaAI/hivemind) | Multi-agent MCP server with per-user OAuth adapters | Separate app. Any MCP client, Hivemind included, can connect to Ryozan's own MCP endpoint (below). |
+| Bookings | Booking requests, approvals, deposits and the studio schedule | [`bookings.py`](api/app/api/v1/endpoints/bookings.py), [`calendar.py`](api/app/api/v1/endpoints/calendar.py) |
+| Unified inbox | Client threads from email, SMS and WhatsApp in one place | [`conversations.py`](api/app/api/v1/endpoints/conversations.py), [`email_inbound.py`](api/app/api/v1/endpoints/email_inbound.py), [`sms.py`](api/app/api/v1/endpoints/sms.py), [`whatsapp.py`](api/app/api/v1/endpoints/whatsapp.py) |
+| Waivers and documents | Signed consent waivers, document templates and signing | [`waiver.py`](api/app/api/v1/endpoints/waiver.py), [`documents.py`](api/app/api/v1/endpoints/documents.py) |
+| Flash | Upload flash sheets, split them into designs with AI, publish them | [`flash.py`](api/app/api/v1/endpoints/flash.py) |
+| Payments | Stripe Connect onboarding for artists, day-of balance checkout, gift cards | [`stripe_connect.py`](api/app/api/v1/endpoints/stripe_connect.py), [`pos.py`](api/app/api/v1/endpoints/pos.py), [`gift_cards.py`](api/app/api/v1/endpoints/gift_cards.py) |
+| Ledger | Integer-cent double-entry bookkeeping for the studio | [`packages/ryozan-econ`](packages/ryozan-econ) |
+| Client rewards | Rewards, wallet receipts and inventory for clients | [`rewards.py`](api/app/api/v1/endpoints/rewards.py) |
+| References | Shared reference library for staff, and Pinterest boards | [`references.py`](api/app/api/v1/endpoints/references.py), [`pinterest.py`](api/app/api/v1/endpoints/pinterest.py) |
+| Follow-ups | A small CRM task pipeline for shop follow-ups | [`crm.py`](api/app/api/v1/endpoints/crm.py) |
+| Push notifications | Web Push to staff and client devices | [`push.py`](api/app/api/v1/endpoints/push.py) |
+| Agent crew | Eight agents coordinated by Gala, each scoped to one part of the shop | [`gala_chat.py`](api/app/api/v1/endpoints/gala_chat.py) |
+| Web search | Agents can search the live web through Tavily | [`web_search.py`](api/app/services/web_search.py) |
+| MCP server | Other AI clients can read and act on the shop over MCP with OAuth | [`api/app/mcp`](api/app/mcp) |
 
-```mermaid
-flowchart LR
-  Owner["Shop owner in the browser"] --> App["Ryozan web app (React, port 15300)"]
-  App -->|"/api/v1"| API["Ryozan API (FastAPI, port 18788)"]
-  API --> DB[("PostgreSQL")]
-  API -->|"POST /v1/chat/completions"| TF["Nebius Token Factory\nNVIDIA Nemotron models"]
-  MCPClient["Any MCP client"] -->|"OAuth 2.1, POST /mcp"| API
-```
+Accounts have one of five roles: `collector` (client), `assistant`, `artist`, `admin` and `founder` ([`security.py`](api/app/core/security.py)). Each role sees only what it is allowed to see. A client only ever sees their own bookings, messages and agent memory.
 
-### The MCP surface
+### The agent crew
 
-The API serves a Model Context Protocol server at `POST /mcp` (Streamable HTTP, stateless JSON responses), implemented in [`api/app/mcp`](api/app/mcp): the transport in `router.py`, the OAuth 2.1 authorization server in `oauth.py`, and the tools in `tools.py` (server name `ryozan`, tools named `ryozan_*`, such as `ryozan_today`, `ryozan_search_bookings` and `ryozan_list_threads`). Tool discovery is filtered by the signed-in account's role and the OAuth scopes it granted (`ryozan.shop.read`, `ryozan.shop.send`, `ryozan.shop.write`).
+The crew is styled after the heroes of Ryōzanpaku in Kuniyoshi's *Suikoden* woodblock prints. Each agent has its own model and its own set of tools, and only the roles listed in its profile can talk to it.
 
----
-
-## 2. How Ryozan uses Nemotron and Token Factory
-
-Agent turns are OpenAI-compatible `POST /v1/chat/completions` calls to Nebius Token Factory (`https://api.tokenfactory.nebius.com/v1`). Each agent gets the smallest Nemotron model that does its job well, so the front desk stays fast and credits go to the work that needs reasoning. If an agent's model fails, the call falls back to the tier lane.
-
-| Agent | Shop job | Model id on Token Factory |
+| Agent | Shop job | Default model |
 | --- | --- | --- |
-| **Gala** | Coordinates the crew, settles conflicts between domains | `nvidia/Nemotron-3-Ultra-550b-a55b` |
-| **Sōkō** | Shop floor and back of house | `nvidia/nemotron-3-super-120b-a12b` |
-| **Shishin** | Flash drops, deposits, ledger | `nvidia/nemotron-3-super-120b-a12b` |
-| **Saishin** | Scheduling, chair holds, calendar sync | `nvidia/nemotron-3-super-120b-a12b` |
-| **Riki** | Social publishing | `nvidia/nemotron-3-super-120b-a12b` |
-| **Ensei** | Front-desk triage for walk-ins and DMs | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` |
-| **Taisō** | Unified inbox | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` |
-| **Andōzen** | Aftercare, waivers, check-ins | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` |
-| **Rochishin** | Flash, style and placement critique (vision) | `nvidia/Nemotron-3.5-Super-VL` |
+| Gala | Coordinates the crew (founder and admin only) | `nvidia/Nemotron-3-Ultra-550b-a55b` |
+| Sōkō | Shop floor and back of house | `nvidia/nemotron-3-super-120b-a12b` |
+| Shishin | Flash drops, deposits, ledger | `nvidia/nemotron-3-super-120b-a12b` |
+| Saishin | Scheduling and calendar | `nvidia/nemotron-3-super-120b-a12b` |
+| Riki | Social publishing | `nvidia/nemotron-3-super-120b-a12b` |
+| Ensei | Front-desk triage | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` |
+| Taisō | Inbox | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` |
+| Andōzen | Aftercare, waivers, check-ins | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` |
+| Rochishin | Flash, style and placement critique (vision) | `nvidia/Nemotron-3.5-Super-VL` |
 
-The model assignments live in `AGENT_PROFILES` in [`api/app/api/v1/endpoints/gala_chat.py`](api/app/api/v1/endpoints/gala_chat.py) (the chat endpoint and its tools); the model client and tier lanes are in [`api/app/services/ai_routing.py`](api/app/services/ai_routing.py). The crew's cards are built in [`app/src/lib/agent-card-hands.ts`](app/src/lib/agent-card-hands.ts), and every card names a tool the agent is allowed to call. Without a key, chat answers with a clear 503 that says to set `NEBIUS_API_KEY`; the rest of the app keeps working.
+The profiles live in `AGENT_PROFILES` in [`gala_chat.py`](api/app/api/v1/endpoints/gala_chat.py). The model client and the fallback lanes are in [`ai_routing.py`](api/app/services/ai_routing.py). If an agent's own model fails, the call falls back to the tier lane.
 
 How a turn runs:
 
-1. The portal posts the message to `POST /api/v1/gala/chat` with the signed-in account's JWT.
-2. The API resolves the agent, builds a system prompt scoped to that account's role (a client only ever sees their own bookings, messages and memory), and offers only the tools that agent and role may call.
-3. It calls Token Factory's `POST /v1/chat/completions` with the agent's Nemotron model and those tools as OpenAI function definitions (`Authorization: Bearer $NEBIUS_API_KEY`, base URL `https://api.tokenfactory.nebius.com/v1`).
-4. When Nemotron asks for a tool, the API runs it against the database or Tavily, returns the result as a `tool` message, and loops (at most 5 rounds) until Nemotron writes the answer.
-5. The reply comes back with a receipt per tool call (`tool_calls`) and data cards (`components`) that the portal renders under the answer.
+1. The web app posts the message to `POST /api/v1/gala/chat` with the signed-in account's token.
+2. The API picks the agent, builds a prompt scoped to the account's role, and offers only the tools that agent and role may use.
+3. It calls the model endpoint's `POST /chat/completions` with those tools.
+4. When the model asks for a tool, the API runs it and loops (at most 5 rounds) until the model writes an answer.
+5. The reply carries a receipt for each tool call and data cards that the web app shows under the answer.
 
-## 2a. How Ryozan uses Tavily
+Without a model key, agent chat returns a 503 that says to set `NEBIUS_API_KEY`. The rest of the app keeps working.
 
-Every agent has a `web_search` tool backed by the [Tavily Search API](https://docs.tavily.com/documentation/api-reference/endpoint/search). Nemotron decides when a question needs the live web (aftercare guidance, a convention date, a pigment regulation, trend research for a flash drop) and calls the tool; the API then makes one `POST https://api.tavily.com/search` with `Authorization: Bearer $TAVILY_API_KEY`, `search_depth: "basic"` (1 credit), up to 5 results and Tavily's short answer. The ranked sources go back to Nemotron, which cites the URLs it used, and the portal shows them as a **web results** card with clickable links. The client is [`api/app/services/web_search.py`](api/app/services/web_search.py); the tool definition and its execution are in `gala_chat.py`. Without `TAVILY_API_KEY` the tool is not offered to any agent.
+## Architecture
 
----
+```mermaid
+flowchart LR
+  Staff["Staff and clients in the browser"] --> App["Ryozan web app (React 19, port 15300)"]
+  App -->|"/api/v1"| API["Ryozan API (FastAPI, port 18788)"]
+  API --> DB[("PostgreSQL")]
+  API -->|"POST /chat/completions"| LLM["OpenAI-compatible model endpoint\n(default: Nemotron on Nebius Token Factory)"]
+  API -.->|"optional"| Ext["Tavily, Stripe, Google, Resend,\nTwilio, Pinterest, Plaid"]
+  MCPClient["Any MCP client"] -->|"OAuth 2.1, POST /mcp"| API
+```
 
-## 2b. Judge accounts on the hosted demo
-
-**Hosted demo:** https://ryozan-production.up.railway.app/portal
-
-Judges have two ways in, and neither involves seeded or mock data:
-
-- **Your own account (recommended).** Choose **Create an account** on the sign-in screen, enter the invite code from the testing instructions, and pick your own email and password. You are signed in at once and see only your own bookings, messages and agent memory.
-- **The shared judge account.** Sign in with the email and password from the testing instructions. Its password cannot be changed or reset and the account cannot be deleted, so it keeps working for every judge; anything typed into it is visible to the other judges who use it.
-
-Then ask the agent on your home screen a question. The status line names the Nemotron model and `api.tokenfactory.nebius.com`. Ask for something current ("search the web for...") to see a Tavily-sourced answer with a **web results** card.
-
-The settings live in `api/.env`:
-
-| Variable | What it does |
-| --- | --- |
-| `OPEN_SIGNUP_ENABLED` | `true` lets `POST /auth/register` create a verified client account and sign it in, with no verification email. |
-| `OPEN_SIGNUP_CODE` | Invite code the sign-up form requires, 8 or more characters. Blank keeps instant sign-up closed. |
-| `OPEN_SIGNUP_UNTIL` | Last open day (UTC, `YYYY-MM-DD`). After it, sign-up closes and those accounts lose AI access. |
-| `OPEN_SIGNUP_MAX_ACCOUNTS` | Cap on accounts created this way (default 200). |
-| `TAVILY_MONTHLY_SEARCHES_PER_ACCOUNT` | Tavily searches per account per month (default 25). |
-| `DEMO_ACCOUNT_EMAIL`, `DEMO_ACCOUNT_PASSWORD` | The shared judge account, created or repaired at startup ([`api/app/services/demo_account.py`](api/app/services/demo_account.py)). |
-| `DEMO_ACCOUNT_MONTHLY_AI_TURNS`, `DEMO_ACCOUNT_MONTHLY_SEARCHES` | Monthly caps for the shared account (defaults 300 and 150), since every judge shares them. |
-
-Each account is a free-tier client: 40 agent turns a month, and every model call counts toward the install's monthly AI budget cap. Sign-up is also rate limited to 5 attempts a minute per IP.
-
-## 3. What's in the repo
+In production one Docker image ([`Dockerfile`](Dockerfile)) builds the web app and serves it from the API container.
 
 ```text
 ryozan/
-├── app/                     React 19 + TypeScript portal (crew, Action Cards, bookings, inbox)
-│   └── src/
-│       ├── components/desktop-portal/   desktop portal, Hub, ActionDeck
-│       └── lib/                         agent-card-hands.ts (the crew), API client
-├── api/                     FastAPI backend
+├── app/            React 19 + TypeScript web app (Vite, Tailwind v4)
+├── api/            FastAPI backend, SQLAlchemy, Alembic
 │   └── app/
-│       ├── api/v1/endpoints/   gala_chat.py (agents), bookings.py, conversations.py, auth.py
+│       ├── api/v1/endpoints/   REST endpoints
 │       ├── mcp/                MCP server: router.py, oauth.py, tools.py
-│       └── services/           ai_routing.py (Token Factory client and model lanes)
+│       └── services/           model client, web search, integrations
 ├── packages/
-│   ├── ryozan-econ/         Integer-cent double-entry ledger and commission split engine
-│   └── ui/                  Component library, vendored into the app as a tarball
-├── docker-compose.yml       Local Postgres, API and app, bound to 127.0.0.1
-└── docs/QUICKSTART.md       Step-by-step local setup
+│   ├── ryozan-econ/   Double-entry ledger (its own MIT license)
+│   └── ui/            The only UI component source, vendored into app/ as a tarball
+├── docker-compose.yml
+└── docs/QUICKSTART.md
 ```
 
-## 4. Quickstart
+## Quickstart
 
-Full steps, including Windows commands, are in [`docs/QUICKSTART.md`](docs/QUICKSTART.md). In short:
+Full steps, including Windows commands, are in [`docs/QUICKSTART.md`](docs/QUICKSTART.md).
+
+### With Docker Compose
 
 ```bash
 cp .env.example .env              # POSTGRES_PASSWORD for docker compose
 cp api/.env.example api/.env      # then set NEBIUS_API_KEY in api/.env
 docker compose up -d db api app
-# first account; the compose database is reached as host "db", so name it as local
+# create the first account and print its password
 docker compose exec api python scripts/bootstrap_dev_login.py --allow-nonlocal-db
 ```
 
-Open http://localhost:15300, choose **Open the studio portal** and sign in with the printed founder account. Connectors (Stripe, Google Calendar, Pinterest, email, SMS) stay hidden until their keys are set in `api/.env`.
+Open http://localhost:15300, choose **Open the studio portal** and sign in with the printed founder account. Every port binds to 127.0.0.1.
 
-### Tests
+### Manual (Python 3.12, Node 20+)
 
 ```bash
-# API unit tests
-cd api && python -m unittest discover -s tests -p "*_tests.py" && cd ..
-
-# Ledger engine
-cd packages/ryozan-econ && PYTHONPATH=. python -m unittest discover -s tests -p "*_tests.py" && cd ../..
-
-# Vendored UI tarball integrity
-node scripts/check-ui-tarball.mjs
-
-# Portal, crew and Action Card tests (install app dependencies first)
-cd app && npm ci && node --test $(git ls-files "*.test.mjs") && cd ..
+cp .env.example .env && cp api/.env.example api/.env
+docker compose up -d db                       # or point DATABASE_URL at your own Postgres 16
+cd api && python -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/uvicorn main:app --host 127.0.0.1 --port 18788
+# in a second terminal
+cd api && .venv/bin/python scripts/bootstrap_dev_login.py
+cd app && npm ci && npm run dev
 ```
 
-## Built during the submission period
+The API creates its tables on first boot. The web dev server proxies `/api` to `http://127.0.0.1:18788`.
 
-Ryozan's shop platform existed before 2026-08-26. During the hackathon window it gained the agent crew and its Nemotron model assignments on Token Factory, the Action Card portal, the MCP server rename and cleanup, and the `ryozan-econ` ledger package. This repository was published on 2026-10-28.
+### Production image
+
+`docker compose --profile production up --build production` builds the same image the [`Dockerfile`](Dockerfile) defines and serves the app and API together on port 8000. [`railway.toml`](railway.toml) deploys that image on Railway. Outside `APP_ENV=development` the API refuses to start until the secrets below are set.
+
+## Configuration
+
+The API reads `api/.env`. Copy [`api/.env.example`](api/.env.example) to start. Every setting and its default is in [`api/app/core/config.py`](api/app/core/config.py).
+
+### Required
+
+| Variable | What it does |
+| --- | --- |
+| `DATABASE_URL` | Async Postgres URL. The example points at the compose database on 127.0.0.1:5433. |
+| `POSTGRES_PASSWORD` | Database password. Docker Compose reads it from the root `.env`; keep it equal to the password in `DATABASE_URL`. |
+| `APP_ENV` | `development` for local use. Any other value turns on the secret checks below. |
+| `FRONTEND_URL`, `API_PUBLIC_BASE_URL` | Public URLs of the web app and the API. Used in links, OAuth callbacks and the MCP issuer. |
+| `SECRET_KEY`, `CRON_SECRET`, `DOC_REMINDER_API_KEY`, `WORKSPACE_BOT_TOKEN` | Private random values. In development they are generated on first run and kept in `api/.dev-secrets.json` (gitignored). Elsewhere the API will not start without them. |
+
+### AI
+
+| Variable | What it does |
+| --- | --- |
+| `NEBIUS_API_KEY` | Key for the model endpoint. Blank turns agent chat off with a clear 503. |
+| `NEBIUS_BASE_URL` | Base URL of any OpenAI-compatible endpoint. Default `https://api.tokenfactory.nebius.com/v1`. |
+| `AI_PREMIUM_PRIMARY_MODEL`, `AI_PREMIUM_FALLBACK_MODEL` (and the `AI_PAID_*`, `AI_FREEMIUM_*` pairs) | Tier models each agent falls back to. Set them to ids your endpoint serves. |
+
+### Studio identity
+
+| Variable | What it does |
+| --- | --- |
+| `STUDIO_NAME` | Name printed on client email, SMS, calendar invites and PDFs. Default `Ryozan Studio`. |
+| `STUDIO_ADDRESS` | Postal address for email footers and PDFs. Nothing prints when blank. |
+
+### Optional features
+
+Each group is off until its keys are set.
+
+| Feature | Variables |
+| --- | --- |
+| Web search (Tavily) | `TAVILY_API_KEY`; `TAVILY_MONTHLY_SEARCHES_PER_ACCOUNT` (default 25). Without a key the `web_search` tool is not offered. |
+| Email | One provider: `RESEND_API_KEY` (with `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, and `RESEND_WEBHOOK_SECRET`, `RESEND_INBOUND_WEBHOOK_SECRET` for delivery and inbound webhooks), or `SENDGRID_API_KEY`, or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`). |
+| Push (VAPID) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` you own). `config.py` has a one-line command to generate a key pair. |
+| Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` for Calendar sync and Google sign-in. `GOOGLE_SIGNIN_CLIENT_ID` overrides the sign-in audience. For browser sign-in, build the web app with `VITE_GOOGLE_CLIENT_ID` set to the same id. `GOOGLE_CALENDAR_AUTH_MODE=workspace_delegated` with `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` and `GOOGLE_CALENDAR_DELEGATED_USER` uses one Workspace identity instead of per-user connect. |
+| Stripe Connect | `STRIPE_SECRET_KEY` turns it on. Also `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_CONNECT_THIN_WEBHOOK_SECRET`, `STRIPE_CONNECT_RETURN_URL`, and `VITE_STRIPE_PUBLISHABLE_KEY` at web build time. Only `artist` and `founder` accounts can start onboarding. |
+| Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET`, `PINTEREST_REDIRECT_URI`; `PINTEREST_USE_SANDBOX` (default `true`). |
+| Plaid | `PLAID_CLIENT_ID`, `PLAID_SECRET`; `PLAID_ENVIRONMENT` (`sandbox`, `development` or `production`, default `sandbox`). |
+| SMS (Twilio) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`, plus the sender numbers listed under Twilio in `config.py`. SMS is an inbox channel, not a Connections card. |
+| Public sign-up | For a public demo install only. `OPEN_SIGNUP_ENABLED`, `OPEN_SIGNUP_CODE` (invite code, 8 or more characters), `OPEN_SIGNUP_UNTIL`, `OPEN_SIGNUP_MAX_ACCOUNTS`. `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` create one shared demo account with its own monthly caps. |
+
+### Integrations appear only when configured
+
+The Connections screen offers Google Calendar, Pinterest, Plaid, Stripe Connect, Web Push and email forwarding. Each one shows up only when its keys are set on the server. `GET /api/v1/integrations/options` reports, for each one, whether this install is configured for it and whether the signed-in role may start it. It never returns a key or secret. See [`integrations.py`](api/app/api/v1/endpoints/integrations.py).
+
+## MCP server
+
+The API serves a Model Context Protocol server at `POST /mcp` (Streamable HTTP, stateless JSON responses). Point any MCP client at `<API_PUBLIC_BASE_URL>/mcp`, for example `http://localhost:18788/mcp`.
+
+- Sign-in is OAuth 2.1 with dynamic client registration (`/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`) and discovery at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`.
+- Shop scopes are `ryozan.shop.read`, `ryozan.shop.send` and `ryozan.shop.write`.
+- Tools are named `ryozan_*`, such as `ryozan_today`, `ryozan_search_bookings`, `ryozan_list_threads` and `ryozan_draft_reply`.
+- The tool list is filtered by the signed-in account's role and the scopes it granted.
+
+Code: [`router.py`](api/app/mcp/router.py) (transport), [`oauth.py`](api/app/mcp/oauth.py) (authorization server), [`tools.py`](api/app/mcp/tools.py) (tools).
+
+## Tests
+
+```bash
+# API lint and unit tests
+cd api && ruff check app/ main.py && python -m unittest discover -s tests -p "*_tests.py" && cd ..
+
+# Ledger package
+cd packages/ryozan-econ && PYTHONPATH=. python -m unittest discover -s tests -p "*_tests.py" && cd ../..
+
+# Vendored UI tarball matches packages/ui
+node scripts/check-ui-tarball.mjs
+
+# Web app lint, build and node tests
+cd app && npm ci && npm run lint && npm run build && node --test $(git ls-files "*.test.mjs") && cd ..
+```
+
+API tests in files ending in `_pg_tests.py` need a Postgres fixture and skip unless the environment variables named at the top of each file are set.
+
+## Project status
+
+Ryozan is early. It is built for a single studio that hosts its own install. Hosted multi-studio service is planned.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Report security issues privately as described in [`SECURITY.md`](SECURITY.md).
 
 ## License
 
-Apache License 2.0, see [`LICENSE`](LICENSE).
+Apache License 2.0, see [`LICENSE`](LICENSE). [`packages/ryozan-econ`](packages/ryozan-econ) carries its own MIT license.
