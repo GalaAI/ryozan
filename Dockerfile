@@ -10,10 +10,8 @@ WORKDIR /build
 # (or any docker build) can inject them via --build-arg, then promote
 # to ENV so `npm run build` can see them.
 ARG VITE_MAPBOX_TOKEN=""
-ARG VITE_STRIPE_PUBLISHABLE_KEY=""
 ARG VITE_GOOGLE_CLIENT_ID=""
 ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
-ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 COPY app/package.json app/package-lock.json ./

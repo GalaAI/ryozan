@@ -39,9 +39,30 @@ _NO_COMPLETION_PATH = {"add-to-homescreen", "three-sessions", "leave-review", "r
 
 
 def outbound_email_configured() -> bool:
-    """Whether this install can send mail (verification links, forwarding confirmations)."""
+    """Whether this install can send mail (verification links, forwarding confirmations).
+
+    Mirrors send_email: SendGrid or Resend by key, SMTP only with both user and password.
+    """
     settings = get_settings()
-    return bool(settings.RESEND_API_KEY or settings.SENDGRID_API_KEY or settings.SMTP_PASSWORD)
+    return bool(
+        (settings.RESEND_API_KEY or "").strip()
+        or (settings.SENDGRID_API_KEY or "").strip()
+        or ((settings.SMTP_USER or "").strip() and (settings.SMTP_PASSWORD or "").strip())
+    )
+
+
+def email_forwarding_configured() -> bool:
+    """Whether a studio email handle can work end to end on this install.
+
+    The handle is confirmed by an outbound verification email, received by
+    Resend on COURIER_REPLY_DOMAIN, and forwarded through Resend.
+    """
+    settings = get_settings()
+    return (
+        outbound_email_configured()
+        and bool((settings.RESEND_API_KEY or "").strip())
+        and bool((settings.COURIER_REPLY_DOMAIN or "").strip())
+    )
 
 
 def quest_available(slug: str) -> bool:
@@ -52,8 +73,8 @@ def quest_available(slug: str) -> bool:
     if slug == "enable-notifications":
         return bool(settings.VAPID_PUBLIC_KEY)
     if slug in {"connect-email", "email-alias"}:
-        # The handle is confirmed by a verification email.
-        return outbound_email_configured()
+        # The handle needs a receiving domain and a verification email.
+        return email_forwarding_configured()
     return True
 
 

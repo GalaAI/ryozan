@@ -921,7 +921,12 @@ class EmailAttachmentTransportTests(unittest.TestCase):
                 captured.update(json)
                 return _Resp()
 
-        with patch("app.services.email.httpx.AsyncClient", lambda **kw: _Client()):
+        from app.core.config import get_settings
+
+        with (
+            patch("app.services.email.httpx.AsyncClient", lambda **kw: _Client()),
+            patch.object(get_settings(), "SENDGRID_FROM_EMAIL", "noreply@studio.example.test"),
+        ):
             ok, _, _ = asyncio.run(
                 _send_via_sendgrid(
                     "a@b.test",

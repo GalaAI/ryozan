@@ -46,6 +46,9 @@ ORIGINAL_STUDIO = {
     "INBOUND_OWNER_ALIASES": "justinwalker",
     "DEBRIEF_RECIPIENT_USER_ID": "68a8d9d0-940a-46ec-ae73-803d1a0aa093",
     "BOOKY_CANARY_ARTIST_SLUGS": "justin",
+    # Owner inbox and receiving domain, once fixed in source, now set here.
+    "SHOP_OWNER_EMAIL": "founder@ryozan.app",
+    "COURIER_REPLY_DOMAIN": "ryozan.app",
 }
 
 
@@ -259,15 +262,16 @@ class ExternalBookingModeTests(unittest.TestCase):
 class InboundOwnerAliasTests(unittest.TestCase):
     def test_reserved_addresses_route_regardless(self):
         with patch.object(email_inbound, "get_settings", return_value=_off()):
-            self.assertEqual(email_inbound._fallback_destination("info"), email_inbound.FOUNDER_EMAIL)
+            self.assertTrue(email_inbound._is_owner_address("info"))
 
     def test_off_has_no_personal_alias(self):
         with patch.object(email_inbound, "get_settings", return_value=_off()):
-            self.assertIsNone(email_inbound._fallback_destination("justinwalker"))
+            self.assertFalse(email_inbound._is_owner_address("justinwalker"))
 
     def test_on_routes_alias_to_owner(self):
         with patch.object(email_inbound, "get_settings", return_value=_on()):
-            self.assertEqual(email_inbound._fallback_destination("justinwalker"), "founder@ryozan.app")
+            self.assertTrue(email_inbound._is_owner_address("justinwalker"))
+            self.assertEqual(_on().owner_inbox_email, "founder@ryozan.app")
 
 
 class DebriefRecipientTests(unittest.IsolatedAsyncioTestCase):

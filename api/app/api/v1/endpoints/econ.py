@@ -755,6 +755,15 @@ async def _diagnose_plaid(*, live: bool, current_user: User) -> dict[str, Any]:
     )
     if missing:
         return _diagnostic_payload("plaid", "blocked", detail="Plaid setup is incomplete", missing=missing)
+    from app.api.v1.endpoints.plaid import plaid_environment, plaid_environment_supported
+
+    if not plaid_environment_supported():
+        return _diagnostic_payload(
+            "plaid",
+            "blocked",
+            detail=f"PLAID_ENVIRONMENT={plaid_environment()!r} is not supported. Set it to sandbox or production.",
+            missing=["PLAID_ENVIRONMENT"],
+        )
     if not live:
         return _diagnostic_payload("plaid", "not_run", detail="Plaid is configured. Live check was not requested.")
 

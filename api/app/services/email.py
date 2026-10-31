@@ -88,18 +88,45 @@ SCROLL_REQUEST_TEMPLATE_MARKER = "BTTCO-EMAIL-FOUNDRY-ARTIST-SCROLL-V1"
 FOUNDRY_EMAIL_ASSET_BASE = "https://app.ryozan.app/dependencies/@bttco/email-foundry/1.0.0/assets"
 
 # ── Email sender identities ───────────────────────────────────────────────
-# Use these constants as the `from_alias` param in send_email()
-FROM_SHOP = "noreply"  # noreply@ryozan.app — booking confirms, waivers, welcome
-FROM_ADMIN = "admin"  # admin@ryozan.app — invites, broadcasts, shop announcements
-FROM_SERVICE = "service"  # service@ryozan.app — payments, receipts, Stripe notifications
+# Use these constants as the `from_alias` param in send_email(). They name what
+# a message is for; the address always comes from settings (sender_identity).
+# With SENDGRID_USE_ALIAS_FROM, SendGrid sends from <alias>@<its from domain>.
+FROM_SHOP = "noreply"  # booking confirms, waivers, welcome
+FROM_ADMIN = "admin"  # invites, broadcasts, shop announcements
+FROM_SERVICE = "service"  # payments, receipts, Stripe notifications
+FROM_ALIASES = frozenset({FROM_SHOP, FROM_ADMIN, FROM_SERVICE})
+# Replies go to settings.SHOP_EMAIL unless the caller passes reply_to; with
+# neither, no Reply-To header is set.
 
-_FROM_MAP = {
-    "noreply": ("Ryozan Studio", "noreply@ryozan.app"),
-    "admin": ("Ryozan Studio", "admin@ryozan.app"),
-    "service": ("Ryozan Studio", "service@ryozan.app"),
-}
-# Tuple: (display_name, from_email). Replies go to settings.SHOP_EMAIL unless
-# the caller passes reply_to; with neither, no Reply-To header is set.
+
+def sender_identity(provider: str, settings=None) -> tuple[str, str]:
+    """(display name, from address) a provider sends as, read from settings only.
+
+    Address: the provider's own from address (SMTP: SMTP_FROM_EMAIL, then
+    SMTP_USER), then SHOP_EMAIL. Name: the provider's from name, then
+    STUDIO_NAME. The address is blank when none is configured; never send then.
+    """
+    settings = settings or get_settings()
+    if provider == "sendgrid":
+        email, name = settings.SENDGRID_FROM_EMAIL, settings.SENDGRID_FROM_NAME
+    elif provider == "resend":
+        email, name = settings.RESEND_FROM_EMAIL, settings.RESEND_FROM_NAME
+    elif provider == "smtp":
+        email = (settings.SMTP_FROM_EMAIL or "").strip() or settings.SMTP_USER
+        name = settings.SMTP_FROM_NAME
+    else:
+        raise ValueError(f"unknown email provider {provider!r}")
+    email = (email or "").strip() or (settings.SHOP_EMAIL or "").strip()
+    name = (name or "").strip() or (settings.STUDIO_NAME or "").strip()
+    return name, email
+
+
+def format_identity(name: str, email: str) -> str:
+    """'Name <address>' for a From header, or the bare address without a name."""
+    return f"{name} <{email}>" if name else email
+
+
+_NO_SENDER = "set {provider}_FROM_EMAIL or SHOP_EMAIL"
 
 
 def _email_head() -> str:
@@ -298,7 +325,7 @@ async def send_email(
         sender_id: User ID of the person triggering the email (for rate limiting)
         sender_role: Role of the sender (artist, admin, founder -- for cap bypass)
         from_alias: Sender identity key (FROM_SHOP, FROM_ADMIN, FROM_SERVICE).
-                    Defaults to FROM_SHOP (noreply@ryozan.app).
+                    Defaults to FROM_SHOP. The address comes from settings.
         courier_message_id: Optional ID of the Courier Message generating this email.
         courier_attempt: Exact Booky Courier provider attempt for delivery reconciliation.
         attachments: Optional files to attach. Supported on all three provider paths.
@@ -313,9 +340,7 @@ async def send_email(
         logger.warning("Email rate limit hit for user %s (cap: %d/day)", sender_id, ARTIST_DAILY_EMAIL_CAP)
         return False
 
-    # Resolve sender identity
     alias_key = from_alias or FROM_SHOP
-    display_name, from_email = _FROM_MAP.get(alias_key, _FROM_MAP["noreply"])
     settings = get_settings()
     effective_reply_to = reply_to or settings.SHOP_EMAIL.strip() or None
 
@@ -364,7 +389,7 @@ async def send_email(
             html_body,
             effective_reply_to,
             tags,
-            from_override=f"{display_name} <{from_email}>",
+            from_alias=alias_key,
             attachments=attachments,
         )
         if not sent and resend_configured:
@@ -375,7 +400,6 @@ async def send_email(
                 html_body,
                 effective_reply_to,
                 tags,
-                from_override=f"{display_name} <{from_email}>",
                 attachments=attachments,
             )
             error_detail = None if sent else f"{error_detail}; {resend_error}" if resend_error else error_detail
@@ -396,7 +420,6 @@ async def send_email(
             html_body,
             effective_reply_to,
             tags,
-            from_override=f"{display_name} <{from_email}>",
             attachments=attachments,
         )
         if not sent and smtp_configured:
@@ -747,29 +770,22 @@ async def process_booky_courier_outbox_once(
         return delivered
 
 
-def _parse_email_identity(identity: str) -> tuple[str | None, str]:
-    """Parse 'Display Name <email@example.com>' into provider-friendly pieces."""
-    match = _re.match(r"^\s*(.*?)\s*<([^>]+)>\s*$", identity)
-    if match:
-        name = match.group(1).strip().strip('"') or None
-        return name, match.group(2).strip()
-    return None, identity.strip()
-
-
 async def _send_via_sendgrid(
     to: str,
     subject: str,
     html_body: str,
     reply_to: str | None = None,
     tags: list[str] | None = None,
-    from_override: str | None = None,
+    from_alias: str | None = None,
     attachments: list[EmailAttachment] | None = None,
 ) -> tuple[bool, str | None, str | None]:
     """Send email via SendGrid REST API. Returns (success, message_id, error)."""
     settings = get_settings()
-    configured_from = f"{settings.SENDGRID_FROM_NAME} <{settings.SENDGRID_FROM_EMAIL}>"
-    from_identity = from_override if settings.SENDGRID_USE_ALIAS_FROM and from_override else configured_from
-    from_name, from_email = _parse_email_identity(from_identity)
+    from_name, from_email = sender_identity("sendgrid", settings)
+    if not from_email:
+        return False, None, f"No SendGrid sender: {_NO_SENDER.format(provider='SENDGRID')}"
+    if settings.SENDGRID_USE_ALIAS_FROM and from_alias in FROM_ALIASES and "@" in from_email:
+        from_email = f"{from_alias}@{from_email.rsplit('@', 1)[1]}"
 
     payload: dict = {
         "personalizations": [
@@ -827,12 +843,14 @@ async def _send_via_resend(
     html_body: str,
     reply_to: str | None = None,
     tags: list[str] | None = None,
-    from_override: str | None = None,
     attachments: list[EmailAttachment] | None = None,
 ) -> tuple[bool, str | None, str | None]:
     """Send email via Resend REST API. Returns (success, resend_id, error)."""
     settings = get_settings()
-    from_addr = from_override or f"{settings.RESEND_FROM_NAME} <{settings.RESEND_FROM_EMAIL}>"
+    from_name, from_email = sender_identity("resend", settings)
+    if not from_email:
+        return False, None, f"No Resend sender: {_NO_SENDER.format(provider='RESEND')}"
+    from_addr = format_identity(from_name, from_email)
 
     payload: dict = {
         "from": from_addr,
@@ -915,7 +933,7 @@ async def _send_via_smtp(
         msg.attach(MIMEText(plain, "plain"))
         msg.attach(MIMEText(html_body, "html"))
 
-    msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL or settings.SMTP_USER}>"
+    msg["From"] = format_identity(*sender_identity("smtp", settings))
     msg["To"] = to
     msg["Subject"] = subject
     if reply_to:

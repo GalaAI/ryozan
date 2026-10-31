@@ -13,7 +13,7 @@ Code: `api/app/api/v1/endpoints/push.py`, `api/app/services/push.py`, the servic
 | Read the public key | `GET /api/v1/push/vapid-key` | Anyone, no sign-in |
 | Subscribe this device, unsubscribe all devices | `POST /api/v1/push/subscribe`, `DELETE /api/v1/push/subscribe` | Any signed-in user |
 
-The Connections card "Push notifications" is offered to every signed-in role when push is configured and the browser supports it.
+The Connections card "Push notifications" is offered to every signed-in role when push is configured (both keys and a subject, the same test `/push/vapid-key` applies) and the browser supports it.
 
 ## What to register
 
@@ -57,5 +57,4 @@ None. There is no app review for Web Push. One platform rule matters:
 
 ## Known limits
 
-- `GET /api/v1/integrations/options` reports `push` as configured when only the two keys are set, without checking for a subject. In that case the card is shown, but subscribing fails because `/push/vapid-key` answers 503. Set `VAPID_SUBJECT` or `SHOP_EMAIL` with the keys.
 - The notification icon path is fixed to `/assets/images/logo-icon.png` on your own site.

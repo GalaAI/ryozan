@@ -174,7 +174,7 @@ export default function ArtistConnections() {
       readOffered(offered, 'stripe_connect', stripeConnect.status),
       readOffered(offered, 'email_forwarding', emailConnect.status),
       readOffered(offered, 'google_calendar', googleAuth.getStatus),
-      readOffered(offered, 'google_calendar', googleAuth.getSigninLinkStatus),
+      readOffered(offered, 'google_signin_link', googleAuth.getSigninLinkStatus),
       readOffered(offered, 'pinterest', pinterestAuth.getStatus),
     ])
     if (requestRef.current !== requestId) return
@@ -318,7 +318,7 @@ export default function ArtistConnections() {
         ? { tone: 'ready' as const, label: email.value.bttco_email || 'Active', detail: `Mail forwards to ${email.value.forward_to || 'your verified inbox'}.` }
         : email.value.connected
           ? { tone: 'incomplete' as const, label: 'Verify your inbox', detail: 'Your address is reserved, but the forwarding inbox still needs verification.' }
-          : { tone: 'disconnected' as const, label: 'Not claimed', detail: 'Claim an @ryozan.app address and forward replies to your inbox.' }
+          : { tone: 'disconnected' as const, label: 'Not claimed', detail: 'Claim a studio email address and forward replies to your inbox.' }
 
   const googleView = google.state === 'loading'
     ? { tone: 'loading' as const, label: 'Checking', detail: 'Reading Calendar connection health.' }
@@ -352,7 +352,7 @@ export default function ArtistConnections() {
     || [stripe, email, google, googleSignin, pinterest].every((item) => item.state === 'loading')
   const showStripe = isShownConnection(availability, 'stripe_connect', stripeView.tone)
   const showGoogle = isShownConnection(availability, 'google_calendar', googleView.tone)
-  const showGoogleSignin = isShownConnection(availability, 'google_calendar', googleSigninView.tone)
+  const showGoogleSignin = isShownConnection(availability, 'google_signin_link', googleSigninView.tone)
   const showPinterest = isShownConnection(availability, 'pinterest', pinterestView.tone)
   const showEmail = isShownConnection(availability, 'email_forwarding', emailView.tone)
   // Push has no server status; it is offered only from a successful options read.

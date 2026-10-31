@@ -38,6 +38,30 @@ NON_DEV_SHARED_SECRETS = {name: f"fixture-{name.lower()}-0123456789abcdef0123456
 # Svix-format test secret built from an obviously fake string; never a real key.
 TEST_WEBHOOK_SECRET = "whsec_" + base64.b64encode(b"ryozan-test-only-not-a-real-secret").decode()
 
+# The fixture install's mail settings. Source no longer names any domain or
+# owner address, so every test that routes or forwards mail sets them.
+FIXTURE_MAIL = {
+    "COURIER_REPLY_DOMAIN": "ryozan.app",
+    "RESEND_FROM_EMAIL": "mail@ryozan.app",
+    "SHOP_OWNER_EMAIL": "owner@studio.example.test",
+}
+
+
+def _fixture_settings(**overrides):
+    return Settings(_env_file=None, APP_ENV="test", **{**FIXTURE_MAIL, **overrides})
+
+
+class _FixtureMailSettings:
+    """Route every unpatched get_settings() in these modules to the fixture install."""
+
+    def setUp(self):
+        super().setUp()
+        self.settings = _fixture_settings(RESEND_API_KEY="re_synthetic", RESEND_INBOUND_WEBHOOK_SECRET="")
+        for module in (email_inbound, conversation_threads):
+            patcher = patch.object(module, "get_settings", return_value=self.settings)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
 class _ScalarValues:
     def __init__(self, value=None):
         self.value = value
@@ -147,9 +171,7 @@ class CourierInboundEmailTests(unittest.IsolatedAsyncioTestCase):
         client.get.return_value = httpx.Response(
             200, json=received, request=httpx.Request("GET", "https://api.resend.com/fixture")
         )
-        settings = Settings(
-            _env_file=None, APP_ENV="test", DEBUG=False, RESEND_API_KEY="re_synthetic", RESEND_INBOUND_WEBHOOK_SECRET=""
-        )
+        settings = _fixture_settings(DEBUG=False, RESEND_API_KEY="re_synthetic", RESEND_INBOUND_WEBHOOK_SECRET="")
         archive, forward = AsyncMock(return_value="synthetic-thread"), AsyncMock()
         with (
             patch.object(email_inbound, "get_settings", return_value=settings),
@@ -329,7 +351,7 @@ class CourierInboundEmailTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(participants, [])
 
 
-class SenderAwareRoutingTests(unittest.IsolatedAsyncioTestCase):
+class SenderAwareRoutingTests(_FixtureMailSettings, unittest.IsolatedAsyncioTestCase):
     async def test_artist_reply_targets_collector_instead_of_self(self):
         artist_id, collector_id, conversation_id = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
         rows = _RowsResult(("artist@example.test", artist_id))
@@ -399,8 +421,9 @@ class SenderAwareRoutingTests(unittest.IsolatedAsyncioTestCase):
         forward.assert_not_awaited()
 
 
-class ReplySafetyAndExchangeTests(unittest.IsolatedAsyncioTestCase):
+class ReplySafetyAndExchangeTests(_FixtureMailSettings, unittest.IsolatedAsyncioTestCase):
     def setUp(self):
+        super().setUp()
         self.conversation_id = uuid.uuid4()
         self.artist_id, self.collector_id = uuid.uuid4(), uuid.uuid4()
         self.people = [
@@ -408,12 +431,6 @@ class ReplySafetyAndExchangeTests(unittest.IsolatedAsyncioTestCase):
             ("collector@example.test", self.collector_id, "collector", "member"),
         ]
         self.alias = f"convo-{self.conversation_id}@ryozan.app"
-        self.settings = Settings(
-            _env_file=None,
-            APP_ENV="test",
-            RESEND_API_KEY="re_synthetic",
-            RESEND_INBOUND_WEBHOOK_SECRET="",
-        )
 
     def payload(self, sender="artist@example.test", **changes):
         return {
@@ -519,7 +536,8 @@ class ReplySafetyAndExchangeTests(unittest.IsolatedAsyncioTestCase):
     async def test_reserved_inbox_route_is_retained(self):
         db = _FakeSession([_ScalarResult(None), _ScalarResult(self.artist_id)])
         route = await email_inbound._resolve_destination(["info@ryozan.app"], db, "new@example.test")
-        self.assertEqual(route.destination, email_inbound.FALLBACK_ROUTES["info"])
+        self.assertEqual(route.destination, "owner@studio.example.test")
+        self.assertEqual(route.owner_user_id, self.artist_id)
         self.assertIsNone(route.conversation_id)
 
     async def test_auto_replies_and_forward_markers_are_not_archived(self):
@@ -612,19 +630,31 @@ class ReplySafetyAndExchangeTests(unittest.IsolatedAsyncioTestCase):
         ):
             alias = conversation_threads.conversation_reply_to(self.conversation_id)
             self.assertEqual(alias, self.alias.replace("@ryozan.app", "@reply.ryozan.app"))
-            for address in (alias, self.alias):
-                route = await email_inbound._resolve_destination(
-                    [address], _FakeSession([_RowsResult(self.people)]), "artist@example.test"
-                )
-                self.assertEqual(route.destination, "collector@example.test")
+            route = await email_inbound._resolve_destination(
+                [alias], _FakeSession([_RowsResult(self.people)]), "artist@example.test"
+            )
+            self.assertEqual(route.destination, "collector@example.test")
+            with self.assertRaises(HTTPException) as raised:
+                await email_inbound._resolve_destination([self.alias], _FakeSession(), "artist@example.test")
+            self.assertEqual(raised.exception.status_code, 400)
             self.assertIsNone(conversation_threads.conversation_reply_to(None))
+
+    async def test_no_receiving_domain_emits_no_reply_alias_and_accepts_none(self):
+        settings = Settings(_env_file=None, COURIER_REPLY_DOMAIN="")
+        with (
+            patch.object(conversation_threads, "get_settings", return_value=settings),
+            patch.object(email_inbound, "get_settings", return_value=settings),
+        ):
+            self.assertIsNone(conversation_threads.conversation_reply_to(self.conversation_id))
+            with self.assertRaises(HTTPException) as raised:
+                await email_inbound._resolve_destination([self.alias], _FakeSession(), "artist@example.test")
+            self.assertEqual(raised.exception.status_code, 400)
 
     def test_reply_domain_rejects_header_injection_or_url(self):
         for value in (
             "https://reply.example.test",
             "x@y.example.test",
             "reply.example.test\nBcc: x",
-            "",
             "-bad.example.test",
         ):
             with self.subTest(value=value), self.assertRaises(ValidationError):
@@ -633,6 +663,7 @@ class ReplySafetyAndExchangeTests(unittest.IsolatedAsyncioTestCase):
             Settings(_env_file=None, COURIER_REPLY_DOMAIN="REPLY.example.test").COURIER_REPLY_DOMAIN,
             "reply.example.test",
         )
+        self.assertEqual(Settings(_env_file=None, COURIER_REPLY_DOMAIN="  ").COURIER_REPLY_DOMAIN, "")
 
     def test_sender_parser_rejects_multiple_mailboxes_and_header_injection(self):
         for value in (
@@ -808,7 +839,7 @@ class ReplySafetyAndExchangeTests(unittest.IsolatedAsyncioTestCase):
     async def test_general_routing_retains_existing_sender_parsing(self):
         db = _FakeSession([_ScalarResult(None), _ScalarResult(self.artist_id)])
         route = await email_inbound._resolve_destination(["info@ryozan.app"], db, "malformed legacy sender")
-        self.assertEqual(route.destination, email_inbound.FALLBACK_ROUTES["info"])
+        self.assertEqual(route.destination, "owner@studio.example.test")
 
     async def test_bad_stored_recipient_reports_recipient_problem(self):
         people = [self.people[0], ("invalid recipient", self.collector_id, "collector", "member")]

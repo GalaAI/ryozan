@@ -12,10 +12,14 @@ Pinterest specifics (verified against API v5 docs, 2026-06):
     Content-Type application/x-www-form-urlencoded.
   - Continuous refresh tokens (60-day, refreshable indefinitely). We store the
     refresh token and mint short-lived access tokens on demand.
-  - Scopes requested: boards:read, pins:read, pins:write, user_accounts:read.
+  - Scopes requested: PINTEREST_SCOPES below (boards:read, boards:write,
+    pins:read, pins:write, user_accounts:read).
 
-Founder/admin gated. Trial access has reduced rate limits; callers should treat
-read calls as cacheable and avoid tight loops.
+Connect, callback, status, disconnect, boards and booking references accept
+any signed-in user (collectors build reference boards). Analytics, pin
+analytics, flash pinning and board ingest need admin or higher (_require_staff).
+Trial access has reduced rate limits; callers should treat read calls as
+cacheable and avoid tight loops.
 """
 
 import base64

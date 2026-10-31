@@ -1203,7 +1203,7 @@ class ResendDeliveryOrderingTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(
             email_log_endpoint,
             "get_settings",
-            return_value=SimpleNamespace(RESEND_WEBHOOK_SECRET=""),
+            return_value=SimpleNamespace(RESEND_WEBHOOK_SECRET="", APP_ENV="test", DEBUG=False),
         ):
             result = await email_log_endpoint.resend_webhook(
                 _ResendRequest(event_type, str(email_log.resend_id)),

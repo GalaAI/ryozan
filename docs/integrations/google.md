@@ -1,6 +1,6 @@
 # Google sign-in and Google Calendar
 
-One Google OAuth client powers two features:
+One Google OAuth client powers two features. Sign-in may use a second client of its own (see `GOOGLE_SIGNIN_CLIENT_ID` below):
 
 - **Google sign-in.** Anyone can sign in to the portal with a Google account. A new Google user becomes a `collector`. Staff whose Google address differs from their portal address can link their Google login from Connections.
 - **Google Calendar.** An artist connects their own Google Calendar. Ryozan then reads free/busy time for booking slots, writes booking events, and can import upcoming events as bookings.
@@ -16,7 +16,7 @@ Code: `api/app/api/v1/endpoints/auth.py` (sign-in), `api/app/api/v1/endpoints/go
 | Connect Google Calendar | `GET /api/v1/auth/google/connect` | Any signed-in user |
 | Sync, import, create or edit Calendar events | `/api/v1/calendar/sync/...`, `/calendar/import`, `/calendar/events` | `artist` and higher |
 
-The Connections card is offered to every signed-in role (`GOOGLE_CALENDAR_ROLES = ALL_SIGNED_IN`), but only `artist` and higher can do anything with a connected calendar.
+The Google Calendar card is offered to every signed-in role (`GOOGLE_CALENDAR_ROLES = ALL_SIGNED_IN`), but only `artist` and higher can do anything with a connected calendar. The Google sign-in link card has its own options entry, `google_signin_link`, offered to `assistant` and higher (`GOOGLE_SIGNIN_LINK_ROLES`), the same gate as `GET /auth/google/link`.
 
 ## What to register
 
@@ -89,7 +89,8 @@ A narrower scope does not skip review. Calendar scopes are still sensitive. It d
 | `API_PUBLIC_BASE_URL` | Yes on a hosted install | `http://localhost:18788` | Builds the sign-in callback. |
 | `FRONTEND_URL` | Yes on a hosted install | `http://localhost:15300` | Where the API sends the browser afterwards. |
 | `VITE_GOOGLE_CLIENT_ID` | For the in-browser Google button on the quote confirmation page | blank | Build-time variable for the web app. Pass it as a Docker build arg. Use the same id as `GOOGLE_CLIENT_ID`. |
-| `GOOGLE_SIGNIN_CLIENT_ID` | No | blank | Overrides the sign-in audience. Leave blank. See Known limits. |
+| `GOOGLE_SIGNIN_CLIENT_ID` | No | blank | A separate OAuth client for sign-in and login linking. Blank: sign-in uses `GOOGLE_CLIENT_ID`. Build the web app with `VITE_GOOGLE_CLIENT_ID` set to this id. |
+| `GOOGLE_SIGNIN_CLIENT_SECRET` | With a separate `GOOGLE_SIGNIN_CLIENT_ID` | blank | The secret of that sign-in client, sent in the sign-in token exchange. Without it, sign-in reports itself unconfigured (`/auth/options` `google: false`, `/auth/google/link` answers 503 naming this variable). |
 | `GOOGLE_REFRESH_TOKEN` | No | blank | Shop-wide fallback refresh token used when a user has none. |
 | `GOOGLE_CALENDAR_AUTH_MODE` | No | `oauth` | `oauth` (each artist connects) or `workspace_delegated`. |
 | `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` | Only for `workspace_delegated` | blank | The full service account key JSON. |
@@ -123,8 +124,5 @@ Checked against Google's documentation on 2026-10-31.
 
 ## Known limits
 
-- `GOOGLE_SIGNIN_CLIENT_ID` is paired with `GOOGLE_CLIENT_SECRET` in the sign-in token exchange. If you set it to a different client, the exchange fails. Leave it blank so both flows use `GOOGLE_CLIENT_ID`.
 - The sign-in callback has no variable of its own. It always follows `API_PUBLIC_BASE_URL`.
-- The Google sign-in link card is shown to collectors too, but `GET /auth/google/link` requires `assistant` or higher, so a collector gets a 403.
-- In `workspace_delegated` mode the `google_calendar` option is false, which also hides the Google sign-in link card.
 - Any signed-in user, including a collector, can grant the full Calendar scope from the Connections card even though only staff can use it.

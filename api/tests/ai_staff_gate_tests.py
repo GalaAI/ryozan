@@ -284,9 +284,7 @@ class GalaChatGatewayFailureTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(ctx.exception.detail["correlation_id"].startswith("gala-"))
 
     async def test_unreceipted_completed_action_is_replaced_with_honest_response(self):
-        gateway = AsyncMock(
-            return_value={"choices": [{"message": {"content": "I've routed your refund request."}}]}
-        )
+        gateway = AsyncMock(return_value={"choices": [{"message": {"content": "I've routed your refund request."}}]})
 
         response = await self._call_chat(gateway)
 
@@ -294,9 +292,7 @@ class GalaChatGatewayFailureTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("I've routed", response.response)
 
     async def test_unverified_future_action_is_replaced_with_honest_response(self):
-        gateway = AsyncMock(
-            return_value={"choices": [{"message": {"content": "They will contact you directly."}}]}
-        )
+        gateway = AsyncMock(return_value={"choices": [{"message": {"content": "They will contact you directly."}}]})
 
         response = await self._call_chat(gateway)
 
@@ -516,13 +512,17 @@ class AgentOrchestrationContractTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(gala_chat._desktop_access(user, "gala", {}))
         with patch.object(gala_chat, "get_settings", return_value=SimpleNamespace(LOCAL_DEV_MODE=False)):
             self.assertIsNone(gala_chat._desktop_access(user, "gala", {"surface": "desktop"}))
-        self.assertEqual([tool["function"]["name"] for tool in gala_chat._openai_tools("gala", "founder", policy)], ["get_schedule"])
+        self.assertEqual(
+            [tool["function"]["name"] for tool in gala_chat._openai_tools("gala", "founder", policy)], ["get_schedule"]
+        )
         with self.assertRaises(HTTPException):
             gala_chat.resolve_action_intent("bookings.read", "gala", "founder", policy)
 
     async def test_dev_access_is_rechecked_at_tool_execution(self):
         with self.assertRaises(PermissionError):
-            await gala_chat.execute_tool("get_schedule", {}, _user("founder"), object(), access={"tools": ["get_schedule"], "scopes": []})
+            await gala_chat.execute_tool(
+                "get_schedule", {}, _user("founder"), object(), access={"tools": ["get_schedule"], "scopes": []}
+            )
 
     async def test_access_update_persists_and_rejects_stale_revision(self):
         user = _user("founder")
@@ -550,7 +550,12 @@ class AgentOrchestrationContractTests(unittest.IsolatedAsyncioTestCase):
             for tools, scopes in [(["fake_tool"], []), ([], ["root:*"]), (["get_schedule"], [])]:
                 db = AsyncMock()
                 with self.assertRaises(HTTPException) as ctx:
-                    await gala_chat.update_agent_access("gala", gala_chat.AgentAccessUpdate(revision=0, tools=tools, scopes=scopes), db, _user("founder"))
+                    await gala_chat.update_agent_access(
+                        "gala",
+                        gala_chat.AgentAccessUpdate(revision=0, tools=tools, scopes=scopes),
+                        db,
+                        _user("founder"),
+                    )
                 self.assertEqual(ctx.exception.status_code, 422)
                 db.commit.assert_not_awaited()
             with self.assertRaises(HTTPException) as ctx:
@@ -628,33 +633,44 @@ class AgentOrchestrationContractTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("You are Saishin · Little Whirlwind", prompt)
         self.assertNotIn("Booky", prompt)
         self.assertIn("durable client and artist record", prompt)
-        self.assertIn("Current Ryozan Studio resident artist roster", prompt)
+        self.assertNotIn("artist roster", prompt)  # no roster unless STUDIO_ARTIST_ROSTER is set
         self.assertNotIn("You are Gala", prompt)
         for legacy in ("BTTCO", "Blind Tiger", "Greenville", "Justin Walker"):
             with self.subTest(legacy=legacy):
                 self.assertNotIn(legacy, prompt)
 
-    def test_founder_prompt_uses_trusted_identity_and_bandit_roster(self):
+    def test_founder_prompt_uses_account_identity_and_bandit_roster(self):
         user = User(
             id=uuid.uuid4(),
-            email="founder@ryozan.app",
+            email="founder@example.test",
             name="Morgan Z.",
             password_hash="test-hash",
             role="founder",
         )
         prompt = gala_chat.get_agent_system_prompt(user, "gala", "", {"portal_tab": "hub"})
 
-        self.assertIn("speaking with Studio Founder", prompt)
-        self.assertNotIn("Morgan Z.", prompt)
-        self.assertIn("working tattoo artist", prompt)
-        self.assertIn("no simulated completion", prompt)
+        self.assertIn("speaking with Morgan Z.", prompt)
+        self.assertIn("account with role founder", prompt)
         for agent_name in ("Sōkō", "Ensei", "Saishin", "Taisō", "Shishin", "Riki", "Rochishin", "Andōzen"):
             with self.subTest(agent_name=agent_name):
                 self.assertIn(agent_name, prompt)
-        for legacy in ("Spyder", "Xar", "Mercury", "Smoku", "Bella", "Booky", "Herald", "BTTCO"):
+        for legacy in ("Spyder", "Xar", "Mercury", "Smoku", "Bella", "Booky", "Herald", "BTTCO", "Resident Horishi"):
             with self.subTest(legacy=legacy):
                 self.assertNotIn(legacy, prompt)
         self.assertIn("Do not claim that a separate agent accepted, executed, or completed", prompt)
+
+    def test_studio_roster_and_owner_come_from_settings(self):
+        user = User(id=uuid.uuid4(), email="o@example.test", name="Owner", password_hash="x", role="founder")
+        settings = gala_chat.get_settings()
+        with (
+            patch.object(settings, "STUDIO_ARTIST_ROSTER", "- Ana: fine line"),
+            patch.object(settings, "STUDIO_OWNER_NAME", "Ana"),
+            patch.object(settings, "STUDIO_NAME", "Lantern Tattoo"),
+        ):
+            prompt = gala_chat.get_agent_system_prompt(user, "gala", "", {})
+        self.assertIn("Current Lantern Tattoo artist roster:\n- Ana: fine line", prompt)
+        self.assertIn("The studio owner is Ana.", prompt)
+        self.assertIn("for Lantern Tattoo", prompt)
 
     def test_session_compaction_parser_ignores_wrapping_and_bounds_facts(self):
         raw = (

@@ -2536,7 +2536,7 @@ function IntegrationsTab({
       desc: 'Courier Modz address for shop-domain replies, routing, and client communication.',
       status: emailStatus?.verified ? 'active' : emailStatus?.connected ? 'pending' : 'disconnected',
       statusLabel: emailStatus?.verified
-        ? `${emailStatus.handle}@ryozan.app`
+        ? emailStatus.bttco_email || emailStatus.handle || 'Active'
         : emailStatus?.connected ? 'Pending Verification' : 'Not Set Up',
       action: emailStatus?.verified ? null : {
         label: 'Set Up Email',

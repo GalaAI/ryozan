@@ -287,7 +287,7 @@ async def auth_options():
         or (settings.SMTP_USER.strip() and settings.SMTP_PASSWORD.strip())
     )
     return {
-        "google": bool(settings.GOOGLE_CLIENT_ID.strip() and settings.GOOGLE_CLIENT_SECRET.strip()),
+        "google": bool(settings.google_signin_client[0]),
         "registration": email_ready or instant_signup_open(settings),
         "instant_signup": instant_signup_open(settings),
         "signup_code_required": instant_signup_open(settings),
@@ -715,7 +715,7 @@ def _verify_google_credential(credential: str) -> dict:
     # The audience must be the Ryozan client ID rendered by the browser. An
     # explicit browser override is supported, otherwise the active Ryozan web
     # OAuth client is shared with the server-side Calendar flow.
-    google_audience = _settings.GOOGLE_SIGNIN_CLIENT_ID or _settings.GOOGLE_CLIENT_ID
+    google_audience = _settings.google_signin_audience
     if not google_audience:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -886,6 +886,18 @@ _GOOGLE_LINK_PURPOSE = "google_link"
 _GOOGLE_STATE_EXPIRE_MINUTES = 10
 
 
+def google_signin_unconfigured_reason() -> str:
+    """Which settings Google sign-in is missing, naming them."""
+    signin_id = _settings.GOOGLE_SIGNIN_CLIENT_ID.strip()
+    if signin_id and signin_id != _settings.GOOGLE_CLIENT_ID.strip():
+        return "Google sign-in is not configured: GOOGLE_SIGNIN_CLIENT_ID is set without GOOGLE_SIGNIN_CLIENT_SECRET"
+    return "Google sign-in is not configured: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET"
+
+
+def _log_google_signin_unconfigured() -> None:
+    logger.warning("google signin: %s", google_signin_unconfigured_reason())
+
+
 def _google_signin_redirect_uri() -> str:
     """Absolute callback URL. Must match the console entry byte for byte."""
     return f"{_settings.API_PUBLIC_BASE_URL}/api/v1/auth/google/callback-signin"
@@ -899,8 +911,9 @@ def _portal_url(fragment_or_query: str) -> str:
 @limiter.limit("10/minute")
 async def google_signin_start(request: Request, return_to: str | None = None):
     """Begin Google sign-in. Any control can link here; no Google button needed."""
-    client_id = _settings.GOOGLE_SIGNIN_CLIENT_ID or _settings.GOOGLE_CLIENT_ID
-    if not client_id or not _settings.GOOGLE_CLIENT_SECRET:
+    client_id, _secret = _settings.google_signin_client
+    if not client_id:
+        _log_google_signin_unconfigured()
         return RedirectResponse(_portal_url("?gsi_error=unconfigured"), status_code=303)
 
     now = datetime.now(UTC)
@@ -957,9 +970,9 @@ async def google_link_start(request: Request, current_user: User = Depends(requi
     account. Linking from inside their real session attaches the Google ID here,
     so every later Google sign-in resolves to this account.
     """
-    client_id = _settings.GOOGLE_SIGNIN_CLIENT_ID or _settings.GOOGLE_CLIENT_ID
-    if not client_id or not _settings.GOOGLE_CLIENT_SECRET:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Google sign-in is not configured")
+    client_id, _secret = _settings.google_signin_client
+    if not client_id:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=google_signin_unconfigured_reason())
 
     now = datetime.now(UTC)
     state = jwt.encode(
@@ -1060,7 +1073,9 @@ async def google_signin_callback(
         return RedirectResponse(_portal_url("?gsi_error=state"), status_code=303)
     linking = claims.get("purpose") == _GOOGLE_LINK_PURPOSE
 
-    client_id = _settings.GOOGLE_SIGNIN_CLIENT_ID or _settings.GOOGLE_CLIENT_ID
+    # Only /google/start and /google/link mint state, and both refuse an
+    # incomplete client, so the pair here is the one the flow started with.
+    client_id, client_secret = _settings.google_signin_client
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             token_response = await client.post(
@@ -1068,7 +1083,7 @@ async def google_signin_callback(
                 data={
                     "code": code,
                     "client_id": client_id,
-                    "client_secret": _settings.GOOGLE_CLIENT_SECRET,
+                    "client_secret": client_secret,
                     "redirect_uri": _google_signin_redirect_uri(),
                     "grant_type": "authorization_code",
                 },

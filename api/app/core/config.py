@@ -108,59 +108,70 @@ class Settings(BaseSettings):
     # WebSocket
     WS_HEARTBEAT_INTERVAL: int = 30  # seconds
 
-    # Email -- SendGrid API (primary when configured), Resend API, or Gmail SMTP fallback.
-    # Net-new SendGrid env is intentionally added here instead of a separate mail config surface.
-    # Ryozan already centralizes outbound sender identity in app.services.email, while Resend
-    # still owns inbound mail and delivery webhooks until those contracts are migrated.
+    # Email -- SendGrid API (primary when configured), Resend API, or SMTP fallback.
+    # Every sender identity comes from these settings; nothing in source names a
+    # mail domain. A blank *_FROM_EMAIL falls back to SHOP_EMAIL and a blank
+    # *_FROM_NAME falls back to STUDIO_NAME (app.services.email.sender_identity).
     SENDGRID_API_KEY: str = ""  # SG.xxxxx from SendGrid
-    SENDGRID_FROM_EMAIL: str = "noreply@ryozan.app"
-    SENDGRID_FROM_NAME: str = "Ryozan Studio"
+    SENDGRID_FROM_EMAIL: str = ""
+    SENDGRID_FROM_NAME: str = ""
+    # Send from <alias>@<domain of the SendGrid from address> (noreply, admin,
+    # service) instead of the from address itself.
     SENDGRID_USE_ALIAS_FROM: bool = False
 
-    # Email -- Resend API (fallback and inbound mail owner)
+    # Email -- Resend API (sending, and the inbound mail owner)
     RESEND_API_KEY: str = ""  # re_xxxxx from resend.com
-    RESEND_FROM_EMAIL: str = "noreply@ryozan.app"
-    RESEND_FROM_NAME: str = "Ryozan Studio"
+    RESEND_FROM_EMAIL: str = ""
+    RESEND_FROM_NAME: str = ""
     RESEND_WEBHOOK_SECRET: str = ""  # svix signing secret for the delivery webhook (Resend → /webhooks/resend)
     # svix signing secret for the inbound webhook (Resend → /webhooks/email-inbound)
     RESEND_INBOUND_WEBHOOK_SECRET: str = ""
-    # Extends the existing mail settings and reply helper, not a second routing
-    # owner. Change only after the proposed receiving domain is live-verified.
-    COURIER_REPLY_DOMAIN: str = "ryozan.app"
+    # The domain Resend receives mail on for this install, for example
+    # in.studio.example.com. Courier reply addresses (convo-<id>@) and artist
+    # email handles (<handle>@) live on it. Blank turns both off.
+    COURIER_REPLY_DOMAIN: str = ""
 
     @field_validator("COURIER_REPLY_DOMAIN")
     @classmethod
     def validate_courier_reply_domain(cls, value: str) -> str:
         import re
 
-        value = value.strip().lower()
+        value = (value or "").strip().lower()
+        if not value:
+            return value
         if len(value) > 253 or not re.fullmatch(
             r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+", value
         ):
             raise ValueError("COURIER_REPLY_DOMAIN must be a DNS hostname")
         return value
 
-    # Gmail SMTP (legacy fallback -- used if RESEND_API_KEY is empty)
+    # SMTP fallback. Sending needs both SMTP_USER and SMTP_PASSWORD.
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""  # Gmail App Password (16-char)
-    SMTP_FROM_NAME: str = "Ryozan Studio"
-    SMTP_FROM_EMAIL: str = ""  # same as SMTP_USER
+    SMTP_FROM_NAME: str = ""
+    SMTP_FROM_EMAIL: str = ""  # blank sends from SMTP_USER
 
     # Studio identity printed on client email, SMS and PDF output. The postal
     # address is env-only: a deployment sets its own, and nothing prints when blank.
     STUDIO_NAME: str = "Ryozan Studio"
+    # Free text the agents read as the studio's artist roster (one artist per line). Empty: no roster in prompts.
+    STUDIO_ARTIST_ROSTER: str = ""
     STUDIO_ADDRESS: str = ""
     # Public studio phone shown in the app (e.g. staff emergency contacts).
     # Blank hides it.
     STUDIO_PHONE: str = ""
 
     # Shop-level notification recipients (always CC'd on booking alerts).
-    # SHOP_EMAIL is also the public contact address in GET /studio/settings and
-    # the fallback VAPID subject. Blank means no shop inbox copy is sent.
+    # SHOP_EMAIL is also the public contact address in GET /studio/settings, the
+    # fallback sender address and the fallback VAPID subject. Blank means no
+    # shop inbox copy is sent.
     SHOP_EMAIL: str = ""
-    SHOP_OWNER_EMAIL: str = "founder@ryozan.app"
+    # The owner's private inbox: booking alerts, and inbound mail to reserved
+    # addresses (info@, bookings@ ...) and the catch-all. Blank falls back to
+    # SHOP_EMAIL; with neither, inbound mail stays in the app inbox only.
+    SHOP_OWNER_EMAIL: str = ""
 
     # ── Studio policy ─────────────────────────────────────────────────────
     # Workflows some studios run and others do not. Every one is off for a new
@@ -226,6 +237,16 @@ class Settings(BaseSettings):
     @property
     def inbound_owner_aliases(self) -> frozenset[str]:
         return self._csv_set(self.INBOUND_OWNER_ALIASES)
+
+    @property
+    def owner_inbox_email(self) -> str:
+        """Where owner mail goes: SHOP_OWNER_EMAIL, else SHOP_EMAIL, else blank."""
+        return (self.SHOP_OWNER_EMAIL or "").strip() or (self.SHOP_EMAIL or "").strip()
+
+    def inbound_address(self, local_part: str) -> str | None:
+        """<local_part>@COURIER_REPLY_DOMAIN, or None when no receiving domain is set."""
+        domain = (self.COURIER_REPLY_DOMAIN or "").strip()
+        return f"{local_part}@{domain}" if domain else None
 
     def resolve_artist_slug(self, slug: str) -> str | None:
         """Map the public "any" artist choice to the configured default artist.
@@ -327,10 +348,34 @@ class Settings(BaseSettings):
     GOOGLE_CALENDAR_DELEGATED_USER: str = ""
     GOOGLE_CALENDAR_DEFAULT_ID: str = ""
 
-    # Optional explicit browser audience. When blank, auth.py uses the active
-    # Ryozan GOOGLE_CLIENT_ID. VITE_GOOGLE_CLIENT_ID must render the same value.
-    # No source fallback is allowed because the former Gmodz project was deleted.
+    # Optional separate OAuth client for Google sign-in. Blank means sign-in uses
+    # GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, the same client as Calendar.
+    # A sign-in client id that differs from GOOGLE_CLIENT_ID needs its own
+    # GOOGLE_SIGNIN_CLIENT_SECRET; without it sign-in reports itself unconfigured.
+    # VITE_GOOGLE_CLIENT_ID must render the same client id as the server uses.
     GOOGLE_SIGNIN_CLIENT_ID: str = ""
+    GOOGLE_SIGNIN_CLIENT_SECRET: str = ""
+
+    @property
+    def google_signin_client(self) -> tuple[str, str]:
+        """(client id, client secret) for Google sign-in, or ("", "") when incomplete.
+
+        The token exchange must send the secret that belongs to the client id,
+        so a separate sign-in client never borrows GOOGLE_CLIENT_SECRET.
+        """
+        shared_id = (self.GOOGLE_CLIENT_ID or "").strip()
+        signin_id = (self.GOOGLE_SIGNIN_CLIENT_ID or "").strip()
+        signin_secret = (self.GOOGLE_SIGNIN_CLIENT_SECRET or "").strip()
+        if signin_id and signin_id != shared_id:
+            client_id, secret = signin_id, signin_secret
+        else:
+            client_id, secret = shared_id, signin_secret or (self.GOOGLE_CLIENT_SECRET or "").strip()
+        return (client_id, secret) if client_id and secret else ("", "")
+
+    @property
+    def google_signin_audience(self) -> str:
+        """Client id a Google ID token must be issued to."""
+        return (self.GOOGLE_SIGNIN_CLIENT_ID or "").strip() or (self.GOOGLE_CLIENT_ID or "").strip()
 
     # Pinterest API v5 (Trial access; app "GalaX"). Credentials live in the
     # developer dashboard at developers.pinterest.com/apps. Base: https://api.pinterest.com/v5
@@ -574,7 +619,9 @@ class Settings(BaseSettings):
     # Plaid (bank account linking)
     PLAID_CLIENT_ID: str = ""
     PLAID_SECRET: str = ""
-    PLAID_ENVIRONMENT: str = "sandbox"  # sandbox | development | production
+    # sandbox or production. Plaid shut down its development environment; any
+    # other value makes every Plaid call answer 503 naming this setting.
+    PLAID_ENVIRONMENT: str = "sandbox"
 
     # Clover POS connector
     CLOVER_CLIENT_ID: str = ""
@@ -591,7 +638,6 @@ class Settings(BaseSettings):
 
     # Stripe Connect
     STRIPE_SECRET_KEY: str = ""
-    STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
     STRIPE_CONNECT_WEBHOOK_SECRET: str = ""
     # Accounts v2 thin-event destinations issue their own signing secret. It
@@ -602,6 +648,19 @@ class Settings(BaseSettings):
     # Connections workflow. The endpoint adds the return or refresh state so
     # an expired Stripe link can be replaced through the authenticated owner.
     STRIPE_CONNECT_RETURN_URL: str = "http://localhost:15300/dashboard?portal=hub&workflow=connections"
+    # Country of the artists' connected accounts (ISO 3166-1 alpha-2), for
+    # example US, GB or CA. Stripe Connect must support it for the platform.
+    STRIPE_CONNECT_COUNTRY: str = "US"
+
+    @field_validator("STRIPE_CONNECT_COUNTRY")
+    @classmethod
+    def validate_stripe_connect_country(cls, value: str) -> str:
+        from app.constants.countries import ISO_3166_ALPHA2
+
+        value = (value or "").strip().upper()
+        if value not in ISO_3166_ALPHA2:
+            raise ValueError("STRIPE_CONNECT_COUNTRY must be an ISO 3166-1 alpha-2 country code, such as US or GB")
+        return value
 
     # Twilio (SMS / A2P 10DLC)
     # Get Account SID + Auth Token from console.twilio.com.

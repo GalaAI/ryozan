@@ -380,7 +380,7 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             with patch.object(
                 email_log_endpoint,
                 "get_settings",
-                return_value=type("Settings", (), {"RESEND_WEBHOOK_SECRET": ""})(),
+                return_value=type("Settings", (), {"RESEND_WEBHOOK_SECRET": "", "APP_ENV": "test", "DEBUG": False})(),
             ):
                 response = await email_log_endpoint.resend_webhook(
                     WebhookRequest(),

@@ -2,7 +2,9 @@
 Resend inbound email webhook -- receives email.received events and routes
 incoming mail via DB-driven routing table (ryozan_email_routes).
 
-Static fallback routes handle reserved addresses (info, bookings, admin).
+Reserved addresses (info, bookings, admin ...) and the catch-all go to the
+owner inbox: settings.owner_inbox_email (SHOP_OWNER_EMAIL, else SHOP_EMAIL).
+With neither set, mail is archived to the app inbox and never forwarded.
 Artist routes are created dynamically via the email connect flow.
 """
 
@@ -25,31 +27,38 @@ from app.models.email_route import EmailRoute
 from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.user import User
 from app.services.conversation_threads import conversation_reply_to, find_direct_conversation
+from app.services.email import format_identity, sender_identity
+from app.services.resend_webhook import verify_resend_webhook
 
 logger = logging.getLogger("ryozan.email_inbound")
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-# Static fallback routes for reserved addresses. INBOUND_OWNER_ALIASES adds
-# more local parts routed to the owner inbox (see _fallback_destination).
-FALLBACK_ROUTES: dict[str, str] = {
-    "info": "founder@ryozan.app",
-    "bookings": "founder@ryozan.app",
-    "admin": "founder@ryozan.app",
-    "noreply": "founder@ryozan.app",
-    "support": "founder@ryozan.app",
-}
-
-FOUNDER_EMAIL = "founder@ryozan.app"
+# Reserved local parts routed to the owner inbox. INBOUND_OWNER_ALIASES adds more.
+OWNER_LOCAL_PARTS = frozenset({"info", "bookings", "admin", "noreply", "support"})
 
 
-def _fallback_destination(local_part: str) -> str | None:
+def _is_owner_address(local_part: str) -> bool:
     """Reserved address or configured owner alias -> owner inbox."""
-    if local_part in FALLBACK_ROUTES:
-        return FALLBACK_ROUTES[local_part]
-    if local_part in get_settings().inbound_owner_aliases:
-        return FOUNDER_EMAIL
-    return None
+    return local_part in OWNER_LOCAL_PARTS or local_part in get_settings().inbound_owner_aliases
+
+
+async def _owner_route(db: AsyncSession, route_handle: str | None) -> "InboundRoute":
+    """The owner inbox: forward to owner_inbox_email, archive to that user.
+
+    The archive goes to the account with the owner address, else the oldest
+    founder, so mail stays visible in the app even with no address configured.
+    A blank destination means the message is archived and never forwarded.
+    """
+    destination = get_settings().owner_inbox_email
+    owner_id = None
+    if destination:
+        owner_id = (await db.execute(select(User.id).where(User.email == destination))).scalar_one_or_none()
+    if owner_id is None:
+        owner_id = (
+            await db.execute(select(User.id).where(User.role == "founder").order_by(User.created_at).limit(1))
+        ).scalar_one_or_none()
+    return InboundRoute(destination, owner_id, route_handle)
 
 
 async def _retrieve_received_body(data: dict, api_key: str) -> dict:
@@ -231,7 +240,7 @@ async def _forward_email(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {api_key}"},
             json={
-                "from": "Ryozan Mail <noreply@ryozan.app>",
+                "from": format_identity(*sender_identity("resend", get_settings())),
                 "to": [forward_to],
                 "reply_to": conversation_reply_to(conversation_id) or from_addr,
                 "headers": {FORWARD_HEADER: "1", "Auto-Submitted": "auto-generated"},
@@ -254,8 +263,8 @@ async def _resolve_destination(
     Resolve forwarding destination. Priority:
       1. Courier conversation reply address
       2. DB route (artist-claimed, verified handles)
-      3. Static fallback routes (reserved addresses)
-      4. Catch-all to founder
+      3. Reserved addresses and owner aliases -> owner inbox
+      4. Catch-all -> owner inbox
     """
     addresses = [to_addresses] if isinstance(to_addresses, str) else to_addresses
     reply_addresses = {_extract_email_address(a) for a in addresses if _extract_local_part(a).startswith("convo-")}
@@ -264,9 +273,8 @@ async def _resolve_destination(
             raise HTTPException(status_code=400, detail="Expected one conversation reply address")
         address = reply_addresses.pop()
         local_part, _, domain = address.partition("@")
-        # Root addresses already appear in old mail. Accept them only if they
-        # reach this signed ingress; this does not provision Google forwarding.
-        if domain not in {"ryozan.app", get_settings().COURIER_REPLY_DOMAIN}:
+        reply_domain = get_settings().COURIER_REPLY_DOMAIN
+        if not reply_domain or domain != reply_domain:
             raise HTTPException(status_code=400, detail="Unsupported conversation reply domain")
         return await _resolve_conversation_reply(local_part, db, _sender_address(from_address))
     for addr in addresses:
@@ -283,14 +291,10 @@ async def _resolve_destination(
         if route:
             return InboundRoute(route.forward_to, route.user_id, local_part)
 
-        # Check static fallbacks
-        destination = _fallback_destination(local_part)
-        if destination:
-            user_result = await db.execute(select(User.id).where(User.email == destination))
-            return InboundRoute(destination, user_result.scalar_one_or_none(), local_part)
+        if _is_owner_address(local_part):
+            return await _owner_route(db, local_part)
 
-    user_result = await db.execute(select(User.id).where(User.email == FOUNDER_EMAIL))
-    return InboundRoute(FOUNDER_EMAIL, user_result.scalar_one_or_none(), None)
+    return await _owner_route(db, None)
 
 
 async def _archive_email_to_courier(
@@ -421,8 +425,8 @@ async def handle_inbound_email(
     """
     Resend webhook handler for email.received events.
 
-    Queries DB for dynamic artist routes, falls back to static routes,
-    then catch-all to founder.
+    Queries DB for dynamic artist routes, then sends reserved addresses and the
+    catch-all to the owner inbox.
 
     The Svix signature is required outside local, development, and test
     environments and is verified before any database or forwarding work runs.
@@ -430,40 +434,9 @@ async def handle_inbound_email(
     settings = get_settings()
     body = await request.body()
 
-    webhook_secret = settings.RESEND_INBOUND_WEBHOOK_SECRET
-    if not webhook_secret:
-        is_local_dev = settings.DEBUG or settings.APP_ENV.strip().lower() in {
-            "development",
-            "dev",
-            "local",
-            "test",
-        }
-        if is_local_dev:
-            logger.warning("resend.inbound.no_secret_configured - accepting unsigned webhook in local/dev")
-        else:
-            logger.error("resend.inbound.no_secret_configured - rejecting webhook in non-dev environment")
-            raise HTTPException(status_code=503, detail="Inbound email webhook signing secret not configured")
-    else:
-        svix_id = request.headers.get("svix-id", "")
-        svix_ts = request.headers.get("svix-timestamp", "")
-        svix_sig = request.headers.get("svix-signature", "")
-        if not all([svix_id, svix_ts, svix_sig]):
-            raise HTTPException(status_code=400, detail="Missing Svix signature headers")
-        try:
-            from svix.webhooks import Webhook
-
-            wh = Webhook(webhook_secret)
-            wh.verify(
-                body,
-                {
-                    "svix-id": svix_id,
-                    "svix-timestamp": svix_ts,
-                    "svix-signature": svix_sig,
-                },
-            )
-        except Exception as exc:
-            logger.warning("Inbound webhook signature verification failed: %s", exc)
-            raise HTTPException(status_code=401, detail="Invalid webhook signature") from exc
+    verify_resend_webhook(
+        body, request.headers, settings.RESEND_INBOUND_WEBHOOK_SECRET, settings, label="Inbound email webhook"
+    )
 
     if not settings.RESEND_API_KEY:
         raise HTTPException(status_code=500, detail="RESEND_API_KEY not configured")
@@ -512,6 +485,22 @@ async def handle_inbound_email(
         route.conversation_id,
         route.sender_user_id,
     )
+    if not route.destination:
+        logger.warning(
+            "Inbound email archived to the app inbox only: set SHOP_OWNER_EMAIL or SHOP_EMAIL to forward owner mail"
+        )
+        return {
+            "status": "archived",
+            "reason": "no_owner_email_configured",
+            "courier_conversation_id": courier_conversation_id,
+        }
+    if not sender_identity("resend", settings)[1]:
+        logger.warning("Inbound email archived without forwarding: set RESEND_FROM_EMAIL or SHOP_EMAIL")
+        return {
+            "status": "archived",
+            "reason": "no_sender_configured",
+            "courier_conversation_id": courier_conversation_id,
+        }
     if not route.conversation_id:
         raw_sender = from_addr[0] if isinstance(from_addr, list) and from_addr else from_addr
         if isinstance(raw_sender, str) and _extract_email_address(raw_sender) == _extract_email_address(

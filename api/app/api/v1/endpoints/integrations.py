@@ -15,7 +15,7 @@ mirrors so the UI never offers a button the API then refuses.
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from app.api.v1.endpoints.quests import outbound_email_configured
+from app.api.v1.endpoints.quests import email_forwarding_configured
 from app.core.config import get_settings
 from app.core.security import ROLE_HIERARCHY, get_optional_current_user
 from app.services.calendar_sync import workspace_delegation_enabled
@@ -26,6 +26,8 @@ ALL_SIGNED_IN = frozenset(ROLE_HIERARCHY)
 
 # GET /auth/google/connect: any signed-in user.
 GOOGLE_CALENDAR_ROLES = ALL_SIGNED_IN
+# GET /auth/google/link: require_role("assistant"), so assistant and higher.
+GOOGLE_SIGNIN_LINK_ROLES = frozenset(ROLE_HIERARCHY[ROLE_HIERARCHY.index("assistant") :])
 # GET /pinterest/connect: any signed-in user (collectors build reference boards).
 PINTEREST_ROLES = ALL_SIGNED_IN
 # POST /plaid/link-token: any signed-in user.
@@ -48,14 +50,21 @@ def _google_calendar_configured() -> bool:
     return _set(settings.GOOGLE_CLIENT_ID, settings.GOOGLE_CLIENT_SECRET) and not workspace_delegation_enabled()
 
 
+def _google_signin_link_configured() -> bool:
+    # The same paired client the sign-in token exchange uses (Settings.google_signin_client).
+    return bool(get_settings().google_signin_client[0])
+
+
 def _pinterest_configured() -> bool:
     settings = get_settings()
     return _set(settings.PINTEREST_CLIENT_ID, settings.PINTEREST_CLIENT_SECRET)
 
 
 def _plaid_configured() -> bool:
+    from app.api.v1.endpoints.plaid import plaid_environment_supported
+
     settings = get_settings()
-    return _set(settings.PLAID_CLIENT_ID, settings.PLAID_SECRET)
+    return _set(settings.PLAID_CLIENT_ID, settings.PLAID_SECRET) and plaid_environment_supported()
 
 
 def _stripe_connect_configured() -> bool:
@@ -66,17 +75,18 @@ def _stripe_connect_configured() -> bool:
 
 
 def _push_configured() -> bool:
-    settings = get_settings()
-    return _set(settings.VAPID_PUBLIC_KEY, settings.VAPID_PRIVATE_KEY)
+    # Keys and a usable subject, the same test /push/vapid-key applies.
+    return get_settings().push_configured
 
 
 INTEGRATIONS = (
     ("google_calendar", _google_calendar_configured, GOOGLE_CALENDAR_ROLES),
+    ("google_signin_link", _google_signin_link_configured, GOOGLE_SIGNIN_LINK_ROLES),
     ("pinterest", _pinterest_configured, PINTEREST_ROLES),
     ("plaid", _plaid_configured, PLAID_ROLES),
     ("stripe_connect", _stripe_connect_configured, STRIPE_CONNECT_ROLES),
     ("push", _push_configured, PUSH_ROLES),
-    ("email_forwarding", outbound_email_configured, EMAIL_FORWARDING_ROLES),
+    ("email_forwarding", email_forwarding_configured, EMAIL_FORWARDING_ROLES),
 )
 
 

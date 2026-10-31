@@ -98,6 +98,13 @@ test('waiver template: configured id, else the named waiver, else the first acti
   assert.equal(resolveWaiverTemplateId(NEUTRAL_STUDIO_SETTINGS, [templates[3]]), null)
 })
 
+test('email_domain is the install receiving domain, empty when handles are off', () => {
+  assert.equal(NEUTRAL_STUDIO_SETTINGS.email_domain, '')
+  assert.equal(configured.email_domain, '')
+  assert.equal(normalizeStudioSettings({ email_domain: ' IN.Example.test ' }).email_domain, 'in.example.test')
+  assert.equal(normalizeStudioSettings({ email_domain: 42 }).email_domain, '')
+})
+
 test('loader reads once, and a failed read is neutral and retried', async () => {
   let calls = 0
   const loader = createStudioSettingsLoader(async () => { calls += 1; return { owner_name: 'Sam' } })

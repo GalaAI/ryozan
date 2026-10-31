@@ -59,7 +59,7 @@ class ArtistLoginLocalTests(unittest.TestCase):
     def _start(self):
         with (
             patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", "fixture-client"),
-            patch.object(auth._settings, "GOOGLE_CLIENT_SECRET", "fixture-secret"),
+            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_SECRET", "fixture-secret"),
         ):
             response = self.client.get("/auth/google/link", headers=self.headers)
         self.assertEqual(response.status_code, 200)

@@ -40,6 +40,8 @@ class StudioSettingsResponse(BaseModel):
     default_artist_slug: str
     waiver_template_id: str
     sample_flash_urls: list[str]
+    # COURIER_REPLY_DOMAIN: where studio email handles live. Empty: handles are off.
+    email_domain: str
 
 
 def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
@@ -58,6 +60,7 @@ def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
         default_artist_slug=settings.DEFAULT_ARTIST_SLUG.strip(),
         waiver_template_id=settings.WAIVER_TEMPLATE_ID,
         sample_flash_urls=settings.sample_flash_urls,
+        email_domain=settings.COURIER_REPLY_DOMAIN,
     )
 
 

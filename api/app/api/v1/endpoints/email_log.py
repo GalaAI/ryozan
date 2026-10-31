@@ -33,6 +33,7 @@ from app.models.message import Message
 from app.models.user import User
 from app.services.courier_channels import CourierRouteContext, build_channel_status
 from app.services.email_foundry import foundry_catalog_summary, foundry_source_sha256
+from app.services.resend_webhook import verify_resend_webhook
 
 logger = logging.getLogger("ryozan.email_log")
 
@@ -1038,34 +1039,17 @@ async def resend_webhook(
     Resend delivery webhook. Updates EmailLog status on:
       email.delivered, email.bounced, email.opened, email.clicked
 
-    Resend signs webhooks with a svix-signature header.
-    We verify using the RESEND_WEBHOOK_SECRET env var (optional but recommended).
+    Resend signs webhooks with a svix-signature header, verified with
+    RESEND_WEBHOOK_SECRET. Without the secret the webhook is refused (503)
+    outside local, development and test environments.
     """
     settings = get_settings()
     body = await request.body()
 
-    # Signature verification (Resend signs via Standard Webhooks; svix SDK is wire-compatible)
-    if settings.RESEND_WEBHOOK_SECRET:
-        svix_id = request.headers.get("svix-id", "")
-        svix_ts = request.headers.get("svix-timestamp", "")
-        svix_sig = request.headers.get("svix-signature", "")
-        if not all([svix_id, svix_ts, svix_sig]):
-            raise HTTPException(status_code=400, detail="Missing Svix signature headers")
-        try:
-            from svix.webhooks import Webhook
-
-            wh = Webhook(settings.RESEND_WEBHOOK_SECRET)
-            wh.verify(
-                body,
-                {
-                    "svix-id": svix_id,
-                    "svix-timestamp": svix_ts,
-                    "svix-signature": svix_sig,
-                },
-            )
-        except Exception as exc:
-            logger.warning("Resend webhook signature verification failed: %s", exc)
-            raise HTTPException(status_code=401, detail="Invalid webhook signature") from exc
+    # Signed with RESEND_WEBHOOK_SECRET. Outside local/dev/test a blank secret answers 503.
+    verify_resend_webhook(
+        body, request.headers, settings.RESEND_WEBHOOK_SECRET, settings, label="Resend delivery webhook"
+    )
 
     try:
         payload = await request.json()

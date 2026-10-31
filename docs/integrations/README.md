@@ -32,12 +32,13 @@ Roles, lowest to highest: `collector`, `assistant`, `artist`, `admin`, `founder`
 
 | Integration | Guide | Options id | "Configured" means | Who may start it | Third-party review before strangers connect |
 | --- | --- | --- | --- | --- | --- |
-| Google sign-in and Calendar | [google.md](google.md) | `google_calendar` | `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` set, and Calendar mode is not `workspace_delegated` | Any signed-in user (Calendar use itself needs `artist` or higher) | Yes. Calendar scope is sensitive: Google verification, or Testing mode with up to 100 test users |
+| Google Calendar | [google.md](google.md) | `google_calendar` | `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` set, and Calendar mode is not `workspace_delegated` | Any signed-in user (Calendar use itself needs `artist` or higher) | Yes. Calendar scope is sensitive: Google verification, or Testing mode with up to 100 test users |
+| Google sign-in linking | [google.md](google.md) | `google_signin_link` | A complete sign-in client: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, or `GOOGLE_SIGNIN_CLIENT_ID` with its own `GOOGLE_SIGNIN_CLIENT_SECRET` | `assistant` and higher | No for `openid email profile` alone |
 | Pinterest | [pinterest.md](pinterest.md) | `pinterest` | `PINTEREST_CLIENT_ID` and `PINTEREST_CLIENT_SECRET` set | Any signed-in user | Yes. Trial access is sandbox only; Standard access needs a video review |
-| Plaid | [plaid.md](plaid.md) | `plaid` | `PLAID_CLIENT_ID` and `PLAID_SECRET` set | Any signed-in user | Yes. Sandbox is free; live banks need a Plaid Trial plan or Production approval. **Blocked by a code bug today** |
+| Plaid | [plaid.md](plaid.md) | `plaid` | `PLAID_CLIENT_ID` and `PLAID_SECRET` set, and `PLAID_ENVIRONMENT` is `sandbox` or `production` | Any signed-in user | Yes. Sandbox is free; live banks need a Plaid Trial plan or Production approval |
 | Stripe Connect | [stripe-connect.md](stripe-connect.md) | `stripe_connect` | `STRIPE_SECRET_KEY` set | `artist` and `founder` only | Yes. Platform profile, live account activation |
-| Email (outbound and inbound) | [email.md](email.md) | `email_forwarding` | `RESEND_API_KEY`, `SENDGRID_API_KEY` or `SMTP_PASSWORD` set | Any signed-in user | Domain verification (SPF and DKIM) at the provider. **Resend sending and inbound are tied to the original domain today** |
-| Web Push (VAPID) | [push.md](push.md) | `push` | `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` set | Any signed-in user | None. You generate your own keys |
+| Email (outbound and inbound) | [email.md](email.md) | `email_forwarding` | Studio email handles can run: `RESEND_API_KEY` and `COURIER_REPLY_DOMAIN` set (handles are received and forwarded by Resend) | Any signed-in user | Domain verification (SPF and DKIM) at the provider |
+| Web Push (VAPID) | [push.md](push.md) | `push` | `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` set, and a subject (`VAPID_SUBJECT`, or `SHOP_EMAIL`) | Any signed-in user | None. You generate your own keys |
 
 Plaid has an options entry, but the Connections screen does not draw a Plaid card. Plaid Link opens from the Hustle page (`/dashboard/hustle`, for `artist`, `admin` and `founder`).
 

@@ -5,7 +5,7 @@ Email has two halves that use different code and different providers.
 - **Outbound.** Booking confirmations, deposit receipts, waivers, password resets, sign-up links and staff alerts. One function sends all of it: `send_email` in `api/app/services/email.py`. It can use SendGrid, Resend or SMTP.
 - **Inbound.** Mail sent to the studio's domain: replies to Courier conversations, mail to an artist's studio handle, and mail to reserved addresses such as `info@`. Only Resend can receive. Code: `api/app/api/v1/endpoints/email_inbound.py`, with artist handles claimed through `api/app/api/v1/endpoints/email_connect.py`.
 
-> **Read Known limits first.** Today the Resend paths and the artist handle feature are tied to the original product domain in code. A new studio can send reliably through **SendGrid** or **SMTP**. Inbound mail and Resend sending need code changes before they work on another domain.
+Every address Ryozan sends from, forwards to, or receives on comes from your settings. Nothing in the code names a mail domain.
 
 ## Who can use it
 
@@ -15,7 +15,7 @@ Email has two halves that use different code and different providers.
 | Claim a studio email handle that forwards to a personal inbox ("Ryozan Email" card) | `POST /api/v1/email/connect`, `GET /email/status`, `DELETE /email/release` | Any signed-in user |
 | Read the send log and stats | `GET /api/v1/email/log`, `GET /email/log/stats` | `founder` |
 
-The `email_forwarding` option is configured when `RESEND_API_KEY`, `SENDGRID_API_KEY` or `SMTP_PASSWORD` is set.
+The `email_forwarding` option (the "Ryozan Email" handle card) is configured when a handle can work end to end: `RESEND_API_KEY` and `COURIER_REPLY_DOMAIN` are set, because Resend receives and forwards handle mail. Outbound mail alone counts SMTP only when both `SMTP_USER` and `SMTP_PASSWORD` are set.
 
 ## Outbound
 
@@ -32,12 +32,16 @@ Every attempt is written to the email log. With `LOCAL_DEV_MODE=true`, nothing i
 
 ### The From address each provider uses
 
+`sender_identity()` in `services/email.py` is the one source for every provider:
+
 | Provider | From address | Name |
 | --- | --- | --- |
-| SendGrid | `SENDGRID_FROM_EMAIL` | `SENDGRID_FROM_NAME` |
-| SendGrid with `SENDGRID_USE_ALIAS_FROM=true` | A fixed `noreply@`, `admin@` or `service@` address on the original product domain. Leave this off. | `Ryozan Studio` |
-| Resend | Always the fixed `noreply@`, `admin@` or `service@` address on the original product domain. `RESEND_FROM_EMAIL` is not used by `send_email`. | `Ryozan Studio` |
-| SMTP | `SMTP_FROM_EMAIL`, or `SMTP_USER` when blank | `SMTP_FROM_NAME` |
+| SendGrid | `SENDGRID_FROM_EMAIL`, else `SHOP_EMAIL` | `SENDGRID_FROM_NAME`, else `STUDIO_NAME` |
+| SendGrid with `SENDGRID_USE_ALIAS_FROM=true` | `noreply@`, `admin@` or `service@` (by message type) on the domain of the address above | as above |
+| Resend | `RESEND_FROM_EMAIL`, else `SHOP_EMAIL` | `RESEND_FROM_NAME`, else `STUDIO_NAME` |
+| SMTP | `SMTP_FROM_EMAIL`, else `SMTP_USER`, else `SHOP_EMAIL` | `SMTP_FROM_NAME`, else `STUDIO_NAME` |
+
+With no From address at all, SendGrid and Resend sends fail with an error naming the variable to set, and the email log records it. The From domain must be one the provider has verified for your account.
 
 Replies go to `SHOP_EMAIL` when it is set, unless the caller sets its own Reply-To.
 
@@ -55,7 +59,7 @@ Replies go to `SHOP_EMAIL` when it is set, unless the caller sets its own Reply-
    SHOP_EMAIL=hello@studio.example.com
    ```
 
-   `SENDGRID_FROM_EMAIL` defaults to an address on the original product domain. You must set it.
+   `SENDGRID_FROM_EMAIL` must be on your authenticated domain. Blank falls back to `SHOP_EMAIL`.
 
 Ryozan has no SendGrid event webhook, so delivered, bounced and opened states are not tracked for SendGrid sends. Ryozan also does not use SendGrid Inbound Parse.
 
@@ -76,9 +80,18 @@ For Gmail or Google Workspace, `SMTP_PASSWORD` is an App Password, and Google re
 
 ### Option C: Resend
 
-Resend is wired up, but see Known limits: `send_email` sends Resend mail from a fixed address on the original product domain, which your Resend account cannot verify, so Resend rejects it. If SendGrid or SMTP is also set, the fallback chain still delivers.
+1. Add your domain in Resend and add the SPF and DKIM DNS records it shows. Wait for it to verify.
+2. Create an API key.
+3. Set:
 
-When this is fixed, the setup is: add your domain in Resend, add the SPF and DKIM DNS records Resend shows, wait for it to verify, create an API key, and set `RESEND_API_KEY`, `RESEND_FROM_EMAIL` and `RESEND_FROM_NAME`.
+   ```
+   RESEND_API_KEY=re_your-key
+   RESEND_FROM_EMAIL=noreply@studio.example.com
+   RESEND_FROM_NAME=Your Studio
+   SHOP_EMAIL=hello@studio.example.com
+   ```
+
+Resend is also the inbound provider (below), and inbound forwards are sent from the same `RESEND_FROM_EMAIL` identity.
 
 ### Delivery webhook (Resend only)
 
@@ -86,7 +99,7 @@ When this is fixed, the setup is: add your domain in Resend, add the SPF and DKI
 | --- | --- | --- |
 | `https://studio.example.com/api/v1/webhooks/resend` | `RESEND_WEBHOOK_SECRET` | `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, `email.delivery_delayed`, `email.opened`, `email.clicked` |
 
-In Resend, add a webhook with that URL and copy its signing secret. If `RESEND_WEBHOOK_SECRET` is blank, this endpoint accepts unsigned requests in every environment. Set it.
+In Resend, add a webhook with that URL and copy its signing secret into `RESEND_WEBHOOK_SECRET`. Outside development (`APP_ENV` other than `development`, `dev`, `local` or `test`, and `DEBUG` off) the endpoint answers 503 until the secret is set, 400 without signature headers, and 401 for a bad signature. The inbound webhook below follows the same rule.
 
 ## Inbound
 
@@ -95,11 +108,13 @@ In Resend, add a webhook with that URL and copy its signing secret. If `RESEND_W
 Resend receives mail for your domain and posts an `email.received` event to Ryozan. Ryozan fetches the message body from Resend's Receiving API with `RESEND_API_KEY`, then routes it in this order:
 
 1. **Conversation replies.** `convo-<conversation id>@<COURIER_REPLY_DOMAIN>` is appended to that Courier conversation. The receiving server's DMARC result must be `pass`, or the message is refused with 403. Courier sets this address as the Reply-To on conversation notifications.
-2. **Artist handles.** A verified handle claimed from the "Ryozan Email" card forwards to that artist's personal address.
+2. **Artist handles.** A verified `<handle>@<COURIER_REPLY_DOMAIN>` claimed from the "Ryozan Email" card forwards to that artist's personal address.
 3. **Reserved addresses.** `info`, `bookings`, `admin`, `noreply`, `support`, plus any local parts in `INBOUND_OWNER_ALIASES`, go to the owner inbox.
 4. **Everything else** goes to the owner inbox.
 
-Every message is also archived to Courier. Forwarding is sent through Resend. Automatic and already-forwarded mail is ignored to prevent loops.
+The owner inbox is `SHOP_OWNER_EMAIL`, else `SHOP_EMAIL`. The Courier copy goes to the account with that address, else the oldest `founder` account. With neither address set, owner mail is archived in the app and never forwarded anywhere; the webhook answers `{"status": "archived", "reason": "no_owner_email_configured"}` and logs a warning.
+
+Every message is also archived to Courier. Forwarding is sent through Resend from the `RESEND_FROM_EMAIL` identity (else `SHOP_EMAIL`); with no sender address, mail is archived without forwarding (`"reason": "no_sender_configured"`). Automatic and already-forwarded mail is ignored to prevent loops.
 
 ### What to register
 
@@ -110,7 +125,8 @@ Every message is also archived to Courier. Forwarding is sent through Resend. Au
    | --- | --- |
    | `https://studio.example.com/api/v1/webhooks/email-inbound` | `RESEND_INBOUND_WEBHOOK_SECRET` |
 
-3. Set `COURIER_REPLY_DOMAIN` to the receiving domain, for example `in.studio.example.com`. The default is the original product domain.
+3. Set `COURIER_REPLY_DOMAIN` to the receiving domain, for example `in.studio.example.com`. Conversation reply addresses and artist handles are both on it, and only that domain is accepted for conversation replies. Blank (the default) turns off conversation reply addresses and handle claims (`/email/check` and `/email/connect` answer 503 naming the variable).
+4. Set `SHOP_OWNER_EMAIL` (or `SHOP_EMAIL`) to the inbox that should receive `info@`, `bookings@` and the catch-all.
 
 Outside development, the inbound endpoint answers 503 until `RESEND_INBOUND_WEBHOOK_SECRET` is set. It answers 500 if `RESEND_API_KEY` is missing.
 
@@ -119,19 +135,21 @@ Outside development, the inbound endpoint answers 503 until `RESEND_INBOUND_WEBH
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `SENDGRID_API_KEY` | One provider is required | blank | |
-| `SENDGRID_FROM_EMAIL` | With SendGrid | original product address | Must be on your authenticated domain. |
-| `SENDGRID_FROM_NAME` | No | `Ryozan Studio` | |
-| `SENDGRID_USE_ALIAS_FROM` | No | `false` | Keep `false`. |
+| `SENDGRID_FROM_EMAIL` | With SendGrid, unless `SHOP_EMAIL` is on the authenticated domain | blank | Must be on your authenticated domain. |
+| `SENDGRID_FROM_NAME` | No | blank (`STUDIO_NAME`) | |
+| `SENDGRID_USE_ALIAS_FROM` | No | `false` | `true` sends from `noreply@`, `admin@` or `service@` on the `SENDGRID_FROM_EMAIL` domain. |
 | `RESEND_API_KEY` | For Resend sending or any inbound | blank | |
-| `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME` | No | original product address | Not used by `send_email` today. |
-| `RESEND_WEBHOOK_SECRET` | Recommended | blank | Delivery webhook. |
-| `RESEND_INBOUND_WEBHOOK_SECRET` | For inbound outside development | blank | Inbound webhook. |
-| `COURIER_REPLY_DOMAIN` | For conversation replies | original product domain | Must be a DNS hostname. |
+| `RESEND_FROM_EMAIL` | With Resend, unless `SHOP_EMAIL` is on the verified domain | blank | Also the sender of inbound forwards. |
+| `RESEND_FROM_NAME` | No | blank (`STUDIO_NAME`) | |
+| `RESEND_WEBHOOK_SECRET` | For the delivery webhook outside development | blank | Without it the endpoint answers 503. |
+| `RESEND_INBOUND_WEBHOOK_SECRET` | For inbound outside development | blank | Without it the endpoint answers 503. |
+| `COURIER_REPLY_DOMAIN` | For conversation replies and artist handles | blank | The receiving domain. Must be a DNS hostname. Blank turns both off. |
+| `SHOP_OWNER_EMAIL` | Recommended with inbound | blank | Owner inbox for reserved addresses, the catch-all and booking alerts. Blank falls back to `SHOP_EMAIL`. |
 | `INBOUND_OWNER_ALIASES` | No | blank | Extra local parts for the owner inbox. |
 | `SMTP_HOST`, `SMTP_PORT` | With SMTP | `smtp.gmail.com`, `587` | |
 | `SMTP_USER`, `SMTP_PASSWORD` | With SMTP | blank | Both are needed to send. |
-| `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` | No | blank, `Ryozan Studio` | |
-| `SHOP_EMAIL` | Recommended | blank | Reply-To on outbound mail and the shop copy on booking alerts. |
+| `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME` | No | blank | Blank sends from `SMTP_USER` with `STUDIO_NAME`. |
+| `SHOP_EMAIL` | Recommended | blank | Reply-To on outbound mail, fallback From address, fallback owner inbox, and the shop copy on booking alerts. |
 | `EMAIL_TEST_REDIRECT` | Development only | blank | Ignored when `APP_ENV=production`. |
 | `LOCAL_DEV_MODE` | Development only | `false` | `true` skips every send. |
 
@@ -154,13 +172,5 @@ No app review is needed. What the providers require is proof you own the sending
 
 ## Known limits
 
-These are code problems that block a new studio. The code was not changed.
-
-- `send_email` always passes a fixed sender from `_FROM_MAP` in `services/email.py` (`noreply@`, `admin@` or `service@` on the original product domain) to Resend. Resend rejects a From domain the account has not verified, so Resend sending fails for any other studio. SendGrid (with `SENDGRID_USE_ALIAS_FROM=false`) and SMTP use your configured address and are not affected.
-- The sender display name in `_FROM_MAP` is fixed to `Ryozan Studio`; it does not use `STUDIO_NAME`.
-- Inbound forwarding in `email_inbound.py` sends from a fixed `noreply@` address on the original product domain, so Resend refuses the forward and the webhook answers 503.
-- Reserved addresses and the catch-all forward to a fixed `founder@` address on the original product domain (`FALLBACK_ROUTES` and `FOUNDER_EMAIL`), not to `SHOP_OWNER_EMAIL` or `SHOP_EMAIL`. Do not point a production domain's MX at Resend until this is fixed, or the studio's mail goes to a third party's address.
-- Conversation replies accept the original product domain as well as `COURIER_REPLY_DOMAIN`.
-- Artist handles in `email_connect.py` are always shown and confirmed as `handle@` the original product domain, whatever domain the studio receives on.
-- The `email_forwarding` option counts `SMTP_PASSWORD` alone as configured, but sending needs `SMTP_USER` too.
-- The Resend delivery webhook accepts unsigned requests when `RESEND_WEBHOOK_SECRET` is blank, in every environment.
+- Conversation reply addresses and artist handles share one receiving domain, `COURIER_REPLY_DOMAIN`. Changing it retires reply addresses already sent on the old domain.
+- Ryozan has no SendGrid event webhook and does not use SendGrid Inbound Parse, so inbound mail always needs Resend.

@@ -15,12 +15,18 @@ from unittest.mock import patch
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from app.api.v1.endpoints import integrations, quests, stripe_connect
+from app.api.v1.endpoints import integrations, plaid, quests, stripe_connect
+from app.core.config import Settings
 from app.core.database import get_db
-from app.core.security import ROLE_HIERARCHY, get_optional_current_user
+from app.core.security import ROLE_HIERARCHY, ROLE_RANK, get_optional_current_user, require_role
 from app.services import calendar_sync
 
-IDS = ["google_calendar", "pinterest", "plaid", "stripe_connect", "push", "email_forwarding"]
+IDS = ["google_calendar", "google_signin_link", "pinterest", "plaid", "stripe_connect", "push", "email_forwarding"]
+# Roles the endpoint behind each id refuses.
+REFUSED = {
+    "stripe_connect": {"collector", "assistant", "admin"},
+    "google_signin_link": {"collector"},
+}
 
 SECRETS = {
     "GOOGLE_CLIENT_ID": "google-id-SECRET-1",
@@ -34,18 +40,34 @@ SECRETS = {
     "VAPID_PRIVATE_KEY": "vapid-private-SECRET-9",
     "RESEND_API_KEY": "re_SECRET-10",
 }
+# Non-secret settings a complete install also needs.
+COMPLETE = {
+    **SECRETS,
+    "VAPID_SUBJECT": "mailto:owner@studio.example.test",
+    "COURIER_REPLY_DOMAIN": "in.studio.example.test",
+}
+
+BLANK = {
+    **{key: "" for key in COMPLETE},
+    "SENDGRID_API_KEY": "",
+    "SMTP_USER": "",
+    "SMTP_PASSWORD": "",
+    "SHOP_EMAIL": "",
+    "GOOGLE_SIGNIN_CLIENT_ID": "",
+    "GOOGLE_SIGNIN_CLIENT_SECRET": "",
+    "GOOGLE_CALENDAR_AUTH_MODE": "oauth",
+    "PLAID_ENVIRONMENT": "sandbox",
+}
 
 
 def _settings(**overrides):
-    base = {key: "" for key in SECRETS}
-    base.update(SENDGRID_API_KEY="", SMTP_PASSWORD="", GOOGLE_CALENDAR_AUTH_MODE="oauth")
-    return SimpleNamespace(**{**base, **overrides})
+    return Settings(_env_file=None, APP_ENV="test", **{**BLANK, **overrides})
 
 
 @contextmanager
 def _patched(settings):
     with ExitStack() as stack:
-        for module in (integrations, quests, calendar_sync, stripe_connect):
+        for module in (integrations, quests, calendar_sync, stripe_connect, plaid):
             stack.enter_context(patch.object(module, "get_settings", return_value=settings))
         yield
 
@@ -60,6 +82,10 @@ def _options(role, settings):
         return _by_id(integrations.integration_options(role))
 
 
+def _configured(integration_id, **overrides):
+    return _options(None, _settings(**overrides))[integration_id]["configured"]
+
+
 class IntegrationOptionsTests(unittest.TestCase):
     def test_contract_lists_every_integration_in_order(self):
         response = _options(None, _settings()).values()
@@ -68,24 +94,18 @@ class IntegrationOptionsTests(unittest.TestCase):
             self.assertEqual(set(item), {"id", "configured", "allowed"})
 
     def test_anonymous_gets_null_allowed(self):
-        for item in _options(None, _settings(**SECRETS)).values():
+        for item in _options(None, _settings(**COMPLETE)).values():
             self.assertIsNone(item["allowed"])
-            self.assertTrue(item["configured"])
+            self.assertTrue(item["configured"], item["id"])
 
-    def test_collector_may_connect_everything_but_stripe(self):
-        options = _options("collector", _settings())
-        self.assertEqual(
-            {key: item["allowed"] for key, item in options.items()},
-            {key: key != "stripe_connect" for key in IDS},
-        )
-
-    def test_artist_and_founder_may_connect_everything(self):
-        for role in ("artist", "founder"):
-            self.assertTrue(all(item["allowed"] for item in _options(role, _settings()).values()), role)
-
-    def test_assistant_and_admin_match_stripe_connect_gate(self):
-        for role in ("assistant", "admin"):
-            self.assertFalse(_options(role, _settings())["stripe_connect"]["allowed"], role)
+    def test_allowed_matches_each_endpoint_for_every_role(self):
+        for role in ROLE_HIERARCHY:
+            options = _options(role, _settings())
+            self.assertEqual(
+                {key: item["allowed"] for key, item in options.items()},
+                {key: role not in REFUSED.get(key, set()) for key in IDS},
+                role,
+            )
 
     def test_stripe_connect_endpoint_enforces_the_same_role_set(self):
         self.assertIs(stripe_connect.STRIPE_CONNECT_ROLES, integrations.STRIPE_CONNECT_ROLES)
@@ -97,27 +117,79 @@ class IntegrationOptionsTests(unittest.TestCase):
                 with self.assertRaises(HTTPException):
                     stripe_connect._require_connect_artist(user)
 
+    def test_google_signin_link_roles_match_the_link_endpoint_gate(self):
+        # GET /auth/google/link depends on require_role("assistant").
+        gate = require_role("assistant")
+        for role in ROLE_HIERARCHY:
+            user = SimpleNamespace(role=role)
+            if role in integrations.GOOGLE_SIGNIN_LINK_ROLES:
+                self.assertIs(asyncio.run(gate(current_user=user)), user)
+            else:
+                with self.assertRaises(HTTPException) as raised:
+                    asyncio.run(gate(current_user=user))
+                self.assertEqual(raised.exception.status_code, 403)
+        self.assertEqual(
+            integrations.GOOGLE_SIGNIN_LINK_ROLES, {r for r in ROLE_HIERARCHY if ROLE_RANK[r] >= ROLE_RANK["assistant"]}
+        )
+
     def test_nothing_configured_on_bare_install(self):
         self.assertFalse(any(item["configured"] for item in _options("artist", _settings()).values()))
 
     def test_each_integration_needs_its_full_credential_pair(self):
         cases = {
             "google_calendar": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+            "google_signin_link": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
             "pinterest": ("PINTEREST_CLIENT_ID", "PINTEREST_CLIENT_SECRET"),
             "plaid": ("PLAID_CLIENT_ID", "PLAID_SECRET"),
-            "push": ("VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"),
         }
         for integration_id, (first, second) in cases.items():
-            only_first = _options(None, _settings(**{first: "x"}))[integration_id]["configured"]
-            both = _options(None, _settings(**{first: "x", second: "y"}))[integration_id]["configured"]
-            self.assertFalse(only_first, integration_id)
-            self.assertTrue(both, integration_id)
+            self.assertFalse(_configured(integration_id, **{first: "x"}), integration_id)
+            self.assertTrue(_configured(integration_id, **{first: "x", second: "y"}), integration_id)
 
-    def test_stripe_and_email_follow_their_owner_helpers(self):
-        self.assertTrue(_options(None, _settings(STRIPE_SECRET_KEY="sk"))["stripe_connect"]["configured"])
-        self.assertFalse(_options(None, _settings(STRIPE_SECRET_KEY="  "))["stripe_connect"]["configured"])
-        for provider in ("RESEND_API_KEY", "SENDGRID_API_KEY", "SMTP_PASSWORD"):
-            self.assertTrue(_options(None, _settings(**{provider: "k"}))["email_forwarding"]["configured"], provider)
+    def test_push_needs_keys_and_a_usable_subject(self):
+        keys = {"VAPID_PUBLIC_KEY": "pub", "VAPID_PRIVATE_KEY": "priv"}
+        self.assertFalse(_configured("push", **keys))
+        self.assertFalse(_configured("push", VAPID_PUBLIC_KEY="pub", VAPID_SUBJECT="mailto:o@example.test"))
+        self.assertTrue(_configured("push", **keys, VAPID_SUBJECT="mailto:o@example.test"))
+        # SHOP_EMAIL is the documented fallback subject.
+        self.assertTrue(_configured("push", **keys, SHOP_EMAIL="shop@example.test"))
+
+    def test_email_forwarding_needs_resend_and_a_receiving_domain(self):
+        domain = {"COURIER_REPLY_DOMAIN": "in.example.test"}
+        self.assertFalse(_configured("email_forwarding", RESEND_API_KEY="re_x"))
+        self.assertTrue(_configured("email_forwarding", RESEND_API_KEY="re_x", **domain))
+        # Handles are received and forwarded by Resend; another provider alone cannot run them.
+        self.assertFalse(_configured("email_forwarding", SENDGRID_API_KEY="SG.x", **domain))
+        self.assertFalse(_configured("email_forwarding", SMTP_USER="u", SMTP_PASSWORD="p", **domain))
+
+    def test_smtp_password_alone_is_not_an_outbound_provider(self):
+        with _patched(_settings(SMTP_PASSWORD="p")):
+            self.assertFalse(quests.outbound_email_configured())
+        with _patched(_settings(SMTP_USER="u", SMTP_PASSWORD="p")):
+            self.assertTrue(quests.outbound_email_configured())
+
+    def test_stripe_follows_its_owner_helper(self):
+        self.assertTrue(_configured("stripe_connect", STRIPE_SECRET_KEY="sk"))
+        self.assertFalse(_configured("stripe_connect", STRIPE_SECRET_KEY="  "))
+
+    def test_plaid_is_not_configured_with_an_unsupported_environment(self):
+        keys = {"PLAID_CLIENT_ID": "x", "PLAID_SECRET": "y"}
+        self.assertTrue(_configured("plaid", **keys, PLAID_ENVIRONMENT="production"))
+        self.assertFalse(_configured("plaid", **keys, PLAID_ENVIRONMENT="development"))
+
+    def test_signin_link_needs_the_secret_of_a_separate_signin_client(self):
+        shared = {"GOOGLE_CLIENT_ID": "calendar-client", "GOOGLE_CLIENT_SECRET": "calendar-secret"}
+        self.assertFalse(_configured("google_signin_link", **shared, GOOGLE_SIGNIN_CLIENT_ID="signin-client"))
+        self.assertTrue(
+            _configured(
+                "google_signin_link",
+                **shared,
+                GOOGLE_SIGNIN_CLIENT_ID="signin-client",
+                GOOGLE_SIGNIN_CLIENT_SECRET="signin-secret",
+            )
+        )
+        # Calendar does not depend on the sign-in client.
+        self.assertTrue(_configured("google_calendar", **shared, GOOGLE_SIGNIN_CLIENT_ID="signin-client"))
 
     def test_service_account_calendar_mode_is_not_user_connectable(self):
         settings = _settings(
@@ -125,10 +197,13 @@ class IntegrationOptionsTests(unittest.TestCase):
             GOOGLE_CLIENT_SECRET="y",
             GOOGLE_CALENDAR_AUTH_MODE=calendar_sync.WORKSPACE_DELEGATED_MODE,
         )
-        self.assertFalse(_options("artist", settings)["google_calendar"]["configured"])
+        options = _options("artist", settings)
+        self.assertFalse(options["google_calendar"]["configured"])
+        # Sign-in linking uses its own OAuth flow and stays available.
+        self.assertTrue(options["google_signin_link"]["configured"])
 
     def test_response_never_contains_secret_values(self):
-        with _patched(_settings(**SECRETS)):
+        with _patched(_settings(**COMPLETE)):
             body = json.dumps(integrations.integration_options("founder").model_dump())
         for value in SECRETS.values():
             self.assertNotIn(value, body)
@@ -146,7 +221,7 @@ class IntegrationOptionsHttpTests(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_anonymous_request_succeeds_with_null_allowed(self):
-        with _patched(_settings(**SECRETS)):
+        with _patched(_settings(**COMPLETE)):
             response = self.client.get("/integrations/options")
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item["id"] for item in response.json()["integrations"]], IDS)
@@ -166,7 +241,7 @@ class IntegrationOptionsHttpTests(unittest.TestCase):
             items = {
                 item["id"]: item["allowed"] for item in self.client.get("/integrations/options").json()["integrations"]
             }
-        self.assertEqual(items, {key: key != "stripe_connect" for key in IDS})
+        self.assertEqual(items, {key: "collector" not in REFUSED.get(key, set()) for key in IDS})
 
     def test_optional_user_without_token_is_none(self):
         self.assertIsNone(asyncio.run(get_optional_current_user(token=None, db=None)))

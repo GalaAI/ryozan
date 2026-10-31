@@ -60,7 +60,7 @@ test('nothing shows and nothing is read while options are still loading', () => 
 test('ArtistConnections reads options first and gates every status read and card on them', async () => {
   const component = await readFile(new URL('../components/ArtistConnections.tsx', import.meta.url), 'utf8')
   assert.match(component, /integrationAvailability\(await integrations\.options\(\)\.catch\(\(\) => null\)\)/)
-  for (const [id, read] of [['stripe_connect', 'stripeConnect.status'], ['email_forwarding', 'emailConnect.status'], ['google_calendar', 'googleAuth.getStatus'], ['google_calendar', 'googleAuth.getSigninLinkStatus'], ['pinterest', 'pinterestAuth.getStatus']]) {
+  for (const [id, read] of [['stripe_connect', 'stripeConnect.status'], ['email_forwarding', 'emailConnect.status'], ['google_calendar', 'googleAuth.getStatus'], ['google_signin_link', 'googleAuth.getSigninLinkStatus'], ['pinterest', 'pinterestAuth.getStatus']]) {
     assert.ok(component.includes(`readOffered(offered, '${id}', ${read})`), read)
   }
   assert.doesNotMatch(component, /stripeConnect\.status\(\)|emailConnect\.status\(\)|pinterestAuth\.getStatus\(\)/)

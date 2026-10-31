@@ -15,6 +15,8 @@ os.environ["ENABLE_API_DOCS"] = "false"
 os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 
 from app.api.v1.endpoints import bookings as bookings_endpoint
+from app.core.config import Settings
+from app.services import conversation_threads
 from app.services.email_foundry_booking import render_request_approved
 
 
@@ -71,7 +73,12 @@ class RequestApprovedRendererTests(unittest.TestCase):
 class RequestApprovedSenderTests(unittest.IsolatedAsyncioTestCase):
     async def test_sender_threads_replies_into_the_booking_conversation(self):
         conversation_id = uuid4()
-        with patch.object(bookings_endpoint, "send_email", new=AsyncMock(return_value=True)) as send:
+        # The reply alias lives on the install's receiving domain.
+        settings = Settings(_env_file=None, APP_ENV="test", COURIER_REPLY_DOMAIN="in.studio.example.test")
+        with (
+            patch.object(bookings_endpoint, "send_email", new=AsyncMock(return_value=True)) as send,
+            patch.object(conversation_threads, "get_settings", return_value=settings),
+        ):
             accepted = await bookings_endpoint._send_request_approved(
                 to="maria@example.test",
                 client_name="Maria",
@@ -88,7 +95,7 @@ class RequestApprovedSenderTests(unittest.IsolatedAsyncioTestCase):
         kwargs = send.await_args.kwargs
         self.assertEqual(kwargs["to"], "maria@example.test")
         self.assertEqual(kwargs["tags"], ["request_approved"])
-        self.assertIn(str(conversation_id), kwargs["reply_to"])
+        self.assertEqual(kwargs["reply_to"], f"convo-{conversation_id}@in.studio.example.test")
         self.assertIn("Request approved", kwargs["subject"])
 
 

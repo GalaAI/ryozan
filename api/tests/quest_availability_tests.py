@@ -20,7 +20,14 @@ SEEDED = set(re.findall(r"gen_random_uuid\(\), '([a-z-]+)',", _SEED))
 
 
 def _settings(**overrides):
-    base = {"VAPID_PUBLIC_KEY": "", "RESEND_API_KEY": "", "SENDGRID_API_KEY": "", "SMTP_PASSWORD": ""}
+    base = {
+        "VAPID_PUBLIC_KEY": "",
+        "RESEND_API_KEY": "",
+        "SENDGRID_API_KEY": "",
+        "SMTP_USER": "",
+        "SMTP_PASSWORD": "",
+        "COURIER_REPLY_DOMAIN": "",
+    }
     return SimpleNamespace(**{**base, **overrides})
 
 
@@ -38,11 +45,23 @@ class QuestAvailabilityTests(unittest.TestCase):
         self.assertEqual(listed, {"first-booking", "profile-pic", "waiver-signed"})
 
     def test_integration_quests_return_when_configured(self):
-        with patch.object(quests, "get_settings", return_value=_settings(VAPID_PUBLIC_KEY="k", RESEND_API_KEY="r")):
+        configured = _settings(VAPID_PUBLIC_KEY="k", RESEND_API_KEY="r", COURIER_REPLY_DOMAIN="in.example.test")
+        with patch.object(quests, "get_settings", return_value=configured):
             self.assertTrue(quests.quest_available("enable-notifications"))
             self.assertTrue(quests.quest_available("connect-email"))
             self.assertTrue(quests.quest_available("email-alias"))
             self.assertFalse(quests.quest_available("leave-review"))
+
+    def test_email_handle_quests_need_a_receiving_domain(self):
+        with patch.object(quests, "get_settings", return_value=_settings(RESEND_API_KEY="r")):
+            self.assertTrue(quests.outbound_email_configured())
+            self.assertFalse(quests.quest_available("connect-email"))
+
+    def test_smtp_password_alone_cannot_send(self):
+        with patch.object(quests, "get_settings", return_value=_settings(SMTP_PASSWORD="p")):
+            self.assertFalse(quests.outbound_email_configured())
+        with patch.object(quests, "get_settings", return_value=_settings(SMTP_USER="u", SMTP_PASSWORD="p")):
+            self.assertTrue(quests.outbound_email_configured())
 
 
 if __name__ == "__main__":

@@ -627,7 +627,7 @@ async def courier_channel_status(
     return build_channel_status(
         settings,
         CourierRouteContext(
-            email_route=f"{email_route.handle}@ryozan.app" if email_route else None,
+            email_route=settings.inbound_address(email_route.handle) if email_route else None,
             email_forward_to=email_route.forward_to if email_route else None,
             email_verified=bool(email_route and email_route.verified),
             instagram_url=effective_user.instagram_url,

@@ -38,10 +38,12 @@ def conversation_reply_to(conversation_id: UUID | None) -> str | None:
 
     The configured domain must be admitted separately for receiving. The helper
     generates an address; it does not establish provider or DNS readiness.
+    None without a conversation or without COURIER_REPLY_DOMAIN; callers then
+    fall back to the default Reply-To.
     """
     if conversation_id is None:
         return None
-    return f"convo-{conversation_id}@{get_settings().COURIER_REPLY_DOMAIN}"
+    return get_settings().inbound_address(f"convo-{conversation_id}")
 
 
 async def find_direct_conversation(

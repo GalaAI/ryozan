@@ -82,7 +82,8 @@ def _create_connected_account(user: User):
         {
             "display_name": user.name,
             "contact_email": user.email,
-            "identity": {"country": "us"},
+            # Accounts v2 takes the lowercase ISO 3166-1 alpha-2 code.
+            "identity": {"country": get_settings().STRIPE_CONNECT_COUNTRY.lower()},
             "dashboard": "full",
             "defaults": {
                 "responsibilities": {

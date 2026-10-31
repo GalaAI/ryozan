@@ -135,7 +135,7 @@ class LinkStartTests(unittest.TestCase):
         settings = get_settings()
         with (
             patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", "client-id"),
-            patch.object(auth._settings, "GOOGLE_CLIENT_SECRET", "secret"),
+            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_SECRET", "secret"),
         ):
             response = asyncio.run(auth.google_link_start.__wrapped__(SimpleNamespace(), current_user=user))
         query = parse_qs(urlparse(response.authorization_url).query)

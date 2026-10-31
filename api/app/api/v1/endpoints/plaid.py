@@ -36,16 +36,40 @@ router = APIRouter(prefix="/plaid", tags=["plaid"])
 # ── Plaid client factory ────────────────────────────────────────────
 
 
+# The environments the pinned plaid-python defines. Plaid shut down its
+# Development environment in 2024 and the SDK no longer has it.
+PLAID_HOSTS = {
+    "sandbox": plaid.Environment.Sandbox,
+    "production": plaid.Environment.Production,
+}
+
+
+def plaid_environment() -> str:
+    """PLAID_ENVIRONMENT, normalized; blank means sandbox."""
+    return (get_settings().PLAID_ENVIRONMENT or "").strip().lower() or "sandbox"
+
+
+def plaid_environment_supported() -> bool:
+    return plaid_environment() in PLAID_HOSTS
+
+
+def _plaid_host() -> str:
+    """API host for PLAID_ENVIRONMENT, or a 503 that names the setting."""
+    environment = plaid_environment()
+    host = PLAID_HOSTS.get(environment)
+    if host is None:
+        logger.error("PLAID_ENVIRONMENT=%r is not supported; use sandbox or production", environment)
+        raise HTTPException(
+            status_code=503,
+            detail=f"PLAID_ENVIRONMENT={environment!r} is not supported. Set it to sandbox or production.",
+        )
+    return host
+
+
 def _get_plaid_client() -> plaid_api.PlaidApi:
     """Build a PlaidApi client from current settings."""
     settings = get_settings()
-
-    env_map = {
-        "sandbox": plaid.Environment.Sandbox,
-        "development": plaid.Environment.Development,
-        "production": plaid.Environment.Production,
-    }
-    host = env_map.get(settings.PLAID_ENVIRONMENT.lower(), plaid.Environment.Sandbox)
+    host = _plaid_host()
 
     configuration = plaid.Configuration(
         host=host,

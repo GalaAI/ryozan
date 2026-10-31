@@ -11,7 +11,7 @@ Code: `api/app/api/v1/endpoints/stripe_connect.py` (onboarding, status, booth re
 Ryozan uses the **Accounts v2** API (`stripe.v2.core.accounts.create`), not the v1 Express or Standard types. The create call sets:
 
 ```python
-"identity": {"country": "us"},
+"identity": {"country": settings.STRIPE_CONNECT_COUNTRY.lower()},  # default "us"
 "dashboard": "full",
 "defaults": {
     "responsibilities": {
@@ -101,8 +101,8 @@ Checkout success and cancel pages are built from `FRONTEND_URL`.
 | `STRIPE_CONNECT_WEBHOOK_SECRET` | Yes once artists take payments | blank | Connected accounts snapshot destination. Without it, direct charge events from artist accounts fail signature checks. |
 | `STRIPE_CONNECT_THIN_WEBHOOK_SECRET` | Yes for live readiness updates | blank | Without it, `/stripe/connect/webhook` answers 503. Readiness is still refreshed when an artist opens their status. |
 | `STRIPE_CONNECT_RETURN_URL` | Yes on a hosted install | localhost | See above. |
+| `STRIPE_CONNECT_COUNTRY` | Outside the US | `US` | Country of every artist's connected account, as an ISO 3166-1 alpha-2 code (`GB`, `CA`, `AU` ...). Validated at startup; an unassigned code stops the API. Stripe must support Connect in that country for your platform. |
 | `FRONTEND_URL` | Yes on a hosted install | `http://localhost:15300` | Checkout return pages. |
-| `STRIPE_PUBLISHABLE_KEY`, `VITE_STRIPE_PUBLISHABLE_KEY` | No | blank | Declared, but no server or web code reads them today. |
 
 If no webhook secret is set, `/stripe/webhook` accepts unsigned events only when `APP_ENV` is a development value or `DEBUG`/`LOCAL_DEV_MODE` is on. Otherwise it answers 503.
 
@@ -135,5 +135,5 @@ Checked against Stripe's documentation on 2026-10-31.
 
 ## Known limits
 
-- Connected accounts are created with `identity.country = "us"`. A studio outside the US cannot onboard artists without a code change.
+- Every connected account uses the one `STRIPE_CONNECT_COUNTRY`. Artists in different countries on one install are not supported.
 - Accounts v2 needs the `stripe` Python SDK pinned in `api/requirements.txt` (`stripe==15.6.1`). An older SDK lacks `client.v2.core.accounts`.

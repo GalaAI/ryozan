@@ -1,6 +1,6 @@
 """
-Email connect endpoints -- artists claim a @ryozan.app handle
-and link it to their personal email during onboarding.
+Email connect endpoints -- artists claim a handle on the studio's receiving
+domain (COURIER_REPLY_DOMAIN) and link it to their personal email.
 
 Flow:
   1. POST   /email/connect  -- artist picks handle + provides personal email
@@ -27,6 +27,21 @@ from app.services.email import FROM_ADMIN, send_email
 from app.services.quest_hooks import check_and_complete_quest
 
 router = APIRouter(prefix="/email", tags=["email"])
+
+NO_DOMAIN_DETAIL = "Studio email handles are off: set COURIER_REPLY_DOMAIN to the domain Resend receives mail on"
+
+
+def _handle_address(handle: str) -> str | None:
+    """handle@COURIER_REPLY_DOMAIN, or None when no receiving domain is set."""
+    return get_settings().inbound_address(handle)
+
+
+def _require_handle_address(handle: str) -> str:
+    address = _handle_address(handle)
+    if address is None:
+        raise HTTPException(503, NO_DOMAIN_DETAIL)
+    return address
+
 
 # Reserved handles that can't be claimed by artists
 RESERVED_HANDLES = {
@@ -70,7 +85,7 @@ class EmailStatusResponse(BaseModel):
 class HandleCheckResponse(BaseModel):
     handle: str
     available: bool
-    bttco_email: str
+    bttco_email: str | None
 
 
 def _sanitize_handle(handle: str) -> str:
@@ -88,10 +103,11 @@ async def check_handle_availability(
     handle: str,
     db: AsyncSession = Depends(get_db),
 ):
-    """Check if a @ryozan.app handle is available."""
+    """Check if a handle is available on the studio's receiving domain."""
     handle = _sanitize_handle(handle)
     if not handle or len(handle) < 2:
         raise HTTPException(400, "Handle must be at least 2 characters")
+    address = _require_handle_address(handle)
 
     available = True
     if handle in RESERVED_HANDLES:
@@ -104,7 +120,7 @@ async def check_handle_availability(
     return HandleCheckResponse(
         handle=handle,
         available=available,
-        bttco_email=f"{handle}@ryozan.app",
+        bttco_email=address,
     )
 
 
@@ -115,7 +131,7 @@ async def connect_email(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Artist claims a @ryozan.app handle and links their personal email.
+    Artist claims a handle on the receiving domain and links their personal email.
     Sends a verification email to confirm ownership of the personal address.
     """
     settings = get_settings()
@@ -127,6 +143,7 @@ async def connect_email(
         raise HTTPException(400, "Handle must be 30 characters or less")
     if handle in RESERVED_HANDLES:
         raise HTTPException(400, f"'{handle}' is reserved")
+    address = _require_handle_address(handle)
 
     # Check if handle is taken by someone else
     existing = await db.execute(select(EmailRoute).where(EmailRoute.handle == handle))
@@ -170,7 +187,7 @@ async def connect_email(
         <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px;">
             <h2 style="color: #d4a853;">Confirm Your Ryozan Email</h2>
             <p>Hey {current_user.name},</p>
-            <p>You're claiming <strong>{handle}@ryozan.app</strong> as your Ryozan email.</p>
+            <p>You're claiming <strong>{address}</strong> as your Ryozan email.</p>
             <p>Click below to verify this forwards to your personal inbox:</p>
             <a href="{verify_url}"
                style="display: inline-block; padding: 12px 24px; background: #d4a853; color: #000;
@@ -187,7 +204,7 @@ async def connect_email(
 
     return EmailStatusResponse(
         handle=handle,
-        bttco_email=f"{handle}@ryozan.app",
+        bttco_email=address,
         forward_to=body.forward_to,
         verified=False,
         connected=True,
@@ -209,7 +226,7 @@ async def verify_email(
         raise HTTPException(404, "Invalid or expired verification token")
 
     if route.verified:
-        return {"status": "already_verified", "email": f"{route.handle}@ryozan.app"}
+        return {"status": "already_verified", "email": _handle_address(route.handle)}
 
     route.verified = True
     route.verified_at = datetime.now(UTC)
@@ -224,7 +241,7 @@ async def verify_email(
     # Redirect to the app with a success message
     return {
         "status": "verified",
-        "email": f"{route.handle}@ryozan.app",
+        "email": _handle_address(route.handle),
         "message": "Your Ryozan email is now active! Incoming mail will forward to your personal inbox.",
     }
 
@@ -242,7 +259,7 @@ async def email_status(
 
     return EmailStatusResponse(
         handle=route.handle,
-        bttco_email=f"{route.handle}@ryozan.app",
+        bttco_email=_handle_address(route.handle),
         forward_to=route.forward_to,
         verified=route.verified,
         connected=True,
@@ -255,7 +272,7 @@ async def release_email(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Release the current user's @ryozan.app email handle.
+    Release the current user's studio email handle.
 
     Deletes the email route entirely so the handle becomes available again.
     This action is irreversible — the user would need to re-claim and re-verify.

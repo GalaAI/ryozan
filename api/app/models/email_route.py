@@ -1,5 +1,5 @@
 """
-Email route model -- dynamic routing table for inbound @ryozan.app mail.
+Email route model -- dynamic routing table for inbound mail on COURIER_REPLY_DOMAIN.
 
 Each artist picks a handle during onboarding. Inbound mail to that handle
 gets forwarded to their personal email. Verified via confirmation link.

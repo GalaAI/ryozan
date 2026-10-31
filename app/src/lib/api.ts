@@ -1854,6 +1854,8 @@ export interface StudioSettings {
   default_artist_slug: string
   waiver_template_id: string
   sample_flash_urls: string[]
+  /** Domain studio email handles live on; empty means handles are off. */
+  email_domain: string
 }
 
 export const studio = {
@@ -3536,7 +3538,7 @@ export const googleAuth = {
     request<{ linked: boolean }>('/auth/google/link/status'),
 }
 
-export type IntegrationId = 'google_calendar' | 'pinterest' | 'plaid' | 'stripe_connect' | 'push' | 'email_forwarding'
+export type IntegrationId = 'google_calendar' | 'google_signin_link' | 'pinterest' | 'plaid' | 'stripe_connect' | 'push' | 'email_forwarding'
 
 export interface IntegrationOption {
   id: IntegrationId

@@ -1,7 +1,5 @@
 # Plaid
 
-> **Blocked today.** Every Plaid call fails with a server error on the pinned SDK. See [Known limits](#known-limits). The rest of this guide describes what the code is built to do, so a studio can set it up once that bug is fixed.
-
 Plaid links a user's bank account. Ryozan then reads account balances and syncs bank transactions into the Econ ledger, where the shop tracks money in and out.
 
 Each user links their own bank. The Plaid access token is stored on that user's row (`plaid_access_token`). There is no shop-wide bank link.
@@ -42,7 +40,7 @@ So Link offers US institutions only, with the Transactions product. `client_name
 | --- | --- | --- | --- |
 | `PLAID_CLIENT_ID` | Yes | blank | |
 | `PLAID_SECRET` | Yes | blank | Must match `PLAID_ENVIRONMENT`. |
-| `PLAID_ENVIRONMENT` | No | `sandbox` | `sandbox` or `production`. The code also lists `development`, which Plaid has shut down. An unknown value falls back to sandbox. |
+| `PLAID_ENVIRONMENT` | No | `sandbox` | `sandbox` or `production`, the two environments `plaid-python` 42.0.0 defines. Any other value (including `development`, which Plaid shut down) makes every Plaid call answer 503 naming `PLAID_ENVIRONMENT`, and the `plaid` option reports `configured: false`. |
 | `APP_NAME` | No | `Ryozan API` | Shown in Plaid Link as the app name. Set it to your studio name. |
 
 ## How to check it works
@@ -64,17 +62,6 @@ Checked against Plaid's documentation on 2026-10-31.
 
 ## Known limits
 
-- **Every Plaid call fails today.** `_get_plaid_client()` in `plaid.py` builds this map:
-
-  ```python
-  env_map = {
-      "sandbox": plaid.Environment.Sandbox,
-      "development": plaid.Environment.Development,
-      "production": plaid.Environment.Production,
-  }
-  ```
-
-  `plaid-python` 42.0.0, the version pinned in `api/requirements.txt`, only defines `Sandbox` and `Production`. Reading `plaid.Environment.Development` raises `AttributeError` before any request is made, whatever `PLAID_ENVIRONMENT` says. Link token creation, token exchange, balances, transaction sync and the Econ Plaid check all return a 500. Removing the `development` entry fixes it.
 - US institutions only (`CountryCode("US")`).
 - No Plaid webhook, so new transactions arrive only when a sync runs.
 - One bank link per user. Linking again replaces the stored access token.

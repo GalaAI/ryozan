@@ -28,6 +28,7 @@ export const NEUTRAL_STUDIO_SETTINGS: StudioSettings = Object.freeze({
   default_artist_slug: '',
   waiver_template_id: '',
   sample_flash_urls: [],
+  email_domain: '',
 }) as StudioSettings
 
 const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
@@ -56,6 +57,7 @@ export function normalizeStudioSettings(raw: unknown): StudioSettings {
     default_artist_slug: text(body.default_artist_slug),
     waiver_template_id: text(body.waiver_template_id),
     sample_flash_urls: textList(body.sample_flash_urls),
+    email_domain: text(body.email_domain).toLowerCase(),
   }
 }
 

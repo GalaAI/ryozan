@@ -22,7 +22,7 @@ from app.services import web_search  # noqa: E402
 
 
 def _settings(**overrides):
-    return SimpleNamespace(**{**get_settings().model_dump(), **overrides})
+    return get_settings().model_copy(update=overrides)
 
 
 class TavilyClientTests(unittest.IsolatedAsyncioTestCase):

@@ -202,7 +202,7 @@ The web app reads these from `GET /api/v1/studio/settings` (public, no auth, cac
 | --- | --- | --- |
 | `STUDIO_NAME` | `studio_name` | Studio name (see Studio identity). |
 | `STUDIO_OWNER_NAME` | `owner_name` | Owner's display name: staff emergency contacts, the owner contact list, the title font preview. |
-| `SHOP_EMAIL` | `contact_email` | Shop inbox: public contact, Reply-To on outbound email, copy of booking alerts, fallback VAPID subject. |
+| `SHOP_EMAIL` | `contact_email` | Shop inbox: public contact, Reply-To on outbound email, fallback From address, copy of booking alerts, fallback VAPID subject. |
 | `STUDIO_PHONE` | `contact_phone` | Studio phone in staff emergency contacts. |
 | `STUDIO_ADDRESS` | `address` | Postal address (see Studio identity). |
 | none | `timezone` | The booking engine's zone, `SHOP_TIMEZONE` in `api/app/constants/timezones.py`. |
@@ -212,6 +212,7 @@ The web app reads these from `GET /api/v1/studio/settings` (public, no auth, cac
 | `DEFAULT_ARTIST_SLUG` | `default_artist_slug` | Artist for "any artist" requests; also the artist whose bookings and slot diagnostics the manager Huddle shows. |
 | `WAIVER_TEMPLATE_ID` | `waiver_template_id` | Template for the staff "Send Waiver" action. Blank: the active `Tattoo Consent Waiver` template. |
 | `SAMPLE_FLASH_URLS` | `sample_flash_urls` | Comma-separated stand-in flash previews, used only by a local dev build. |
+| `COURIER_REPLY_DOMAIN` | `email_domain` | The receiving domain studio email handles live on (see Inbound mail below). Blank: the handle UI shows no domain and claiming is off. |
 
 ### Optional features
 
@@ -220,18 +221,19 @@ Each group is off until its keys are set.
 | Feature | Variables |
 | --- | --- |
 | Web search (Tavily) | `TAVILY_API_KEY`; `TAVILY_MONTHLY_SEARCHES_PER_ACCOUNT` (default 25). Without a key the `web_search` tool is not offered. |
-| Email | One provider: `RESEND_API_KEY` (with `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, and `RESEND_WEBHOOK_SECRET`, `RESEND_INBOUND_WEBHOOK_SECRET` for delivery and inbound webhooks), or `SENDGRID_API_KEY`, or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`). |
+| Email | One provider: `RESEND_API_KEY` (with `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`), or `SENDGRID_API_KEY` (with `SENDGRID_FROM_EMAIL`, `SENDGRID_FROM_NAME`), or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`). A blank From address falls back to `SHOP_EMAIL`, a blank From name to `STUDIO_NAME`; nothing in the code names a mail domain. Webhooks: `RESEND_WEBHOOK_SECRET` (delivery) and `RESEND_INBOUND_WEBHOOK_SECRET` (inbound); outside development each webhook answers 503 until its secret is set. |
+| Inbound mail and handles | `COURIER_REPLY_DOMAIN` is the domain Resend receives on (for example `in.studio.example.com`): Courier reply addresses and artist email handles live on it. Blank turns both off. `SHOP_OWNER_EMAIL` is the owner inbox for booking alerts and for mail to `info@`, `bookings@`, `admin@`, `noreply@`, `support@` (plus `INBOUND_OWNER_ALIASES`) and the catch-all; blank falls back to `SHOP_EMAIL`. With neither set, inbound mail stays in the app inbox and is never forwarded. |
 | Push (VAPID) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` or `https://` contact you own; blank falls back to `mailto:` + `SHOP_EMAIL`). With keys but no subject, push stays off and `/push/vapid-key` answers 503 naming the missing setting. `config.py` has a one-line command to generate a key pair. |
-| Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` for Calendar sync and Google sign-in. `GOOGLE_SIGNIN_CLIENT_ID` overrides the sign-in audience. For browser sign-in, build the web app with `VITE_GOOGLE_CLIENT_ID` set to the same id. `GOOGLE_CALENDAR_AUTH_MODE=workspace_delegated` with `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` and `GOOGLE_CALENDAR_DELEGATED_USER` uses one Workspace identity instead of per-user connect. |
-| Stripe Connect | `STRIPE_SECRET_KEY` turns it on. Also `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_CONNECT_THIN_WEBHOOK_SECRET`, `STRIPE_CONNECT_RETURN_URL`, and `VITE_STRIPE_PUBLISHABLE_KEY` at web build time. Only `artist` and `founder` accounts can start onboarding. |
+| Google | `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` serve Calendar sync and Google sign-in. `GOOGLE_REDIRECT_URI` is the Calendar callback only; the sign-in callback is always `API_PUBLIC_BASE_URL` + `/api/v1/auth/google/callback-signin`. To use a separate OAuth client for sign-in, set `GOOGLE_SIGNIN_CLIENT_ID` and its own `GOOGLE_SIGNIN_CLIENT_SECRET`; without the secret, sign-in reports itself unconfigured. For browser sign-in, build the web app with `VITE_GOOGLE_CLIENT_ID` set to the sign-in client id. `GOOGLE_CALENDAR_AUTH_MODE=workspace_delegated` with `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` and `GOOGLE_CALENDAR_DELEGATED_USER` uses one Workspace identity instead of per-user connect. |
+| Stripe Connect | `STRIPE_SECRET_KEY` turns it on. Also `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_CONNECT_THIN_WEBHOOK_SECRET`, `STRIPE_CONNECT_RETURN_URL`, and `STRIPE_CONNECT_COUNTRY` (ISO 3166-1 alpha-2 country of the artists' connected accounts, default `US`; an invalid code stops the API at startup). No publishable key is needed: onboarding runs on Stripe-hosted pages. Only `artist` and `founder` accounts can start onboarding. |
 | Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET`, `PINTEREST_REDIRECT_URI`; `PINTEREST_USE_SANDBOX` (default `true`). |
-| Plaid | `PLAID_CLIENT_ID`, `PLAID_SECRET`; `PLAID_ENVIRONMENT` (`sandbox`, `development` or `production`, default `sandbox`). |
+| Plaid | `PLAID_CLIENT_ID`, `PLAID_SECRET`; `PLAID_ENVIRONMENT` (`sandbox` or `production`, default `sandbox`; any other value makes every Plaid call answer 503 naming the setting). Plaid Link opens from the Hustle page (`/dashboard/hustle`), not from Connections. |
 | SMS (Twilio) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`, plus the sender numbers listed under Twilio in `config.py`. SMS is an inbox channel, not a Connections card. |
 | Public sign-up | For a public demo install only. `OPEN_SIGNUP_ENABLED`, `OPEN_SIGNUP_CODE` (invite code, 8 or more characters), `OPEN_SIGNUP_UNTIL`, `OPEN_SIGNUP_MAX_ACCOUNTS`. `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` create one shared demo account with its own monthly caps. |
 
 ### Integrations appear only when configured
 
-The Connections screen offers Google Calendar, Pinterest, Plaid, Stripe Connect, Web Push and email forwarding. Each one shows up only when its keys are set on the server. `GET /api/v1/integrations/options` reports, for each one, whether this install is configured for it and whether the signed-in role may start it. It never returns a key or secret. See [`integrations.py`](api/app/api/v1/endpoints/integrations.py).
+The Connections screen offers Google Calendar, Google sign-in linking (staff), Pinterest, Stripe Connect, Web Push and email forwarding. Each one shows up only when its keys are set on the server and the signed-in role may use it. Plaid has an options entry too, but its bank link lives on the Hustle page. `GET /api/v1/integrations/options` reports, for each one, whether this install is configured for it and whether the signed-in role may start it. It never returns a key or secret. See [`integrations.py`](api/app/api/v1/endpoints/integrations.py).
 
 ## MCP server
 

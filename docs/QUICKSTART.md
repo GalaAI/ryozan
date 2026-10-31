@@ -108,9 +108,10 @@ address to email footers and PDFs; nothing prints when it is blank.
 
 ## Optional services
 
-Each integration (Google Calendar, Pinterest, Plaid, Stripe Connect, Web Push,
-email forwarding) appears under Connections only when its keys are set in
-`api/.env`. The API reports which ones this install offers at
+Each integration (Google Calendar, Google sign-in linking, Pinterest, Stripe
+Connect, Web Push, email forwarding) appears under Connections only when its
+keys are set in `api/.env`. Plaid is configured the same way, but its bank link
+opens from the Hustle page (`/dashboard/hustle`), not from Connections. The API reports which ones this install offers at
 `GET /api/v1/integrations/options`. Client self-registration sends a
 password-setting email, so it needs an email provider (Resend, SendGrid or
 SMTP). The full list of variables is in the Configuration section of the root

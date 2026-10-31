@@ -52,6 +52,7 @@ CONFIGURED = {
     "BOOKING_REQUEST_ONLY_ARTIST_SLUGS": "sam",
     "WAIVER_TEMPLATE_ID": "00000000-0000-4000-8000-000000000001",
     "SAMPLE_FLASH_URLS": "https://cdn.example.test/flash-1.jpg, https://cdn.example.test/flash-2.jpg",
+    "COURIER_REPLY_DOMAIN": "in.example.test",
 }
 
 SECRET_VALUES = {
@@ -96,6 +97,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
         self.assertEqual(body["default_artist_slug"], "")
         self.assertEqual(body["waiver_template_id"], "")
         self.assertEqual(body["sample_flash_urls"], [])
+        self.assertEqual(body["email_domain"], "")
         self.assertEqual(
             body["booking_days"],
             {"closed_weekdays": [], "request_only_weekdays": [], "request_only_artist_slugs": []},
@@ -124,6 +126,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
                     "https://cdn.example.test/flash-1.jpg",
                     "https://cdn.example.test/flash-2.jpg",
                 ],
+                "email_domain": "in.example.test",
             },
         )
 

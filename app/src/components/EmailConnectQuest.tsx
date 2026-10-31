@@ -1,8 +1,9 @@
 /**
- * EmailConnectQuest -- full email connect experience for claiming a @ryozan.app handle.
+ * EmailConnectQuest -- full email connect experience for claiming a studio email
+ * handle on the install's receiving domain (studio settings `email_domain`).
  *
  * Three steps:
- *   1. Handle picker: input with @ryozan.app suffix, availability check
+ *   1. Handle picker: input with @<email_domain> suffix, availability check
  *   2. Verification pending: waiting for user to click email verification link
  *   3. Connected: shows claimed handle with green checkmark, release option
  *
@@ -13,6 +14,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { emailConnect, type EmailStatus, type HandleCheck } from '../lib/api'
+import { useStudioSettings } from '../hooks/useStudioSettings'
 
 interface EmailConnectQuestProps {
   /** 'compact' for quest card inline, 'full' for settings page */
@@ -20,6 +22,8 @@ interface EmailConnectQuestProps {
 }
 
 export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQuestProps) {
+  const { settings: studioSettings } = useStudioSettings()
+  const emailSuffix = studioSettings.email_domain ? `@${studioSettings.email_domain}` : ''
   const [status, setStatus] = useState<EmailStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [handle, setHandle] = useState('')
@@ -254,7 +258,7 @@ export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQues
     <div style={isFullMode ? styles.fullContainer : styles.container}>
       {isFullMode && (
         <p style={styles.sectionDesc}>
-          Claim your own <strong style={{ color: 'var(--gold)' }}>@ryozan.app</strong> email address.
+          Claim your own <strong style={{ color: 'var(--gold)' }}>{emailSuffix || 'studio'}</strong> email address.
           Incoming mail will be forwarded to your personal inbox.
         </p>
       )}
@@ -277,7 +281,7 @@ export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQues
           spellCheck={false}
           autoComplete="off"
         />
-        <span style={styles.domain}>@ryozan.app</span>
+        {emailSuffix && <span style={styles.domain}>{emailSuffix}</span>}
       </div>
 
       {/* Validation hint */}

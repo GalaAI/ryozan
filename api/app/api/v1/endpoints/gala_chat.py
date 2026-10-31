@@ -494,40 +494,25 @@ AGENT_PROFILES: dict[str, dict[str, Any]] = {
 # the Bandit display name and are not listed separately.
 RYOZAN_AGENT_IDS = ("gala", "soko", "ensei", "saishin", "taiso", "shishin", "riki", "rochishin", "andozen")
 
-STUDIO_ARTIST_ROSTER = """Current Ryozan Studio resident artist roster:
-- Founder & Master Horishi: Japanese Irezumi, Neo-Ukiyo-e, American Traditional, and black & grey
-- Resident Horishi I: Neo-traditional & botanical color
-- Resident Horishi II: Fine line, Japanese blackwork, and geometric composition
-- Resident Horishi III: American traditional and bold color flash
-- Resident Horishi IV: Illustrative blackwork and woodblock linework"""
-
 STUDIO_COMPANY_CONTEXT = """Company context:
 - Ryozan is an autonomous multi-agent creative studio & shop operating system powered by the Bandits of Ryōzanpaku and NVIDIA Nemotron models via Nebius Token Factory.
 - When artist, studio, booking, ledger, or publication facts could have changed, rely on current approved records rather than guessing from memory."""
 
-TRUSTED_ACCOUNT_CONTEXT: dict[str, dict[str, str]] = {
-    "founder@ryozan.app": {
-        "name": "Studio Founder",
-        "context": (
-            "The Studio Founder is a working tattoo artist and systems builder at Ryozan Studio "
-            "who expects direct, executable workflows, current evidence, and no simulated completion."
-        ),
-    },
-    "admin@ryozan.app": {
-        "name": "Studio Administrator",
-        "context": ("The Studio Administrator coordinates front-of-house scheduling, waivers, and studio operations."),
-    },
-}
+
+def _studio_roster_context() -> str:
+    """The studio's artist roster for agent prompts, from STUDIO_ARTIST_ROSTER; empty when unset."""
+    roster = get_settings().STUDIO_ARTIST_ROSTER.strip()
+    return f"Current {get_settings().STUDIO_NAME} artist roster:\n{roster}" if roster else ""
 
 
 def _trusted_account_identity(user: User) -> tuple[str, str]:
-    """Return server-owned identity context for known operator accounts."""
-    email = str(user.email or "").strip().lower()
-    trusted = TRUSTED_ACCOUNT_CONTEXT.get(email)
-    if trusted:
-        return trusted["name"], trusted["context"]
+    """Return server-owned identity context for the signed-in account; never client-supplied."""
     name = str(user.name or "").strip() or "the authenticated account"
-    return name, f"{name} is the authenticated Ryozan account with role {user.role or 'collector'}."
+    context = f"{name} is the authenticated {get_settings().STUDIO_NAME} account with role {user.role or 'collector'}."
+    owner = get_settings().STUDIO_OWNER_NAME.strip()
+    if user.role == "founder" and owner:
+        context += f" The studio owner is {owner}."
+    return name, context
 
 
 def _agent_roster_context() -> str:
@@ -1886,7 +1871,7 @@ def get_agent_system_prompt(
     }
     context_lines = "\n".join(f"- {key}: {str(value)[:300]}" for key, value in safe_context.items())
 
-    prompt = f"""You are {profile["name"]}, the {profile["role"]} for Ryozan Studio
+    prompt = f"""You are {profile["name"]}, the {profile["role"]} for {get_settings().STUDIO_NAME}
 
 You are speaking with {name} (account role: {role}). Today is {today_formatted}.
 
@@ -1896,7 +1881,7 @@ Active responsibility:
 Trusted account context:
 {trusted_account_context}
 
-{STUDIO_ARTIST_ROSTER}
+{_studio_roster_context()}
 
 {STUDIO_COMPANY_CONTEXT}
 
