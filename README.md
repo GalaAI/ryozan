@@ -22,7 +22,7 @@ Every item below points at the code that implements it.
 | Waivers and documents | Signed consent waivers, document templates and signing | [`waiver.py`](api/app/api/v1/endpoints/waiver.py), [`documents.py`](api/app/api/v1/endpoints/documents.py) |
 | Flash | Upload flash sheets, split them into designs with AI, publish them | [`flash.py`](api/app/api/v1/endpoints/flash.py) |
 | Payments | Stripe Connect onboarding for artists, day-of balance checkout, gift cards | [`stripe_connect.py`](api/app/api/v1/endpoints/stripe_connect.py), [`pos.py`](api/app/api/v1/endpoints/pos.py), [`gift_cards.py`](api/app/api/v1/endpoints/gift_cards.py) |
-| Ledger | Integer-cent double-entry bookkeeping for the studio | [`packages/ryozan-econ`](packages/ryozan-econ) |
+| Ledger | A standalone integer-cent double-entry ledger library. The API does not import it yet. | [`packages/ryozan-econ`](packages/ryozan-econ) |
 | Client rewards | Rewards, wallet receipts and inventory for clients | [`rewards.py`](api/app/api/v1/endpoints/rewards.py) |
 | References | Shared reference library for staff, and Pinterest boards | [`references.py`](api/app/api/v1/endpoints/references.py), [`pinterest.py`](api/app/api/v1/endpoints/pinterest.py) |
 | Follow-ups | A small CRM task pipeline for shop follow-ups | [`crm.py`](api/app/api/v1/endpoints/crm.py) |
@@ -60,6 +60,46 @@ How a turn runs:
 5. The reply carries a receipt for each tool call and data cards that the web app shows under the answer.
 
 Without a model key, agent chat returns a 503 that says to set `NEBIUS_API_KEY`. The rest of the app keeps working.
+
+## What's in v1
+
+v1 is one studio running its own install. The split below comes from the code: the routers in [`router.py`](api/app/api/v1/router.py), the models in [`api/app/models`](api/app/models) and the routes in [`App.tsx`](app/src/App.tsx). No code was removed to draw it.
+
+### Core
+
+What a studio needs to run day to day.
+
+| Area | Code | Off until |
+| --- | --- | --- |
+| Bookings and schedule: requests, approvals, session types, add-ons, quotes, the staff calendar | [`bookings.py`](api/app/api/v1/endpoints/bookings.py), [`calendar.py`](api/app/api/v1/endpoints/calendar.py), [`session_types.py`](api/app/api/v1/endpoints/session_types.py), [`booking_addons.py`](api/app/api/v1/endpoints/booking_addons.py), [`quotes.py`](api/app/api/v1/endpoints/quotes.py) | Always on. Google Calendar sync needs the Google keys. |
+| Client inbox (Courier): threads, contacts, reply templates | [`conversations.py`](api/app/api/v1/endpoints/conversations.py), [`messages.py`](api/app/api/v1/endpoints/messages.py), [`contacts.py`](api/app/api/v1/endpoints/contacts.py), [`email_inbound.py`](api/app/api/v1/endpoints/email_inbound.py), [`sms.py`](api/app/api/v1/endpoints/sms.py), [`whatsapp.py`](api/app/api/v1/endpoints/whatsapp.py) | Always on. Each channel needs its provider keys (Resend, SendGrid or SMTP; Twilio; Meta WhatsApp). |
+| Waivers, documents and artist paperwork | [`waiver.py`](api/app/api/v1/endpoints/waiver.py), [`documents.py`](api/app/api/v1/endpoints/documents.py), [`scrolls.py`](api/app/api/v1/endpoints/scrolls.py), [`archive.py`](api/app/api/v1/endpoints/archive.py) | Always on. |
+| Flash: upload, split, publish, the client flash shop | [`flash.py`](api/app/api/v1/endpoints/flash.py) | Always on. |
+| Payments and deposits: deposit checkout at booking, day-of balance checkout, artist payouts, gift cards | [`bookings.py`](api/app/api/v1/endpoints/bookings.py), [`pos.py`](api/app/api/v1/endpoints/pos.py), [`stripe_connect.py`](api/app/api/v1/endpoints/stripe_connect.py), [`stripe_webhooks.py`](api/app/api/v1/endpoints/stripe_webhooks.py), [`gift_cards.py`](api/app/api/v1/endpoints/gift_cards.py) | `STRIPE_SECRET_KEY`. |
+| Agent crew | [`gala_chat.py`](api/app/api/v1/endpoints/gala_chat.py), [`ai_routing.py`](api/app/services/ai_routing.py) | `NEBIUS_API_KEY` (agent chat answers 503 without it). |
+| MCP server | [`api/app/mcp`](api/app/mcp) | Always mounted. Clients sign in with OAuth. |
+| Accounts, roles and studio settings, notifications, push, follow-ups | [`auth.py`](api/app/api/v1/endpoints/auth.py), [`users.py`](api/app/api/v1/endpoints/users.py), [`studio.py`](api/app/api/v1/endpoints/studio.py), [`integrations.py`](api/app/api/v1/endpoints/integrations.py), [`security.py`](api/app/core/security.py), [`crm.py`](api/app/api/v1/endpoints/crm.py), [`push.py`](api/app/api/v1/endpoints/push.py) | Always on. Push needs the VAPID keys. |
+
+### Optional extras
+
+Gamified, experimental or tied to one studio's tools. There is no feature flag for any of them yet. The last column says what turns each one off today.
+
+| Extra | Code | Can it be switched off today? |
+| --- | --- | --- |
+| Quests | [`quests.py`](api/app/api/v1/endpoints/quests.py), [`quest_hooks.py`](api/app/services/quest_hooks.py), `/dashboard/quests` | No. Always on for every signed-in account. Starter quests are seeded on every boot ([`main.py`](api/main.py)). |
+| RYO coin, rewards and wallet | [`rewards.py`](api/app/api/v1/endpoints/rewards.py) (`/rewards`, `/bttcoin`), [`reward_engine.py`](api/app/services/reward_engine.py), `/dashboard/wallet` | No. Coin is awarded automatically on flash purchases ([`flash.py`](api/app/api/v1/endpoints/flash.py)) and on completed artist paperwork ([`documents.py`](api/app/api/v1/endpoints/documents.py)). Only a manual award needs the `admin` role. |
+| Club feed | [`club.py`](api/app/api/v1/endpoints/club.py), `/dashboard/club` | No. Any signed-in account can post. The Club page itself is a coming-soon placeholder. |
+| Leaderboards, gauntlets, class | [`GuildPage.tsx`](app/src/pages/dashboard/GuildPage.tsx), [`LootPage.tsx`](app/src/pages/dashboard/LootPage.tsx) | Not built. Guild (staff nav) and Loot (client nav) are coming-soon pages that always show. |
+| Finance connectors: Clover POS, Mercury, Plaid | [`econ.py`](api/app/api/v1/endpoints/econ.py), [`plaid.py`](api/app/api/v1/endpoints/plaid.py), `/dashboard/hustle` | Yes, by keys. Each stays off until its keys are set (`CLOVER_*`, `MERCURY_API_TOKEN`, `PLAID_*`). Staff roles only. |
+| `ryozan-econ` ledger | [`packages/ryozan-econ`](packages/ryozan-econ) | Nothing to switch. The API does not import it. CI tests it on its own. |
+| Artist stash and canvas sessions | [`stash.py`](api/app/api/v1/endpoints/stash.py) | No setting. `artist` role and up. |
+| Herald: artist reposts and social broadcasts | [`social_reposts.py`](api/app/api/v1/endpoints/social_reposts.py), [`broadcasts.py`](api/app/api/v1/endpoints/broadcasts.py), `/dashboard/herald` | Partly. Reposts go through the Ark Pack bridge, which is off until `ARK_PACK_BRIDGE_URL` and `ARK_PACK_BRIDGE_KEY` are set ([`pack_bridge.py`](api/app/services/pack_bridge.py)), and need `founder` or `admin`. Publishing to Instagram and Facebook needs the `META_*` keys. The Herald page is always in the staff nav. |
+| Phone agents (ElevenLabs) | [`phone_agents.py`](api/app/api/v1/endpoints/phone_agents.py) | Yes, by keys. The webhook answers 503 until `ELEVENLABS_WEBHOOK_SECRET` is set. |
+| Pinterest boards | [`pinterest.py`](api/app/api/v1/endpoints/pinterest.py) | Yes, by keys (`PINTEREST_*`). |
+| Viber | [`viber.py`](api/app/api/v1/endpoints/viber.py) | No setting. Always mounted, `founder` only, no screen in the web app. |
+| Dev workspaces and the Discord bot | [`workspaces.py`](api/app/api/v1/endpoints/workspaces.py) | No setting. `admin` and up, or a bot holding `WORKSPACE_BOT_TOKEN`. No screen in the web app. |
+
+What comes next for these, including feature flags, is in [`ROADMAP.md`](ROADMAP.md).
 
 ## Architecture
 
@@ -112,13 +152,14 @@ Open http://localhost:15300, choose **Open the studio portal** and sign in with 
 cp .env.example .env && cp api/.env.example api/.env
 docker compose up -d db                       # or point DATABASE_URL at your own Postgres 16
 cd api && python -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/alembic upgrade head                # builds the schema; the API never creates tables itself
 .venv/bin/uvicorn main:app --host 127.0.0.1 --port 18788
 # in a second terminal
 cd api && .venv/bin/python scripts/bootstrap_dev_login.py
 cd app && npm ci && npm run dev
 ```
 
-The API creates its tables on first boot. The web dev server proxies `/api` to `http://127.0.0.1:18788`.
+Alembic builds and changes the schema ([`api/alembic/README.md`](api/alembic/README.md)). The Docker images run `alembic upgrade head` before the API starts. The web dev server proxies `/api` to `http://127.0.0.1:18788`.
 
 ### Production image
 
@@ -223,7 +264,7 @@ API tests in files ending in `_pg_tests.py` need a Postgres fixture and skip unl
 
 ## Project status
 
-Ryozan is early. It is built for a single studio that hosts its own install. Hosted multi-studio service is planned.
+Ryozan is early. It is built for a single studio that hosts its own install. Hosted multi-studio service is planned but not started. [`ROADMAP.md`](ROADMAP.md) lists what is done, what is next and what comes later. Setup notes for each optional integration are in [`docs/integrations/README.md`](docs/integrations/README.md).
 
 ## Contributing
 

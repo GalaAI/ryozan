@@ -46,7 +46,7 @@ cd ..\app; npm ci; npm run dev
 `requirements.txt` skips `uvloop` on Windows (it has no Windows build) and
 installs `tzdata`, which Python's `zoneinfo` needs there.
 
-The API creates its tables on first boot. Every port binds to 127.0.0.1. The
+Before the API starts, `alembic upgrade head` builds or updates the schema. Every port binds to 127.0.0.1. The
 web dev server proxies `/api` to `http://127.0.0.1:18788` by default; set
 `VITE_API_TARGET` only to point it somewhere else.
 

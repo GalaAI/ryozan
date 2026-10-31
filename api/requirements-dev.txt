@@ -6,4 +6,4 @@
 # this file changes too.
 
 # Linter + formatter (must match .github/workflows/api.yml + .pre-commit-config.yaml)
-ruff==0.16.8
+ruff==0.15.13
