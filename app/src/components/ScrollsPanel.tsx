@@ -43,6 +43,8 @@ import SignaturePad from './SignaturePad'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from './Toast'
 import { formatDate } from '../lib/form-utils'
+import { resolveWaiverTemplateId } from '../lib/studio-settings'
+import { useStudioSettings } from '../hooks/useStudioSettings'
 
 const ArtistScrollForm = lazy(() => import('./ArtistScroll'))
 
@@ -652,15 +654,15 @@ function Field({ label, value }: { label: string; value: string }) {
   )
 }
 
-const WAIVER_TEMPLATE_ID = 'a134b9fa-19ef-4840-96e2-69fffd96937d'
-
 function WaiversSection() {
   const { user } = useAuthStore()
   const toast = useToast()
   const isAdmin = ['assistant', 'admin', 'founder'].includes(user?.role || '')
 
   const [loading, setLoading] = useState(true)
-  const [, setTemplates] = useState<DocumentTemplate[]>([])
+  const [templates, setTemplates] = useState<DocumentTemplate[]>([])
+  const { settings: studioSettings } = useStudioSettings()
+  const waiverTemplateId = resolveWaiverTemplateId(studioSettings, templates)
   const [trackingDocs, setTrackingDocs] = useState<DocumentInstance[]>([])
   const [resentIds, setResentIds] = useState<Set<string>>(new Set())
   const [cancellingIds, setCancellingIds] = useState<Set<string>>(new Set())
@@ -790,11 +792,13 @@ function WaiversSection() {
           {loading ? 'Loading...' : `${trackingDocs.length} waiver${trackingDocs.length !== 1 ? 's' : ''}`}
         </span>
         <button
+          disabled={!sendOpen && !waiverTemplateId}
+          title={waiverTemplateId ? undefined : 'No waiver template yet. Create an active waiver template or set WAIVER_TEMPLATE_ID.'}
           onClick={() => {
             const opening = !sendOpen
             setSendOpen(opening)
             if (opening) {
-              setSendTemplateId(WAIVER_TEMPLATE_ID)
+              setSendTemplateId(waiverTemplateId ?? '')
               setSendRecipient('')
               setSendEmail('')
               fetchClientSuggestions()

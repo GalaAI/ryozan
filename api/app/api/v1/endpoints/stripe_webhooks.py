@@ -1611,12 +1611,13 @@ async def _handle_checkout_completed(session, *, provider_event_id: str | None =
                 )
 
             # Send to shop inbox
-            await send_email(
-                to=get_settings().SHOP_EMAIL,
-                subject=subject,
-                html_body=notification_html,
-                from_alias=FROM_ADMIN,
-            )
+            if get_settings().SHOP_EMAIL:
+                await send_email(
+                    to=get_settings().SHOP_EMAIL,
+                    subject=subject,
+                    html_body=notification_html,
+                    from_alias=FROM_ADMIN,
+                )
         except Exception as e:
             logger.error("Failed to send deposit artist notification: %s", e)
 
@@ -1772,12 +1773,13 @@ async def _handle_quote_proposal_checkout_completed(session, *, provider_event_i
             subject = notification.subject
             if artist and artist.email:
                 await send_email(to=artist.email, subject=subject, html_body=notification_html, from_alias=FROM_ADMIN)
-            await send_email(
-                to=get_settings().SHOP_EMAIL,
-                subject=subject,
-                html_body=notification_html,
-                from_alias=FROM_ADMIN,
-            )
+            if get_settings().SHOP_EMAIL:
+                await send_email(
+                    to=get_settings().SHOP_EMAIL,
+                    subject=subject,
+                    html_body=notification_html,
+                    from_alias=FROM_ADMIN,
+                )
         except Exception as e:
             logger.error("Failed to send quote proposal artist notification: %s", e)
 
@@ -1926,12 +1928,13 @@ async def _handle_public_booking_checkout_completed(session, *, provider_event_i
             subject = notification.subject
             if artist and artist.email:
                 await send_email(to=artist.email, subject=subject, html_body=notification_html, from_alias=FROM_ADMIN)
-            await send_email(
-                to=get_settings().SHOP_EMAIL,
-                subject=subject,
-                html_body=notification_html,
-                from_alias=FROM_ADMIN,
-            )
+            if get_settings().SHOP_EMAIL:
+                await send_email(
+                    to=get_settings().SHOP_EMAIL,
+                    subject=subject,
+                    html_body=notification_html,
+                    from_alias=FROM_ADMIN,
+                )
         except Exception as exc:
             logger.error("Failed public booking checkout artist notification: %s", exc)
 
@@ -2107,12 +2110,13 @@ async def _handle_flash_checkout_completed(session, *, provider_event_id: str | 
             subject = notification.subject
             if artist and artist.email:
                 await send_email(to=artist.email, subject=subject, html_body=notification_html, from_alias=FROM_ADMIN)
-            await send_email(
-                to=get_settings().SHOP_EMAIL,
-                subject=subject,
-                html_body=notification_html,
-                from_alias=FROM_ADMIN,
-            )
+            if get_settings().SHOP_EMAIL:
+                await send_email(
+                    to=get_settings().SHOP_EMAIL,
+                    subject=subject,
+                    html_body=notification_html,
+                    from_alias=FROM_ADMIN,
+                )
         except Exception as exc:
             logger.error("Failed flash checkout artist notification: %s", exc)
 

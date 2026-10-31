@@ -1831,6 +1831,36 @@ export const notificationPreferences = {
     }),
 }
 
+// ── Studio settings (public) ──────────────────────────
+
+/** Weekday names as the API sends them, Sunday first like Date.getDay(). */
+export type StudioWeekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
+
+/** GET /studio/settings: one install's non-secret display and booking settings. */
+export interface StudioSettings {
+  studio_name: string
+  owner_name: string
+  contact_email: string
+  contact_phone: string
+  address: string
+  /** IANA zone the booking engine trades in; empty means the browser's own. */
+  timezone: string
+  booking_days: {
+    closed_weekdays: StudioWeekday[]
+    request_only_weekdays: StudioWeekday[]
+    /** Artists the request-only days apply to; empty means every artist. */
+    request_only_artist_slugs: string[]
+  }
+  default_artist_slug: string
+  waiver_template_id: string
+  sample_flash_urls: string[]
+}
+
+export const studio = {
+  getSettings: () =>
+    request<StudioSettings>('/studio/settings'),
+}
+
 // ── Push Notifications ───────────────────────────────
 
 export const push = {

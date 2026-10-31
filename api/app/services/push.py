@@ -47,6 +47,12 @@ async def send_push_notification(
         logger.warning("VAPID keys not configured — skipping push notifications")
         return 0
 
+    if not settings.vapid_subject:
+        # Push services reject a VAPID token without a `sub` contact, and
+        # py_vapid raises before sending. Say which setting fixes it.
+        logger.error("Push skipped: set VAPID_SUBJECT (mailto: or https://) or SHOP_EMAIL to enable Web Push")
+        return 0
+
     payload = json.dumps(
         {
             "title": title,
@@ -57,7 +63,7 @@ async def send_push_notification(
     )
 
     vapid_claims = {
-        "sub": settings.VAPID_SUBJECT,
+        "sub": settings.vapid_subject,
     }
 
     sent = 0

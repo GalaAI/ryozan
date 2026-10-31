@@ -30,6 +30,8 @@ import {
   type FlashDesignUpdate,
 } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
+import { useStudioSettings } from '../../hooks/useStudioSettings'
+import { sampleFlashUrl } from '../../lib/studio-settings'
 
 const STYLE_OPTIONS = [
   'traditional', 'japanese', 'neo-traditional', 'realism',
@@ -82,14 +84,7 @@ function validatePickedFile(file: File): string | null {
   return null
 }
 
-const VISUAL_TEST_FLASH_FALLBACKS = [
-  'https://assets.ryozan.app/flash/justin/flash-1.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-2.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-3.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-4.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-5.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-6.jpg',
-]
+// Local development only: stand-in previews from the studio's SAMPLE_FLASH_URLS.
 const ENABLE_VISUAL_TEST_FLASH_FALLBACK = import.meta.env.DEV
 
 interface FlashManagerProps {
@@ -179,9 +174,8 @@ function FlashSheetImage({
 }) {
   const [fallbackActive, setFallbackActive] = useState(false)
   const [failed, setFailed] = useState(false)
-  const fallbackSrc = ENABLE_VISUAL_TEST_FLASH_FALLBACK
-    ? VISUAL_TEST_FLASH_FALLBACKS[index % VISUAL_TEST_FLASH_FALLBACKS.length]
-    : null
+  const { settings: studioSettings } = useStudioSettings()
+  const fallbackSrc = ENABLE_VISUAL_TEST_FLASH_FALLBACK ? sampleFlashUrl(studioSettings, index) : null
   const src = fallbackActive && fallbackSrc ? fallbackSrc : imageUrl
 
   if (!src || failed) {
@@ -205,7 +199,7 @@ function FlashSheetImage({
         height: event.currentTarget.naturalHeight,
       })}
       onError={() => {
-        if (!fallbackActive && ENABLE_VISUAL_TEST_FLASH_FALLBACK) {
+        if (!fallbackActive && fallbackSrc) {
           setFallbackActive(true)
           return
         }

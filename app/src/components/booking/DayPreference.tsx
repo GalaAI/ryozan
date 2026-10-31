@@ -8,6 +8,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { calendar as calendarApi, sessionTypes as sessionTypesApi, type BookingKind, type SessionType } from '../../lib/api'
 import { formatCustomerPrice } from '../../lib/format'
+import { isClosedDay, isRequestOnlyDay, timezoneLabel, todayInStudioTimezone, weekdayLongName, weekdayOf } from '../../lib/studio-settings'
+import { useStudioSettings } from '../../hooks/useStudioSettings'
 import '../../styles/dashboard.css'
 // The .day-pref-* layout/slot styles live in booking.css. Import them here so
 // this component renders correctly wherever it is used (public booking flow AND
@@ -57,23 +59,8 @@ export interface DayPreferenceValue {
   flexible?: boolean
 }
 
-const CLOSED_DAYS = new Set([0, 1])
-const SPECIAL_REQUEST_DAYS = new Set([2])
-const SPECIAL_REQUEST_ARTIST_SLUGS = new Set(['justin'])
-
 function fmt12h(h: number, m: number): string {
   return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`
-}
-
-function todayInShopTimezone(): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date())
-  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  return `${values.year}-${values.month}-${values.day}`
 }
 
 export function DayPreference({
@@ -91,6 +78,7 @@ export function DayPreference({
   bookingKind = 'tattoo_session',
   consultation = false,
 }: DayPreferenceProps) {
+  const { settings: studioSettings } = useStudioSettings()
   const [month, setMonth] = useState(() => { const d = new Date(); d.setDate(1); return d })
   const [busy, setBusy] = useState<BusyBlock[]>([])
   const [connected, setConnected] = useState(() => !consultation)
@@ -150,7 +138,7 @@ export function DayPreference({
   const bufferMinutes = consultation ? 0 : sessionType?.buffer_minutes ?? selectedBufferMinutes ?? undefined
   const effectiveSessionTypeId = consultation ? undefined : selectedSessionType?.id ?? sessionType?.id
   const hasSessionType = !consultation && Boolean(sessionType)
-  const today = todayInShopTimezone()
+  const today = todayInStudioTimezone(studioSettings)
   const dim = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
   const fdow = new Date(month.getFullYear(), month.getMonth(), 1).getDay()
   const label = month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -243,14 +231,12 @@ export function DayPreference({
     }
   }, [pickedDay, value?.date])
 
-  const isSpecialRequestDay = useCallback((ds: string) => {
-    const dow = new Date(`${ds}T12:00:00`).getDay()
-    return Boolean(!consultation && artistSlug && SPECIAL_REQUEST_ARTIST_SLUGS.has(artistSlug) && SPECIAL_REQUEST_DAYS.has(dow))
-  }, [artistSlug, consultation])
+  const isSpecialRequestDay = useCallback((ds: string) => (
+    !consultation && isRequestOnlyDay(studioSettings, ds, artistSlug)
+  ), [artistSlug, consultation, studioSettings])
 
   const pickDay = (ds: string) => {
-    const dow = new Date(`${ds}T12:00:00`).getDay()
-    if (CLOSED_DAYS.has(dow)) return
+    if (isClosedDay(studioSettings, ds)) return
     setFirstOpenError(null)
     if (pickedDay === ds) {
       releaseCurrentHold()
@@ -362,6 +348,7 @@ export function DayPreference({
 
   const dayLabel = pickedDay ? new Date(pickedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }) : null
   const selectedSpecialRequestDay = pickedDay ? isSpecialRequestDay(pickedDay) : false
+  const pickedWeekdayName = pickedDay ? weekdayLongName(weekdayOf(pickedDay)) : ''
 
   // Always show the slot panel for native Ryozan booking. The API returns
   // Google-backed slots when connected and shop-hours fallback slots when not.
@@ -375,7 +362,7 @@ export function DayPreference({
             <span className="day-pref-huddl-kicker"><i aria-hidden="true" /> LIVE CONSULTATION</span>
             <strong>Choose a verified time</strong>
           </div>
-          <span className="day-pref-huddl-meta">30 MIN / TUE-SAT / EASTERN</span>
+          <span className="day-pref-huddl-meta">{['30 MIN', 'TUE-SAT', timezoneLabel(studioSettings)].filter(Boolean).join(' / ')}</span>
         </div>
       )}
       <div className="day-pref-layout">
@@ -400,15 +387,14 @@ export function DayPreference({
               const sel = pickedDay === ds
               const past = ds < today
               const isToday = ds === today
-              const dow = new Date(`${ds}T12:00:00`).getDay()
-              const closedDay = CLOSED_DAYS.has(dow)
+              const closedDay = isClosedDay(studioSettings, ds)
               const specialRequestDay = isSpecialRequestDay(ds)
               const unavailable = past || closedDay
               return (
                 <button
                   key={n} type="button" disabled={unavailable}
                   className={`cal-cell${sel ? ' selected' : ''}${isToday ? ' today' : ''}${past ? ' outside' : ''}${!ok && !past && !closedDay ? ' no-openings-day' : ''}${closedDay ? ' closed-day' : ''}${specialRequestDay ? ' special-request-day' : ''}`}
-                  title={specialRequestDay ? 'Tuesday bookings by special request only' : closedDay ? 'Shop is closed this day' : undefined}
+                  title={specialRequestDay ? `${weekdayLongName(weekdayOf(ds))} bookings by special request only` : closedDay ? 'Shop is closed this day' : undefined}
                   onClick={() => pickDay(ds)}
                 >
                   <span className="cal-day-num">{n}</span>
@@ -438,7 +424,7 @@ export function DayPreference({
               {selectedSpecialRequestDay ? (
                 <div className="day-pref-slots-empty day-pref-slots-special">
                   <span>Special request day</span>
-                  <small>Tuesdays with Justin are request-only. Send the request and the shop will confirm whether that day can work.</small>
+                  <small>{pickedWeekdayName}s are request-only. Send the request and the shop will confirm whether that day can work.</small>
                 </div>
               ) : slotsLoading ? (
                 <div className="day-pref-slots-empty" aria-live="polite">

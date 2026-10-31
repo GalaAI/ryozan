@@ -13,6 +13,8 @@ import { useNavigate } from 'react-router-dom'
 import { browsePublicFlashStore } from '../../lib/api'
 import { customerPrice, formatCustomerPrice } from '../../lib/format'
 import FlashPlacementPreview, { type PlacementPreviewResult } from '../../components/FlashPlacementPreview'
+import { useStudioSettings } from '../../hooks/useStudioSettings'
+import { sampleFlashUrl } from '../../lib/studio-settings'
 
 interface FlashDesign {
   id: string
@@ -42,14 +44,7 @@ const STYLE_FILTERS = [
   'blackwork', 'fine-line', 'watercolor', 'illustrative',
 ]
 
-const VISUAL_TEST_FLASH_FALLBACKS = [
-  'https://assets.ryozan.app/flash/justin/flash-1.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-2.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-3.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-4.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-5.jpg',
-  'https://assets.ryozan.app/flash/justin/flash-6.jpg',
-]
+// Local development only: stand-in previews from the studio's SAMPLE_FLASH_URLS.
 const ENABLE_VISUAL_TEST_FLASH_FALLBACK = import.meta.env.DEV
 
 function trackGoogleEvent(eventName: string, params: Record<string, string | number | boolean | undefined>) {
@@ -89,9 +84,8 @@ function FlashPreview({ design, index }: { design: FlashDesign; index: number })
   const [fallbackActive, setFallbackActive] = useState(false)
   const [failed, setFailed] = useState(false)
   const [sourceSize, setSourceSize] = useState<{ width: number; height: number } | null>(null)
-  const fallbackSrc = ENABLE_VISUAL_TEST_FLASH_FALLBACK
-    ? VISUAL_TEST_FLASH_FALLBACKS[index % VISUAL_TEST_FLASH_FALLBACKS.length]
-    : null
+  const { settings: studioSettings } = useStudioSettings()
+  const fallbackSrc = ENABLE_VISUAL_TEST_FLASH_FALLBACK ? sampleFlashUrl(studioSettings, index) : null
   const sourceUrl = design.source_image_url || design.image_url
   const previewUrl = design.preview_url || (!design.source_image_url ? design.image_url : null)
   const src = fallbackActive && fallbackSrc
@@ -129,7 +123,7 @@ function FlashPreview({ design, index }: { design: FlashDesign; index: number })
             setSourceFallbackActive(true)
             return
           }
-          if (!fallbackActive && ENABLE_VISUAL_TEST_FLASH_FALLBACK) {
+          if (!fallbackActive && fallbackSrc) {
             setFallbackActive(true)
             return
           }

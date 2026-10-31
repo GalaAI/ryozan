@@ -27,4 +27,4 @@ pub_bytes = private_key.public_key().public_bytes(
 print("Add these to your .env file:\n")
 print(f"VAPID_PUBLIC_KEY={b64url(pub_bytes)}")
 print(f"VAPID_PRIVATE_KEY={b64url(priv_bytes)}")
-print(f'VAPID_SUBJECT=mailto:hackathon-judge@arkomnitek.com')
+print("VAPID_SUBJECT=mailto:you@your-studio.example  # an address you own; blank falls back to SHOP_EMAIL")

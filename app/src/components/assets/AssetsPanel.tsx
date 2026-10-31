@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import { users as usersApi, listEmailLog, getEmailStats, retryEmailLog, type User, type EmailLogRow, type EmailStatsResponse } from '../../lib/api'
 import { useToast } from '../Toast'
+import { useStudioSettings } from '../../hooks/useStudioSettings'
 import '../../styles/assets-panel.css'
 
 const EmailTemplateEditor = lazy(() => import('../EmailTemplateEditor'))
@@ -97,7 +98,8 @@ const FONTS = [
   { var: '--font-accent', label: 'Accent', stack: "'KC SimpleSans', sans-serif", preview: 'Flash Available Now' },
   { var: '--font-mono', label: 'Mono', stack: "'IBM Plex Mono', monospace", preview: '{{client_name}} · BKG-XXXXXX' },
   { var: '--font-btn', label: 'Button', stack: "'JetBrains Mono', monospace", preview: 'BOOK NOW · VIEW FLASH' },
-  { var: '--font-title', label: 'Title', stack: "'Inter', sans-serif", preview: 'JUSTIN WALKER' },
+  // Title previews the studio owner's name (titlePreview in AssetsPanel).
+  { var: '--font-title', label: 'Title', stack: "'Inter', sans-serif", preview: '' },
 ]
 
 // ── CSS snippets ──────────────────────────────────────────────────────────
@@ -123,6 +125,8 @@ interface Props { token: string }
 
 export default function AssetsPanel({ token }: Props) {
   const toast = useToast()
+  const { settings: studioSettings } = useStudioSettings()
+  const titlePreview = (studioSettings.owner_name || 'Artist Name').toUpperCase()
   const [activeTab, setActiveTab] = useState<AssetsTab>('email')
 
   // Email tab state
@@ -549,7 +553,7 @@ export default function AssetsPanel({ token }: Props) {
                 <span className="font-card-var">{f.var}</span>
                 <span className="font-card-stack">{f.label}</span>
               </div>
-              <div className="font-preview" style={{ fontFamily: f.stack }}>{f.preview}</div>
+              <div className="font-preview" style={{ fontFamily: f.stack }}>{f.var === '--font-title' ? titlePreview : f.preview}</div>
               <div style={{ marginTop: '6px', display: 'flex', gap: '6px' }}>
                 {['0.6rem', '0.8rem', '1rem', '1.3rem', '1.8rem'].map(size => (
                   <span key={size} style={{ fontFamily: f.stack, fontSize: size, color: 'var(--text-muted)' }}>Aa</span>

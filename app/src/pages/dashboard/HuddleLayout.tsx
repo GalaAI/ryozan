@@ -27,6 +27,7 @@ import {
   type SchedulerContract,
 } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
+import { useStudioSettings } from '../../hooks/useStudioSettings'
 
 /* ── SVG Icons ──────────────────────────────────── */
 
@@ -238,6 +239,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
   const [apiContacts, setApiContacts] = useState<ClientEntry[]>([])
   const [contactsLoading, setContactsLoading] = useState(true)
   const [contactsError, setContactsError] = useState<string | null>(null)
+  const { settings: studioSettings } = useStudioSettings()
   const [jwtContacts, setJwtContacts] = useState<ClientEntry[]>([])
   const [bttcoContacts, setBttcoContacts] = useState<ClientEntry[]>([])
   const [selectedClientKey, setSelectedClientKey] = useState<string | null>(null)
@@ -361,7 +363,7 @@ function ClientsPanel({ bookings }: { bookings: Booking[] }) {
 
   const TABS: { key: ClientTab; label: string; count: number }[] = [
     { key: 'all', label: 'All', count: allClients.length },
-    { key: 'jwt', label: 'Justin Walker', count: jwtContacts.length },
+    { key: 'jwt', label: studioSettings.owner_name || 'Owner', count: jwtContacts.length },
     { key: 'bttco', label: 'Ryozan', count: apiContacts.length + bttcoContacts.length },
   ]
 
@@ -959,39 +961,50 @@ export default function HuddleLayout() {
     }
   }, [activePanel])
 
+  // The studio's default artist (DEFAULT_ARTIST_SLUG) anchors the manager view:
+  // their bookings, scheduler contract and slot diagnostics. None configured
+  // means the manager sees their own bookings and no single-artist diagnostics.
+  const { settings: studioSettings, loaded: studioSettingsLoaded } = useStudioSettings()
+  const leadArtistSlug = studioSettings.default_artist_slug
+
   // Load bookings + Google Calendar status
   useEffect(() => {
+    if (!studioSettingsLoaded) return
     const load = async () => {
       try {
-        // Admin/assistant see founder's bookings
+        // Admin/assistant see the lead artist's bookings
         let bookParams: Parameters<typeof bookingsApi.list>[0] = { limit: 100 }
-        if (isManager && effectiveRole !== 'founder' && effectiveRole !== 'artist') {
+        if (leadArtistSlug && isManager && effectiveRole !== 'founder' && effectiveRole !== 'artist') {
           try {
             const artistList = await artistsApi.list()
-            const founder = artistList.find((a: { slug: string }) => a.slug === 'justin')
-            if (founder) bookParams = { limit: 100, for_artist: founder.id }
+            const leadArtist = artistList.find((a: { slug: string }) => a.slug === leadArtistSlug)
+            if (leadArtist) bookParams = { limit: 100, for_artist: leadArtist.id }
           } catch { /* fallback to default */ }
         }
         const [bookingData, gcalStatus, contractData] = await Promise.allSettled([
           bookingsApi.list(bookParams),
           googleAuth.getStatus(),
-          calendarApi.getSchedulerContract('justin'),
+          leadArtistSlug ? calendarApi.getSchedulerContract(leadArtistSlug) : Promise.resolve(null),
         ])
         if (bookingData.status === 'fulfilled') setBookings(bookingData.value.bookings || [])
         if (gcalStatus.status === 'fulfilled') setGoogleStatus(gcalStatus.value)
         if (contractData.status === 'fulfilled') setSchedulerContract(contractData.value)
-        const diagnosticStart = new Date()
-        const diagnosticEnd = new Date()
-        diagnosticEnd.setDate(diagnosticStart.getDate() + 14)
-        calendarApi.getArtistSlots('justin', {
-          start: toDateStr(diagnosticStart),
-          end: toDateStr(diagnosticEnd),
-          limit: 12,
-          includeBlocked: true,
-          blockedLimit: 180,
-        })
-          .then((diagnostics) => setSlotDiagnostics(diagnostics))
-          .catch(() => setSlotDiagnostics(null))
+        if (leadArtistSlug) {
+          const diagnosticStart = new Date()
+          const diagnosticEnd = new Date()
+          diagnosticEnd.setDate(diagnosticStart.getDate() + 14)
+          calendarApi.getArtistSlots(leadArtistSlug, {
+            start: toDateStr(diagnosticStart),
+            end: toDateStr(diagnosticEnd),
+            limit: 12,
+            includeBlocked: true,
+            blockedLimit: 180,
+          })
+            .then((diagnostics) => setSlotDiagnostics(diagnostics))
+            .catch(() => setSlotDiagnostics(null))
+        } else {
+          setSlotDiagnostics(null)
+        }
         if (gcalStatus.status === 'fulfilled' && gcalStatus.value.connected) {
           setCalConnected(true)
           try {
@@ -1006,7 +1019,7 @@ export default function HuddleLayout() {
       }
     }
     load()
-  }, [effectiveRole, isManager])
+  }, [effectiveRole, isManager, leadArtistSlug, studioSettingsLoaded])
 
   // Calendar data
   const calBookingMap = useMemo(() => bookingsByDate(bookings), [bookings])

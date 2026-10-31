@@ -22,6 +22,7 @@ import {
   type User,
 } from '../../lib/api'
 import { useAuthStore } from '../../stores/auth'
+import { useStudioSettings } from '../../hooks/useStudioSettings'
 import FlashManager, { type FlashStage } from './FlashManager'
 
 type ConnectorStatus = 'active' | 'pending' | 'planned'
@@ -87,12 +88,15 @@ const PUBLISH_CHECKLIST = [
   ['Payment', 'Stripe connected'],
 ]
 
+const workspaceIdentityItem = (contactEmail: string) => ({
+  label: 'Workspace identity',
+  value: contactEmail || 'Not set',
+  note: contactEmail
+    ? 'Primary operator account for Business Profile, Search Console, GA4, Ads, Drive, Gmail, and Calendar ownership.'
+    : 'Set SHOP_EMAIL to the account that owns Business Profile, Search Console, GA4, Ads, Drive, Gmail, and Calendar.',
+})
+
 const GOOGLE_STACK_ITEMS = [
-  {
-    label: 'Workspace identity',
-    value: 'justinwalker@ryozan.app',
-    note: 'Primary operator account for Business Profile, Search Console, GA4, Ads, Drive, Gmail, and Calendar ownership.',
-  },
   {
     label: 'Business Profile',
     value: 'Discovery',
@@ -127,7 +131,7 @@ const GOOGLE_OPERATIONS_ITEMS = [
   ['Discoverability', 'Search Console queries plus Business Profile interactions show what people want before they book.'],
   ['Booking conversion', 'GA4 funnels connect artist pages, booking steps, lead submits, deposits, and abandoned paths.'],
   ['Revenue attribution', 'Stripe checkout, QuickBooks, Mercury, and purchase events tie traffic sources to deposit and product revenue.'],
-  ['Workspace leverage', 'Gmail, Calendar, Drive, Docs, Sheets, and Looker Studio become the shared operating layer for Justin, Kathryn, and staff.'],
+  ['Workspace leverage', 'Gmail, Calendar, Drive, Docs, Sheets, and Looker Studio become the shared operating layer for the owner, artists, and staff.'],
 ]
 
 const money = (cents: number) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -166,6 +170,7 @@ const hustlPeriod = () => {
 
 export default function HustlePage() {
   const currentUser = useAuthStore((s) => s.user)
+  const { settings: studioSettings } = useStudioSettings()
   const toast = useToast()
   const urlParams = useMemo(() => new URLSearchParams(window.location.search), [])
   const initialStashTab = useMemo<StashTab>(() => {
@@ -1036,7 +1041,7 @@ export default function HustlePage() {
                       {connectorPanel === 'google-business' && (
                         <>
                           <div className="hustle-lane-grid">
-                            {GOOGLE_STACK_ITEMS.map((item) => (
+                            {[workspaceIdentityItem(studioSettings.contact_email), ...GOOGLE_STACK_ITEMS].map((item) => (
                               <div key={item.label}>
                                 <strong>{item.value}</strong>
                                 <span>{item.label}: {item.note}</span>

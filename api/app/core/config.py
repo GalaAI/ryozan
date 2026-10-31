@@ -12,8 +12,22 @@ from functools import lru_cache
 from pathlib import Path
 from uuid import UUID
 
-from pydantic import AliasChoices, Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, ValidationInfo, field_validator, model_validator
 from pydantic_settings import BaseSettings
+
+# Weekday names for the booking-day settings, Sunday first like the browser's
+# Date.getDay(). Full names are accepted on input and stored as the short form.
+WEEKDAYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+WEEKDAY_ALIASES = {
+    **{day: day for day in WEEKDAYS},
+    "sunday": "sun",
+    "monday": "mon",
+    "tuesday": "tue",
+    "wednesday": "wed",
+    "thursday": "thu",
+    "friday": "fri",
+    "saturday": "sat",
+}
 
 # Shared secrets that sign tokens or authorize machine callers.
 SHARED_SECRET_FIELDS = ("SECRET_KEY", "CRON_SECRET", "DOC_REMINDER_API_KEY", "WORKSPACE_BOT_TOKEN")
@@ -134,9 +148,14 @@ class Settings(BaseSettings):
     # address is env-only: a deployment sets its own, and nothing prints when blank.
     STUDIO_NAME: str = "Ryozan Studio"
     STUDIO_ADDRESS: str = ""
+    # Public studio phone shown in the app (e.g. staff emergency contacts).
+    # Blank hides it.
+    STUDIO_PHONE: str = ""
 
-    # Shop-level notification recipients (always CC'd on booking alerts)
-    SHOP_EMAIL: str = "hackathon-judge@arkomnitek.com"
+    # Shop-level notification recipients (always CC'd on booking alerts).
+    # SHOP_EMAIL is also the public contact address in GET /studio/settings and
+    # the fallback VAPID subject. Blank means no shop inbox copy is sent.
+    SHOP_EMAIL: str = ""
     SHOP_OWNER_EMAIL: str = "founder@ryozan.app"
 
     # ── Studio policy ─────────────────────────────────────────────────────
@@ -170,6 +189,23 @@ class Settings(BaseSettings):
     # User id that receives the cron daily debrief. Blank sends it to every
     # founder account.
     DEBRIEF_RECIPIENT_USER_ID: str = ""
+    # Booking calendar days, as comma-separated weekday names (sun, mon, tue,
+    # wed, thu, fri, sat; full names also accepted). Closed days cannot be
+    # picked on the public booking calendar. Request-only days can be picked,
+    # but no time slot is offered: the client sends a request and the shop
+    # confirms. BOOKING_REQUEST_ONLY_ARTIST_SLUGS limits request-only days to
+    # those artists; blank applies them to every artist. All blank: every day
+    # is bookable and the live slot engine decides.
+    BOOKING_CLOSED_WEEKDAYS: str = ""
+    BOOKING_REQUEST_ONLY_WEEKDAYS: str = ""
+    BOOKING_REQUEST_ONLY_ARTIST_SLUGS: str = ""
+    # Document template id the staff "Send Waiver" action uses. Blank falls back
+    # to the active "Tattoo Consent Waiver" template, the same one /waiver uses.
+    WAIVER_TEMPLATE_ID: str = ""
+    # Comma-separated image URLs shown as stand-in flash previews in local
+    # development when a real flash image fails to load. Blank shows the
+    # neutral "Preview unavailable" placeholder instead.
+    SAMPLE_FLASH_URLS: str = ""
 
     @staticmethod
     def _csv_set(raw: str) -> frozenset[str]:
@@ -201,15 +237,74 @@ class Settings(BaseSettings):
         """Owner name for prompts and labels, or a neutral fallback."""
         return self.STUDIO_OWNER_NAME.strip() or "the shop owner"
 
-    @field_validator("DEBRIEF_RECIPIENT_USER_ID")
+    @staticmethod
+    def _csv_list(raw: str) -> list[str]:
+        return [part.strip() for part in (raw or "").split(",") if part.strip()]
+
+    @property
+    def booking_closed_weekdays(self) -> list[str]:
+        return self._csv_list(self.BOOKING_CLOSED_WEEKDAYS)
+
+    @property
+    def booking_request_only_weekdays(self) -> list[str]:
+        return self._csv_list(self.BOOKING_REQUEST_ONLY_WEEKDAYS)
+
+    @property
+    def booking_request_only_artist_slugs(self) -> list[str]:
+        return sorted(self._csv_set(self.BOOKING_REQUEST_ONLY_ARTIST_SLUGS))
+
+    @property
+    def sample_flash_urls(self) -> list[str]:
+        return self._csv_list(self.SAMPLE_FLASH_URLS)
+
+    @property
+    def vapid_subject(self) -> str:
+        """VAPID `sub` claim: VAPID_SUBJECT, else mailto:SHOP_EMAIL, else blank.
+
+        Push services require it, so push stays off while it is blank.
+        """
+        subject = self.VAPID_SUBJECT.strip()
+        if subject:
+            return subject
+        email = self.SHOP_EMAIL.strip()
+        return f"mailto:{email}" if email else ""
+
+    @property
+    def push_configured(self) -> bool:
+        return bool(self.VAPID_PUBLIC_KEY and self.VAPID_PRIVATE_KEY and self.vapid_subject)
+
+    @field_validator("BOOKING_CLOSED_WEEKDAYS", "BOOKING_REQUEST_ONLY_WEEKDAYS")
     @classmethod
-    def validate_debrief_recipient(cls, value: str) -> str:
+    def normalize_weekdays(cls, value: str) -> str:
+        """Canonical form: unique three-letter names in Sunday-first order."""
+        picked: set[str] = set()
+        for part in (value or "").split(","):
+            name = part.strip().lower()
+            if not name:
+                continue
+            short = WEEKDAY_ALIASES.get(name)
+            if short is None:
+                raise ValueError(f"unknown weekday {part.strip()!r}; use sun, mon, tue, wed, thu, fri or sat")
+            picked.add(short)
+        return ",".join(day for day in WEEKDAYS if day in picked)
+
+    @field_validator("VAPID_SUBJECT")
+    @classmethod
+    def validate_vapid_subject(cls, value: str) -> str:
+        value = (value or "").strip()
+        if value and not (value.startswith("mailto:") or value.startswith("https://")):
+            raise ValueError("VAPID_SUBJECT must be a mailto: or https:// URI")
+        return value
+
+    @field_validator("DEBRIEF_RECIPIENT_USER_ID", "WAIVER_TEMPLATE_ID")
+    @classmethod
+    def validate_optional_uuid(cls, value: str, info: ValidationInfo) -> str:
         value = (value or "").strip()
         if value:
             try:
                 UUID(value)
             except ValueError as exc:
-                raise ValueError("DEBRIEF_RECIPIENT_USER_ID must be a UUID") from exc
+                raise ValueError(f"{info.field_name} must be a UUID") from exc
         return value
 
     # Google OAuth for the active BTTCO Cloud project (628400721124). The web
@@ -468,7 +563,9 @@ class Settings(BaseSettings):
     # Generate with: python -c "from pywebpush import webpush; from py_vapid import Vapid; v=Vapid(); v.generate_keys(); from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat; import base64; b=lambda d: base64.urlsafe_b64encode(d).rstrip(b'=').decode(); print('PRIVATE:', b(v.private_key.private_numbers().private_value.to_bytes(32,'big'))); print('PUBLIC:', b(v.private_key.public_key().public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)))"
     VAPID_PUBLIC_KEY: str = ""
     VAPID_PRIVATE_KEY: str = ""
-    VAPID_SUBJECT: str = "mailto:hackathon-judge@arkomnitek.com"
+    # Contact URI push services require ("mailto:..." or "https://...").
+    # Blank falls back to mailto:SHOP_EMAIL; with neither, push stays off.
+    VAPID_SUBJECT: str = ""
 
     # Plaid (bank account linking)
     PLAID_CLIENT_ID: str = ""

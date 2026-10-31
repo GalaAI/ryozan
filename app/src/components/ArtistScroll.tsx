@@ -16,6 +16,7 @@
 import { useState, useRef } from 'react'
 import SignaturePad from './SignaturePad'
 import { submitArtistScroll } from '../lib/api'
+import { useStudioSettings } from '../hooks/useStudioSettings'
 import '../styles/artist-scroll.css'
 
 /* ── Section definitions ── */
@@ -44,6 +45,7 @@ interface ArtistScrollProps {
 
 export default function ArtistScroll({ artistName = 'Artist', onSubmitted, layout = 'tabbed', preview = false }: ArtistScrollProps) {
   const continuous = layout === 'continuous'
+  const { settings: studioSettings } = useStudioSettings()
   const [activeSection, setActiveSection] = useState<ScrollSection>('application')
   const [acceptedSections, setAcceptedSections] = useState<Partial<Record<ScrollSection, boolean>>>({})
   const [acceptanceNames, setAcceptanceNames] = useState<Partial<Record<ScrollSection, string>>>({})
@@ -520,7 +522,12 @@ export default function ArtistScroll({ artistName = 'Artist', onSubmitted, layou
               <div className="scroll-contact-grid">
                 <span className="scroll-contact-label">Emergency</span><span className="scroll-contact-value">911</span>
                 <span className="scroll-contact-label">Poison Control</span><span className="scroll-contact-value">1-800-222-1222</span>
-                <span className="scroll-contact-label">Shop Owner</span><span className="scroll-contact-value">Justin Walker</span>
+                {studioSettings.owner_name && (
+                  <><span className="scroll-contact-label">Shop Owner</span><span className="scroll-contact-value">{studioSettings.owner_name}</span></>
+                )}
+                {studioSettings.contact_phone && (
+                  <><span className="scroll-contact-label">Shop Phone</span><span className="scroll-contact-value">{studioSettings.contact_phone}</span></>
+                )}
               </div>
             </div>
 

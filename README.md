@@ -153,6 +153,25 @@ The API reads `api/.env`. Copy [`api/.env.example`](api/.env.example) to start. 
 | `STUDIO_NAME` | Name printed on client email, SMS, calendar invites and PDFs. Default `Ryozan Studio`. |
 | `STUDIO_ADDRESS` | Postal address for email footers and PDFs. Nothing prints when blank. |
 
+### Studio settings
+
+The web app reads these from `GET /api/v1/studio/settings` (public, no auth, cached five minutes) instead of hardcoding one studio's details. Blank values show neutral copy or hide the element. Only non-secret values belong in that response.
+
+| Variable | Field | What it does |
+| --- | --- | --- |
+| `STUDIO_NAME` | `studio_name` | Studio name (see Studio identity). |
+| `STUDIO_OWNER_NAME` | `owner_name` | Owner's display name: staff emergency contacts, the owner contact list, the title font preview. |
+| `SHOP_EMAIL` | `contact_email` | Shop inbox: public contact, Reply-To on outbound email, copy of booking alerts, fallback VAPID subject. |
+| `STUDIO_PHONE` | `contact_phone` | Studio phone in staff emergency contacts. |
+| `STUDIO_ADDRESS` | `address` | Postal address (see Studio identity). |
+| none | `timezone` | The booking engine's zone, `SHOP_TIMEZONE` in `api/app/constants/timezones.py`. |
+| `BOOKING_CLOSED_WEEKDAYS` | `booking_days.closed_weekdays` | Weekdays (`sun`..`sat`, comma-separated) the public booking calendar shows as closed. |
+| `BOOKING_REQUEST_ONLY_WEEKDAYS` | `booking_days.request_only_weekdays` | Weekdays that take a request instead of a time slot. |
+| `BOOKING_REQUEST_ONLY_ARTIST_SLUGS` | `booking_days.request_only_artist_slugs` | Artists the request-only days apply to. Blank: every artist. |
+| `DEFAULT_ARTIST_SLUG` | `default_artist_slug` | Artist for "any artist" requests; also the artist whose bookings and slot diagnostics the manager Huddle shows. |
+| `WAIVER_TEMPLATE_ID` | `waiver_template_id` | Template for the staff "Send Waiver" action. Blank: the active `Tattoo Consent Waiver` template. |
+| `SAMPLE_FLASH_URLS` | `sample_flash_urls` | Comma-separated stand-in flash previews, used only by a local dev build. |
+
 ### Optional features
 
 Each group is off until its keys are set.
@@ -161,7 +180,7 @@ Each group is off until its keys are set.
 | --- | --- |
 | Web search (Tavily) | `TAVILY_API_KEY`; `TAVILY_MONTHLY_SEARCHES_PER_ACCOUNT` (default 25). Without a key the `web_search` tool is not offered. |
 | Email | One provider: `RESEND_API_KEY` (with `RESEND_FROM_EMAIL`, `RESEND_FROM_NAME`, and `RESEND_WEBHOOK_SECRET`, `RESEND_INBOUND_WEBHOOK_SECRET` for delivery and inbound webhooks), or `SENDGRID_API_KEY`, or SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`). |
-| Push (VAPID) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` you own). `config.py` has a one-line command to generate a key pair. |
+| Push (VAPID) | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (a `mailto:` or `https://` contact you own; blank falls back to `mailto:` + `SHOP_EMAIL`). With keys but no subject, push stays off and `/push/vapid-key` answers 503 naming the missing setting. `config.py` has a one-line command to generate a key pair. |
 | Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` for Calendar sync and Google sign-in. `GOOGLE_SIGNIN_CLIENT_ID` overrides the sign-in audience. For browser sign-in, build the web app with `VITE_GOOGLE_CLIENT_ID` set to the same id. `GOOGLE_CALENDAR_AUTH_MODE=workspace_delegated` with `GOOGLE_CALENDAR_SERVICE_ACCOUNT_JSON` and `GOOGLE_CALENDAR_DELEGATED_USER` uses one Workspace identity instead of per-user connect. |
 | Stripe Connect | `STRIPE_SECRET_KEY` turns it on. Also `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_CONNECT_WEBHOOK_SECRET`, `STRIPE_CONNECT_THIN_WEBHOOK_SECRET`, `STRIPE_CONNECT_RETURN_URL`, and `VITE_STRIPE_PUBLISHABLE_KEY` at web build time. Only `artist` and `founder` accounts can start onboarding. |
 | Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET`, `PINTEREST_REDIRECT_URI`; `PINTEREST_USE_SANDBOX` (default `true`). |

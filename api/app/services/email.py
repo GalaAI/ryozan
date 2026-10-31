@@ -94,11 +94,12 @@ FROM_ADMIN = "admin"  # admin@ryozan.app — invites, broadcasts, shop announcem
 FROM_SERVICE = "service"  # service@ryozan.app — payments, receipts, Stripe notifications
 
 _FROM_MAP = {
-    "noreply": ("Ryozan Studio", "noreply@ryozan.app", "hackathon-judge@arkomnitek.com"),
-    "admin": ("Ryozan Studio", "admin@ryozan.app", "hackathon-judge@arkomnitek.com"),
-    "service": ("Ryozan Studio", "service@ryozan.app", "hackathon-judge@arkomnitek.com"),
+    "noreply": ("Ryozan Studio", "noreply@ryozan.app"),
+    "admin": ("Ryozan Studio", "admin@ryozan.app"),
+    "service": ("Ryozan Studio", "service@ryozan.app"),
 }
-# Tuple: (display_name, from_email, reply_to_fallback)
+# Tuple: (display_name, from_email). Replies go to settings.SHOP_EMAIL unless
+# the caller passes reply_to; with neither, no Reply-To header is set.
 
 
 def _email_head() -> str:
@@ -314,10 +315,9 @@ async def send_email(
 
     # Resolve sender identity
     alias_key = from_alias or FROM_SHOP
-    display_name, from_email, default_reply_to = _FROM_MAP.get(alias_key, _FROM_MAP["noreply"])
-    effective_reply_to = reply_to or default_reply_to
-
+    display_name, from_email = _FROM_MAP.get(alias_key, _FROM_MAP["noreply"])
     settings = get_settings()
+    effective_reply_to = reply_to or settings.SHOP_EMAIL.strip() or None
 
     # Dev/test redirect: route every outbound email to one readable inbox instead
     # of the real recipient. Hard-guarded to non-production so it can never hijack

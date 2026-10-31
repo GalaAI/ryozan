@@ -47,6 +47,13 @@ async def get_vapid_key():
     """Return the public VAPID key for client-side push subscription. No auth required."""
     if not settings.VAPID_PUBLIC_KEY:
         raise HTTPException(status_code=503, detail="Push notifications not configured")
+    if not settings.vapid_subject:
+        # A browser that subscribes now would never receive a push: sends need a
+        # VAPID subject. Refuse here so the client does not offer push at all.
+        raise HTTPException(
+            status_code=503,
+            detail="Push notifications not configured: set VAPID_SUBJECT or SHOP_EMAIL",
+        )
     return VapidKeyResponse(public_key=settings.VAPID_PUBLIC_KEY)
 
 

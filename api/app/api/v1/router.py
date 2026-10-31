@@ -54,6 +54,7 @@ from app.api.v1.endpoints import (
     stash,
     stripe_connect,
     stripe_webhooks,
+    studio,
     users,
     viber,
     waiver,
@@ -67,6 +68,7 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 
 api_router.include_router(auth.router)
+api_router.include_router(studio.router)
 api_router.include_router(users.router)
 api_router.include_router(artists.router)
 api_router.include_router(conversations.router)
