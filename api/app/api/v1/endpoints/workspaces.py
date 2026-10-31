@@ -45,7 +45,7 @@ from app.schemas.workspace import (
     WorkspaceStatus,
 )
 
-logger = logging.getLogger("bttco.workspaces")
+logger = logging.getLogger("ryozan.workspaces")
 settings = get_settings()
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])

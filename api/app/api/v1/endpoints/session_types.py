@@ -19,9 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.session_type import ArtistSessionType
-from app.models.user import BTTCOUser
+from app.models.user import User
 
-logger = logging.getLogger("bttco.session_types")
+logger = logging.getLogger("ryozan.session_types")
 router = APIRouter(prefix="/session-types", tags=["session-types"])
 
 
@@ -76,7 +76,7 @@ class SessionTypeResponse(BaseModel):
 # ── Helpers ──────────────────────────────────────────
 
 
-def _require_staff(user: BTTCOUser) -> None:
+def _require_staff(user: User) -> None:
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("artist", 2):
         raise HTTPException(status_code=403, detail="Artist role or higher required")
 
@@ -96,9 +96,9 @@ async def list_session_types_for_artist(
     and auto-fill pricing based on client's size/placement selection.
     """
     artist_result = await db.execute(
-        select(BTTCOUser).where(
-            BTTCOUser.slug == artist_slug,
-            BTTCOUser.role.in_(["artist", "founder"]),
+        select(User).where(
+            User.slug == artist_slug,
+            User.role.in_(["artist", "founder"]),
         )
     )
     artist = artist_result.scalar_one_or_none()
@@ -117,7 +117,7 @@ async def list_session_types_for_artist(
 @router.get("/mine", response_model=list[SessionTypeResponse])
 async def list_my_session_types(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Artist+: list your own session types (including inactive)."""
     _require_staff(current_user)
@@ -133,7 +133,7 @@ async def list_my_session_types(
 async def create_session_type(
     body: SessionTypeCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Artist+: create a new session type."""
     _require_staff(current_user)
@@ -160,7 +160,7 @@ async def update_session_type(
     session_type_id: UUID,
     body: SessionTypeUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Artist+: update one of your session types."""
     _require_staff(current_user)
@@ -184,7 +184,7 @@ async def update_session_type(
 async def delete_session_type(
     session_type_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Artist+: delete one of your session types."""
     _require_staff(current_user)
@@ -217,9 +217,9 @@ async def lookup_session_type(
     to size-only if no placement match exists.
     """
     artist_result = await db.execute(
-        select(BTTCOUser.id).where(
-            BTTCOUser.slug == artist_slug,
-            BTTCOUser.role.in_(["artist", "founder"]),
+        select(User.id).where(
+            User.slug == artist_slug,
+            User.role.in_(["artist", "founder"]),
         )
     )
     artist_id = artist_result.scalar_one_or_none()

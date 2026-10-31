@@ -1,9 +1,9 @@
 """Ryozan adapter for Apex-owned Bella and Gala evolution.
 
 Net-new justification: Apex owns behavior candidates, trials, and promotion,
-while BTTCO owns the shop UI and ElevenLabs runtime binding. This adapter uses
+while Ryozan owns the shop UI and ElevenLabs runtime binding. This adapter uses
 the existing signed Pack bridge credential and does not create another profile,
-memory, trial, or inbox authority inside BTTCO.
+memory, trial, or inbox authority inside Ryozan.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ _MANAGED_END = "<!-- APEX BEHAVIOR PROFILE END -->"
 APEX_EVALUATION_SEGMENT = "cru" + "cibles"
 APEX_EVALUATION_PASSED_STATUS = "cru" + "cible_passed"
 
-BTTCO_ORCHESTRA_MODELS_PATH = "workbench/orchestras/orchestra%3Abttco/model-routing"
+ORCHESTRA_MODELS_PATH = "workbench/orchestras/orchestra%3Abttco/model-routing"
 
 
 _BANDIT_TO_LEGACY = {
@@ -44,7 +44,7 @@ _BANDIT_TO_LEGACY = {
 }
 
 
-def bttco_actor_ref(agent_id: str) -> str:
+def ryozan_actor_ref(agent_id: str) -> str:
     if agent_id == "gala":
         return "agent:gala"
     mapped = _BANDIT_TO_LEGACY.get(agent_id, agent_id)
@@ -54,7 +54,7 @@ def bttco_actor_ref(agent_id: str) -> str:
 async def resolve_orchestra_model_lane(agent_id: str, lane):
     """Use the shared Nexus assignment; never persist a Ryozan shadow copy."""
     try:
-        data = await request_apex_agent("GET", BTTCO_ORCHESTRA_MODELS_PATH)
+        data = await request_apex_agent("GET", ORCHESTRA_MODELS_PATH)
     except AgentEvolutionBridgeError as exc:
         if exc.status_code != 404:
             raise
@@ -67,7 +67,7 @@ async def resolve_orchestra_model_lane(agent_id: str, lane):
     if not data.get("ok") or routing.get("orchestraId") != "orchestra:bttco" or routing.get("scope") != "bttco_chat":
         raise AgentEvolutionBridgeError(502, "Ark returned a different Orchestra routing contract.")
     member = next(
-        (item for item in routing.get("members", []) if item.get("actorRef") == bttco_actor_ref(agent_id)), None
+        (item for item in routing.get("members", []) if item.get("actorRef") == ryozan_actor_ref(agent_id)), None
     )
     if member is None:
         raise AgentEvolutionBridgeError(409, "This agent has no Ryozan Orchestra membership.")
@@ -119,7 +119,7 @@ async def request_ark_bridge(
     local_config = getattr(settings, "ARK_ORCHESTRA_CONFIG_URL", "").strip().rstrip("/")
     normalized_path = path.lstrip("/")
     if (
-        normalized_path in {BTTCO_ORCHESTRA_MODELS_PATH, f"{_APEX_PATH.lstrip('/')}/{BTTCO_ORCHESTRA_MODELS_PATH}"}
+        normalized_path in {ORCHESTRA_MODELS_PATH, f"{_APEX_PATH.lstrip('/')}/{ORCHESTRA_MODELS_PATH}"}
         and getattr(settings, "LOCAL_DEV_MODE", False)
         and local_config
     ):
@@ -171,7 +171,7 @@ async def request_apex_agent(
     return await request_ark_bridge(method, f"{_APEX_PATH}/{path.lstrip('/')}", payload, service="Ark Apex")
 
 
-def project_agent_evolution_for_bttco(data: dict[str, Any]) -> dict[str, Any]:
+def project_agent_evolution_for_ryozan(data: dict[str, Any]) -> dict[str, Any]:
     """Translate the Ark lifecycle label into Ryozan's plain product language."""
 
     def project(value: Any) -> Any:
@@ -228,7 +228,7 @@ async def apply_profile_to_elevenlabs(agent_id: AgentId, profile: dict[str, Any]
     settings = get_settings()
     api_key = settings.ELEVENLABS_API_KEY.strip()
     provider_agent_id = (
-        settings.ELEVENLABS_BTTCO_AGENT_ID.strip()
+        settings.ELEVENLABS_RYOZAN_AGENT_ID.strip()
         if agent_id == "bella"
         else settings.ELEVENLABS_JUSTIN_AGENT_ID.strip()
     )

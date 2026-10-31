@@ -20,7 +20,7 @@ from PIL import Image
 
 from app.api.v1.endpoints import conversations, gala_chat
 from app.core.config import Settings
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import ai_routing
 
 
@@ -33,7 +33,7 @@ def _settings(auto_reply_enabled=False):
 
 
 def _user(role):
-    return BTTCOUser(id=uuid.uuid4(), email=f"{role}@example.com", name=role, role=role)
+    return User(id=uuid.uuid4(), email=f"{role}@example.com", name=role, role=role)
 
 
 def _png_bytes() -> bytes:
@@ -635,7 +635,7 @@ class AgentOrchestrationContractTests(unittest.IsolatedAsyncioTestCase):
                 self.assertNotIn(legacy, prompt)
 
     def test_founder_prompt_uses_trusted_identity_and_bandit_roster(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="founder@ryozan.app",
             name="Morgan Z.",

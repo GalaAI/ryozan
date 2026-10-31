@@ -19,10 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.message import Conversation, ConversationParticipant, Message
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.sms import normalise_phone
 
-logger = logging.getLogger("bttco.whatsapp")
+logger = logging.getLogger("ryozan.whatsapp")
 
 router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
 
@@ -141,18 +141,18 @@ async def _archive_message(
     return True
 
 
-async def _resolve_owner(db: AsyncSession, phone_e164: str) -> BTTCOUser:
+async def _resolve_owner(db: AsyncSession, phone_e164: str) -> User:
     staff = await db.execute(
-        select(BTTCOUser)
-        .where(BTTCOUser.role.in_(("founder", "admin")))
-        .order_by(desc(BTTCOUser.role == "founder"), BTTCOUser.created_at.asc())
+        select(User)
+        .where(User.role.in_(("founder", "admin")))
+        .order_by(desc(User.role == "founder"), User.created_at.asc())
         .limit(1)
     )
     owner = staff.scalar_one_or_none()
     if owner:
         return owner
 
-    fallback = await db.scalar(select(BTTCOUser).order_by(BTTCOUser.created_at.asc()).limit(1))
+    fallback = await db.scalar(select(User).order_by(User.created_at.asc()).limit(1))
     if not fallback:
         raise HTTPException(
             status_code=500, detail=f"No Courier owner available for WhatsApp message from {phone_e164}"
@@ -160,18 +160,18 @@ async def _resolve_owner(db: AsyncSession, phone_e164: str) -> BTTCOUser:
     return fallback
 
 
-async def _resolve_sender(db: AsyncSession, phone_e164: str, contact_name: str) -> BTTCOUser:
-    users = await db.execute(select(BTTCOUser).where(BTTCOUser.phone.is_not(None)))
+async def _resolve_sender(db: AsyncSession, phone_e164: str, contact_name: str) -> User:
+    users = await db.execute(select(User).where(User.phone.is_not(None)))
     for user in users.scalars():
         if normalise_phone(user.phone) == phone_e164:
             return user
 
     email = f"whatsapp-{phone_e164.lstrip('+')}@ryozan.app"
-    existing = await db.scalar(select(BTTCOUser).where(BTTCOUser.email == email))
+    existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         return existing
 
-    user = BTTCOUser(
+    user = User(
         email=email,
         name=contact_name or phone_e164,
         role="collector",
@@ -185,8 +185,8 @@ async def _resolve_sender(db: AsyncSession, phone_e164: str, contact_name: str) 
 
 async def _resolve_conversation(
     db: AsyncSession,
-    owner: BTTCOUser,
-    sender: BTTCOUser,
+    owner: User,
+    sender: User,
     contact_name: str,
     phone_e164: str,
 ) -> Conversation:

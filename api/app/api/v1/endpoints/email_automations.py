@@ -29,7 +29,7 @@ from app.models.booking_draft import BookingDraft
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.push_subscription import PushSubscription
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email import (
     FROM_ADMIN,
     FROM_SHOP,
@@ -51,7 +51,7 @@ from app.services.email_foundry import (
 from app.services.push import send_push_notification
 from app.services.sms import send_from_template
 
-logger = logging.getLogger("bttco.email_automations")
+logger = logging.getLogger("ryozan.email_automations")
 
 router = APIRouter(prefix="/email-automations", tags=["email-automations"])
 
@@ -121,9 +121,7 @@ async def process_automated_emails(
         client_name = booking.guest_name or "there"
 
         if booking.client_id:
-            client_result = await db.execute(
-                select(BTTCOUser.email, BTTCOUser.name).where(BTTCOUser.id == booking.client_id)
-            )
+            client_result = await db.execute(select(User.email, User.name).where(User.id == booking.client_id))
             client_row = client_result.first()
             if client_row:
                 client_email, client_name = client_row
@@ -134,7 +132,7 @@ async def process_automated_emails(
             client_email = booking.guest_email
 
         # Get artist name
-        artist_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+        artist_result = await db.execute(select(User.name).where(User.id == booking.artist_id))
         artist_name = artist_result.scalar_one_or_none() or "your artist"
 
         if client_email and not email_already_sent:
@@ -247,9 +245,7 @@ async def process_automated_emails(
         client_name = booking.guest_name or "there"
 
         if booking.client_id:
-            client_result = await db.execute(
-                select(BTTCOUser.email, BTTCOUser.name).where(BTTCOUser.id == booking.client_id)
-            )
+            client_result = await db.execute(select(User.email, User.name).where(User.id == booking.client_id))
             client_row = client_result.first()
             if client_row:
                 client_email, client_name = client_row
@@ -262,7 +258,7 @@ async def process_automated_emails(
             continue
 
         # Get artist name
-        artist_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+        artist_result = await db.execute(select(User.name).where(User.id == booking.artist_id))
         artist_name = artist_result.scalar_one_or_none() or "your artist"
 
         fallback_subject = f"How's your tattoo healing? ({weeks_since} week check-in)"
@@ -322,16 +318,14 @@ async def process_automated_emails(
             client_email = booking.guest_email
             client_name = booking.guest_name or "there"
             if booking.client_id:
-                client_result = await db.execute(
-                    select(BTTCOUser.email, BTTCOUser.name).where(BTTCOUser.id == booking.client_id)
-                )
+                client_result = await db.execute(select(User.email, User.name).where(User.id == booking.client_id))
                 client_row = client_result.first()
                 if not client_row or not await should_notify(db, booking.client_id, "email", "bookings"):
                     continue
                 client_email, client_name = client_row
             if not client_email:
                 continue
-            artist_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+            artist_result = await db.execute(select(User.name).where(User.id == booking.artist_id))
             artist_name = artist_result.scalar_one_or_none() or "your artist"
             try:
                 dispatch = await dispatch_foundry_trigger(
@@ -403,7 +397,7 @@ async def process_automated_emails(
     # 24h window: registered between (now - 25h) and (now - 24h)
     install_reminders_sent = 0
 
-    no_push_sub = ~exists().where(PushSubscription.user_id == BTTCOUser.id)
+    no_push_sub = ~exists().where(PushSubscription.user_id == User.id)
 
     for hours_ago, slug, is_final in [
         (3, "install_reminder_3h", False),
@@ -413,11 +407,11 @@ async def process_automated_emails(
         window_start = window_end - timedelta(hours=1)
 
         candidates = await db.execute(
-            select(BTTCOUser).where(
+            select(User).where(
                 and_(
-                    BTTCOUser.created_at >= window_start,
-                    BTTCOUser.created_at < window_end,
-                    BTTCOUser.role == "collector",
+                    User.created_at >= window_start,
+                    User.created_at < window_end,
+                    User.role == "collector",
                     no_push_sub,
                 )
             )
@@ -447,29 +441,29 @@ async def process_automated_emails(
     cutoff = now - timedelta(hours=24)
     scroll_request_exists = exists().where(
         and_(
-            Notification.user_id == BTTCOUser.id,
+            Notification.user_id == User.id,
             Notification.notification_type.in_(("scroll_request", "scroll_remind")),
         )
     )
     recent_scroll_reminder_exists = exists().where(
         and_(
-            Notification.user_id == BTTCOUser.id,
+            Notification.user_id == User.id,
             Notification.notification_type == "scroll_remind",
             Notification.created_at >= cutoff,
         )
     )
     completed_scroll_exists = exists().where(
         and_(
-            DocumentInstance.user_id == BTTCOUser.id,
+            DocumentInstance.user_id == User.id,
             DocumentInstance.category == "scroll",
             DocumentInstance.status == "signed",
         )
     )
 
     pending_artists_result = await db.execute(
-        select(BTTCOUser).where(
+        select(User).where(
             and_(
-                BTTCOUser.role.in_(("artist", "admin", "founder")),
+                User.role.in_(("artist", "admin", "founder")),
                 scroll_request_exists,
                 ~recent_scroll_reminder_exists,
                 ~completed_scroll_exists,

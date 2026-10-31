@@ -1,5 +1,5 @@
 <#
-Start the BTTCO API in E2E mode: real sends OFF, everything captured locally.
+Start the Ryozan API in E2E mode: real sends OFF, everything captured locally.
 
 - Email: providers blanked, SMTP pointed at the compose mailhog (UI :8025),
   LOCAL_DEV_MODE off so mail actually flows (into mailhog, true recipients).

@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import require_role
 from app.models.response_template import ResponseTemplate
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 router = APIRouter(prefix="/response-templates", tags=["response-templates"])
 
@@ -50,7 +50,7 @@ def _serialize(t: ResponseTemplate) -> dict:
 @router.get("/")
 async def list_templates(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("assistant")),
+    current_user: User = Depends(require_role("assistant")),
 ):
     result = await db.execute(
         select(ResponseTemplate).order_by(ResponseTemplate.sort_order, ResponseTemplate.created_at)
@@ -62,7 +62,7 @@ async def list_templates(
 async def create_template(
     body: TemplateIn,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("assistant")),
+    current_user: User = Depends(require_role("assistant")),
 ):
     t = ResponseTemplate(
         title=body.title.strip(),
@@ -81,7 +81,7 @@ async def update_template(
     template_id: uuid.UUID,
     body: TemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("assistant")),
+    current_user: User = Depends(require_role("assistant")),
 ):
     result = await db.execute(select(ResponseTemplate).where(ResponseTemplate.id == template_id))
     t = result.scalar_one_or_none()
@@ -110,7 +110,7 @@ async def update_template(
 async def delete_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("assistant")),
+    current_user: User = Depends(require_role("assistant")),
 ):
     result = await db.execute(select(ResponseTemplate).where(ResponseTemplate.id == template_id))
     t = result.scalar_one_or_none()

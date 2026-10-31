@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install git hooks for bttco-api
+# Install git hooks for the Ryozan API
 # Run once after cloning: bash install-hooks.sh
 
 HOOK_DIR="$(git rev-parse --git-dir)/hooks"

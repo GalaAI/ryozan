@@ -11,7 +11,7 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-from app.models.user import BTTCOUser
+from app.models.user import User
 from scripts import bootstrap_dev_login, sync_test_data
 
 
@@ -53,7 +53,7 @@ class _SessionContext:
 
 
 def _user(*, user_id=None, email, name, role, slug):
-    return BTTCOUser(
+    return User(
         id=user_id or uuid.uuid4(),
         email=email,
         name=name,
@@ -119,7 +119,7 @@ class MirroredOperatorIdentityTests(unittest.IsolatedAsyncioTestCase):
             patch.object(
                 bootstrap_dev_login,
                 "get_settings",
-                return_value=SimpleNamespace(DATABASE_URL="postgresql+asyncpg://u:p@localhost/bttco"),
+                return_value=SimpleNamespace(DATABASE_URL="postgresql+asyncpg://u:p@localhost/ryozan"),
             ),
             patch.object(bootstrap_dev_login, "async_session", return_value=_SessionContext(session)),
         ):

@@ -21,16 +21,17 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.v1.endpoints import sms as sms_endpoint
 from app.constants.status import BookingStatus
+from app.core import legacy_env
 from app.core.config import Settings
 from app.core.database import Base
 from app.models.booking import Booking
 from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.notification import Notification
 from app.models.sms_message import SmsMessage
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import sms as sms_service
 
-TEST_DATABASE_URL = os.environ.get("BTTCO_TEST_DATABASE_URL", "")
+TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "")
 if TEST_DATABASE_URL.startswith("postgresql://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
@@ -48,7 +49,7 @@ def _settings():
     )
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "set BTTCO_TEST_DATABASE_URL to run real SMS booking routing")
+@unittest.skipUnless(TEST_DATABASE_URL, "set RYOZAN_TEST_DATABASE_URL to run real SMS booking routing")
 class CourierSmsBookingRoutingPostgresTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.schema = f"sms_booking_routing_{uuid4().hex}"
@@ -62,7 +63,7 @@ class CourierSmsBookingRoutingPostgresTests(unittest.IsolatedAsyncioTestCase):
         )
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
         tables = [
-            BTTCOUser.__table__,
+            User.__table__,
             Conversation.__table__,
             ConversationParticipant.__table__,
             Booking.__table__,
@@ -98,7 +99,7 @@ class CourierSmsBookingRoutingPostgresTests(unittest.IsolatedAsyncioTestCase):
 
     @staticmethod
     def _user(name, role, *, phone=None, sms_opt_in=False):
-        return BTTCOUser(
+        return User(
             id=uuid4(),
             email=f"{role}-{uuid4().hex}@example.test",
             password_hash="disabled",
@@ -333,12 +334,12 @@ class CourierSmsBookingRoutingPostgresTests(unittest.IsolatedAsyncioTestCase):
             booking, thread = await self._booking_thread(db, guest_phone="(555) 010-4961")
             await db.commit()
         async with self.sessions() as db:
-            user = await db.get(BTTCOUser, account.id)
+            user = await db.get(User, account.id)
             with patch.object(bookings_endpoint, "_enrich_booking", new=AsyncMock(return_value=None)):
                 await bookings_endpoint.link_booking_to_account(booking.reference_code, db=db, current_user=user)
             await db.commit()
         async with self.sessions() as db:
-            self.assertEqual((await db.get(BTTCOUser, account.id)).phone, "(555) 010-4961")
+            self.assertEqual((await db.get(User, account.id)).phone, "(555) 010-4961")
             await db.execute(text("UPDATE ryozan_users SET phone = NULL WHERE id = :id"), {"id": self.collector.id})
             await db.commit()
         async with self.sessions() as db:

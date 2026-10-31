@@ -31,9 +31,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
-from app.models.user import BTTCOUser
+from app.models.user import User
 
-logger = logging.getLogger("bttco.pinterest")
+logger = logging.getLogger("ryozan.pinterest")
 
 router = APIRouter(prefix="/auth/pinterest", tags=["pinterest"])
 
@@ -43,7 +43,7 @@ PINTEREST_SCOPES = ["boards:read", "boards:write", "pins:read", "pins:write", "u
 AUTHORIZE_URL = "https://www.pinterest.com/oauth/"
 
 
-def _require_staff(user: BTTCOUser) -> None:
+def _require_staff(user: User) -> None:
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("admin", 99):
         raise HTTPException(status_code=403, detail="Requires admin role or higher")
 
@@ -84,7 +84,7 @@ async def _exchange_code(code: str) -> dict:
     return resp.json()
 
 
-async def get_access_token(user: BTTCOUser) -> str:
+async def get_access_token(user: User) -> str:
     """Return a usable access token.
 
     Prefers a directly-stored access token (e.g. a dashboard-issued token), and
@@ -117,7 +117,7 @@ async def get_access_token(user: BTTCOUser) -> str:
 
 @router.get("/connect")
 async def pinterest_connect(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Return the Pinterest authorize URL. state encodes the user_id.
 
@@ -168,7 +168,7 @@ async def pinterest_callback(
     except (JWTError, ValueError, KeyError) as exc:
         raise HTTPException(status_code=400, detail="Invalid or expired state parameter") from exc
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -206,7 +206,7 @@ async def pinterest_callback(
 
 @router.get("/status")
 async def pinterest_status(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     # Any user can see their own connection state.
     return {
@@ -217,7 +217,7 @@ async def pinterest_status(
 
 @router.delete("/disconnect", status_code=204)
 async def pinterest_disconnect(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     # Any user can disconnect their own account.
@@ -229,7 +229,7 @@ async def pinterest_disconnect(
 
 @router.get("/boards")
 async def pinterest_boards(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List the caller's own connected boards (uses their own token)."""
     from app.services import pinterest as pin
@@ -246,7 +246,7 @@ async def pinterest_account_analytics(
     days: int = Query(default=30, ge=1, le=90),
     start_date: str | None = Query(default=None, description="YYYY-MM-DD (UTC); overrides days"),
     end_date: str | None = Query(default=None, description="YYYY-MM-DD (UTC); overrides days"),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Account analytics for Axiom SEO/product reporting.
 
@@ -275,7 +275,7 @@ async def pinterest_account_analytics(
 async def pinterest_pin_analytics(
     pin_id: str,
     days: int = Query(default=30, ge=1, le=90),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Per-pin analytics (which designs/pins drive clicks). Staff-only."""
     _require_staff(current_user)
@@ -300,7 +300,7 @@ async def pinterest_pin_analytics(
 async def pinterest_booking_references(
     booking_id: str,
     board_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Collector reference board: pull pins from the collector's own Pinterest
@@ -332,7 +332,7 @@ async def pinterest_booking_references(
     # Pinterest token, not the staff caller's. Collector-self keeps using their own.
     token_owner = current_user
     if is_staff and booking.client_id:
-        client_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.client_id))
+        client_result = await db.execute(select(User).where(User.id == booking.client_id))
         client = client_result.scalar_one_or_none()
         if not client or not (client.pinterest_refresh_token or client.pinterest_access_token):
             raise HTTPException(status_code=400, detail="Booking client has not connected Pinterest")
@@ -397,7 +397,7 @@ async def _find_or_create_board(access: str, name: str, description: str = "") -
 @router.post("/pin-flash/{design_id}")
 async def pinterest_pin_flash(
     design_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a Pin for a published flash design, linking to the shop.
@@ -453,7 +453,7 @@ async def pinterest_pin_flash(
 @router.post("/ingest/{board_id}")
 async def pinterest_ingest_board(
     board_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Ingest pins from a board into the References library.

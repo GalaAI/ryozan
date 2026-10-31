@@ -1,5 +1,5 @@
 <#
-Mirror scoped production data into a local BTTCO database.
+Mirror scoped production data into a local Ryozan database.
 
 Wraps the repo's existing, deliberately scoped sync pipeline (the owners):
   api/scripts/dump_prod_test_data.py   prod -> .dev/state/prod-test-dump.json

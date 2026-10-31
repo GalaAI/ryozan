@@ -32,7 +32,7 @@ from app.core.security import hash_password
 from app.models.booking import Booking
 from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.notification import Notification
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 
 SENSITIVE_USER_COLUMNS = {
     "password_hash",
@@ -217,7 +217,7 @@ async def _import_rows(
 
 
 async def _upsert_user(session, row: dict, id_map: dict[uuid.UUID, uuid.UUID]) -> None:
-    values = _model_values(BTTCOUser, row, drop_sensitive=True)
+    values = _model_values(User, row, drop_sensitive=True)
     if not values:
         return
 
@@ -226,7 +226,7 @@ async def _upsert_user(session, row: dict, id_map: dict[uuid.UUID, uuid.UUID]) -
     slug = values.get("slug")
     matched_by_slug = False
 
-    by_id = await session.execute(select(BTTCOUser).where(BTTCOUser.id == prod_id))
+    by_id = await session.execute(select(User).where(User.id == prod_id))
     user = by_id.scalar_one_or_none()
 
     if user is None and email:
@@ -234,7 +234,7 @@ async def _upsert_user(session, row: dict, id_map: dict[uuid.UUID, uuid.UUID]) -
         # source can still carry: the model normalizes on write, so an exact
         # match against a mixed-case source address would miss the local row and
         # create a second one.
-        by_email = await session.execute(select(BTTCOUser).where(func.lower(BTTCOUser.email) == normalize_email(email)))
+        by_email = await session.execute(select(User).where(func.lower(User.email) == normalize_email(email)))
         user = by_email.scalars().first()
         if user and user.id != prod_id:
             # This local row is the same person under a different primary key,
@@ -261,7 +261,7 @@ async def _upsert_user(session, row: dict, id_map: dict[uuid.UUID, uuid.UUID]) -
         #
         # Without this the import tried to INSERT a second row carrying the
         # same slug and died on ryozan_users_slug_key.
-        by_slug = await session.execute(select(BTTCOUser).where(BTTCOUser.slug == slug))
+        by_slug = await session.execute(select(User).where(User.slug == slug))
         user = by_slug.scalars().first()
         if user:
             matched_by_slug = True
@@ -285,14 +285,14 @@ async def _upsert_user(session, row: dict, id_map: dict[uuid.UUID, uuid.UUID]) -
     if slug:
         # Last guard before insert: a local-only account may hold this slug
         # without being the same person, and slug is unique.
-        clash = await session.execute(select(BTTCOUser).where(BTTCOUser.slug == slug))
+        clash = await session.execute(select(User).where(User.slug == slug))
         if clash.scalars().first() is not None:
             print(f"  slug '{slug}' already held locally; importing {prod_id} without one")
             values["slug"] = None
 
-    user = BTTCOUser(
+    user = User(
         **values,
-        password_hash=hash_password("BTTCO-dev-sync-change-me"),
+        password_hash=hash_password("Ryozan-dev-sync-change-me"),
         must_reset_password=True,
     )
     session.add(user)

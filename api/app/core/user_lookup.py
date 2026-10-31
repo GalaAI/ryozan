@@ -56,7 +56,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
 from app.core.security import password_hash_fingerprint, verify_password
-from app.models.user import BTTCOUser, UserIdentityAlias, normalize_email
+from app.models.user import User, UserIdentityAlias, normalize_email
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +78,9 @@ def user_email_matches(email: str):
     """Case-insensitive WHERE clause against the normalized address."""
     normalized = normalize_email(email)
     return or_(
-        func.lower(BTTCOUser.email) == normalized,
+        func.lower(User.email) == normalized,
         select(UserIdentityAlias.id)
-        .where(UserIdentityAlias.user_id == BTTCOUser.id, UserIdentityAlias.email == normalized)
+        .where(UserIdentityAlias.user_id == User.id, UserIdentityAlias.email == normalized)
         .exists(),
     )
 
@@ -88,18 +88,18 @@ def user_email_matches(email: str):
 def user_google_matches(subject: str):
     """Resolve a verified provider subject, including explicitly merged identities."""
     return or_(
-        BTTCOUser.google_id == subject,
+        User.google_id == subject,
         select(UserIdentityAlias.id)
-        .where(UserIdentityAlias.user_id == BTTCOUser.id, UserIdentityAlias.google_id == subject)
+        .where(UserIdentityAlias.user_id == User.id, UserIdentityAlias.google_id == subject)
         .exists(),
     )
 
 
-def has_usable_password(user: BTTCOUser) -> bool:
+def has_usable_password(user: User) -> bool:
     return bool(user.password_hash) and user.password_hash.startswith(_BCRYPT_PREFIX)
 
 
-def _rank_key(user: BTTCOUser) -> tuple:
+def _rank_key(user: User) -> tuple:
     """Sort key implementing the documented winner rule. Lower sorts first."""
     return (
         0 if user.google_id else 1,
@@ -110,12 +110,12 @@ def _rank_key(user: BTTCOUser) -> tuple:
     )
 
 
-def rank_candidates(users: list[BTTCOUser]) -> list[BTTCOUser]:
+def rank_candidates(users: list[User]) -> list[User]:
     """Most-authenticatable first, deterministically."""
     return sorted(users, key=_rank_key)
 
 
-def _warn_on_duplicates(email: str, users: list[BTTCOUser]) -> None:
+def _warn_on_duplicates(email: str, users: list[User]) -> None:
     if len(users) > 1:
         correlation = hashlib.sha256(normalize_email(email).encode("utf-8")).hexdigest()[:12]
         logger.warning(
@@ -125,13 +125,13 @@ def _warn_on_duplicates(email: str, users: list[BTTCOUser]) -> None:
         )
 
 
-async def find_users_by_email(db: AsyncSession, email: str) -> list[BTTCOUser]:
+async def find_users_by_email(db: AsyncSession, email: str) -> list[User]:
     """Every row matching this email, case-insensitively. Never raises."""
-    result = await db.execute(select(BTTCOUser).where(user_email_matches(email)))
+    result = await db.execute(select(User).where(user_email_matches(email)))
     return list(result.scalars().all())
 
 
-async def find_user_by_email(db: AsyncSession, email: str) -> BTTCOUser | None:
+async def find_user_by_email(db: AsyncSession, email: str) -> User | None:
     """The best row for this email, or None. Never raises on duplicates."""
     users = await find_users_by_email(db, email)
     if not users:
@@ -140,7 +140,7 @@ async def find_user_by_email(db: AsyncSession, email: str) -> BTTCOUser | None:
     return rank_candidates(users)[0]
 
 
-async def authenticate_by_email(db: AsyncSession, email: str, password: str) -> BTTCOUser | None:
+async def authenticate_by_email(db: AsyncSession, email: str, password: str) -> User | None:
     """Return the row this password actually authenticates, else None.
 
     Checks every candidate rather than the first, so a duplicate pair where

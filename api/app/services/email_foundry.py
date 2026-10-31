@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.constants.timezones import SHOP_TIMEZONE
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 _CATALOG_PATH = Path(__file__).with_name("email_foundry_catalog.json")
 
@@ -558,7 +558,7 @@ def resolve_foundry_recipient(state: Mapping[str, Any], slug: str, event_recipie
     return normalized if _EMAIL_RE.fullmatch(normalized) else None
 
 
-def foundry_state_for_user(user: BTTCOUser) -> dict[str, Any]:
+def foundry_state_for_user(user: User) -> dict[str, Any]:
     """Return one complete adapter snapshot from the founder's durable profile.
 
     The snapshot is a deep copy. Callers mutate it freely and hand it back to
@@ -811,7 +811,7 @@ def merge_foundry_outbox(existing: list[dict[str, Any]], incoming: list[dict[str
     return merged[:_MAX_OUTBOX_ROWS]
 
 
-def store_foundry_state(user: BTTCOUser, state: Mapping[str, Any]) -> None:
+def store_foundry_state(user: User, state: Mapping[str, Any]) -> None:
     """Write the adapter snapshot back and force the JSONB column dirty.
 
     ``nexus_profile`` is a plain JSONB column without mutation tracking. When a
@@ -884,7 +884,7 @@ def _render_outbox_email(
         return rendered
 
     # Custom Forge rows are compiled by the locked adapter using forgeHtml().
-    # The BTTCO sender only fills per-recipient merge tags in that exact output.
+    # The Ryozan sender only fills per-recipient merge tags in that exact output.
     template_html = entry.get("templateHtml")
     template_subject = entry.get("templateSubject")
     if slug.startswith("forge:") and isinstance(template_html, str) and isinstance(template_subject, str):
@@ -927,7 +927,7 @@ def parse_foundry_delay_hours(value: Any) -> float | None:
 async def _send_foundry_single(
     state: Mapping[str, Any],
     schedule: Mapping[str, Any],
-    actor: BTTCOUser,
+    actor: User,
     *,
     slug: str,
     recipient: str,
@@ -982,7 +982,7 @@ async def dispatch_foundry_trigger(
     variables: Mapping[str, Any],
     event_id: str | None = None,
     occurred_at: datetime | None = None,
-    owners: list[BTTCOUser] | None = None,
+    owners: list[User] | None = None,
     delivery: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Bind one Ryozan domain event to every matching Foundry schedule."""
@@ -992,7 +992,7 @@ async def dispatch_foundry_trigger(
     observed_at = (occurred_at or datetime.now(UTC)).astimezone(UTC)
     stable_event_id = event_id or f"{trigger}:{uuid4()}"
     if owners is None:
-        owner_result = await db.execute(select(BTTCOUser).where(BTTCOUser.role == "founder"))
+        owner_result = await db.execute(select(User).where(User.role == "founder"))
         owners = list(owner_result.scalars().all())
 
     matched: list[str] = []
@@ -1112,7 +1112,7 @@ async def _execute_foundry_audience_trigger(
     db: AsyncSession,
     state: dict[str, Any],
     schedule: Mapping[str, Any],
-    owner: BTTCOUser,
+    owner: User,
     *,
     slug: str,
     event_id: str,
@@ -1154,14 +1154,14 @@ async def dispatch_foundry_audience_trigger(
     variables: Mapping[str, Any],
     event_id: str,
     occurred_at: datetime | None = None,
-    owners: list[BTTCOUser] | None = None,
+    owners: list[User] | None = None,
 ) -> dict[str, Any]:
     """Bind a shop-wide event such as flash_published to the consent list."""
     if trigger not in FOUNDRY_TRIGGERS:
         raise ValueError(f"Unsupported Foundry trigger: {trigger}")
     observed_at = (occurred_at or datetime.now(UTC)).astimezone(UTC)
     if owners is None:
-        owner_result = await db.execute(select(BTTCOUser).where(BTTCOUser.role == "founder"))
+        owner_result = await db.execute(select(User).where(User.role == "founder"))
         owners = list(owner_result.scalars().all())
     matched: list[str] = []
     sent = 0
@@ -1238,12 +1238,12 @@ async def process_foundry_trigger_queue(
     db: AsyncSession,
     *,
     now: datetime | None = None,
-    owners: list[BTTCOUser] | None = None,
+    owners: list[User] | None = None,
 ) -> dict[str, int]:
     """Execute delayed domain-event sends from the existing hourly worker."""
     observed_at = (now or datetime.now(UTC)).astimezone(UTC)
     if owners is None:
-        owner_result = await db.execute(select(BTTCOUser).where(BTTCOUser.role == "founder"))
+        owner_result = await db.execute(select(User).where(User.role == "founder"))
         owners = list(owner_result.scalars().all())
     due = 0
     sent = 0
@@ -1323,7 +1323,7 @@ async def process_foundry_trigger_queue(
 
 async def process_foundry_outbox(
     db: AsyncSession,
-    actor: BTTCOUser,
+    actor: User,
     state: dict[str, Any],
     *,
     only_entry_ids: set[str] | None = None,
@@ -1391,7 +1391,7 @@ async def process_foundry_outbox(
             continue
 
         audience_result = await db.execute(
-            select(BTTCOUser).where(BTTCOUser.marketing_opt_in.is_(True)).order_by(BTTCOUser.created_at)
+            select(User).where(User.marketing_opt_in.is_(True)).order_by(User.created_at)
         )
         audience = [user for user in audience_result.scalars().all() if _EMAIL_RE.fullmatch(user.email or "")]
         sent = 0
@@ -1487,12 +1487,12 @@ async def process_foundry_campaigns(
     db: AsyncSession,
     *,
     now: datetime | None = None,
-    owners: list[BTTCOUser] | None = None,
+    owners: list[User] | None = None,
 ) -> dict[str, int]:
     """Execute due Foundry campaigns for opted-in Ryozan recipients exactly once."""
     observed_at = (now or datetime.now(UTC)).astimezone(UTC)
     if owners is None:
-        owner_result = await db.execute(select(BTTCOUser).where(BTTCOUser.role == "founder"))
+        owner_result = await db.execute(select(User).where(User.role == "founder"))
         owners = list(owner_result.scalars().all())
 
     due = 0

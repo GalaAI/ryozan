@@ -1,6 +1,6 @@
 """Provider-neutral flash-sheet segmentation through Ark Model Gateway.
 
-BTTCO owns upload and preview orchestration. Ark owns model/provider routing at
+Ryozan owns upload and preview orchestration. Ark owns model/provider routing at
 ``POST /v1/vision/segment``. A backend outage is distinct from a valid empty result,
 and contextual marks are classified separately so only tattoo designs become inventory.
 """
@@ -16,7 +16,7 @@ import httpx
 
 from app.core.config import get_settings
 
-logger = logging.getLogger("bttco.flash_vision")
+logger = logging.getLogger("ryozan.flash_vision")
 
 FLASH_SEGMENT_MODEL = "ark/bttco/flash-segment"
 CONTEXT_LABEL_TOKENS = {

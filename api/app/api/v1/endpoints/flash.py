@@ -42,7 +42,7 @@ from app.core.user_lookup import find_user_by_email
 from app.models.booking import Booking
 from app.models.booking_slot_hold import BookingSlotHold
 from app.models.flash import FlashDesign, FlashSheet, ModelFeedbackSample
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 from app.schemas.flash import (
     FlashBookRequest,
     FlashBookResponse,
@@ -76,7 +76,7 @@ from app.services.storage import build_object_key
 from app.services.storage import upload_file as upload_to_drive
 from app.services.stripe_client import get_stripe_client
 
-logger = logging.getLogger("bttco.flash")
+logger = logging.getLogger("ryozan.flash")
 
 router = APIRouter(prefix="/flash", tags=["flash"])
 
@@ -87,16 +87,16 @@ _last_apex_dataset_attempt = 0.0
 _last_apex_dataset_digest: str | None = None
 
 
-def _can_manage_artist_flash(current_user: BTTCOUser, artist_id: UUID) -> bool:
+def _can_manage_artist_flash(current_user: User, artist_id: UUID) -> bool:
     """Allow artists to manage their own flash and admin+ roles to manage staff inventory."""
     return current_user.id == artist_id or ROLE_RANK.get(current_user.role, 0) >= ROLE_RANK.get("admin", 3)
 
 
 async def _resolve_flash_owner(
     db: AsyncSession,
-    current_user: BTTCOUser,
+    current_user: User,
     artist_id: UUID | None,
-) -> BTTCOUser:
+) -> User:
     if artist_id is None or artist_id == current_user.id:
         return current_user
 
@@ -104,9 +104,9 @@ async def _resolve_flash_owner(
         raise HTTPException(status_code=403, detail="Cannot manage another artist's flash inventory")
 
     result = await db.execute(
-        select(BTTCOUser).where(
-            BTTCOUser.id == artist_id,
-            BTTCOUser.role.in_(["artist", "admin", "founder"]),
+        select(User).where(
+            User.id == artist_id,
+            User.role.in_(["artist", "admin", "founder"]),
         )
     )
     owner = result.scalar_one_or_none()
@@ -267,9 +267,7 @@ async def _design_responses_with_sources(
     result = await db.execute(select(FlashSheet.id, FlashSheet.image_url).where(FlashSheet.id.in_(sheet_ids)))
     source_urls = {sheet_id: image_url for sheet_id, image_url in result.all()}
     artist_ids = {design.artist_id for design in designs}
-    artist_result = await db.execute(
-        select(BTTCOUser.id, BTTCOUser.slug, BTTCOUser.name).where(BTTCOUser.id.in_(artist_ids))
-    )
+    artist_result = await db.execute(select(User.id, User.slug, User.name).where(User.id.in_(artist_ids)))
     artists = {artist_id: (slug, name) for artist_id, slug, name in artist_result.all()}
     responses = []
     for design in designs:
@@ -311,7 +309,7 @@ async def upload_flash_sheet(
     title: str | None = Form(default=None),
     artist_id: UUID | None = Form(default=None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Upload a flash sheet image to Cloudflare R2 and create a sheet record.
 
@@ -366,7 +364,7 @@ async def save_sheet_crop(
     sheet_id: UUID,
     body: FlashSheetCropRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Materialize a reversible overall sheet crop before design segmentation."""
     result = await db.execute(select(FlashSheet).where(FlashSheet.id == sheet_id))
@@ -451,7 +449,7 @@ async def segment_sheet(
     sheet_id: UUID,
     body: FlashSegmentationRequest | None = None,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     AI-segment a flash sheet into individual designs through the Ark Model Gateway.
@@ -677,7 +675,7 @@ async def list_sheets(
     limit: int = Query(default=20, le=50),
     artist_id: UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """List flash sheets for the current artist or an admin-selected artist."""
     owner = await _resolve_flash_owner(db, current_user, artist_id)
@@ -705,7 +703,7 @@ async def list_sheets(
 async def identify_sheet_inventory(
     sheet_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Use AI to draft a named inventory while preserving the whole sheet asset."""
     result = await db.execute(select(FlashSheet).where(FlashSheet.id == sheet_id))
@@ -816,7 +814,7 @@ async def identify_sheet_inventory(
 async def publish_sheet_catalog(
     sheet_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Publish a completed whole-sheet catalog after the artist reviews every item."""
     sheet = await db.get(FlashSheet, sheet_id)
@@ -896,7 +894,7 @@ async def publish_sheet_catalog(
 async def _delete_sheet_record(
     sheet_id: UUID,
     db: AsyncSession,
-    current_user: BTTCOUser,
+    current_user: User,
 ):
     result = await db.execute(select(FlashSheet).where(FlashSheet.id == sheet_id))
     sheet = result.scalar_one_or_none()
@@ -913,7 +911,7 @@ async def _delete_sheet_record(
 async def delete_sheet(
     sheet_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Delete a flash sheet and its segmented designs."""
     await _delete_sheet_record(sheet_id, db, current_user)
@@ -923,7 +921,7 @@ async def delete_sheet(
 async def delete_sheet_post_alias(
     sheet_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Compatibility alias for clients or proxies that do not pass DELETE cleanly."""
     await _delete_sheet_record(sheet_id, db, current_user)
@@ -933,7 +931,7 @@ async def delete_sheet_post_alias(
 async def list_sheet_designs(
     sheet_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List designs on a flash sheet."""
     sheet_result = await db.execute(select(FlashSheet).where(FlashSheet.id == sheet_id))
@@ -959,7 +957,7 @@ async def create_design_crop(
     sheet_id: UUID,
     body: FlashDesignCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Materialize one artist-selected region as an independent WebP design asset."""
     result = await db.execute(select(FlashSheet).where(FlashSheet.id == sheet_id))
@@ -1039,7 +1037,7 @@ async def update_design(
     design_id: UUID,
     body: FlashDesignUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Update a flash design (name, price, time estimate, status)."""
     result = await db.execute(select(FlashDesign).where(FlashDesign.id == design_id))
@@ -1123,7 +1121,7 @@ async def update_design(
 async def delete_design(
     design_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Delete an incorrect unclaimed design without deleting its source sheet."""
     result = await db.execute(select(FlashDesign).where(FlashDesign.id == design_id))
@@ -1168,7 +1166,7 @@ async def correct_segment(
     design_id: UUID,
     body: FlashDesignUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Artist corrects a SAM2 segment prediction.
@@ -1277,7 +1275,7 @@ async def _build_training_manifest(db: AsyncSession) -> dict:
 @router.get("/feedback/training-manifest")
 async def get_training_manifest(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("admin")),
+    current_user: User = Depends(require_role("admin")),
 ):
     """Return the latest reviewed event per design for an operator-triggered training run."""
     del current_user
@@ -1365,7 +1363,7 @@ async def process_apex_training_manifest_once() -> dict:
 @router.post("/feedback/push-to-apex")
 async def push_training_manifest_to_apex(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("admin")),
+    current_user: User = Depends(require_role("admin")),
 ):
     """Snapshot reviewed masks in Ark Apex without starting a training job."""
     del current_user
@@ -1401,7 +1399,7 @@ async def browse_store(
     skip: int = 0,
     limit: int = Query(default=30, le=50),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Browse published flash designs (collector storefront)."""
     filters = [FlashDesign.status == "published"]
@@ -1428,7 +1426,7 @@ async def browse_store(
 async def claim_design(
     design_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Retired: inventory may only be claimed by the atomic booking and payment flow."""
     del design_id, db, current_user
@@ -1451,7 +1449,7 @@ class FlashCheckoutRequest(BaseModel):
 async def flash_checkout(
     body: FlashCheckoutRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Retired: claiming inventory without a booking or payment artifact is unsafe."""
     del body, db, current_user
@@ -1475,9 +1473,9 @@ async def browse_store_public(
     """
     filters = [FlashDesign.status == "published"]
     if artist_slug:
-        from app.models.user import BTTCOUser
+        from app.models.user import User
 
-        artist_result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.slug == artist_slug))
+        artist_result = await db.execute(select(User.id).where(User.slug == artist_slug))
         artist_id = artist_result.scalar_one_or_none()
         if not artist_id:
             raise HTTPException(status_code=404, detail="Artist not found")
@@ -1561,9 +1559,7 @@ async def get_public_sheet_wall(
     Returns sheet wall data for the artist page flash tab.
     """
     artist_result = await db.execute(
-        select(BTTCOUser.id, BTTCOUser.name, BTTCOUser.flash_deposit_amount, BTTCOUser.allow_prepay_full).where(
-            BTTCOUser.slug == artist_slug
-        )
+        select(User.id, User.name, User.flash_deposit_amount, User.allow_prepay_full).where(User.slug == artist_slug)
     )
     artist_row = artist_result.first()
     if not artist_row:
@@ -1611,8 +1607,8 @@ async def get_public_sheet_wall(
 # ── Flash booking ─────────────────────────────────────
 
 
-FLASH_BTTCOIN_BASE_RATE = 0.10  # 10% of price in BTTcoin
-FLASH_BTTCOIN_MULTIPLIER = 1.5  # flash bookings earn more than custom
+FLASH_REWARD_BASE_RATE = 0.10  # 10% of price in RYO
+FLASH_REWARD_MULTIPLIER = 1.5  # flash bookings earn more than custom
 
 
 @dataclass(frozen=True)
@@ -1696,7 +1692,7 @@ async def _resolve_flash_slot_hold(
 async def _assert_flash_slot_available(
     db: AsyncSession,
     *,
-    artist: BTTCOUser,
+    artist: User,
     scheduled_date: _date,
     scheduled_time: str,
     duration_minutes: int,
@@ -1744,7 +1740,7 @@ async def book_flash_design(
 
     Creates a booking record and a Stripe Checkout session.
     Supports deposit-only or full payment (if artist allows prepay).
-    Rewards BTTcoin on booking creation (1.5x rate vs custom bookings).
+    Rewards RYO on booking creation (1.5x rate vs custom bookings).
     Auto-creates a collector account if the email is new.
     """
     settings = get_settings()
@@ -1768,12 +1764,12 @@ async def book_flash_design(
     # Resolve artist + settings
     artist_result = await db.execute(
         select(
-            BTTCOUser.id,
-            BTTCOUser.name,
-            BTTCOUser.slug,
-            BTTCOUser.flash_deposit_amount,
-            BTTCOUser.allow_prepay_full,
-        ).where(BTTCOUser.id == design.artist_id)
+            User.id,
+            User.name,
+            User.slug,
+            User.flash_deposit_amount,
+            User.allow_prepay_full,
+        ).where(User.id == design.artist_id)
     )
     artist_row = artist_result.first()
     if not artist_row:
@@ -1786,7 +1782,7 @@ async def book_flash_design(
         allow_prepay_full,
     ) = artist_row
 
-    artist = await db.get(BTTCOUser, artist_id)
+    artist = await db.get(User, artist_id)
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
 
@@ -1832,8 +1828,8 @@ async def book_flash_design(
     service_price_cents = int(charge_dollars * 100)
     charge_cents = customer_price_cents(service_price_cents)
 
-    # BTTcoin reward: 10% of design price * 1.5x flash multiplier, minimum 10
-    bttcoin_reward = max(10, int(design_price * FLASH_BTTCOIN_BASE_RATE * FLASH_BTTCOIN_MULTIPLIER))
+    # RYO reward: 10% of design price * 1.5x flash multiplier, minimum 10
+    bttcoin_reward = max(10, int(design_price * FLASH_REWARD_BASE_RATE * FLASH_REWARD_MULTIPLIER))
 
     # Auto-create or find collector account
     normalized_email = normalize_email(body.guest_email)
@@ -1841,7 +1837,7 @@ async def book_flash_design(
     account_created = client_user is None
     if not client_user:
         temp_password = "".join(random.choices(string.ascii_letters + string.digits, k=32))
-        client_user = BTTCOUser(
+        client_user = User(
             email=normalized_email,
             password_hash=hash_password(temp_password),
             name=body.guest_name,
@@ -2000,7 +1996,7 @@ async def book_flash_design(
     await db.commit()
 
     logger.info(
-        "Flash booking created: %s | design=%s | $%.2f | BTTcoin+%d",
+        "Flash booking created: %s | design=%s | $%.2f | RYO+%d",
         ref_code,
         design.id,
         charge_dollars,

@@ -5,7 +5,7 @@ Single source of truth for all frontend URLs used in notifications,
 emails, and webhooks. When a route changes on the frontend, update
 it here and every reference picks it up.
 
-Mirrors frontend: bttco-app/src/lib/routes.ts
+Mirrors frontend: app/src/lib/routes.ts
 
 Usage:
     from app.core.routes import ROUTES

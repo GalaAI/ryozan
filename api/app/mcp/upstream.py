@@ -17,6 +17,8 @@ from typing import Any
 
 import httpx
 
+from app.core import legacy_env
+
 DEFAULT_PORT_FALLBACK = "8801"
 _RETRY_STATUSES = {502, 503, 504}
 _MAX_ATTEMPTS = 3
@@ -41,7 +43,7 @@ def upstream_base_url() -> str:
     So honour an explicit override first, then PORT, then the compose port.
     Hardcoding one of these would silently break the other two.
     """
-    explicit = os.environ.get("BTTCO_MCP_UPSTREAM_URL")
+    explicit = legacy_env.getenv("RYOZAN_MCP_UPSTREAM_URL")
     if explicit:
         return explicit.rstrip("/")
     port = os.environ.get("PORT") or DEFAULT_PORT_FALLBACK
@@ -49,8 +51,8 @@ def upstream_base_url() -> str:
 
 
 def _timeout() -> httpx.Timeout:
-    read = float(os.environ.get("BTTCO_MCP_READ_TIMEOUT", "20"))
-    connect = float(os.environ.get("BTTCO_MCP_CONNECT_TIMEOUT", "5"))
+    read = float(legacy_env.getenv("RYOZAN_MCP_READ_TIMEOUT", "20"))
+    connect = float(legacy_env.getenv("RYOZAN_MCP_CONNECT_TIMEOUT", "5"))
     return httpx.Timeout(read, connect=connect)
 
 

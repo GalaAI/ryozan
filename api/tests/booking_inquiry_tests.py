@@ -30,7 +30,7 @@ from app.models.booking_draft import BookingDraft
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.message import Message
 from app.models.notification import Notification
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.booking import PublicInquirySubmit
 from app.services import inquiry_mirror
 
@@ -75,8 +75,8 @@ class _RecordingSession:
         self.commits += 1
 
 
-def _staff(role: str, *, slug: str | None = None, name: str) -> BTTCOUser:
-    return BTTCOUser(
+def _staff(role: str, *, slug: str | None = None, name: str) -> User:
+    return User(
         id=uuid.uuid4(),
         email=f"{name.lower()}@example.test",
         password_hash="disabled",
@@ -87,8 +87,8 @@ def _staff(role: str, *, slug: str | None = None, name: str) -> BTTCOUser:
     )
 
 
-def _collector(email: str = "client@example.test") -> BTTCOUser:
-    return BTTCOUser(
+def _collector(email: str = "client@example.test") -> User:
+    return User(
         id=uuid.uuid4(),
         email=email,
         password_hash="disabled",
@@ -313,7 +313,7 @@ class InquirySubmitTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(run.db.commits, 1)
 
         failing = AsyncMock(side_effect=RuntimeError("ainbox down"))
-        with self.assertLogs("bttco.bookings", level="WARNING") as logs:
+        with self.assertLogs("ryozan.bookings", level="WARNING") as logs:
             run = await self._run(_inquiry(), [[founder], []], mirror=failing)
         failing.assert_awaited_once()
         self.assertTrue(any("inquiry AInbox mirror" in line for line in logs.output))
@@ -362,7 +362,7 @@ class InquiryMirrorTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(inquiry_mirror, "get_settings", return_value=self._settings("https://ark.example.test/x")),
             patch.object(inquiry_mirror.httpx, "AsyncClient", return_value=client),
-            self.assertLogs("bttco.inquiry_mirror", level="WARNING") as logs,
+            self.assertLogs("ryozan.inquiry_mirror", level="WARNING") as logs,
         ):
             await inquiry_mirror.mirror_general_inquiry({"reference_code": "INQ-000002"})
         self.assertTrue(any("AInbox mirror failed" in line for line in logs.output))

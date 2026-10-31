@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BTTCO lint-fix — run the exact CI lint/format commands locally with the pinned version.
+# Ryozan lint-fix — run the exact CI lint/format commands locally with the pinned version.
 #
 # Usage:
 #   ./scripts/lint-fix.sh              # check + auto-fix (default)
@@ -22,7 +22,7 @@
 set -euo pipefail
 
 RUFF_PIN="ruff==0.15.13"
-VENV_DIR="${TMPDIR:-/tmp}/bttco-ruff-pin-venv"
+VENV_DIR="${TMPDIR:-/tmp}/ryozan-ruff-pin-venv"
 SCOPE=( "app/" "main.py" )
 MODE="${1:-fix}"
 

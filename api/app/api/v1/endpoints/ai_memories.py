@@ -18,7 +18,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.models.ai_memory import AIMemory
 from app.models.booking import Booking
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.ai_memory import (
     MemoryContext,
     MemoryCreate,
@@ -80,7 +80,7 @@ async def list_memories(
     skip: int = 0,
     limit: int = Query(default=100, le=500),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List memories for the current user, filterable by agent and category."""
     filters = [AIMemory.user_id == current_user.id]
@@ -115,7 +115,7 @@ async def get_memory_context(
     user_id: UUID,
     agent: str = "gala",
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Return a formatted text block of memories for a user, suitable for
@@ -131,7 +131,7 @@ async def get_memory_context(
         )
 
     # Look up the target user's name
-    user_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    user_result = await db.execute(select(User).where(User.id == user_id))
     target_user = user_result.scalar_one_or_none()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -188,7 +188,7 @@ async def get_memory_context(
 async def create_or_upsert_memory(
     body: MemoryCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Create a new memory or update an existing one if the
@@ -250,7 +250,7 @@ class ExtractResponse(BaseModel):
 async def extract_memories(
     body: ExtractRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Extract factual memories from a text blob using Anthropic Claude.
@@ -365,7 +365,7 @@ async def update_memory(
     memory_id: UUID,
     body: MemoryUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Update a specific memory belonging to the current user."""
     result = await db.execute(
@@ -399,7 +399,7 @@ async def update_memory(
 async def delete_memory(
     memory_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a single memory belonging to the current user."""
     result = await db.execute(
@@ -422,7 +422,7 @@ async def clear_user_memories(
     user_id: UUID,
     agent: str | None = None,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("admin")),
+    current_user: User = Depends(require_role("admin")),
 ):
     """Clear all memories for a specific user. Admin only."""
     filters = [AIMemory.user_id == user_id]

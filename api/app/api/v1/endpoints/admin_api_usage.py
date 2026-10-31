@@ -14,7 +14,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import require_role
 from app.models.api_usage import APIUsage
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.get("/api-usage")
 async def get_api_usage(
     db: AsyncSession = Depends(get_db),
-    _: BTTCOUser = Depends(require_role("admin")),
+    _: User = Depends(require_role("admin")),
 ):
     """Return this month's API usage summary and the last 100 log entries."""
     settings = get_settings()

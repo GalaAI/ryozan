@@ -32,7 +32,7 @@ from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.booking_slot_hold import BookingSlotHold
 from app.models.session_type import ArtistSessionType
 from app.models.time_block import TimeBlock
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.calendar_sync import (
     artist_calendar_connected,
     artist_calendar_id,
@@ -206,7 +206,7 @@ class SchedulerContractResponse(BaseModel):
     actions: list[SchedulerContractAction]
 
 
-logger = logging.getLogger("bttco.calendar")
+logger = logging.getLogger("ryozan.calendar")
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
@@ -231,7 +231,7 @@ _CONSULTATION_SCHEDULE: dict[int, tuple[int, int] | None] = {
 
 
 def _resolve_artist_work_schedule(
-    artist: BTTCOUser | None,
+    artist: User | None,
     is_consultation: bool = False,
 ) -> dict[int, tuple[int, int] | None]:
     if is_consultation:
@@ -299,7 +299,7 @@ _SLOT_BLOCKING_BOOKING_STATUSES = [
 
 
 async def _resolve_calendar_access(
-    user: BTTCOUser,
+    user: User,
     db: AsyncSession,
 ) -> tuple[str | None, str]:
     """Resolve the legacy token and concrete calendar target for staff actions."""
@@ -311,8 +311,8 @@ async def _resolve_calendar_access(
 
     if ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("admin", 3):
         result = await db.execute(
-            select(BTTCOUser).where(
-                BTTCOUser.role == "founder",
+            select(User).where(
+                User.role == "founder",
             )
         )
         founder = result.scalar_one_or_none()
@@ -520,7 +520,7 @@ def _artist_rule_value(value: int | None, fallback: int) -> int:
 
 
 def _artist_booking_rules(
-    artist: BTTCOUser,
+    artist: User,
     *,
     slot_interval_minutes: int | None = None,
     buffer_minutes: int | None = None,
@@ -733,11 +733,11 @@ def _generate_blocked_slots(
     return blocked
 
 
-async def _resolve_artist_for_slots(db: AsyncSession, artist_slug: str) -> BTTCOUser:
+async def _resolve_artist_for_slots(db: AsyncSession, artist_slug: str) -> User:
     artist_result = await db.execute(
-        select(BTTCOUser).where(
-            BTTCOUser.slug == artist_slug,
-            BTTCOUser.role.in_(["artist", "founder"]),
+        select(User).where(
+            User.slug == artist_slug,
+            User.role.in_(["artist", "founder"]),
         )
     )
     artist = artist_result.scalar_one_or_none()
@@ -980,7 +980,7 @@ async def _slot_is_available(
 async def calendar_availability(
     start: str = Query(..., description="Start date YYYY-MM-DD"),
     end: str = Query(..., description="End date YYYY-MM-DD"),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Return free/busy blocks for a date range.
@@ -1002,7 +1002,7 @@ async def calendar_availability(
 @router.get("/upcoming")
 async def calendar_upcoming(
     days: int = Query(default=7, ge=1, le=90),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1041,9 +1041,9 @@ async def public_artist_availability(
     Returns empty busy list if the artist hasn't connected Google Calendar.
     """
     result = await db.execute(
-        select(BTTCOUser).where(
-            BTTCOUser.slug == artist_slug,
-            BTTCOUser.role.in_(["artist", "founder"]),
+        select(User).where(
+            User.slug == artist_slug,
+            User.role.in_(["artist", "founder"]),
         )
     )
     artist = result.scalar_one_or_none()
@@ -1091,7 +1091,7 @@ async def public_artist_slots(
 
     This is the native scheduler contract for the public booking flow. It
     combines shop hours, session type duration, Google busy blocks when
-    connected, and existing confirmed BTTCO bookings.
+    connected, and existing confirmed Ryozan bookings.
     """
     start_date = _parse_local_date(start, "start")
     end_date = _parse_local_date(end, "end")
@@ -1387,7 +1387,7 @@ async def hold_public_slot(
     booking_kind = "consultation" if is_consultation else body.booking_kind
 
     artist = await _resolve_artist_for_slots(db, body.artist_slug)
-    await db.execute(select(BTTCOUser.id).where(BTTCOUser.id == artist.id).with_for_update())
+    await db.execute(select(User.id).where(User.id == artist.id).with_for_update())
     if is_consultation and not artist_calendar_connected(artist):
         raise HTTPException(
             status_code=503,
@@ -1544,7 +1544,7 @@ def _serialize_time_block(block: TimeBlock) -> TimeBlockResponse:
     )
 
 
-def _resolve_block_artist_id(current_user: BTTCOUser, requested: UUID | None) -> UUID:
+def _resolve_block_artist_id(current_user: User, requested: UUID | None) -> UUID:
     """Artists manage their own blocks; admins+ may target another artist."""
     if ROLE_RANK.get(current_user.role, 0) < ROLE_RANK.get("artist", 2):
         raise HTTPException(status_code=403, detail="Artist role or higher required")
@@ -1561,7 +1561,7 @@ async def list_time_blocks(
     end: str = Query(..., description="End date YYYY-MM-DD"),
     artist_id: UUID | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List personal time blocks for an artist within a date range."""
     target_artist = _resolve_block_artist_id(current_user, artist_id)
@@ -1578,7 +1578,7 @@ async def list_time_blocks(
 async def create_time_block(
     body: TimeBlockCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Block personal time on an artist's calendar so it cannot be booked."""
     target_artist = _resolve_block_artist_id(current_user, body.artist_id)
@@ -1607,7 +1607,7 @@ async def create_time_block(
 async def delete_time_block(
     block_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Remove a personal time block (owner or admin+)."""
     block = (await db.execute(select(TimeBlock).where(TimeBlock.id == block_id))).scalar_one_or_none()
@@ -1625,7 +1625,7 @@ async def delete_time_block(
 async def sync_booking_to_calendar(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Manually sync a booking to Google Calendar.
@@ -1647,7 +1647,7 @@ async def sync_booking_to_calendar(
 
     # Resolve client name
     if booking.client_id:
-        from app.models.user import BTTCOUser as User
+        from app.models.user import User
 
         client_r = await db.execute(select(User.name, User.email).where(User.id == booking.client_id))
         client_row = client_r.first()
@@ -1677,7 +1677,7 @@ async def sync_booking_to_calendar(
         "duration_minutes": booking.duration_minutes or 120,
     }
 
-    artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+    artist_result = await db.execute(select(User).where(User.id == booking.artist_id))
     calendar_artist = artist_result.scalar_one_or_none()
     if not calendar_artist or not artist_calendar_connected(calendar_artist):
         raise HTTPException(status_code=400, detail="No Google Calendar connected")
@@ -1708,7 +1708,7 @@ async def sync_booking_to_calendar(
 @router.post("/events", status_code=201)
 async def create_event(
     body: EventCreateBody,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1765,7 +1765,7 @@ async def create_event(
 async def update_event(
     event_id: str,
     body: EventUpdateBody,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -1807,7 +1807,7 @@ async def update_event(
 
 @router.get("/schedule")
 async def get_schedule(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Return the shop working schedule for use by the booking slot picker."""
     return {
@@ -1825,11 +1825,11 @@ async def get_schedule(
 @router.post("/import")
 async def import_calendar_events(
     days: int = Query(default=30, ge=1, le=90),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Import upcoming Google Calendar events as BTTCO bookings.
+    Import upcoming Google Calendar events as Ryozan bookings.
     Skips events already imported (matched by google_calendar_event_id).
     Parses Acuity-style titles: "Client Name: Service (Artist Name)"
     """
@@ -1842,8 +1842,8 @@ async def import_calendar_events(
         "admin", 3
     ):
         result = await db.execute(
-            select(BTTCOUser).where(
-                BTTCOUser.role == "founder",
+            select(User).where(
+                User.role == "founder",
             )
         )
         founder = result.scalar_one_or_none()
@@ -1871,7 +1871,7 @@ async def import_calendar_events(
         return {"imported": 0, "skipped": 0, "total": 0}
 
     # Get existing google_calendar_event_ids to avoid duplicates and reconcile
-    # sparse import rows back onto native BTTCO bookings when possible.
+    # sparse import rows back onto native Ryozan bookings when possible.
     event_ids = [e["id"] for e in events]
     existing_result = await db.execute(select(Booking).where(Booking.google_calendar_event_id.in_(event_ids)))
     existing_by_event_id = {
@@ -1991,7 +1991,7 @@ async def import_calendar_events(
 async def delete_event(
     event_id: str,
     calendar_id: str = Query(default="primary"),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """

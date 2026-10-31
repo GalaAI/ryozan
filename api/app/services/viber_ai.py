@@ -1,8 +1,8 @@
 """Provider-agnostic Viber AI adapter.
 
 Viber agents call this service instead of provider SDKs. This is net-new because
-Viber accounts choose their own AI provider, while existing BTTCO Gala chat
-resolves AI lanes from BTTCO user membership.
+Viber accounts choose their own AI provider, while existing Ryozan Gala chat
+resolves AI lanes from Ryozan user membership.
 """
 
 from __future__ import annotations

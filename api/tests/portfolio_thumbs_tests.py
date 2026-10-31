@@ -19,7 +19,7 @@ os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 from PIL import Image
 
 from app.api.v1.endpoints import artists
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.artist import ArtistDetail
 from app.services import portfolio_thumbs
 
@@ -41,8 +41,8 @@ def _black_padded_png(width: int, height: int, *, top: int, bottom: int) -> byte
     return buffer.getvalue()
 
 
-def _artist(images: list[str], thumbs: dict | None = None, focus: dict | None = None) -> BTTCOUser:
-    return BTTCOUser(
+def _artist(images: list[str], thumbs: dict | None = None, focus: dict | None = None) -> User:
+    return User(
         id=uuid.uuid4(),
         email="artist@example.test",
         password_hash="disabled",

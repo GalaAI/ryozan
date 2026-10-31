@@ -18,7 +18,7 @@ from app.core.database import Base
 
 
 def normalize_email(email: str | None) -> str | None:
-    """The single definition of a canonical BTTCO email address.
+    """The single definition of a canonical Ryozan email address.
 
     Stripped and lowercased. Every read comparison and every write goes
     through this, so `Meredith@x.com` and `meredith@x.com` can never become
@@ -50,7 +50,7 @@ class UserIdentityAlias(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
-class BTTCOUser(Base):
+class User(Base):
     __tablename__ = "ryozan_users"
     __table_args__ = (
         Index("idx_ryozan_users_role", "role"),
@@ -166,7 +166,7 @@ class BTTCOUser(Base):
 
     # ── Google OAuth (per-user calendar/profile connection) ────
     google_refresh_token: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    # Calendar shared with the delegated BTTCO booking identity. Defaults to
+    # Calendar shared with the delegated Ryozan booking identity. Defaults to
     # the artist account email when blank, but supports secondary calendars.
     google_calendar_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     google_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)

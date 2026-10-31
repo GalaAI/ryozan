@@ -9,10 +9,10 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from app.core.security import hash_password
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 
-def set_user_password(user: BTTCOUser, password: str, method: Literal["change", "reset", "invite"]) -> None:
+def set_user_password(user: User, password: str, method: Literal["change", "reset", "invite"]) -> None:
     user.password_hash = hash_password(password)
     user.must_reset_password = False
     user.password_state = "user_set"
@@ -20,14 +20,14 @@ def set_user_password(user: BTTCOUser, password: str, method: Literal["change", 
     user.password_change_method = method
 
 
-def record_password_setup(user: BTTCOUser) -> None:
+def record_password_setup(user: User) -> None:
     """Call when replacing a credential with a generated/temporary credential."""
     user.password_state = "setup_required"
     user.password_changed_at = datetime.now(UTC)
     user.password_change_method = "setup"
 
 
-def record_successful_login(user: BTTCOUser, method: Literal["password", "google", "invite"]) -> None:
+def record_successful_login(user: User, method: Literal["password", "google", "invite"]) -> None:
     # Using a temporary credential proves login, never password ownership.
     if user.must_reset_password and not user.password_state:
         user.password_state = "setup_required"

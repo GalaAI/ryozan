@@ -15,7 +15,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.push_subscription import PushSubscription
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.quest_hooks import check_and_complete_quest
 
 router = APIRouter(prefix="/push", tags=["push"])
@@ -61,7 +61,7 @@ async def get_vapid_key():
 async def subscribe_push(
     body: PushSubscribeRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Save a push subscription for the current user.
@@ -102,7 +102,7 @@ async def subscribe_push(
 @router.delete("/subscribe", status_code=204)
 async def unsubscribe_push(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Remove all push subscriptions for the current user."""
     await db.execute(delete(PushSubscription).where(PushSubscription.user_id == current_user.id))

@@ -1,7 +1,7 @@
-"""Regression guards for the active BTTCO Google OAuth project.
+"""Regression guards for the active Ryozan Google OAuth project.
 
 The browser and API must agree on the GSI token audience. Production may set an
-explicit GOOGLE_SIGNIN_CLIENT_ID, otherwise the API uses the active BTTCO web
+explicit GOOGLE_SIGNIN_CLIENT_ID, otherwise the API uses the active Ryozan web
 OAuth client that also owns the server-side Calendar flow. Source must never
 fall back to the deleted legacy Gmodz client.
 """
@@ -25,7 +25,7 @@ from app.api.v1.endpoints import auth
 from app.core.config import get_settings
 from app.core.rate_limit import limiter
 
-BTTCO_CLIENT_ID = "628400721124-example.apps.googleusercontent.com"
+WEB_CLIENT_ID = "628400721124-example.apps.googleusercontent.com"
 LEGACY_PROJECT_NUMBER = "656109371073"
 
 
@@ -95,9 +95,9 @@ class GoogleSignInAudienceTests(unittest.TestCase):
         self.assertNotIn(LEGACY_PROJECT_NUMBER, source)
 
     def test_google_auth_uses_explicit_signin_client_id(self):
-        from app.models.user import BTTCOUser
+        from app.models.user import User
 
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="collector@example.com",
             password_hash="x",
@@ -108,7 +108,7 @@ class GoogleSignInAudienceTests(unittest.TestCase):
         client = TestClient(app)
 
         with (
-            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", BTTCO_CLIENT_ID),
+            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", WEB_CLIENT_ID),
             patch.object(auth._settings, "GOOGLE_CLIENT_ID", "calendar-client.apps.googleusercontent.com"),
             patch(
                 "app.api.v1.endpoints.auth.google_id_token.verify_oauth2_token",
@@ -126,12 +126,12 @@ class GoogleSignInAudienceTests(unittest.TestCase):
         verify.assert_called_once()
 
         audience = verify.call_args.args[2]
-        self.assertEqual(audience, BTTCO_CLIENT_ID)
+        self.assertEqual(audience, WEB_CLIENT_ID)
 
-    def test_google_auth_falls_back_to_active_bttco_web_client(self):
-        from app.models.user import BTTCOUser
+    def test_google_auth_falls_back_to_active_ryozan_web_client(self):
+        from app.models.user import User
 
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="collector@example.com",
             password_hash="x",
@@ -142,7 +142,7 @@ class GoogleSignInAudienceTests(unittest.TestCase):
 
         with (
             patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", ""),
-            patch.object(auth._settings, "GOOGLE_CLIENT_ID", BTTCO_CLIENT_ID),
+            patch.object(auth._settings, "GOOGLE_CLIENT_ID", WEB_CLIENT_ID),
             patch(
                 "app.api.v1.endpoints.auth.google_id_token.verify_oauth2_token",
                 return_value={
@@ -156,7 +156,7 @@ class GoogleSignInAudienceTests(unittest.TestCase):
             response = client.post("/auth/google", json={"credential": "a-google-id-token"})
 
         self.assertEqual(response.status_code, 200, response.text)
-        self.assertEqual(verify.call_args.args[2], BTTCO_CLIENT_ID)
+        self.assertEqual(verify.call_args.args[2], WEB_CLIENT_ID)
 
     def test_google_auth_fails_closed_without_a_client_id(self):
         client = TestClient(_build_app(_UserSession(None)))
@@ -174,7 +174,7 @@ class GoogleSignInAudienceTests(unittest.TestCase):
         client = TestClient(_build_app(_UserSession(None)))
 
         with (
-            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", BTTCO_CLIENT_ID),
+            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", WEB_CLIENT_ID),
             patch(
                 "app.api.v1.endpoints.auth.google_id_token.verify_oauth2_token",
                 return_value={
@@ -191,9 +191,9 @@ class GoogleSignInAudienceTests(unittest.TestCase):
         self.assertEqual(response.json()["detail"], "Invalid Google credential")
 
     def test_verified_google_signin_claims_an_unclaimed_artist_without_warning(self):
-        from app.models.user import BTTCOUser
+        from app.models.user import User
 
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             password_hash="unpublished-placeholder",
@@ -204,7 +204,7 @@ class GoogleSignInAudienceTests(unittest.TestCase):
         client = TestClient(_build_app(_UserSession(artist)))
 
         with (
-            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", BTTCO_CLIENT_ID),
+            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", WEB_CLIENT_ID),
             patch(
                 "app.api.v1.endpoints.auth.google_id_token.verify_oauth2_token",
                 return_value={
@@ -238,7 +238,7 @@ class GoogleSignInAudienceTests(unittest.TestCase):
         from urllib.parse import parse_qs, urlparse
 
         from app.api.v1.endpoints import google_auth
-        from app.models.user import BTTCOUser
+        from app.models.user import User
         from app.services import calendar_sync
 
         calendar_scopes = {"https://www.googleapis.com/auth/calendar"}
@@ -256,11 +256,11 @@ class GoogleSignInAudienceTests(unittest.TestCase):
             self.assertNotIn(unused_api, requested)
 
         settings = SimpleNamespace(
-            GOOGLE_CLIENT_ID=BTTCO_CLIENT_ID,
+            GOOGLE_CLIENT_ID=WEB_CLIENT_ID,
             GOOGLE_CLIENT_SECRET="test-secret",
             GOOGLE_REDIRECT_URI="https://api.example.com/google/callback",
         )
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             password_hash="x",

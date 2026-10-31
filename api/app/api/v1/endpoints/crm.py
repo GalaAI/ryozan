@@ -12,15 +12,15 @@ from app.core.routes import ROUTES
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.booking import Booking
 from app.models.crm_pipeline_task import CrmPipelineTask
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.crm import CrmPipelineTaskCreate, CrmPipelineTaskListResponse, CrmPipelineTaskRecord
 
-logger = logging.getLogger("bttco.crm")
+logger = logging.getLogger("ryozan.crm")
 
 router = APIRouter(prefix="/crm", tags=["crm"])
 
 
-def _require_role(user: BTTCOUser, min_role: str) -> None:
+def _require_role(user: User, min_role: str) -> None:
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get(min_role, 99):
         raise HTTPException(status_code=403, detail=f"Requires {min_role} role or higher")
 
@@ -37,9 +37,9 @@ async def _task_record(row: CrmPipelineTask, db: AsyncSession) -> CrmPipelineTas
             Booking.client_id,
             Booking.artist_id,
             Booking.conversation_id,
-            BTTCOUser.name.label("artist_name"),
+            User.name.label("artist_name"),
         )
-        .join(BTTCOUser, BTTCOUser.id == Booking.artist_id)
+        .join(User, User.id == Booking.artist_id)
         .where(Booking.id == row.booking_id)
     )
     booking = result.one_or_none()
@@ -87,8 +87,8 @@ def _booking_task_body(booking: Booking, artist_name: str | None) -> str:
 
 async def _backfill_pending_booking_tasks(db: AsyncSession) -> None:
     result = await db.execute(
-        select(Booking, BTTCOUser.name)
-        .join(BTTCOUser, BTTCOUser.id == Booking.artist_id)
+        select(Booking, User.name)
+        .join(User, User.id == Booking.artist_id)
         .where(Booking.status == "pending")
         .order_by(desc(Booking.created_at))
         .limit(100)
@@ -121,7 +121,7 @@ async def list_pipeline_tasks(
     skip: int = 0,
     limit: int = Query(default=50, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff: list CRM pipeline tasks (open shop follow-ups)."""
     _require_role(current_user, "assistant")
@@ -147,7 +147,7 @@ async def list_pipeline_tasks(
 async def create_pipeline_task(
     body: CrmPipelineTaskCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff: create a pipeline task."""
     _require_role(current_user, "assistant")
@@ -171,7 +171,7 @@ async def update_pipeline_task_status(
     task_id: UUID,
     status: str = Query(..., min_length=2, max_length=32),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff: update task status (e.g. open -> done)."""
     _require_role(current_user, "assistant")

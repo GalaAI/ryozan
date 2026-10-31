@@ -1,6 +1,6 @@
 """Typed Ryozan communication delivery into Ark AInbox and connected Packs.
 
-Net-new justification: BTTCO already owns Courier messages, channel delivery,
+Net-new justification: Ryozan already owns Courier messages, channel delivery,
 and provider receipts, while Ark owns AInbox and cross-Pack intake. This module
 adds only the authenticated adapter between those authorities and never creates
 a second inbox, conversation store, or outbound transport.
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
-logger = logging.getLogger("bttco.pack_bridge")
+logger = logging.getLogger("ryozan.pack_bridge")
 PACK_BRIDGE_MAX_ATTEMPTS = 5
 PACK_BRIDGE_STALE_MINUTES = 10
 LEARNING_CAPTURE_LOOKBACK_HOURS = 24
@@ -143,7 +143,7 @@ async def queue_recent_learning_captures_once(limit: int = 100) -> int:
 
     Calls and SMS already enter the Pack bridge at their signed provider
     boundaries. This reconciler covers ordinary Courier and booking outcomes
-    while preserving BTTCO as the raw-content authority.
+    while preserving Ryozan as the raw-content authority.
     """
     observed_after = datetime.now(UTC) - timedelta(hours=LEARNING_CAPTURE_LOOKBACK_HOURS)
     async with async_session() as session:

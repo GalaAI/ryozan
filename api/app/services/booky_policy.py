@@ -16,7 +16,7 @@ from uuid import UUID
 
 if TYPE_CHECKING:
     from app.core.config import Settings
-    from app.models.user import BTTCOUser
+    from app.models.user import User
 
 BookyMode = Literal["manual", "shadow", "approval", "consult_auto", "session_auto"]
 ACTIVE_BOOKY_MODES = {"manual", "shadow", "approval", "consult_auto"}
@@ -43,7 +43,7 @@ def booky_action_id(
     return "booky_" + hashlib.sha256(seed.encode("utf-8")).hexdigest()[:32]
 
 
-def artist_canary_allowed(settings: Settings, artist: BTTCOUser) -> bool:
+def artist_canary_allowed(settings: Settings, artist: User) -> bool:
     allowed = _csv_set(settings.BOOKY_CANARY_ARTIST_SLUGS)
     return "*" in allowed or (artist.slug or "").lower() in allowed
 
@@ -85,7 +85,7 @@ class BookyPolicyDecision:
 def resolve_booky_policy(
     *,
     settings: Settings,
-    artist: BTTCOUser,
+    artist: User,
     booking_kind: str,
     collector_id: object | None,
     collector_identity_verified: bool,

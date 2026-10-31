@@ -1,5 +1,5 @@
 """
-Ark Model Gateway routing tests for the shared BTTCO model client.
+Ark Model Gateway routing tests for the shared Ryozan model client.
 
 Kept separate from endpoint and auth tests because the client contract — where it
 POSTs, how it authenticates, and how it walks the primary -> fallback slug chain —

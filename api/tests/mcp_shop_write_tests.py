@@ -1,4 +1,4 @@
-"""Booking write tools and per-role OAuth scope narrowing for the BTTCO MCP.
+"""Booking write tools and per-role OAuth scope narrowing for the Ryozan MCP.
 
 Net-new file: the existing MCP transport tests cover discovery and reads. This
 contract covers the shop write scope Ark agents and individual staff use.

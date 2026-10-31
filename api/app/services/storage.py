@@ -19,7 +19,7 @@ import httpx
 
 from app.core.config import get_settings
 
-logger = logging.getLogger("bttco.storage")
+logger = logging.getLogger("ryozan.storage")
 
 
 def build_object_key(folder_path: str, extension: str) -> str:

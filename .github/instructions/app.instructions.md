@@ -25,8 +25,8 @@ when editing anything under `app/`.
   preview** — never use it to alter API calls.
 
 ## Design system
-* The only UI source is `packages/ui` (`@bttco/ui`). Every colour, space,
-  radius, shadow and font is a token from `@bttco/ui/tokens.css`, which is
+* The only UI source is `packages/ui` (`@ryozan/ui`). Every colour, space,
+  radius, shadow and font is a token from `@ryozan/ui/tokens.css`, which is
   GENERATED from `packages/ui/design-system/tokens.json` (`npm run tokens:gen`
   in `packages/ui`). Never edit `tokens.css` by hand; never add a token
   outside `tokens.json`.

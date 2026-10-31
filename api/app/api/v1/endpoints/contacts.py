@@ -15,7 +15,7 @@ from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.booking import Booking
 from app.models.document import DocumentInstance
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.contact import ContactExportResponse, ContactIntakeRecord, ContactListResponse, ContactRecord
 
 if TYPE_CHECKING:
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
 
-def _require_contact_access(current_user: BTTCOUser) -> None:
+def _require_contact_access(current_user: User) -> None:
     if ROLE_RANK.get(current_user.role, 0) < ROLE_RANK["assistant"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -111,12 +111,12 @@ def _touch_contact(
     return existing
 
 
-async def _load_contact_export(db: AsyncSession, current_user: BTTCOUser) -> ContactExportResponse:
+async def _load_contact_export(db: AsyncSession, current_user: User) -> ContactExportResponse:
     _require_contact_access(current_user)
 
-    user_result = await db.execute(select(BTTCOUser))
+    user_result = await db.execute(select(User))
     users = user_result.scalars().all()
-    users_by_id: dict[UUID, BTTCOUser] = {user.id: user for user in users}
+    users_by_id: dict[UUID, User] = {user.id: user for user in users}
 
     booking_stmt = select(Booking)
     if current_user.role == "artist":
@@ -242,7 +242,7 @@ async def list_contacts(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=250, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     export = await _load_contact_export(db, current_user)
     contacts = export.contacts
@@ -261,6 +261,6 @@ async def list_contacts(
 @router.get("/intake-export", response_model=ContactExportResponse)
 async def export_contacts_for_nexus(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     return await _load_contact_export(db, current_user)

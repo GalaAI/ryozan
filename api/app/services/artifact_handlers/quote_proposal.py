@@ -47,7 +47,7 @@ from app.constants.status import BookingStatus
 from app.core.config import get_settings
 from app.core.security import ROLE_RANK
 from app.models.booking import Booking
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.artifacts import (
     ArtifactActionError,
     ArtifactError,
@@ -58,7 +58,7 @@ from app.services.calendar_sync import artist_calendar_connected, artist_calenda
 from app.services.payments import apply_customer_receipt, customer_price_cents, resolve_charge_routing
 from app.services.stripe_client import get_stripe_client
 
-logger = logging.getLogger("bttco.artifacts.quote_proposal")
+logger = logging.getLogger("ryozan.artifacts.quote_proposal")
 
 
 # ── Payload schema ───────────────────────────────────────────────
@@ -117,7 +117,7 @@ async def _load_booking(db: AsyncSession, booking_id: UUID) -> Booking:
 async def _apply_confirm(
     db: AsyncSession,
     message: Any,
-    actor: BTTCOUser | None,
+    actor: User | None,
     payload: dict[str, Any],
     state: dict[str, Any],
 ) -> dict[str, Any]:
@@ -161,15 +161,13 @@ async def _apply_confirm(
         # Auto-sync to Google Calendar
         if booking.scheduled_date:
             try:
-                artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+                artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
                 artist = artist_r.scalar_one_or_none()
                 if artist and artist_calendar_connected(artist):
                     client_name = booking.guest_name or "Client"
                     client_email = booking.guest_email
                     if booking.client_id:
-                        client_r = await db.execute(
-                            select(BTTCOUser.name, BTTCOUser.email).where(BTTCOUser.id == booking.client_id)
-                        )
+                        client_r = await db.execute(select(User.name, User.email).where(User.id == booking.client_id))
                         client_row = client_r.first()
                         if client_row:
                             client_name = client_row[0] or client_name
@@ -199,7 +197,7 @@ async def _apply_confirm(
     _init_stripe()
     settings = get_settings()
 
-    artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+    artist_result = await db.execute(select(User).where(User.id == booking.artist_id))
     artist = artist_result.scalar_one_or_none()
     if artist is None:
         raise ArtifactError("booking has no assigned artist")
@@ -208,7 +206,7 @@ async def _apply_confirm(
     deposit_cents = customer_price_cents(service_price_cents)
     client_email: str | None = booking.guest_email
     if booking.client_id:
-        client_result = await db.execute(select(BTTCOUser.email).where(BTTCOUser.id == booking.client_id))
+        client_result = await db.execute(select(User.email).where(User.id == booking.client_id))
         row = client_result.first()
         if row:
             client_email = row[0]
@@ -305,7 +303,7 @@ async def _apply_action(
     db: AsyncSession,
     message: Any,
     action: str,
-    actor: BTTCOUser | None,
+    actor: User | None,
     data: dict[str, Any],
 ) -> dict[str, Any]:
     payload = dict(message.artifact_payload or {})

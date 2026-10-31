@@ -30,9 +30,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.models.sms_message import SmsMessage
 from app.models.sms_template import SmsTemplate
-from app.models.user import BTTCOUser
+from app.models.user import User
 
-logger = logging.getLogger("bttco.sms")
+logger = logging.getLogger("ryozan.sms")
 
 
 def project_sms_delivery_status(status: str | None) -> str:
@@ -130,9 +130,7 @@ async def is_opted_in(db: AsyncSession, phone_e164: str) -> bool:
 
 async def _get_opt_state(db: AsyncSession, phone_e164: str) -> tuple[bool, bool]:
     """Return (has_opt_in, has_opt_out) for all rows matching this phone."""
-    result = await db.execute(
-        select(BTTCOUser.phone, BTTCOUser.sms_opt_in, BTTCOUser.sms_opt_out_at).where(BTTCOUser.phone.is_not(None))
-    )
+    result = await db.execute(select(User.phone, User.sms_opt_in, User.sms_opt_out_at).where(User.phone.is_not(None)))
     has_opt_in = False
     has_opt_out = False
     for phone, sms_opt_in, sms_opt_out_at in result.all():
@@ -148,7 +146,7 @@ async def _get_opt_state(db: AsyncSession, phone_e164: str) -> tuple[bool, bool]
 async def set_opt_out(db: AsyncSession, phone_e164: str) -> int:
     """Mark every user with this phone as opted-out. Returns row count."""
     now = datetime.now(UTC)
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.phone.is_not(None)))
+    result = await db.execute(select(User).where(User.phone.is_not(None)))
     count = 0
     for user in result.scalars():
         if normalise_phone(user.phone) == phone_e164:
@@ -163,7 +161,7 @@ async def set_opt_out(db: AsyncSession, phone_e164: str) -> int:
 async def set_opt_in(db: AsyncSession, phone_e164: str) -> int:
     """Mark every user with this phone as opted-in (clears prior opt-out)."""
     now = datetime.now(UTC)
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.phone.is_not(None)))
+    result = await db.execute(select(User).where(User.phone.is_not(None)))
     count = 0
     for user in result.scalars():
         if normalise_phone(user.phone) == phone_e164:
@@ -213,7 +211,7 @@ _SMS_LANE_FIELDS = {
         "bella",
         "Bella",
         "gated_auto_reply",
-        "ELEVENLABS_BTTCO_AGENT_ID",
+        "ELEVENLABS_RYOZAN_AGENT_ID",
     ),
     "gala": (
         "Gala",

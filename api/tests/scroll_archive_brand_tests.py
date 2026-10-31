@@ -1,5 +1,5 @@
 """
-Artist Scroll owner email and archive PDF in the BTTCO brand, plus the starseed cache-bust.
+Artist Scroll owner email and archive PDF in the Ryozan brand, plus the starseed cache-bust.
 
 Pins: every outgoing body points at the current versioned starseed tile (the R2 object is
 cached as immutable, so a replaced tile needs a new URL), the owner "scroll filed" email uses

@@ -7,7 +7,7 @@ alwaysApply: false
 # Ryozan frontend (`app/`)
 
 - **Stack:** React 19, TypeScript, Vite 7, Tailwind CSS v4 (`@tailwindcss/vite`). Match existing component and ESLint patterns in the tree.
-- **Design system:** UI comes from `@bttco/ui` and its generated `tokens.css` (source: `packages/ui/design-system/tokens.json`, a mirror of the Ryozan Studio Design System artifact). No raw hex, px or off-system fonts in `app/src`; ESLint enforces it. Never invent a component, colour or layout the system does not have; request it upstream. See `AGENTS.md` § Design system.
+- **Design system:** UI comes from `@ryozan/ui` and its generated `tokens.css` (source: `packages/ui/design-system/tokens.json`, a mirror of the Ryozan Studio Design System artifact). No raw hex, px or off-system fonts in `app/src`; ESLint enforces it. Never invent a component, colour or layout the system does not have; request it upstream. See `AGENTS.md` § Design system.
 - **API during dev:** Vite proxies `/api`. Default target may be **production** on Railway; for a **local** FastAPI instance set `VITE_API_TARGET=http://localhost:8801` (see root `README.md` / `AGENTS.md`). Call this out when debugging “wrong data” or CORS.
 - **PWA / prod:** production is served as static files from the FastAPI container after `docker build` — avoid assumptions that only match pure static hosting unless the code path matches.
 - **Secrets:** never embed API keys or VAPID private material in frontend source; use env/build-time `VITE_*` only as already established in the project.

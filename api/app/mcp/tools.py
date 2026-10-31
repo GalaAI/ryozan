@@ -1452,7 +1452,7 @@ TOOLS_BY_NAME = {spec["name"]: spec for spec in TOOL_SPECS}
 
 _ROLE_RANK = {role: rank for rank, role in enumerate(("collector", "assistant", "artist", "admin", "founder"))}
 
-# Discovery and execution use the same policy table. BTTCO shop tools remain
+# Discovery and execution use the same policy table. Ryozan shop tools remain
 # distinct from development coordination tools routed through Axiom/Hivemind.
 TOOL_ACCESS_POLICY: dict[str, tuple[str, str]] = {
     "ryozan_today": ("collector", "ryozan.shop.read"),

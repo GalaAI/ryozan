@@ -19,7 +19,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.models.booking import Booking
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.user import (
     UserAccountStatus,
     UserMembershipResponse,
@@ -61,13 +61,13 @@ async def list_users(
     limit: int = 50,
     role: str | None = Query(default=None, pattern="^(collector|assistant|artist|admin|founder)$"),
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("admin")),
+    _caller: User = Depends(require_role("admin")),
 ):
     """List all users. Admin/founder only."""
     filters = []
     if role:
-        filters.append(BTTCOUser.role == role)
-    result = await db.execute(select(BTTCOUser).where(*filters).offset(skip).limit(limit).order_by(BTTCOUser.name))
+        filters.append(User.role == role)
+    result = await db.execute(select(User).where(*filters).offset(skip).limit(limit).order_by(User.name))
     return result.scalars().all()
 
 
@@ -75,22 +75,22 @@ async def list_users(
 async def list_artist_account_status(
     response: Response,
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """Owner-only artist credential evidence; never select passwords or tokens."""
     response.headers["Cache-Control"] = "no-store"
     result = await db.execute(
         select(
-            BTTCOUser.id,
-            BTTCOUser.must_reset_password,
-            BTTCOUser.password_state,
-            BTTCOUser.password_changed_at,
-            BTTCOUser.password_change_method,
-            BTTCOUser.last_login_at,
-            BTTCOUser.last_login_method,
+            User.id,
+            User.must_reset_password,
+            User.password_state,
+            User.password_changed_at,
+            User.password_change_method,
+            User.last_login_at,
+            User.last_login_method,
         )
-        .where(BTTCOUser.role == "artist")
-        .order_by(BTTCOUser.id)
+        .where(User.role == "artist")
+        .order_by(User.id)
     )
     return [
         UserAccountStatus(
@@ -108,21 +108,21 @@ async def list_artist_account_status(
 @router.get("/my-clients", response_model=list[UserResponse])
 async def list_my_clients(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist: list distinct clients from your bookings."""
     # Get unique client_ids from bookings assigned to this artist
     client_ids_q = (
         select(Booking.client_id).where(Booking.artist_id == current_user.id, Booking.client_id.isnot(None)).distinct()
     )
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id.in_(client_ids_q)).order_by(BTTCOUser.name))
+    result = await db.execute(select(User).where(User.id.in_(client_ids_q)).order_by(User.name))
     return result.scalars().all()
 
 
 @router.get("/me/membership", response_model=UserMembershipResponse)
 async def get_my_membership(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Return the current user's effective AI and portal membership state."""
     decision = await resolve_ai_lane(current_user, db, get_settings(), enforce_limits=False)
@@ -145,7 +145,7 @@ async def get_my_membership(
 async def get_user(
     user_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a full profile for self, admin, or an assigned artist relationship."""
     can_access = current_user.id == user_id or current_user.role in {"admin", "founder"}
@@ -154,7 +154,7 @@ async def get_user(
     if not can_access:
         raise HTTPException(status_code=403, detail="Not authorized to view this user profile")
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -165,7 +165,7 @@ async def get_user(
 async def update_my_profile(
     body: UserProfileUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Update the calling user's own profile fields."""
     update_data = body.model_dump(exclude_unset=True)
@@ -187,7 +187,7 @@ async def update_my_profile(
 async def upload_user_avatar(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Any authenticated user: upload a profile picture."""
     allowed = {"image/jpeg", "image/png", "image/webp"}
@@ -230,14 +230,14 @@ async def upload_user_avatar_admin(
     user_id: UUID,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: upload / replace any user's avatar."""
     allowed = {"image/jpeg", "image/png", "image/webp"}
     if file.content_type not in allowed:
         raise HTTPException(400, f"File type {file.content_type} not allowed")
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -266,13 +266,13 @@ async def change_user_role(
     user_id: UUID,
     body: UserRoleUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("admin")),
+    current_user: User = Depends(require_role("admin")),
 ):
     """Change another user's role without crossing the founder boundary."""
     if current_user.id == user_id:
         raise HTTPException(status_code=403, detail="Users cannot change their own role")
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -291,10 +291,10 @@ async def update_user_membership(
     user_id: UUID,
     body: UserMembershipUpdate,
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: assign plan tier, cap, and connected product entitlements."""
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -317,7 +317,7 @@ async def set_user_proxy(
     user_id: UUID,
     body: UserProxyUpdate,
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: delegate a user's inbox to another account.
 
@@ -327,14 +327,14 @@ async def set_user_proxy(
     """
     if body.proxy_for is not None and not get_settings().STAFF_PROXY_ENABLED:
         raise HTTPException(status_code=403, detail="Staff proxy is not enabled for this studio")
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     if body.proxy_for is not None:
         # Verify target exists
-        target_result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.id == body.proxy_for))
+        target_result = await db.execute(select(User.id).where(User.id == body.proxy_for))
         if not target_result.scalar_one_or_none():
             raise HTTPException(status_code=404, detail="Proxy target user not found")
         # Prevent circular proxy
@@ -351,17 +351,17 @@ async def set_user_proxy(
 async def delete_user(
     user_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: permanently remove a user account."""
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if user.role == "founder":
         raise HTTPException(status_code=403, detail="Cannot delete another founder account")
     refuse_if_demo_account(user)
-    await db.execute(delete(BTTCOUser).where(BTTCOUser.id == user_id))
+    await db.execute(delete(User).where(User.id == user_id))
     await db.commit()
     return Response(status_code=204)
 
@@ -377,7 +377,7 @@ class GalaAutoReplyUpdate(BaseModel):
 async def toggle_gala_auto_reply(
     body: GalaAutoReplyUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Toggle Gala auto-reply for the calling artist.
@@ -407,7 +407,7 @@ async def toggle_gala_auto_reply(
 
 @router.get("/me/signature")
 async def get_saved_signature(
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Return the saved artist signature URL (or null)."""
     return {"signature_url": current_user.saved_signature_url}
@@ -417,7 +417,7 @@ async def get_saved_signature(
 async def save_signature(
     body: dict,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Save an artist's signature (base64 PNG) to R2 for reuse across waivers.
@@ -432,7 +432,7 @@ async def save_signature(
     if not sig_data:
         raise HTTPException(status_code=422, detail="signature_data is required")
 
-    logger = logging.getLogger("bttco.users")
+    logger = logging.getLogger("ryozan.users")
     try:
         raw = sig_data.split(",", 1)[-1] if "," in sig_data else sig_data
         sig_bytes = base64.b64decode(raw)

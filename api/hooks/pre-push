@@ -1,11 +1,11 @@
 #!/bin/bash
-# BTTCO API pre-push quality gate
+# Ryozan API pre-push quality gate
 # Blocks push if lint or import validation fails
 #
 # INSTALL: cp hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
 
 echo ""
-echo "=== BTTCO API Pre-Push Checks ==="
+echo "=== Ryozan API Pre-Push Checks ==="
 echo ""
 
 # Check if ruff is available

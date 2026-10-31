@@ -21,19 +21,20 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core import legacy_env
 from app.core.database import Base
 from app.models.booking import Booking
 from app.models.message import Conversation  # noqa: F401 - register Booking's existing foreign key target
 from app.models.pos_transaction import POSTransaction
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.pos import POSAttemptResponse, POSBalanceSnapshot, POSReceiptContext
 
-TEST_DATABASE_URL = os.environ.get("BTTCO_TEST_DATABASE_URL", "")
+TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "")
 if TEST_DATABASE_URL.startswith("postgresql://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "set BTTCO_TEST_DATABASE_URL for isolated POS PostgreSQL proof")
+@unittest.skipUnless(TEST_DATABASE_URL, "set RYOZAN_TEST_DATABASE_URL for isolated POS PostgreSQL proof")
 class POSAttemptPostgresTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.schema = f"pos_attempt_{uuid4().hex}"
@@ -57,7 +58,7 @@ class POSAttemptPostgresTests(unittest.IsolatedAsyncioTestCase):
                 (self.other_artist_id, "artist"),
             ):
                 db.add(
-                    BTTCOUser(
+                    User(
                         id=identity,
                         email=f"fixture-{identity}@example.test",
                         password_hash="disabled",
@@ -165,7 +166,7 @@ class POSAttemptPostgresTests(unittest.IsolatedAsyncioTestCase):
     async def test_saved_payment_owner_survives_artist_account_change(self):
         row = await self._save(self._attempt())
         async with self.sessions() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
+            artist = await db.get(User, self.artist_id)
             artist.stripe_account_id = "acct_changed"
             await db.commit()
         async with self.sessions() as db:

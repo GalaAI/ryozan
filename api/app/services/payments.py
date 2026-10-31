@@ -1,5 +1,5 @@
 """
-Payment routing — single source of truth for the BTTCO revenue split.
+Payment routing — single source of truth for the Ryozan revenue split.
 
 Every checkout path calls resolve_charge_routing() instead of inlining its own
 split, then apply_customer_receipt() to attach exact customer-facing receipt
@@ -7,10 +7,10 @@ context to the resulting PaymentIntent.
 
 Rules:
   * Artist connected AND payment-ready -> direct charge on the artist's
-    connected account. The artist is the settlement merchant and BTTCO takes
+    connected account. The artist is the settlement merchant and Ryozan takes
     its configured share as application_fee_amount.
   * Artist not connected, or onboarding incomplete -> the full amount lands
-    in the BTTCO platform account. The artist's share is recorded as
+    in the Ryozan platform account. The artist's share is recorded as
     payout_owed_cents so it can be routed manually.
   * Booth-rent artists carry commission_rate = 100, so the shop cut is zero
     in both branches.
@@ -30,7 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.econ import EconLedgerEntry
 
-logger = logging.getLogger("bttco.payments")
+logger = logging.getLogger("ryozan.payments")
 
 # Applied when an artist has no explicit commission_rate. 70 means the artist
 # keeps 70% and the shop keeps 30%. Booth-rent artists are set to 100.
@@ -39,7 +39,7 @@ DEFAULT_ARTIST_COMMISSION_RATE = 70
 # Customer prices are four percent above the configured service price. This is
 # one all-in price for every supported Checkout payment method, not a card
 # surcharge. Artist commission remains based on the configured service price,
-# so the price adjustment stays with BTTCO to offset payment operating costs.
+# so the price adjustment stays with Ryozan to offset payment operating costs.
 CUSTOMER_PRICE_INCREASE_BPS = 400
 
 DESTINATION_ARTIST = "artist"
@@ -852,7 +852,7 @@ def resolve_charge_routing(
     Decide where a charge lands and how it splits.
 
     Args:
-        artist: a BTTCOUser row (needs commission_rate, stripe_account_id,
+        artist: a User row (needs commission_rate, stripe_account_id,
             stripe_onboarding_complete)
         amount_cents: total charged to the collector, in cents
         artist_share_base_cents: configured service price used to calculate
@@ -932,7 +932,7 @@ def resolve_charge_routing(
         )
 
     # Fallback: no usable connected account. The whole charge lands in the
-    # BTTCO platform account and the artist's share is owed manually.
+    # Ryozan platform account and the artist's share is owed manually.
     reason = "onboarding_incomplete" if account_id else "not_connected"
     logger.info(
         "charge of %d cents for artist %s routed to shop (%s); %d cents owed on payout",

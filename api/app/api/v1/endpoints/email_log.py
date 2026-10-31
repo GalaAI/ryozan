@@ -30,11 +30,11 @@ from app.core.security import ROLE_RANK, get_current_user
 from app.models.email_log import EmailLog
 from app.models.email_template import EmailTemplate
 from app.models.message import Message
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.courier_channels import CourierRouteContext, build_channel_status
 from app.services.email_foundry import foundry_catalog_summary, foundry_source_sha256
 
-logger = logging.getLogger("bttco.email_log")
+logger = logging.getLogger("ryozan.email_log")
 
 router = APIRouter(tags=["email_log"])
 
@@ -352,7 +352,7 @@ def _resolve_delivery_webhook_status(current: str | None, incoming: str) -> str:
 # ── Auth helpers ────────────────────────────────────────────────────────────
 
 
-def _require_founder(user: BTTCOUser):
+def _require_founder(user: User):
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("founder", 99):
         raise HTTPException(status_code=403, detail="Founder access required")
 
@@ -813,7 +813,7 @@ async def list_email_log(
     search: str | None = Query(None, max_length=200),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -853,7 +853,7 @@ async def list_email_log(
 @router.get("/email/log/stats", response_model=EmailStatsResponse)
 async def email_log_stats(
     days: int = Query(30, ge=1, le=90),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Aggregate send counts grouped by template + status for the last N days."""
@@ -885,7 +885,7 @@ async def email_log_stats(
 @router.get("/email/manifest", response_model=MessagingManifestResponse)
 async def email_messaging_manifest(
     days: int = Query(90, ge=1, le=365),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Founder-only tenant projection for Ark Courier and Email Foundry."""
@@ -961,7 +961,7 @@ async def email_messaging_manifest(
 @router.post("/email/log/{log_id}/retry", response_model=RetryResponse)
 async def retry_email(
     log_id: UUID,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """

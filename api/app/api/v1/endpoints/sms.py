@@ -30,7 +30,7 @@ from app.models.booking import Booking
 from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.notification import Notification as NotificationModel
 from app.models.sms_message import SmsMessage
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email import should_notify
 from app.services.pack_bridge import build_pack_capture, queue_pack_capture
 from app.services.push import send_push_notification
@@ -45,28 +45,28 @@ from app.services.sms import (
     set_opt_out,
 )
 
-logger = logging.getLogger("bttco.sms")
+logger = logging.getLogger("ryozan.sms")
 router = APIRouter(prefix="/sms", tags=["sms"])
 
 
 # ── Helpers ──────────────────────────────────────────
 
 
-def _is_admin(user: BTTCOUser) -> bool:
+def _is_admin(user: User) -> bool:
     return ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("admin", 3)
 
 
-def _is_staff(user: BTTCOUser) -> bool:
+def _is_staff(user: User) -> bool:
     """Artist, admin, or founder."""
     return ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("artist", 2)
 
 
-def _require_admin(user: BTTCOUser) -> None:
+def _require_admin(user: User) -> None:
     if not _is_admin(user):
         raise HTTPException(status_code=403, detail="Admin role or higher required")
 
 
-def _require_staff(user: BTTCOUser) -> None:
+def _require_staff(user: User) -> None:
     if not _is_staff(user):
         raise HTTPException(status_code=403, detail="Staff role or higher required")
 
@@ -125,7 +125,7 @@ class OptInToggleRequest(BaseModel):
 @router.get("/log", response_model=list[SmsLogRow])
 async def list_messages(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     direction: str | None = None,
     status: str | None = None,
     phone: str | None = None,
@@ -169,7 +169,7 @@ async def list_messages(
 @router.get("/stats")
 async def sms_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff+: counts for the SMS dashboard tile.
 
@@ -188,10 +188,8 @@ async def sms_stats(
 
     if _is_admin(current_user):
         inbound = await db.scalar(select(func.count()).select_from(SmsMessage).where(SmsMessage.direction == "inbound"))
-        opted_in = await db.scalar(select(func.count()).select_from(BTTCOUser).where(BTTCOUser.sms_opt_in.is_(True)))
-        opted_out = await db.scalar(
-            select(func.count()).select_from(BTTCOUser).where(BTTCOUser.sms_opt_out_at.is_not(None))
-        )
+        opted_in = await db.scalar(select(func.count()).select_from(User).where(User.sms_opt_in.is_(True)))
+        opted_out = await db.scalar(select(func.count()).select_from(User).where(User.sms_opt_out_at.is_not(None)))
     else:
         inbound = 0
         opted_in = 0
@@ -212,7 +210,7 @@ async def sms_stats(
 # ── Manual send (admin) ──────────────────────────────────────────
 
 
-async def _staff_can_text(db: AsyncSession, sender: BTTCOUser, phone_e164: str) -> bool:
+async def _staff_can_text(db: AsyncSession, sender: User, phone_e164: str) -> bool:
     """Return True if `sender` (non-admin staff) is allowed to text this number.
 
     Allowed when at least one `ryozan_users` row with that phone shares a
@@ -222,7 +220,7 @@ async def _staff_can_text(db: AsyncSession, sender: BTTCOUser, phone_e164: str) 
     """
     from app.models.message import ConversationParticipant
 
-    users_with_phone_q = select(BTTCOUser.id, BTTCOUser.phone).where(BTTCOUser.phone.is_not(None))
+    users_with_phone_q = select(User.id, User.phone).where(User.phone.is_not(None))
     user_ids: set[UUID] = set()
     for user_id, phone in (await db.execute(users_with_phone_q)).all():
         # The phone column isn't normalised in storage; check on read.
@@ -251,7 +249,7 @@ async def _staff_can_text(db: AsyncSession, sender: BTTCOUser, phone_e164: str) 
 async def send_manual(
     body: ManualSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff+: send a raw SMS to one number.
 
@@ -294,7 +292,7 @@ async def send_manual(
 async def opt_in_toggle(
     body: OptInToggleRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: manually flip a phone's opt-in state. Used to honour written
     consent on paper waivers or to clear an erroneous opt-out."""
@@ -356,34 +354,34 @@ def _twiml_response(message: str | None = None) -> Response:
     return Response(content=xml, media_type="application/xml")
 
 
-async def _resolve_courier_owner(db: AsyncSession) -> BTTCOUser:
+async def _resolve_courier_owner(db: AsyncSession) -> User:
     result = await db.execute(
-        select(BTTCOUser)
-        .where(BTTCOUser.role.in_(("founder", "admin")))
-        .order_by(desc(BTTCOUser.role == "founder"), BTTCOUser.created_at.asc())
+        select(User)
+        .where(User.role.in_(("founder", "admin")))
+        .order_by(desc(User.role == "founder"), User.created_at.asc())
         .limit(1)
     )
     owner = result.scalar_one_or_none()
     if owner:
         return owner
-    fallback = await db.scalar(select(BTTCOUser).order_by(BTTCOUser.created_at.asc()).limit(1))
+    fallback = await db.scalar(select(User).order_by(User.created_at.asc()).limit(1))
     if not fallback:
         raise HTTPException(status_code=500, detail="No Courier owner available for inbound SMS")
     return fallback
 
 
-async def _resolve_sms_sender(db: AsyncSession, phone_e164: str) -> BTTCOUser:
-    users = await db.execute(select(BTTCOUser).where(BTTCOUser.phone.is_not(None)))
+async def _resolve_sms_sender(db: AsyncSession, phone_e164: str) -> User:
+    users = await db.execute(select(User).where(User.phone.is_not(None)))
     for user in users.scalars():
         if normalise_phone(user.phone) == phone_e164:
             return user
 
     email = f"sms-{phone_e164.lstrip('+')}@ryozan.app"
-    existing = await db.scalar(select(BTTCOUser).where(BTTCOUser.email == email))
+    existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         return existing
 
-    user = BTTCOUser(
+    user = User(
         email=email,
         name=phone_e164,
         role="collector",
@@ -397,8 +395,8 @@ async def _resolve_sms_sender(db: AsyncSession, phone_e164: str) -> BTTCOUser:
 
 async def _resolve_sms_conversation(
     db: AsyncSession,
-    owner: BTTCOUser,
-    sender: BTTCOUser,
+    owner: User,
+    sender: User,
     phone_e164: str,
     channel: str = "sms",
     lane_id: str = "bella",
@@ -477,12 +475,12 @@ def _phone_match_sql(column: Any, phone_e164: str) -> Any | None:
     return stored == digits
 
 
-async def _candidate_bookings_for_sms(db: AsyncSession, sender: BTTCOUser, phone_e164: str) -> list[Booking]:
+async def _candidate_bookings_for_sms(db: AsyncSession, sender: User, phone_e164: str) -> list[Booking]:
     """Open (or recently completed) bookings that belong to this phone, newest first."""
     guest_match = _phone_match_sql(Booking.guest_phone, phone_e164)
     if guest_match is None:
         return []
-    client = aliased(BTTCOUser)
+    client = aliased(User)
     # The aftercare window runs from the appointment, which edits do not move.
     completed_since = (datetime.now(UTC) - _BOOKING_THREAD_COMPLETED_WINDOW).date()
     return list(
@@ -514,7 +512,7 @@ async def _candidate_bookings_for_sms(db: AsyncSession, sender: BTTCOUser, phone
     )
 
 
-async def _find_booking_for_sms(db: AsyncSession, sender: BTTCOUser, phone_e164: str) -> Booking | None:
+async def _find_booking_for_sms(db: AsyncSession, sender: User, phone_e164: str) -> Booking | None:
     """Pick the booking an inbound shop-line SMS is most likely answering.
 
     The thread that last reached this collector wins: the latest staff Courier
@@ -531,10 +529,10 @@ async def _find_booking_for_sms(db: AsyncSession, sender: BTTCOUser, phone_e164:
     if conversation_ids:
         staff_rows = await db.execute(
             select(Message.conversation_id, func.max(Message.created_at))
-            .join(BTTCOUser, BTTCOUser.id == Message.sender_id)
+            .join(User, User.id == Message.sender_id)
             .where(
                 Message.conversation_id.in_(conversation_ids),
-                BTTCOUser.role.in_(_STAFF_ROLES),
+                User.role.in_(_STAFF_ROLES),
                 Message.message_type.in_(_RANKING_MESSAGE_TYPES),
             )
             .group_by(Message.conversation_id)
@@ -569,7 +567,7 @@ async def _ensure_participant(db: AsyncSession, conversation_id: UUID, user_id: 
         db.add(ConversationParticipant(conversation_id=conversation_id, user_id=user_id, role=role))
 
 
-async def _booking_thread(db: AsyncSession, booking: Booking, collector: BTTCOUser) -> Conversation:
+async def _booking_thread(db: AsyncSession, booking: Booking, collector: User) -> Conversation:
     """The booking's own Courier thread, created when the booking has none.
 
     Never reuses another artist-client conversation: a repeat collector has one
@@ -592,16 +590,16 @@ async def _booking_thread(db: AsyncSession, booking: Booking, collector: BTTCOUs
 
 async def _resolve_booking_sms_conversation(
     db: AsyncSession,
-    sender: BTTCOUser,
+    sender: User,
     phone_e164: str,
-) -> tuple[Conversation, BTTCOUser, Booking] | None:
+) -> tuple[Conversation, User, Booking] | None:
     """Return the booking thread, the collector identity to post as, and the booking."""
     booking = await _find_booking_for_sms(db, sender, phone_e164)
     if booking is None:
         return None
     collector = sender
     if booking.client_id and booking.client_id != sender.id:
-        collector = await db.get(BTTCOUser, booking.client_id) or sender
+        collector = await db.get(User, booking.client_id) or sender
     conversation = await _booking_thread(db, booking, collector)
     await _ensure_participant(db, conversation.id, booking.artist_id, "owner")
     await _ensure_participant(db, conversation.id, collector.id, "member")
@@ -613,7 +611,7 @@ async def _notify_inbound_sms_recipients(
     *,
     conversation: Conversation,
     message: Message,
-    sender: BTTCOUser,
+    sender: User,
     booking: Booking,
 ) -> None:
     """Alert the booking's artist and shop managers the same way a portal message does.
@@ -629,13 +627,13 @@ async def _notify_inbound_sms_recipients(
         (
             await db.execute(
                 select(ConversationParticipant.user_id)
-                .join(BTTCOUser, BTTCOUser.id == ConversationParticipant.user_id)
+                .join(User, User.id == ConversationParticipant.user_id)
                 .where(
                     ConversationParticipant.conversation_id == conversation.id,
                     ConversationParticipant.user_id != sender.id,
                     or_(
                         ConversationParticipant.user_id == booking.artist_id,
-                        BTTCOUser.role.in_(_SHOP_MANAGER_ROLES),
+                        User.role.in_(_SHOP_MANAGER_ROLES),
                     ),
                 )
             )
@@ -692,7 +690,7 @@ async def _archive_sms_to_courier(
     assigned_agent_label: str = "Bella",
     reply_mode: str = "gated_auto_reply",
     voice_status: str = "not_configured",
-) -> tuple[Conversation, BTTCOUser, BTTCOUser, Message]:
+) -> tuple[Conversation, User, User, Message]:
     owner = await _resolve_courier_owner(db)
     sender = await _resolve_sms_sender(db, phone_e164)
     booking_route = None
@@ -790,8 +788,8 @@ async def _bella_channel_reply(
         async with async_session() as db:
             rows = (
                 await db.execute(
-                    select(Message, BTTCOUser.name)
-                    .join(BTTCOUser, Message.sender_id == BTTCOUser.id)
+                    select(Message, User.name)
+                    .join(User, Message.sender_id == User.id)
                     .where(Message.conversation_id == conversation_id)
                     .order_by(desc(Message.created_at))
                     .limit(20)

@@ -6,7 +6,7 @@ ARK_PACK_BRIDGE_URL/KEY. That lane is a learning capture stream with its own
 payload contract. This module is the narrower, owner-requested mirror of one
 general inquiry to a plain AInbox endpoint (ARK_AINBOX_MIRROR_URL): off by
 default, one bounded POST, no outbox, and never a hard dependency. The Courier
-thread in BTTCO stays the record; a mirror failure is logged and never
+thread in Ryozan stays the record; a mirror failure is logged and never
 surfaced to the collector.
 """
 
@@ -19,7 +19,7 @@ import httpx
 
 from app.core.config import get_settings
 
-logger = logging.getLogger("bttco.inquiry_mirror")
+logger = logging.getLogger("ryozan.inquiry_mirror")
 
 INQUIRY_MIRROR_TIMEOUT_SECONDS = 5.0
 

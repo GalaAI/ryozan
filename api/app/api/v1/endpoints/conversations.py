@@ -31,7 +31,7 @@ from app.models.email_route import EmailRoute
 from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.notification import Notification as NotificationModel
 from app.models.sms_message import SmsMessage
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.message import (
     ConversationCreate,
     ConversationListResponse,
@@ -59,7 +59,7 @@ from app.services.sms import (
     send_twilio_whatsapp_text,
 )
 
-logger = logging.getLogger("bttco.courier")
+logger = logging.getLogger("ryozan.courier")
 
 UNICODE_DASHES = str.maketrans(
     {
@@ -123,7 +123,7 @@ async def _verify_participant(
     return participant
 
 
-def _proxy_target(current_user: BTTCOUser) -> UUID | None:
+def _proxy_target(current_user: User) -> UUID | None:
     """The user this account acts as in Courier, when STAFF_PROXY_ENABLED is on.
 
     With the setting off a stored proxy_for is ignored and every account acts
@@ -134,16 +134,16 @@ def _proxy_target(current_user: BTTCOUser) -> UUID | None:
     return current_user.proxy_for
 
 
-async def _resolve_effective_user(current_user: BTTCOUser, db: AsyncSession) -> BTTCOUser:
+async def _resolve_effective_user(current_user: User, db: AsyncSession) -> User:
     """Return the user a proxy operator acts as in Courier."""
     proxy_for = _proxy_target(current_user)
     if not proxy_for:
         return current_user
-    proxy_user_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == proxy_for))
+    proxy_user_result = await db.execute(select(User).where(User.id == proxy_for))
     return proxy_user_result.scalar_one_or_none() or current_user
 
 
-def _visible_user_ids(current_user: BTTCOUser) -> list[UUID]:
+def _visible_user_ids(current_user: User) -> list[UUID]:
     """Return IDs the current session may act as or view in Courier."""
     proxy_for = _proxy_target(current_user)
     return [current_user.id] + ([proxy_for] if proxy_for else [])
@@ -151,7 +151,7 @@ def _visible_user_ids(current_user: BTTCOUser) -> list[UUID]:
 
 async def _require_conversation_creation_access(
     body: ConversationCreate,
-    effective_user: BTTCOUser,
+    effective_user: User,
     db: AsyncSession,
 ) -> None:
     """Restrict artist and collector-created threads to their booking counterpart."""
@@ -206,7 +206,7 @@ def _merge_metadata(existing: str | None, updates: dict) -> str:
     return json.dumps(data)
 
 
-def _is_staff_viewer(user: BTTCOUser) -> bool:
+def _is_staff_viewer(user: User) -> bool:
     return ROLE_RANK.get(user.role, 0) >= ROLE_RANK["assistant"]
 
 
@@ -387,7 +387,7 @@ async def _build_conversation_response(
     last_message = None
     if last_msg:
         # Get sender name
-        sender_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == last_msg.sender_id))
+        sender_result = await db.execute(select(User.name).where(User.id == last_msg.sender_id))
         sender_name = sender_result.scalar_one_or_none()
         last_message = MessageResponse(
             id=last_msg.id,
@@ -434,7 +434,7 @@ async def _build_conversation_response(
     booking_context = None
     display_name = conv.name
     if booking:
-        artist_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+        artist_result = await db.execute(select(User.name).where(User.id == booking.artist_id))
         artist_name = artist_result.scalar_one_or_none()
         display_name = booking.guest_name or (conv.name.removeprefix("Booking: ").strip() if conv.name else None)
         reference_urls: list[str] = []
@@ -497,7 +497,7 @@ async def _build_conversation_response(
 async def create_conversation(
     body: ConversationCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Start a new conversation. Creator is auto-added as participant."""
     effective_user = await _resolve_effective_user(current_user, db)
@@ -507,7 +507,7 @@ async def create_conversation(
 
     # Validate all participant IDs exist
     for pid in body.participant_ids:
-        result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.id == pid))
+        result = await db.execute(select(User.id).where(User.id == pid))
         if not result.scalar_one_or_none():
             raise HTTPException(status_code=404, detail=f"User {pid} not found")
 
@@ -569,7 +569,7 @@ async def list_my_conversations(
     skip: int = 0,
     limit: int = Query(default=50, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List all conversations the current user belongs to.
 
@@ -616,7 +616,7 @@ async def list_my_conversations(
 @router.get("/channels/status")
 async def courier_channel_status(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Return Ryozan Nexus Courier connector status for the current user."""
     settings = get_settings()
@@ -640,7 +640,7 @@ async def courier_channel_status(
 async def get_conversation(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a single conversation's details."""
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
@@ -663,14 +663,14 @@ async def get_conversation(
 async def list_participants(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List all participants in a conversation."""
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
 
     result = await db.execute(
-        select(ConversationParticipant, BTTCOUser.name)
-        .join(BTTCOUser, ConversationParticipant.user_id == BTTCOUser.id)
+        select(ConversationParticipant, User.name)
+        .join(User, ConversationParticipant.user_id == User.id)
         .where(ConversationParticipant.conversation_id == conversation_id)
     )
     rows = result.all()
@@ -812,7 +812,7 @@ async def _queue_conversation_notifications(
     db: AsyncSession,
     *,
     message: Message,
-    sender: BTTCOUser,
+    sender: User,
     conversation: Conversation,
     recipient_ids: list[UUID],
     allow_sms_channel_message: bool = False,
@@ -825,7 +825,7 @@ async def _queue_conversation_notifications(
     """
     if not recipient_ids:
         return
-    recipients = list((await db.execute(select(BTTCOUser).where(BTTCOUser.id.in_(recipient_ids)))).scalars().all())
+    recipients = list((await db.execute(select(User).where(User.id.in_(recipient_ids)))).scalars().all())
     sms_lane_id: str | None = None
     intents: list[dict[str, Any]] = []
     now = datetime.now(UTC).isoformat()
@@ -1104,8 +1104,8 @@ async def _gala_auto_reply(
         async with async_session() as db:
             # Fetch recent messages for context (last 20)
             msg_result = await db.execute(
-                select(Message, BTTCOUser.name)
-                .join(BTTCOUser, Message.sender_id == BTTCOUser.id)
+                select(Message, User.name)
+                .join(User, Message.sender_id == User.id)
                 .where(Message.conversation_id == conversation_id)
                 .order_by(desc(Message.created_at))
                 .limit(20)
@@ -1208,7 +1208,7 @@ async def send_message(
     conversation_id: UUID,
     body: MessageCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Send a message to a conversation.
@@ -1278,10 +1278,10 @@ async def send_message(
     recipient_ids = [row[0] for row in part_result.all()]
     if effective_sender.role == "collector" and recipient_ids:
         staff_recipient = await db.scalar(
-            select(BTTCOUser.id)
+            select(User.id)
             .where(
-                BTTCOUser.id.in_(recipient_ids),
-                BTTCOUser.role.in_(["assistant", "artist", "admin", "founder"]),
+                User.id.in_(recipient_ids),
+                User.role.in_(["assistant", "artist", "admin", "founder"]),
             )
             .limit(1)
         )
@@ -1332,10 +1332,10 @@ async def send_message(
     if not sender_is_artist and not conv.is_group:
         for rid in recipient_ids:
             artist_result = await db.execute(
-                select(BTTCOUser).where(
-                    BTTCOUser.id == rid,
-                    BTTCOUser.gala_auto_reply.isnot(None),
-                    BTTCOUser.role.in_(["artist", "admin", "founder"]),
+                select(User).where(
+                    User.id == rid,
+                    User.gala_auto_reply.isnot(None),
+                    User.role.in_(["artist", "admin", "founder"]),
                 )
             )
             artist = artist_result.scalar_one_or_none()
@@ -1370,14 +1370,14 @@ async def _resolve_channel_recipient(
     conversation_id: UUID,
     visible_ids: list[UUID],
     explicit_to: str | None,
-) -> tuple[str, BTTCOUser | None]:
+) -> tuple[str, User | None]:
     result = await db.execute(
-        select(BTTCOUser)
-        .join(ConversationParticipant, ConversationParticipant.user_id == BTTCOUser.id)
+        select(User)
+        .join(ConversationParticipant, ConversationParticipant.user_id == User.id)
         .where(
             ConversationParticipant.conversation_id == conversation_id,
             ConversationParticipant.user_id.notin_(visible_ids),
-            BTTCOUser.phone.is_not(None),
+            User.phone.is_not(None),
         )
     )
     recipients = list(result.scalars().all())
@@ -1401,7 +1401,7 @@ async def send_channel_message(
     conversation_id: UUID,
     body: ChannelSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Send a Courier message through an explicit external channel."""
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
@@ -1518,7 +1518,7 @@ async def get_messages(
     skip: int = 0,
     limit: int = Query(default=50, le=200),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get message history for a conversation (newest first)."""
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
@@ -1529,8 +1529,8 @@ async def get_messages(
 
     # Fetch messages
     result = await db.execute(
-        select(Message, BTTCOUser.name)
-        .join(BTTCOUser, Message.sender_id == BTTCOUser.id, isouter=True)
+        select(Message, User.name)
+        .join(User, Message.sender_id == User.id, isouter=True)
         .where(Message.conversation_id == conversation_id)
         .order_by(desc(Message.created_at))
         .offset(skip)
@@ -1566,7 +1566,7 @@ async def get_messages(
 async def mark_conversation_read(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Mark all messages in this conversation as read for the current user."""
     participant = await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
@@ -1578,7 +1578,7 @@ async def delete_message(
     conversation_id: UUID,
     message_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Redact a message while preserving an audit trail."""
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
@@ -1624,7 +1624,7 @@ async def delete_message(
 async def archive_conversation(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Archive a conversation for the current user. Removes them from
@@ -1642,7 +1642,7 @@ async def archive_conversation(
 async def delete_conversation(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Archive a conversation without destroying the retained thread.
@@ -1686,7 +1686,7 @@ _typing_state: dict[str, dict[str, float]] = {}  # conv_id -> {user_id: timestam
 async def set_typing(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Signal that the current user is typing in this conversation."""
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
@@ -1701,7 +1701,7 @@ async def set_typing(
 async def get_typing(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get who is currently typing (within last 5 seconds)."""
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
@@ -1713,7 +1713,7 @@ async def get_typing(
     # Resolve names
     names = []
     for uid in active:
-        result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == uid))
+        result = await db.execute(select(User.name).where(User.id == uid))
         name = result.scalar_one_or_none()
         if name:
             names.append(name.split()[0])
@@ -1742,11 +1742,11 @@ Rules:
 async def gala_courier_assist(
     conversation_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Generate a context-aware reply draft for the current conversation.
-    Uses conversation history + BTTCO brand voice + artist tone matching.
+    Uses conversation history + Ryozan brand voice + artist tone matching.
     """
     await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     effective_user = await _resolve_effective_user(current_user, db)
@@ -1761,8 +1761,8 @@ async def gala_courier_assist(
 
     # Fetch recent messages for context (last 20)
     msg_result = await db.execute(
-        select(Message, BTTCOUser.name)
-        .join(BTTCOUser, Message.sender_id == BTTCOUser.id)
+        select(Message, User.name)
+        .join(User, Message.sender_id == User.id)
         .where(Message.conversation_id == conversation_id)
         .order_by(desc(Message.created_at))
         .limit(20)
@@ -1780,8 +1780,8 @@ async def gala_courier_assist(
 
     # Get the other participant's name
     other_result = await db.execute(
-        select(BTTCOUser.name)
-        .join(ConversationParticipant, ConversationParticipant.user_id == BTTCOUser.id)
+        select(User.name)
+        .join(ConversationParticipant, ConversationParticipant.user_id == User.id)
         .where(
             ConversationParticipant.conversation_id == conversation_id,
             ConversationParticipant.user_id.notin_(visible_ids),

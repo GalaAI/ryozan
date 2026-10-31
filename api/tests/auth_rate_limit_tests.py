@@ -18,7 +18,7 @@ from app.api.v1.endpoints import auth, bookings
 from app.core.rate_limit import get_rate_limit_key, limiter
 from app.core.schema_compare import BASELINE_SQL_PATH  # noqa: E402
 from app.core.security import hash_password
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.booking import PublicBookingResponse
 
 
@@ -149,7 +149,7 @@ class AuthRateLimitTests(unittest.TestCase):
         self.assertEqual(response.status_code, 429)
 
     def test_login_succeeds_until_limit_then_returns_429(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="user@example.com",
             email_verified_at=datetime.now(UTC),
@@ -184,7 +184,7 @@ class AuthRateLimitTests(unittest.TestCase):
         headers = {"X-Forwarded-For": "203.0.113.12"}
 
         with (
-            patch.object(auth._settings, "GOOGLE_CLIENT_ID", "active-bttco-client.apps.googleusercontent.com"),
+            patch.object(auth._settings, "GOOGLE_CLIENT_ID", "active-ryozan-client.apps.googleusercontent.com"),
             patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", ""),
             patch("app.api.v1.endpoints.auth.google_id_token.verify_oauth2_token", side_effect=ValueError),
         ):

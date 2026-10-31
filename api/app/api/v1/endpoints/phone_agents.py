@@ -30,7 +30,7 @@ from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.crm_pipeline_task import CrmPipelineTask
 from app.models.message import Message
 from app.models.notification import Notification
-from app.models.user import BTTCOUser  # noqa: TC001
+from app.models.user import User  # noqa: TC001
 from app.services.pack_bridge import build_pack_capture, process_pack_bridge_outbox_once, queue_pack_capture
 from app.services.sms import normalise_phone
 
@@ -126,7 +126,7 @@ def _event_summary(event_type: str, data: dict[str, Any], lane: str) -> str:
 
 def _agent_lane(agent_id: str) -> str | None:
     settings = get_settings()
-    if agent_id and agent_id == settings.ELEVENLABS_BTTCO_AGENT_ID:
+    if agent_id and agent_id == settings.ELEVENLABS_RYOZAN_AGENT_ID:
         return "bella"
     if agent_id and agent_id == settings.ELEVENLABS_JUSTIN_AGENT_ID:
         return "gala"
@@ -138,7 +138,7 @@ def _tool_authorized(request: Request, secret: str) -> bool:
     return bool(token and secret and hmac.compare_digest(token, secret))
 
 
-async def _resolve_booking(db: AsyncSession, sender: BTTCOUser, phone: str | None) -> Booking | None:
+async def _resolve_booking(db: AsyncSession, sender: User, phone: str | None) -> Booking | None:
     booking = await db.scalar(
         select(Booking)
         .where(Booking.client_id == sender.id)
@@ -158,15 +158,15 @@ async def _resolve_voice_sender(
     *,
     phone: str | None,
     conversation_id: str,
-) -> BTTCOUser:
+) -> User:
     if phone:
         return await _resolve_sms_sender(db, phone)
     opaque_id = hashlib.sha256(conversation_id.encode()).hexdigest()[:24]
     email = f"voice-{opaque_id}@ryozan.app"
-    existing = await db.scalar(select(BTTCOUser).where(BTTCOUser.email == email))
+    existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         return existing
-    sender = BTTCOUser(
+    sender = User(
         email=email,
         name="Unknown phone caller",
         role="collector",
@@ -362,7 +362,7 @@ async def take_phone_message(
     summary = ". ".join([*labels, body.message.strip()])[:2048]
     data: dict[str, Any] = {
         "agent_id": (
-            settings.ELEVENLABS_BTTCO_AGENT_ID if body.agent == "bella" else settings.ELEVENLABS_JUSTIN_AGENT_ID
+            settings.ELEVENLABS_RYOZAN_AGENT_ID if body.agent == "bella" else settings.ELEVENLABS_JUSTIN_AGENT_ID
         ),
         "conversation_id": body.conversation_id,
         "status": "in_progress",

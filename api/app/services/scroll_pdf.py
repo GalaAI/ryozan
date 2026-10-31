@@ -51,7 +51,7 @@ from reportlab.platypus import (
 
 from app.constants.timezones import SHOP_TIMEZONE
 
-logger = logging.getLogger("bttco.scroll_pdf")
+logger = logging.getLogger("ryozan.scroll_pdf")
 
 # HEIC/HEIF support. iPhone photos of a certificate arrive as HEIC, and without this
 # Pillow cannot open them at all. Registered lazily and defensively: a missing or broken
@@ -74,7 +74,7 @@ _BOTTOM_MARGIN = 0.85 * inch  # clears the footer rule
 _CONTENT_WIDTH = _PAGE_WIDTH - 2 * _SIDE_MARGIN
 _CONTENT_HEIGHT = _PAGE_HEIGHT - _TOP_MARGIN - _BOTTOM_MARGIN - 1.6 * inch
 
-# BTTCO print palette. Email Foundry's colors, adapted for paper: the dark ground is kept for
+# Ryozan print palette. Email Foundry's colors, adapted for paper: the dark ground is kept for
 # the header band only, body copy stays ink-on-white so the archive prints cleanly.
 _INK = colors.HexColor("#161512")
 _GROUND = colors.HexColor("#121312")

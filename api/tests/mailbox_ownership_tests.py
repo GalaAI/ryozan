@@ -16,7 +16,7 @@ from app.core.rate_limit import limiter
 from app.core.security import create_password_reset_token, create_user_access_token, get_current_user, hash_password
 from app.models.booking import Booking
 from app.models.quote import Quote
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import account_setup
 
 
@@ -61,7 +61,7 @@ class FixtureSession:
 
 
 def user(*, email="mailbox@example.com", role="collector", verified=False, google_id=None):
-    return BTTCOUser(
+    return User(
         id=uuid.uuid4(),
         email=email,
         name="Test Identity",

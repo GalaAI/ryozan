@@ -20,7 +20,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.broadcast import Broadcast, GalaFeedback
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 router = APIRouter(prefix="/broadcasts", tags=["broadcasts"])
 
@@ -93,7 +93,7 @@ class BroadcastPublishResponse(BaseModel):
 @router.post("/", response_model=BroadcastOut)
 async def create_broadcast(
     data: BroadcastCreate,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if user.role not in STAFF_ROLES:
@@ -127,7 +127,7 @@ async def create_broadcast(
 @router.get("/")
 async def list_broadcasts(
     limit: int = 20,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     role = user.role
@@ -135,8 +135,8 @@ async def list_broadcasts(
     role_audience = "artists" if role in ("artist", "admin", "founder") else "collectors"
 
     stmt = (
-        select(Broadcast, BTTCOUser.name.label("author_name"))
-        .join(BTTCOUser, Broadcast.author_id == BTTCOUser.id)
+        select(Broadcast, User.name.label("author_name"))
+        .join(User, Broadcast.author_id == User.id)
         .where(
             or_(
                 Broadcast.audience == "all",
@@ -172,7 +172,7 @@ async def list_broadcasts(
 async def publish_broadcast(
     broadcast_id: str,
     data: BroadcastPublishRequest,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if user.role not in STAFF_ROLES:
@@ -281,7 +281,7 @@ def _meta_error(resp: httpx.Response) -> str:
 @router.post("/feedback", response_model=FeedbackOut)
 async def submit_feedback(
     data: FeedbackCreate,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     feedback = GalaFeedback(
@@ -308,15 +308,15 @@ async def submit_feedback(
 async def list_feedback(
     status: str | None = None,
     limit: int = 50,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if user.role not in STAFF_ROLES:
         raise HTTPException(403, "Only admins and founders can view feedback")
 
     stmt = (
-        select(GalaFeedback, BTTCOUser.name.label("user_name"), BTTCOUser.email.label("user_email"))
-        .join(BTTCOUser, GalaFeedback.user_id == BTTCOUser.id)
+        select(GalaFeedback, User.name.label("user_name"), User.email.label("user_email"))
+        .join(User, GalaFeedback.user_id == User.id)
         .order_by(GalaFeedback.created_at.desc())
         .limit(limit)
     )
@@ -347,7 +347,7 @@ async def list_feedback(
 async def update_feedback(
     feedback_id: str,
     data: FeedbackUpdate,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     if user.role not in STAFF_ROLES:

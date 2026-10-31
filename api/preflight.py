@@ -7,7 +7,7 @@
 |            Dead Code Ghoul, Config Doppelganger              |
 +==============================================================+
 
-A sentinel that validates the BTTCO stack integrity.
+A sentinel that validates the Ryozan stack integrity.
 Runs the Watcher Classification Protocol:
   DETECT -> IDENTIFY -> MEASURE -> CLASSIFY -> ASSESS -> LOG
 
@@ -31,10 +31,8 @@ import argparse
 import ast
 import asyncio
 import hashlib
-import json
 import os
 import re
-import subprocess
 import sys
 from collections import defaultdict
 from datetime import UTC, datetime
@@ -51,10 +49,6 @@ ROUTER_FILE = APP_DIR / "api" / "v1" / "router.py"
 MAIN_FILE = PROJECT_ROOT / "main.py"
 REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
 FRONTEND_ROOT = REPO_ROOT / "app"
-SCRIPTS_DIR = REPO_ROOT / "scripts"
-PULSE_SCRIPT = SCRIPTS_DIR / "pulse-dev-health.ps1"
-RECON_SCRIPT = SCRIPTS_DIR / "aegis-spectr-recon.ps1"
-SENTINEL_SCRIPT = SCRIPTS_DIR / "aegis-sentinel-recover.ps1"
 FRONTEND_API_FILE = FRONTEND_ROOT / "src" / "lib" / "api.ts"
 
 DB_URL = os.environ.get(
@@ -143,63 +137,6 @@ def iter_watch_files() -> list[Path]:
             files.update(root.rglob(pattern))
     return sorted(path for path in files if path.is_file())
 
-
-def emit_pulse(event_type: str, severity: str, message: str, payload: dict[str, Any], mode: str = "unknown"):
-    if not PULSE_SCRIPT.exists():
-        return
-    try:
-        subprocess.run(
-            [
-                "powershell.exe",
-                "-ExecutionPolicy", "Bypass",
-                "-File", str(PULSE_SCRIPT),
-                "-EventType", event_type,
-                "-Severity", severity,
-                "-Message", message,
-                "-Source", "PreflightWatcher",
-                "-Mode", mode,
-                "-DataJson", json.dumps(payload),
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-    except OSError:
-        pass
-
-
-def run_dev_recon(recover_dev: bool = False) -> dict[str, Any] | None:
-    if not RECON_SCRIPT.exists():
-        return None
-    try:
-        recon_proc = subprocess.run(
-            ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", str(RECON_SCRIPT)],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        raw = (recon_proc.stdout or "").strip()
-        if not raw:
-            return None
-        recon = json.loads(raw)
-    except (OSError, json.JSONDecodeError):
-        return None
-
-    if recover_dev and recon.get("recoveryNeeded") and SENTINEL_SCRIPT.exists():
-        try:
-            sentinel_proc = subprocess.run(
-                ["powershell.exe", "-ExecutionPolicy", "Bypass", "-File", str(SENTINEL_SCRIPT)],
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-            raw_sentinel = (sentinel_proc.stdout or "").strip()
-            if raw_sentinel:
-                recon["sentinel"] = json.loads(raw_sentinel)
-                recon["recovered"] = True
-        except (OSError, json.JSONDecodeError):
-            recon["recovered"] = False
-    return recon
 
 
 def _record_encounter(check_key: str, issue_count: int):
@@ -699,17 +636,14 @@ def check_dependencies():
 #  DAEMON MODE (Background Watcher)
 # =================================================================
 
-async def daemon_loop(interval: int = 30, recover_dev: bool = False):
+async def daemon_loop(interval: int = 30):
     print(f"\n{BOLD}  THE WATCHER AWAKENS{RESET}")
     print(f"{DIM}  Daemon mode -- scanning every {interval}s{RESET}")
     print(f"{DIM}  Watching: {REPO_ROOT}{RESET}")
-    print(f"{DIM}  Dev recovery: {'enabled' if recover_dev else 'disabled'}{RESET}")
     print(f"{DIM}  Ctrl+C to banish{RESET}\n")
 
     prev: dict[str, str] = {}
     first = True
-    last_integrity_state: str | None = None
-    last_dev_state: str | None = None
 
     while True:
         curr: dict[str, str] = {}
@@ -732,41 +666,7 @@ async def daemon_loop(interval: int = 30, recover_dev: bool = False):
             print(f"\n{CYAN}{'=' * 60}{RESET}")
             print(f"{BOLD}  WATCHER SCAN -- {ts}{RESET}")
             print(f"{CYAN}{'=' * 60}{RESET}")
-            summary = await run_all(exit_on_fail=False)
-            integrity_state = "degraded" if summary["fail"] > 0 else "nominal"
-            if integrity_state != last_integrity_state or changed_files:
-                emit_pulse(
-                    event_type=f"integrity-{integrity_state}",
-                    severity="warn" if integrity_state == "degraded" else "info",
-                    message="Preflight integrity scan completed.",
-                    payload={
-                        "changedFiles": changed_files,
-                        "summary": summary,
-                    },
-                )
-                last_integrity_state = integrity_state
-
-        recon = run_dev_recon(recover_dev=recover_dev)
-        if recon is not None:
-            dev_state = "degraded" if recon.get("recoveryNeeded") else "nominal"
-            if recon.get("recovered"):
-                emit_pulse(
-                    event_type="dev-recovered",
-                    severity="warn",
-                    message="A.E.G.I.S. restored the local dev environment.",
-                    payload=recon,
-                    mode=str(recon.get("mode", "unknown")),
-                )
-                dev_state = "nominal"
-            elif dev_state != last_dev_state:
-                emit_pulse(
-                    event_type=f"dev-{dev_state}",
-                    severity="warn" if dev_state == "degraded" else "info",
-                    message="Dev environment state changed.",
-                    payload=recon,
-                    mode=str(recon.get("mode", "unknown")),
-                )
-            last_dev_state = dev_state
+            await run_all(exit_on_fail=False)
 
         prev = curr
         first = False
@@ -869,12 +769,11 @@ checks:
     parser.add_argument("--fix", action="store_true", help="Generate ALTER statements for schema drift")
     parser.add_argument("--daemon", action="store_true", help="Run as background repo and app watcher")
     parser.add_argument("--interval", type=int, default=30, help="Daemon poll interval (seconds)")
-    parser.add_argument("--recover-dev", action="store_true", help="Allow A.E.G.I.S. to recover degraded local dev services")
     args = parser.parse_args()
 
     if args.daemon:
         try:
-            asyncio.run(daemon_loop(args.interval, recover_dev=args.recover_dev))
+            asyncio.run(daemon_loop(args.interval))
         except KeyboardInterrupt:
             print(f"\n{DIM}The Watcher sleeps...{RESET}")
     else:

@@ -3,7 +3,7 @@
 Net-new justification: Courier and its provider logs own shop messages, while
 Ark owns AInbox intake, but neither store owns the retryable transport between
 them. This table records only that outbound bridge obligation and its typed
-receipt; it does not duplicate AInbox items or BTTCO business state.
+receipt; it does not duplicate AInbox items or Ryozan business state.
 """
 
 import uuid

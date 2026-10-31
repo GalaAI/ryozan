@@ -27,10 +27,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.sms_template import SmsTemplate
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.sms import render_template
 
-logger = logging.getLogger("bttco.sms_templates")
+logger = logging.getLogger("ryozan.sms_templates")
 router = APIRouter(prefix="/sms-templates", tags=["sms-templates"])
 
 # Slug rules:
@@ -87,28 +87,28 @@ class TemplatePreview(BaseModel):
 # ── Permission helpers ──────────────────────────────────────────
 
 
-def _is_admin(user: BTTCOUser) -> bool:
+def _is_admin(user: User) -> bool:
     return ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("admin", 3)
 
 
-def _is_staff(user: BTTCOUser) -> bool:
+def _is_staff(user: User) -> bool:
     """Artist, admin, or founder. Excludes collectors."""
     return ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("artist", 2)
 
 
-def _require_staff(user: BTTCOUser) -> None:
+def _require_staff(user: User) -> None:
     if not _is_staff(user):
         raise HTTPException(status_code=403, detail="Staff role or higher required")
 
 
-def _can_edit(user: BTTCOUser, tpl: SmsTemplate) -> bool:
+def _can_edit(user: User, tpl: SmsTemplate) -> bool:
     """Admin+ can edit anything; otherwise must own the template."""
     if _is_admin(user):
         return True
     return tpl.owner_id is not None and tpl.owner_id == user.id
 
 
-def _can_read(user: BTTCOUser, tpl: SmsTemplate) -> bool:
+def _can_read(user: User, tpl: SmsTemplate) -> bool:
     """Admin+ reads all; staff reads shop + own; otherwise nothing.
 
     Collectors don't have any read path here at all (router guard on _require_staff).
@@ -121,7 +121,7 @@ def _can_read(user: BTTCOUser, tpl: SmsTemplate) -> bool:
     return tpl.owner_id == user.id
 
 
-def _to_response(tpl: SmsTemplate, user: BTTCOUser) -> dict:
+def _to_response(tpl: SmsTemplate, user: User) -> dict:
     return {
         "id": tpl.id,
         "slug": tpl.slug,
@@ -158,7 +158,7 @@ def _segment_count(body: str) -> int:
 @router.get("/", response_model=list[TemplateResponse])
 async def list_templates(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff+: list every template the caller is allowed to see.
 
@@ -183,7 +183,7 @@ async def list_templates(
 async def get_template(
     slug: str,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
     result = await db.execute(select(SmsTemplate).where(SmsTemplate.slug == slug))
@@ -197,7 +197,7 @@ async def get_template(
 async def create_template(
     body: TemplateCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff+: create a new template.
 
@@ -249,7 +249,7 @@ async def update_template(
     slug: str,
     body: TemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
     result = await db.execute(select(SmsTemplate).where(SmsTemplate.slug == slug))
@@ -272,7 +272,7 @@ async def update_template(
 async def delete_template(
     slug: str,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a template. Same edit gate as PATCH."""
     _require_staff(current_user)
@@ -290,7 +290,7 @@ async def delete_template(
 @router.post("/preview")
 async def preview_template(
     body: TemplatePreview,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Render a body string with sample data. Doesn't require ownership —
     artists can preview shop templates without modifying them."""
@@ -313,7 +313,7 @@ async def send_template_manual(
     slug: str,
     body: TemplateSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff+: send a template. Staff can only send their own templates or
     shop templates. Recipient validation (whether the artist can text this
@@ -360,7 +360,7 @@ async def send_template_manual(
 @router.post("/seed", status_code=200)
 async def seed_templates(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Founder only: upsert all hardcoded shop-level SMS templates."""
     if current_user.role != "founder":

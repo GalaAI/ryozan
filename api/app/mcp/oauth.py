@@ -1,6 +1,6 @@
 """OAuth 2.1 authorization server and token verifier for the remote Ryozan MCP.
 
-The BTTCO account remains the only user identity. This module adds the remote
+The Ryozan account remains the only user identity. This module adds the remote
 client grant layer required by ChatGPT, Claude, Gemini, and other MCP hosts.
 """
 
@@ -31,7 +31,7 @@ from app.core.security import (
     reset_token_matches_hash,
 )
 from app.models.mcp_oauth import McpOAuthAuthorizationCode, McpOAuthClient, McpOAuthRefreshToken
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -354,7 +354,7 @@ def _pkce_challenge(verifier: str) -> str:
     return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("ascii")
 
 
-def _create_mcp_access_token(user: BTTCOUser, client_id: str, scope: str, resource: str) -> str:
+def _create_mcp_access_token(user: User, client_id: str, scope: str, resource: str) -> str:
     now = _now()
     return jwt.encode(
         {
@@ -376,7 +376,7 @@ def _create_mcp_access_token(user: BTTCOUser, client_id: str, scope: str, resour
 
 async def _issue_tokens(
     db: AsyncSession,
-    user: BTTCOUser,
+    user: User,
     client_id: str,
     scope: str,
     resource: str,
@@ -434,7 +434,7 @@ async def token_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
         ):
             return _oauth_error("invalid_grant", "Authorization code is invalid or expired")
         record.used_at = _now()
-        user = await db.get(BTTCOUser, record.user_id)
+        user = await db.get(User, record.user_id)
         if not user:
             return _oauth_error("invalid_grant", "User account no longer exists")
         if not _grant_matches_mailbox_ownership(user, record):
@@ -459,7 +459,7 @@ async def token_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
         ):
             return _oauth_error("invalid_grant", "Refresh token is invalid or expired")
         record.revoked_at = _now()
-        user = await db.get(BTTCOUser, record.user_id)
+        user = await db.get(User, record.user_id)
         if not user:
             return _oauth_error("invalid_grant", "User account no longer exists")
         if not _grant_matches_mailbox_ownership(user, record):
@@ -491,7 +491,7 @@ async def revoke_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
     return JSONResponse({}, status_code=200)
 
 
-def _grant_matches_mailbox_ownership(user: BTTCOUser, record) -> bool:
+def _grant_matches_mailbox_ownership(user: User, record) -> bool:
     if user.role != "collector":
         return True
     # Historical grants carry neither email nor password proof. Even after
@@ -505,7 +505,7 @@ def _grant_matches_mailbox_ownership(user: BTTCOUser, record) -> bool:
 
 @dataclass(frozen=True)
 class McpActor:
-    user: BTTCOUser | None
+    user: User | None
     role: str
     scopes: set[str]
     site_token: str
@@ -529,7 +529,7 @@ async def authenticate_mcp_token(token: str) -> McpActor | None:
         return None
     async with async_session() as db:
         try:
-            user = await db.get(BTTCOUser, UUID(str(payload["sub"])))
+            user = await db.get(User, UUID(str(payload["sub"])))
         except (TypeError, ValueError):
             return None
         if not user or not reset_token_matches_hash(payload, user.password_hash):

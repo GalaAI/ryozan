@@ -557,11 +557,11 @@ app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 # Resolve the router from its module at include time: the top-level name bound
 # at import can miss the decorator-registered routes under some import orders,
 # so read the fully-built router object here.
-from app.mcp.oauth import oauth_router as _bttco_oauth_router  # noqa: E402
-from app.mcp.router import mcp_router as _bttco_mcp_router  # noqa: E402
+from app.mcp.oauth import oauth_router as _mcp_oauth_router  # noqa: E402
+from app.mcp.router import mcp_router as _mcp_router  # noqa: E402
 
-app.include_router(_bttco_mcp_router)
-app.include_router(_bttco_oauth_router)
+app.include_router(_mcp_router)
+app.include_router(_mcp_oauth_router)
 
 # Serve uploaded files (gallery images, etc.)
 # NOTE: Local /uploads/ static mount removed (2026-03-24).

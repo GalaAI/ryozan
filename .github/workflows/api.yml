@@ -167,37 +167,39 @@ jobs:
 
       - name: Booking approval integration
         env:
-          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+          RYOZAN_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "booking_approval_pg_tests.py"
 
       - name: Courier SMS booking routing integration
         env:
-          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+          RYOZAN_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "courier_sms_booking_routing_pg_tests.py"
 
       - name: POS attempt integration
         env:
-          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+          RYOZAN_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "pos_attempt_pg_tests.py"
 
       - name: Booky courier integration
         env:
-          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+          RYOZAN_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "booky_courier_pg_tests.py"
 
       - name: Gala schedule integration
         env:
-          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+          RYOZAN_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "gala_schedule_pg_tests.py"
 
       - name: Baseline and adoption against a real Postgres
+        # This suite describes the frozen BTTCO-era baseline and is not edited
+        # by the rename, so it still reads the legacy variable name.
         env:
           BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "schema_baseline_pg_tests.py"
 
       - name: Models match the schema (create_all == baseline, alembic check clean)
         env:
-          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+          RYOZAN_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "model_schema_parity_pg_tests.py"
 
       - name: alembic upgrade head on an empty database (the container's path)
@@ -327,7 +329,7 @@ jobs:
       run:
         working-directory: packages/ryozan-econ
     # The bookkeeping core is pure domain logic: no dependencies, no database, no
-    # BTTCO imports, so it needs none of the verify job's setup. Its whole value
+    # Ryozan imports, so it needs none of the verify job's setup. Its whole value
     # is its invariants -- entries balance, the trial balance ties, the balance
     # sheet ties, a deposit stays a liability until earned -- and those are cheap
     # to prove, so they are proven on every run rather than assumed.

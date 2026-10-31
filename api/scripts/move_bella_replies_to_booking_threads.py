@@ -59,7 +59,7 @@ from app.api.v1.endpoints.sms import (  # noqa: E402
 )
 from app.models.message import Conversation, Message  # noqa: E402
 from app.models.sms_message import SmsMessage  # noqa: E402
-from app.models.user import BTTCOUser  # noqa: E402
+from app.models.user import User  # noqa: E402
 from app.services.sms import normalise_phone  # noqa: E402
 
 if TYPE_CHECKING:
@@ -104,7 +104,7 @@ async def plan_and_apply(db: AsyncSession, *, apply: bool, exclude_names: set[st
             continue
         inbound_sender_ids = [m.sender_id for m in messages]
         sender = await db.scalar(
-            select(BTTCOUser).where(BTTCOUser.id.in_(inbound_sender_ids), BTTCOUser.role == "collector").limit(1)
+            select(User).where(User.id.in_(inbound_sender_ids), User.role == "collector").limit(1)
         )
         move = Move(thread.id, _mask(phone), (sender.name if sender else "") or "(unknown)", None, None, len(messages))
         moves.append(move)
@@ -130,7 +130,7 @@ async def plan_and_apply(db: AsyncSession, *, apply: bool, exclude_names: set[st
         # SMS sender's name is the phone and guest_name is cleared.
         collector = sender
         if booking.client_id and booking.client_id != sender.id:
-            collector = await db.get(BTTCOUser, booking.client_id) or sender
+            collector = await db.get(User, booking.client_id) or sender
         names = {(n or "").strip().lower() for n in (sender.name, collector.name, booking.guest_name)}
         if names & excluded:
             move.skipped_reason = "excluded"

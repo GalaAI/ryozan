@@ -37,9 +37,7 @@ def build_channel_status(settings: Settings, context: CourierRouteContext) -> di
     sms_connected = bool(sms_configured and bella_lane_ready)
     whatsapp_configured = bool(twilio_credentials and settings.TWILIO_FROM_NUMBER)
     email_configured = bool(settings.RESEND_API_KEY or settings.SENDGRID_API_KEY)
-    bttco_voice_configured = bool(
-        twilio_credentials and settings.ELEVENLABS_API_KEY and settings.ELEVENLABS_BTTCO_AGENT_ID
-    )
+    voice_configured = bool(twilio_credentials and settings.ELEVENLABS_API_KEY and settings.ELEVENLABS_RYOZAN_AGENT_ID)
     personal_voice_configured = bool(
         settings.JAMBONZ_ACCOUNT_SID
         and settings.JAMBONZ_API_KEY
@@ -117,11 +115,11 @@ def build_channel_status(settings: Settings, context: CourierRouteContext) -> di
             "id": "twilio_voice",
             "label": "Business Voice",
             "kind": "voice",
-            "connected": bttco_voice_configured,
+            "connected": voice_configured,
             "configured": bool(twilio_credentials and settings.ELEVENLABS_API_KEY),
             "route": mask_sms_sender(settings.TWILIO_FROM_NUMBER) if settings.TWILIO_FROM_NUMBER else None,
             "forward_to": "Courier voice agent",
-            "status": "ready_for_voice_webhook" if bttco_voice_configured else "needs_twilio_elevenlabs_voice_setup",
+            "status": "ready_for_voice_webhook" if voice_configured else "needs_twilio_elevenlabs_voice_setup",
             "direction": "inbound_outbound",
             "provider": "twilio_elevenlabs",
             "lane": "bttco_business",
@@ -173,11 +171,11 @@ def build_channel_status(settings: Settings, context: CourierRouteContext) -> di
 
 def build_tool_catalog(settings: Settings) -> list[dict[str, Any]]:
     public_base = settings.API_PUBLIC_BASE_URL.rstrip("/")
-    bttco_voice_configured = bool(
+    voice_configured = bool(
         settings.TWILIO_ACCOUNT_SID
         and settings.TWILIO_AUTH_TOKEN
         and settings.ELEVENLABS_API_KEY
-        and settings.ELEVENLABS_BTTCO_AGENT_ID
+        and settings.ELEVENLABS_RYOZAN_AGENT_ID
     )
     sms_lanes = public_sms_lane_status(settings)
     bella_sms_ready = any(lane["id"] == "bella" and lane["status"] == "ready" for lane in sms_lanes)
@@ -220,7 +218,7 @@ def build_tool_catalog(settings: Settings) -> list[dict[str, Any]]:
             "label": "Ryozan voice assistant",
             "provider": "twilio_elevenlabs",
             "lane": "bttco_business",
-            "status": "ready" if bttco_voice_configured else "planned",
+            "status": "ready" if voice_configured else "planned",
             "webhook_url": f"{public_base}/api/v1/voice/twilio/inbound",
             "capabilities": ["call_screen", "summarize", "handoff", "missed_call_textback"],
         },

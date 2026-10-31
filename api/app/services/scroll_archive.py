@@ -39,7 +39,7 @@ from app.constants.timezones import SHOP_TIMEZONE
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email import FROM_ADMIN, EmailAttachment, send_email
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 
     from app.services.scroll_pdf import ScrollAsset
 
-logger = logging.getLogger("bttco.scroll_archive")
+logger = logging.getLogger("ryozan.scroll_archive")
 
 # Scroll category slug for the owner's archive, and the document category it maps to
 # under the scrolls.py convention (`scroll_{slug}`, builtin `artist` -> `scroll`).
@@ -77,14 +77,14 @@ def build_submission_prefix(artist_user_id: str) -> str:
     return f"scrolls/{artist_user_id}/{stamp}-{token}"
 
 
-async def resolve_founders(db: AsyncSession) -> list[BTTCOUser]:
+async def resolve_founders(db: AsyncSession) -> list[User]:
     """Every user with role='founder'. Empty list is a valid, non-fatal outcome."""
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.role == FOUNDER_ROLE))
+    result = await db.execute(select(User).where(User.role == FOUNDER_ROLE))
     return list(result.scalars().all())
 
 
 def _archive_data(
-    artist: BTTCOUser,
+    artist: User,
     fields: dict,
     assets: list[ScrollAsset],
     submission_id: str,
@@ -120,8 +120,8 @@ def _archive_data(
 
 def file_owner_archive(
     db: AsyncSession,
-    artist: BTTCOUser,
-    founders: list[BTTCOUser],
+    artist: User,
+    founders: list[User],
     fields: dict,
     assets: list[ScrollAsset],
     submission_id: str,
@@ -163,8 +163,8 @@ def file_owner_archive(
 
 def notify_owners(
     db: AsyncSession,
-    artist: BTTCOUser,
-    founders: list[BTTCOUser],
+    artist: User,
+    founders: list[User],
     submitted_at: datetime,
     pdf_url: str | None,
 ) -> int:
@@ -282,8 +282,8 @@ def build_owner_archive_email_html(
 
 def queue_owner_emails(
     db: AsyncSession,
-    artist: BTTCOUser,
-    founders: list[BTTCOUser],
+    artist: User,
+    founders: list[User],
     submitted_at: datetime,
     assets: list[ScrollAsset],
     pdf_bytes: bytes | None,

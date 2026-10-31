@@ -21,15 +21,16 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.api.v1.endpoints import bookings as bookings_endpoint
 from app.api.v1.endpoints import email_log as email_log_endpoint
 from app.constants.status import BookingStatus
+from app.core import legacy_env
 from app.core.database import Base
 from app.models.booking import Booking
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.email_log import EmailLog
 from app.models.message import Conversation, Message
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import email as email_service
 
-TEST_DATABASE_URL = os.environ.get("BTTCO_TEST_DATABASE_URL", "")
+TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "")
 if TEST_DATABASE_URL.startswith("postgresql://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace(
         "postgresql://", "postgresql+asyncpg://", 1
@@ -38,7 +39,7 @@ if TEST_DATABASE_URL.startswith("postgresql://"):
 
 @unittest.skipUnless(
     TEST_DATABASE_URL,
-    "set BTTCO_TEST_DATABASE_URL to run the real Booky Courier race",
+    "set RYOZAN_TEST_DATABASE_URL to run the real Booky Courier race",
 )
 class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -57,7 +58,7 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             expire_on_commit=False,
         )
         tables = [
-            BTTCOUser.__table__,
+            User.__table__,
             Conversation.__table__,
             Booking.__table__,
             Message.__table__,
@@ -72,7 +73,7 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
                 )
             )
 
-        self.founder = BTTCOUser(
+        self.founder = User(
             id=uuid4(),
             email=f"founder-{uuid4().hex}@example.test",
             password_hash="disabled",

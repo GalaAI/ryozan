@@ -35,7 +35,7 @@ from app.core.security import get_current_user, require_role
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_category import ScrollCategory
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email import (
     FROM_ADMIN,
     SCROLL_REQUEST_TEMPLATE_MARKER,
@@ -46,7 +46,7 @@ from app.services.email import (
 from app.services.push import send_push_notification
 from app.services.storage import upload_file as upload_to_blob
 
-logger = logging.getLogger("bttco.scrolls")
+logger = logging.getLogger("ryozan.scrolls")
 router = APIRouter(prefix="/scrolls", tags=["scrolls"])
 
 SLUG_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789_-")
@@ -54,7 +54,7 @@ OWNER_ARCHIVE_SLUG = "owner-archive"
 OWNER_ARCHIVE_CATEGORY = f"scroll_{OWNER_ARCHIVE_SLUG}"
 
 
-def _require_owner_archive_access(user: BTTCOUser, category_slug: str) -> None:
+def _require_owner_archive_access(user: User, category_slug: str) -> None:
     if category_slug == OWNER_ARCHIVE_SLUG and user.role != "founder":
         raise HTTPException(status_code=403, detail="Owner archive access requires founder role")
 
@@ -69,7 +69,7 @@ def _slugify(label: str) -> str:
 @router.get("/categories")
 async def list_categories(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """List all scroll categories ordered by sort_order."""
     result = await db.execute(select(ScrollCategory).order_by(ScrollCategory.sort_order, ScrollCategory.label))
@@ -100,7 +100,7 @@ async def create_category(
     ai_digest_enabled: bool = Form(False),
     ai_digest_prompt: str = Form(""),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("founder")),
+    current_user: User = Depends(require_role("founder")),
 ):
     """
     Founder only — create a new scroll tab category.
@@ -162,7 +162,7 @@ _VALID_ICON_SLUGS = ["file", "dollar", "health", "legal", "chart", "lock", "clip
 async def gala_interpret_category(
     body: InterpretCategoryRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("founder")),
+    current_user: User = Depends(require_role("founder")),
 ):
     """
     Founder only — Gala (Claude Haiku) interprets natural language intent and creates a scroll category.
@@ -264,7 +264,7 @@ async def gala_interpret_category(
 async def delete_category(
     slug: str,
     db: AsyncSession = Depends(get_db),
-    _: BTTCOUser = Depends(require_role("founder")),
+    _: User = Depends(require_role("founder")),
 ):
     """Founder only — delete a custom (non-builtin) category."""
     result = await db.execute(select(ScrollCategory).where(ScrollCategory.slug == slug))
@@ -285,7 +285,7 @@ async def list_category_docs(
     category_slug: str,
     user_id: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List scroll documents in a category.
@@ -305,8 +305,8 @@ async def list_category_docs(
     doc_category = "scroll" if category_slug == "artist" else f"scroll_{category_slug}"
 
     query = (
-        select(DocumentInstance, BTTCOUser.name.label("user_name"))
-        .outerjoin(BTTCOUser, DocumentInstance.user_id == BTTCOUser.id)
+        select(DocumentInstance, User.name.label("user_name"))
+        .outerjoin(User, DocumentInstance.user_id == User.id)
         .where(DocumentInstance.category == doc_category)
     )
 
@@ -370,7 +370,7 @@ async def upload_scroll_doc(
     notes: str = Form(""),
     ai_digest_enabled: bool = Form(False),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Upload a document to a scroll category.
@@ -465,7 +465,7 @@ async def upload_scroll_doc(
 async def delete_scroll_doc(
     doc_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a scroll document. Founders can delete any; others delete only their own."""
     result = await db.execute(select(DocumentInstance).where(DocumentInstance.id == doc_id))
@@ -491,7 +491,7 @@ async def _run_gala_digest(
     mime_type: str,
     filename: str,
     prompt: str,
-    user: BTTCOUser,
+    user: User,
     db: AsyncSession,
 ) -> dict:
     """
@@ -610,7 +610,7 @@ async def _get_latest_scroll_notification(
     return result.scalar_one_or_none()
 
 
-async def _send_scroll_notification(db: AsyncSession, artist: BTTCOUser, *, is_reminder: bool) -> Notification:
+async def _send_scroll_notification(db: AsyncSession, artist: User, *, is_reminder: bool) -> Notification:
     if is_reminder:
         title = "Reminder: Your Artist Scroll is Still Incomplete"
         body = (
@@ -688,7 +688,7 @@ async def _send_scroll_notification(db: AsyncSession, artist: BTTCOUser, *, is_r
     return notif
 
 
-async def _send_scroll_reminder_if_due(db: AsyncSession, artist: BTTCOUser) -> bool:
+async def _send_scroll_reminder_if_due(db: AsyncSession, artist: User) -> bool:
     latest_scroll = await _get_latest_scroll(db, artist.id)
     if latest_scroll and latest_scroll.status == "signed":
         return False
@@ -714,14 +714,14 @@ async def _send_scroll_reminder_if_due(db: AsyncSession, artist: BTTCOUser) -> b
 async def request_artist_scroll(
     artist_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("founder")),
+    current_user: User = Depends(require_role("founder")),
 ):
     """
     Send the artist a first-time notification asking them to complete their Artist Scroll.
     Founder only. Safe to call multiple times — each call creates a new notification.
     The notification links directly to the Spyder Artist Scroll workflow in the Hub.
     """
-    artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == artist_id))
+    artist_result = await db.execute(select(User).where(User.id == artist_id))
     artist = artist_result.scalar_one_or_none()
     if not artist:
         raise HTTPException(404, "Artist not found")
@@ -737,13 +737,13 @@ async def request_artist_scroll(
 async def remind_artist_scroll(
     artist_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("founder")),
+    current_user: User = Depends(require_role("founder")),
 ):
     """
     Send the artist a reminder to complete their Artist Scroll.
     Debounced: if a remind was already sent within the last 24 hours, returns 429.
     """
-    artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == artist_id))
+    artist_result = await db.execute(select(User).where(User.id == artist_id))
     artist = artist_result.scalar_one_or_none()
     if not artist:
         raise HTTPException(404, "Artist not found")
@@ -765,10 +765,10 @@ async def remind_artist_scroll(
 async def get_artist_scroll_request_status(
     artist_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _: BTTCOUser = Depends(require_role("founder")),
+    _: User = Depends(require_role("founder")),
 ):
     """Founder: review whether an artist has been requested or reminded to complete their scroll."""
-    artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == artist_id))
+    artist_result = await db.execute(select(User).where(User.id == artist_id))
     artist = artist_result.scalar_one_or_none()
     if not artist:
         raise HTTPException(404, "Artist not found")
@@ -809,7 +809,7 @@ async def send_daily_scroll_reminders(
     if x_cron_secret != settings.CRON_SECRET:
         raise HTTPException(status_code=403, detail="Invalid cron secret")
 
-    artists_result = await db.execute(select(BTTCOUser).where(BTTCOUser.role.in_(("artist", "admin", "founder"))))
+    artists_result = await db.execute(select(User).where(User.role.in_(("artist", "admin", "founder"))))
     artists = artists_result.scalars().all()
     sent: list[str] = []
     skipped = 0

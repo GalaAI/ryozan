@@ -47,7 +47,7 @@ from app.core.security import get_current_user, require_role
 from app.models.booking import Booking
 from app.models.document import DocumentInstance, DocumentTemplate
 from app.models.notification import Notification
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 from app.schemas.document import (
     DocumentInstanceCreate,
     DocumentInstanceListResponse,
@@ -84,7 +84,7 @@ from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pd
 from app.services.sms import send_sms
 from app.services.storage import upload_file as upload_to_blob
 
-logger = logging.getLogger("bttco.documents")
+logger = logging.getLogger("ryozan.documents")
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -105,13 +105,13 @@ WAIVER_CONTACT_PREFILL_FIELDS = (
 )
 
 
-def _require_owner_archive_access(user: BTTCOUser, category: str | None) -> None:
+def _require_owner_archive_access(user: User, category: str | None) -> None:
     """Keep owner compliance archives founder-only across generic document routes."""
     if category == OWNER_ARCHIVE_CATEGORY and user.role != "founder":
         raise HTTPException(status_code=403, detail="Owner archive access requires founder role")
 
 
-def _require_document_instance_access(instance: DocumentInstance, user: BTTCOUser) -> None:
+def _require_document_instance_access(instance: DocumentInstance, user: User) -> None:
     """Apply the same owner and artist assignment boundary to generic document actions."""
     _require_owner_archive_access(user, instance.category)
     if user.role in {"admin", "founder"}:
@@ -311,7 +311,7 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
 async def list_templates(
     category: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List all active document templates, optionally filtered by category."""
     query = select(DocumentTemplate).where(DocumentTemplate.is_active)
@@ -329,7 +329,7 @@ async def list_templates(
 async def get_template(
     template_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a single document template by ID."""
     result = await db.execute(select(DocumentTemplate).where(DocumentTemplate.id == template_id))
@@ -343,7 +343,7 @@ async def get_template(
 async def create_template(
     body: DocumentTemplateCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("admin")),
+    current_user: User = Depends(require_role("admin")),
 ):
     """Admin/founder: create a new global document template."""
     template = DocumentTemplate(
@@ -361,7 +361,7 @@ async def update_template(
     template_id: uuid.UUID,
     body: DocumentTemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("admin")),
+    current_user: User = Depends(require_role("admin")),
 ):
     """Admin/founder: update a global document template."""
     result = await db.execute(select(DocumentTemplate).where(DocumentTemplate.id == template_id))
@@ -388,7 +388,7 @@ async def list_documents(
     user_id: uuid.UUID | None = Query(None),
     status: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List document instances.
@@ -403,10 +403,10 @@ async def list_documents(
         select(
             DocumentInstance,
             DocumentTemplate.name.label("template_name"),
-            BTTCOUser.name.label("user_name"),
+            User.name.label("user_name"),
         )
         .outerjoin(DocumentTemplate, DocumentInstance.template_id == DocumentTemplate.id)
-        .outerjoin(BTTCOUser, DocumentInstance.user_id == BTTCOUser.id)
+        .outerjoin(User, DocumentInstance.user_id == User.id)
     )
 
     # Role-based filtering: founders/admins see all; artists see their own
@@ -454,7 +454,7 @@ async def list_documents(
 async def submit_document(
     body: DocumentInstanceCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Submit a filled form or create a document instance."""
     _require_owner_archive_access(current_user, body.category)
@@ -485,7 +485,7 @@ async def submit_document(
 async def sign_document(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Sign a document (marks it as signed with current timestamp)."""
     result = await db.execute(select(DocumentInstance).where(DocumentInstance.id == document_id))
@@ -519,7 +519,7 @@ async def update_document_status(
     document_id: uuid.UUID,
     body: DocumentStatusUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: update a document's status (approve, reject, etc.)."""
     result = await db.execute(select(DocumentInstance).where(DocumentInstance.id == document_id))
@@ -543,7 +543,7 @@ async def update_document_status(
         tpl_result = await db.execute(select(DocumentTemplate.name).where(DocumentTemplate.id == instance.template_id))
         template_name = tpl_result.scalar_one_or_none()
     if instance.user_id != current_user.id:
-        user_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == instance.user_id))
+        user_result = await db.execute(select(User.name).where(User.id == instance.user_id))
         user_name = user_result.scalar_one_or_none()
 
     return _instance_to_response(instance, template_name, user_name)
@@ -555,7 +555,7 @@ async def upload_document(
     category: str = Form(...),
     title: str = Form(...),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Upload a file and create a document instance for it."""
     _require_owner_archive_access(current_user, category)
@@ -599,7 +599,7 @@ async def upload_document(
 async def delete_document(
     instance_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: Delete a document instance."""
     result = await db.execute(select(DocumentInstance).where(DocumentInstance.id == instance_id))
@@ -634,7 +634,7 @@ async def submit_scroll(
     cpr_cert: UploadFile | None = File(None),
     govt_id: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Submit a completed Artist Scroll. Stores:
@@ -917,7 +917,7 @@ async def submit_scroll(
     # All best-effort: a failure here must not cost the artist their submission, their
     # coin, or their XP. Logged at error level with the submission id so a missing
     # archive is diagnosable rather than a silent 200.
-    founders: list[BTTCOUser] = []
+    founders: list[User] = []
     archive_rows: list[DocumentInstance] = []
     owner_emails_queued = 0
     try:
@@ -951,10 +951,10 @@ async def submit_scroll(
             exc_info=True,
         )
 
-    # Award BTTCoin + XP for scroll completion
-    scroll_bttcoin = 500
+    # Award RYO + XP for scroll completion
+    scroll_coin_reward = 500
     scroll_xp = 150
-    current_user.bttcoin_balance = (current_user.bttcoin_balance or 0) + scroll_bttcoin
+    current_user.bttcoin_balance = (current_user.bttcoin_balance or 0) + scroll_coin_reward
     current_user.quest_points = (current_user.quest_points or 0) + scroll_xp
 
     # Mark all scroll_request notifications as read for this user
@@ -984,7 +984,7 @@ async def submit_scroll(
         "owner_copies_filed": len(archive_rows),
         "owner_emails_queued": owner_emails_queued,
         "owner_emails_sent": 0,
-        "bttcoin_awarded": scroll_bttcoin,
+        "bttcoin_awarded": scroll_coin_reward,
         "xp_awarded": scroll_xp,
     }
 
@@ -992,7 +992,7 @@ async def submit_scroll(
 @router.get("/scroll/my")
 async def get_my_scroll(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get the calling user's own completed scroll (if any)."""
     result = await db.execute(
@@ -1035,14 +1035,14 @@ async def get_my_scroll(
 async def get_user_scroll(
     user_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    caller: BTTCOUser = Depends(require_role("artist")),
+    caller: User = Depends(require_role("artist")),
 ):
     """Fetch the caller's scroll, or any scroll for founder/admin review."""
     if caller.role not in {"founder", "admin"} and caller.id != user_id:
         raise HTTPException(status_code=403, detail="Artist Scroll is not assigned to this account")
     result = await db.execute(
-        select(DocumentInstance, BTTCOUser.name.label("user_name"))
-        .outerjoin(BTTCOUser, DocumentInstance.user_id == BTTCOUser.id)
+        select(DocumentInstance, User.name.label("user_name"))
+        .outerjoin(User, DocumentInstance.user_id == User.id)
         .where(
             DocumentInstance.user_id == user_id,
             DocumentInstance.category == "scroll",
@@ -1087,7 +1087,7 @@ async def get_user_scroll(
 async def send_document(
     body: DocumentSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Artist+: Send a document to a recipient via magic link email.
@@ -1245,18 +1245,16 @@ CHECKIN_VISIT_STATUSES = (DocStatus.PENDING_REVIEW, DocStatus.SIGNED, DocStatus.
 
 async def _checkin_matches(db: AsyncSession, contact: checkin_verify.Contact) -> dict:
     """Everything on file for one contact: portal account, the next booking, and prior waivers."""
-    users: list[BTTCOUser] = []
+    users: list[User] = []
     if contact.kind == "email":
-        users = list(
-            (await db.execute(select(BTTCOUser).where(func.lower(BTTCOUser.email) == contact.value))).scalars()
-        )
+        users = list((await db.execute(select(User).where(func.lower(User.email) == contact.value))).scalars())
         booking_filter = or_(
             func.lower(Booking.guest_email) == contact.value,
             Booking.client_id.in_([u.id for u in users]) if users else false(),
         )
     else:
-        digits = func.regexp_replace(func.coalesce(BTTCOUser.phone, ""), r"\D", "", "g")
-        users = list((await db.execute(select(BTTCOUser).where(digits.like(f"%{contact.value}")))).scalars())
+        digits = func.regexp_replace(func.coalesce(User.phone, ""), r"\D", "", "g")
+        users = list((await db.execute(select(User).where(digits.like(f"%{contact.value}")))).scalars())
         booking_digits = func.regexp_replace(func.coalesce(Booking.guest_phone, ""), r"\D", "", "g")
         booking_filter = or_(
             booking_digits.like(f"%{contact.value}"),
@@ -1527,10 +1525,10 @@ async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = D
 
     matches = await _checkin_matches(db, contact)
     booking: Booking | None = matches["booking"]
-    member: BTTCOUser | None = matches["member"]
+    member: User | None = matches["member"]
     account = member or (matches["users"][0] if matches["users"] else None)
 
-    artist: BTTCOUser | None = await db.get(BTTCOUser, booking.artist_id) if booking else None
+    artist: User | None = await db.get(User, booking.artist_id) if booking else None
     # A returning walk-in has no booking and no account: their last waiver is the only record of who they are.
     prior_answers: dict = matches["prior"]["data"] if matches["prior"] else {}
     prior_name = prior_answers.get("full_name") if isinstance(prior_answers.get("full_name"), str) else None
@@ -1864,10 +1862,10 @@ async def complete_public_form(
         artist_slug = data.get("artist_name")
         if artist_slug:
             # Try slug match first, fall back to name match
-            artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.slug == artist_slug))
+            artist_result = await db.execute(select(User).where(User.slug == artist_slug))
             artist = artist_result.scalar_one_or_none()
             if not artist:
-                artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.name == artist_slug))
+                artist_result = await db.execute(select(User).where(User.name == artist_slug))
                 artist = artist_result.scalar_one_or_none()
             if artist:
                 artist_display = artist.name or ""
@@ -1888,9 +1886,7 @@ async def complete_public_form(
         waiver_email = normalize_email(instance.guest_email or data.get("email") or "")
         if waiver_email:
             submitter_id = (
-                (await db.execute(select(BTTCOUser.id).where(func.lower(BTTCOUser.email) == waiver_email)))
-                .scalars()
-                .first()
+                (await db.execute(select(User.id).where(func.lower(User.email) == waiver_email))).scalars().first()
             )
             if submitter_id:
                 try:
@@ -1991,7 +1987,7 @@ async def process_reminders(
 async def manual_remind(
     document_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: Manually resend a reminder email for a sent document."""
     result = await db.execute(select(DocumentInstance).where(DocumentInstance.id == document_id))

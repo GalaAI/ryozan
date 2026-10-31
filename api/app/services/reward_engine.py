@@ -11,7 +11,7 @@ from sqlalchemy import and_, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from app.models.reward import RewardGrant, RewardOffer
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -44,7 +44,7 @@ MINIGAME_UNLOCKS = (
 )
 
 
-def profile_is_complete(user: BTTCOUser) -> bool:
+def profile_is_complete(user: User) -> bool:
     """Return the minimal collector profile completion contract."""
     return bool((user.name or "").strip() and user.avatar_url and (user.reasons or []))
 
@@ -103,7 +103,7 @@ async def _maybe_issue_minigame_offer(db: AsyncSession, grant: RewardGrant) -> R
 
 async def grant_reward(
     db: AsyncSession,
-    user: BTTCOUser,
+    user: User,
     *,
     event_type: str,
     source_id: str,
@@ -146,11 +146,11 @@ async def grant_reward(
         return existing, False
 
     await db.execute(
-        update(BTTCOUser)
-        .where(BTTCOUser.id == user.id)
+        update(User)
+        .where(User.id == user.id)
         .values(
-            quest_points=func.coalesce(BTTCOUser.quest_points, 0) + xp,
-            bttcoin_balance=func.coalesce(BTTCOUser.bttcoin_balance, 0) + coin,
+            quest_points=func.coalesce(User.quest_points, 0) + xp,
+            bttcoin_balance=func.coalesce(User.bttcoin_balance, 0) + coin,
         )
     )
     await db.refresh(user, attribute_names=["quest_points", "bttcoin_balance"])
@@ -165,7 +165,7 @@ async def grant_reward(
 
 async def grant_configured_reward(
     db: AsyncSession,
-    user: BTTCOUser,
+    user: User,
     event_type: str,
     source_id: str,
     *,
@@ -194,7 +194,7 @@ async def reward_user_by_id(
 ) -> tuple[RewardGrant | None, bool]:
     if not user_id:
         return None, False
-    user = await db.get(BTTCOUser, user_id)
+    user = await db.get(User, user_id)
     if not user or user.role != "collector":
         return None, False
     return await grant_configured_reward(db, user, event_type, source_id, metadata=metadata)
@@ -202,7 +202,7 @@ async def reward_user_by_id(
 
 async def complete_reward_offer(
     db: AsyncSession,
-    user: BTTCOUser,
+    user: User,
     offer_id: UUID,
 ) -> tuple[RewardOffer, RewardGrant]:
     """Complete one earned minigame offer and issue its unlock exactly once."""

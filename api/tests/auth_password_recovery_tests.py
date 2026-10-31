@@ -51,7 +51,7 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from app.models.user import BTTCOUser, UserIdentityAlias
+from app.models.user import User, UserIdentityAlias
 
 _settings = get_settings()
 
@@ -154,7 +154,7 @@ def _make_user(password="password123", **kwargs):
         "email_verified_at": datetime.now(UTC),
     }
     fields.update(kwargs)
-    return BTTCOUser(**fields)
+    return User(**fields)
 
 
 # ── BUG 1: long passwords ──────────────────────────────────────────────────

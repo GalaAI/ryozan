@@ -13,14 +13,15 @@ from fastapi import FastAPI
 from sqlalchemy import select, text
 
 from app.api.v1.endpoints import auth, bookings
+from app.core import legacy_env
 from app.core.database import async_session, engine
 from app.core.rate_limit import limiter
 from app.core.security import create_password_reset_token, create_user_access_token, hash_password
 from app.models.booking import Booking
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import account_setup
 
-ENABLED = os.environ.get("BTTCO_MAILBOX_PG_TESTS") == "1"
+ENABLED = legacy_env.getenv("RYOZAN_MAILBOX_PG_TESTS") == "1"
 FIXTURE_DB = "@127.0.0.1:55433/mailbox_test" in os.environ.get("DATABASE_URL", "")
 
 
@@ -43,7 +44,7 @@ class MailboxPostgresTests(unittest.IsolatedAsyncioTestCase):
         self.slug = f"fixture-artist-{stamp}"
         async with async_session() as db:
             db.add(
-                BTTCOUser(
+                User(
                     email=f"artist-{stamp}@example.com",
                     password_hash=hash_password("fixture-artist-password"),
                     role="artist",
@@ -86,7 +87,7 @@ class MailboxPostgresTests(unittest.IsolatedAsyncioTestCase):
 
     async def _account(self):
         async with async_session() as db:
-            return (await db.execute(select(BTTCOUser).where(BTTCOUser.email == self.email))).scalar_one()
+            return (await db.execute(select(User).where(User.email == self.email))).scalar_one()
 
     async def test_guest_submission_mailbox_outbox_redemption_and_repeated_booking(self):
         first = await self._submit()

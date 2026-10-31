@@ -12,7 +12,7 @@ param(
 $ErrorActionPreference = "Continue"
 
 # New artifact justification:
-# Existing BTTCO scripts cover dev process health, recovery, and data sync, while
+# Existing Ryozan scripts cover local data sync, while
 # CI covers broad lint/import/unit checks. This verifier is a release-readiness
 # boundary for the Huddl scheduler plan, combining existing checks with local
 # scheduler HTTP probes and a numeric success score.
@@ -489,7 +489,7 @@ from app.api.v1.endpoints.bookings import _create_public_booking_checkout
 from app.models.booking import Booking
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.booking_slot_hold import BookingSlotHold
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 
 class FakeSession:
@@ -502,7 +502,7 @@ class FakeSession:
 
 async def main():
     artist_id = uuid.uuid4()
-    artist = BTTCOUser(
+    artist = User(
         id=artist_id,
         email="stripe-smoke@example.test",
         password_hash="disabled",
@@ -592,7 +592,7 @@ function Invoke-BookingE2ESandboxGauntlet {
 
   $sandboxEnv = @{
     APP_ENV = "development"
-    BTTCO_E2E_SANDBOX = "1"
+    RYOZAN_E2E_SANDBOX = "1"
     DATABASE_URL = "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/nexus"
     DATABASE_SYNC_URL = "postgresql://postgres:postgres@127.0.0.1:5433/nexus"
     EMAIL_TEST_REDIRECT = ""

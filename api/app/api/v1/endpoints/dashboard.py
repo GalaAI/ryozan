@@ -26,9 +26,9 @@ from app.models.booking import Booking
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.quest import Quest, UserQuest
-from app.models.user import BTTCOUser
+from app.models.user import User
 
-logger = logging.getLogger("bttco.dashboard")
+logger = logging.getLogger("ryozan.dashboard")
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
@@ -40,9 +40,7 @@ async def debrief_recipient_ids(db: AsyncSession, settings) -> list[UUID]:
     """
     if settings.DEBRIEF_RECIPIENT_USER_ID:
         return [UUID(settings.DEBRIEF_RECIPIENT_USER_ID)]
-    result = await db.execute(
-        select(BTTCOUser.id).where(BTTCOUser.role == "founder").order_by(BTTCOUser.created_at.asc())
-    )
+    result = await db.execute(select(User.id).where(User.role == "founder").order_by(User.created_at.asc()))
     return list(result.scalars().all())
 
 
@@ -51,7 +49,7 @@ def _init_stripe():
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
-def _stripe_balance_projection(current_user: BTTCOUser) -> dict:
+def _stripe_balance_projection(current_user: User) -> dict:
     """Project the platform balance for owners and connected balance for artists."""
     is_shop_owner = current_user.role in {"founder", "admin"}
     connected_account_id = None if is_shop_owner else current_user.stripe_account_id
@@ -116,12 +114,12 @@ def _stripe_balance_projection(current_user: BTTCOUser) -> dict:
 @router.get("/artist-summary")
 async def get_artist_summary(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Artist dashboard summary — single endpoint aggregating:
     - Stripe Connect balance & next payout date
-    - BTTcoin balance & quest points
+    - RYO balance & quest points
     - Unread message count
     - Today's bookings with client details
     - Active quest progress
@@ -164,7 +162,7 @@ async def get_artist_summary(
                 # Resolve client name from FK or guest_name fallback
                 client_name = b.guest_name
                 if b.client_id:
-                    name_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == b.client_id))
+                    name_result = await db.execute(select(User.name).where(User.id == b.client_id))
                     client_name = name_result.scalar_one_or_none() or b.guest_name
 
                 today_bookings.append(
@@ -297,7 +295,7 @@ def _generate_briefing(
 @router.get("/daily-digest")
 async def get_daily_digest(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Founder/Admin daily digest — aggregates today's full shop activity.
@@ -353,10 +351,10 @@ async def get_daily_digest(
     for b in sessions_result.scalars().all():
         client_name = b.guest_name
         if b.client_id:
-            name_r = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == b.client_id))
+            name_r = await db.execute(select(User.name).where(User.id == b.client_id))
             client_name = name_r.scalar_one_or_none() or b.guest_name
 
-        artist_r = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == b.artist_id))
+        artist_r = await db.execute(select(User.name).where(User.id == b.artist_id))
         artist_name = artist_r.scalar_one_or_none() or "Unknown"
 
         todays_sessions.append(
@@ -403,7 +401,7 @@ async def get_daily_digest(
     messages_today = messages_result.scalar() or 0
 
     # ── Total active clients (users with collector role) ──
-    clients_result = await db.execute(select(func.count()).select_from(BTTCOUser).where(BTTCOUser.role == "collector"))
+    clients_result = await db.execute(select(func.count()).select_from(User).where(User.role == "collector"))
     total_clients = clients_result.scalar() or 0
 
     # ── Revenue (Stripe, if connected) ──
@@ -488,7 +486,7 @@ async def gather_debrief_data(db: AsyncSession) -> dict:
     for b in new_bookings:
         client_name = b.guest_name
         if b.client_id:
-            name_r = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == b.client_id))
+            name_r = await db.execute(select(User.name).where(User.id == b.client_id))
             client_name = name_r.scalar_one_or_none() or b.guest_name
 
         new_booking_details.append(
@@ -532,9 +530,7 @@ async def gather_debrief_data(db: AsyncSession) -> dict:
     new_waivers = waivers_result.scalar() or 0
 
     # ── New user registrations in the last 24h ──
-    new_users_result = await db.execute(
-        select(func.count()).select_from(BTTCOUser).where(BTTCOUser.created_at >= period_start)
-    )
+    new_users_result = await db.execute(select(func.count()).select_from(User).where(User.created_at >= period_start))
     new_accounts = new_users_result.scalar() or 0
 
     # ── Revenue (Stripe, if connected) ──
@@ -854,7 +850,7 @@ def _fallback_summary(stats: dict, data: dict) -> str:
 @router.get("/debrief", response_model=DebriefResponse)
 async def get_daily_debrief(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Daily debrief endpoint. Returns AI-generated summary + raw data.

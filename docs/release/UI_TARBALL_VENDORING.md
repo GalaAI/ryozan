@@ -5,7 +5,7 @@ tarball:
 
 ```jsonc
 // app/package.json
-"@bttco/ui": "file:vendor/bttco-ui-0.2.0.tgz"
+"@ryozan/ui": "file:vendor/ryozan-ui-0.2.1.tgz"
 ```
 
 The source tree and the shipped artifact are two separate things. **Editing
@@ -21,29 +21,29 @@ Three steps. Skip any one of them and the change silently does not ship.
 
 # 2. repack the tarball
 cd packages/ui
-npm run pack:app                 # writes ../../app/vendor/bttco-ui-<version>.tgz
+npm run pack:app                 # writes ../../app/vendor/ryozan-ui-<version>.tgz
 
 # 3. relock the integrity hash
 cd ../../app
-npm install --package-lock-only "@bttco/ui@file:vendor/bttco-ui-<version>.tgz"
+npm install --package-lock-only "@ryozan/ui@file:vendor/ryozan-ui-<version>.tgz"
 ```
 
 Commit all three results together: the `packages/ui/src` change, the rebuilt
-`app/vendor/bttco-ui-<version>.tgz`, and the one-line `app/package-lock.json`
+`app/vendor/ryozan-ui-<version>.tgz`, and the one-line `app/package-lock.json`
 diff.
 
 ## Why step 3 is not optional
 
 This is the part that has cost real debugging time.
 
-`npm ci` does not install `@bttco/ui` from the bytes sitting in `app/vendor/`.
+`npm ci` does not install `@ryozan/ui` from the bytes sitting in `app/vendor/`.
 It restores the package from the npm cache, keyed by the `integrity` hash
 recorded in `app/package-lock.json`:
 
 ```jsonc
-"node_modules/@bttco/ui": {
-  "version": "0.2.0",
-  "resolved": "file:vendor/bttco-ui-0.2.0.tgz",
+"node_modules/@ryozan/ui": {
+  "version": "0.2.1",
+  "resolved": "file:vendor/ryozan-ui-0.2.1.tgz",
   "integrity": "sha512-Zrs+6zCk93TuoKq+..."
 }
 ```
@@ -56,7 +56,7 @@ what you actually built.
 
 Note the exact form of the command. A bare `npm install --package-lock-only`
 prints `up to date` and leaves the stale hash in place. You have to name the
-spec (`"@bttco/ui@file:vendor/bttco-ui-<version>.tgz"`) to force npm to
+spec (`"@ryozan/ui@file:vendor/ryozan-ui-<version>.tgz"`) to force npm to
 re-resolve the tarball.
 
 ## The guard

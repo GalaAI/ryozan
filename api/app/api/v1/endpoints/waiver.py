@@ -38,7 +38,7 @@ from app.core.routes import ROUTES
 from app.core.security import ROLE_RANK, get_current_user, require_role
 from app.models.document import DocumentInstance, DocumentTemplate
 from app.models.notification import Notification
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 from app.schemas.waiver import (
     CountersignRequest,
     WaiverDetailResponse,
@@ -53,7 +53,7 @@ from app.services.email_foundry_waiver import render_aftercare_instructions
 from app.services.quest_hooks import check_and_complete_quest
 from app.services.storage import upload_file as upload_to_drive
 
-logger = logging.getLogger("bttco.waiver")
+logger = logging.getLogger("ryozan.waiver")
 
 router = APIRouter(prefix="/waiver", tags=["waiver"])
 
@@ -77,7 +77,7 @@ def _safe_name(name: str) -> str:
     return re.sub(r"[^a-zA-Z0-9_-]", "", name.replace(" ", "-"))[:40] or "client"
 
 
-def _artist_can_access_waiver(instance: DocumentInstance, current_user: BTTCOUser) -> bool:
+def _artist_can_access_waiver(instance: DocumentInstance, current_user: User) -> bool:
     """Allow managers broadly, but scope artists to their own waiver work."""
     if ROLE_RANK.get(current_user.role, 0) >= ROLE_RANK.get("admin", 3):
         return True
@@ -87,7 +87,7 @@ def _artist_can_access_waiver(instance: DocumentInstance, current_user: BTTCOUse
     return data.get("artist_id") == str(current_user.id) or instance.artist_id_reviewed == current_user.id
 
 
-def _require_waiver_access(instance: DocumentInstance, current_user: BTTCOUser) -> None:
+def _require_waiver_access(instance: DocumentInstance, current_user: User) -> None:
     if not _artist_can_access_waiver(instance, current_user):
         raise HTTPException(status_code=403, detail="Waiver is not assigned to this artist")
 
@@ -244,9 +244,9 @@ async def submit_waiver(
 
     # ── Resolve artist slug → name ──
     result = await db.execute(
-        select(BTTCOUser.id, BTTCOUser.name)
-        .where(BTTCOUser.slug == body.artist_slug)
-        .where(BTTCOUser.role.in_(["artist", "admin", "founder"]))
+        select(User.id, User.name)
+        .where(User.slug == body.artist_slug)
+        .where(User.role.in_(["artist", "admin", "founder"]))
     )
     artist_row = result.first()
     if not artist_row:
@@ -322,9 +322,7 @@ async def submit_waiver(
     # ── Quest: auto-complete "waiver-signed" if submitter is a registered user ──
     # Case-insensitive so a waiver signed as "Name@Example.com" still credits
     # the account, and .first() so duplicate rows cannot 500 the submission.
-    user_result = await db.execute(
-        select(BTTCOUser.id).where(func.lower(BTTCOUser.email) == normalize_email(body.email))
-    )
+    user_result = await db.execute(select(User.id).where(func.lower(User.email) == normalize_email(body.email)))
     submitter_id = user_result.scalars().first()
     if submitter_id:
         await check_and_complete_quest(db, submitter_id, "waiver-signed")
@@ -374,7 +372,7 @@ async def list_waivers(
     status: str | None = Query(None),
     search: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Artist+: list submitted waivers with optional filtering.
@@ -439,7 +437,7 @@ async def list_my_waivers(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Any authenticated user: list waivers they submitted (matched by email).
@@ -489,7 +487,7 @@ async def list_my_waivers(
 async def get_waiver(
     waiver_id: uuid_mod.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: get full waiver details with parsed form data."""
     result = await db.execute(
@@ -552,7 +550,7 @@ async def update_waiver_status(
     waiver_id: uuid_mod.UUID,
     body: WaiverStatusUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: approve, flag, or reject a waiver."""
     allowed = {
@@ -595,7 +593,7 @@ async def countersign_waiver(
     waiver_id: uuid_mod.UUID,
     body: CountersignRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Artist+: counter-sign a waiver that a client has submitted.
@@ -676,7 +674,7 @@ async def countersign_waiver(
 async def export_waiver_pdf(
     waiver_id: uuid_mod.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """
     Generate a printable PDF of the completed waiver.
@@ -929,7 +927,7 @@ async def _resolve_artist_slug(db: AsyncSession, slug_or_name: str) -> str:
     """Resolve an artist slug to display name. Falls back to the raw value."""
     if not slug_or_name:
         return ""
-    result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.slug == slug_or_name))
+    result = await db.execute(select(User.name).where(User.slug == slug_or_name))
     name = result.scalar_one_or_none()
     return name or slug_or_name
 
@@ -938,7 +936,7 @@ async def _resolve_artist_name(db: AsyncSession, artist_id: uuid_mod.UUID | None
     """Look up artist name by ID, returning None if not set."""
     if not artist_id:
         return None
-    result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == artist_id))
+    result = await db.execute(select(User.name).where(User.id == artist_id))
     return result.scalar_one_or_none()
 
 
@@ -984,11 +982,7 @@ async def _send_aftercare_email(
         try:
             async with async_session() as session:
                 role = (
-                    (
-                        await session.execute(
-                            select(BTTCOUser.role).where(func.lower(BTTCOUser.email) == normalize_email(to))
-                        )
-                    )
+                    (await session.execute(select(User.role).where(func.lower(User.email) == normalize_email(to))))
                     .scalars()
                     .first()
                 )

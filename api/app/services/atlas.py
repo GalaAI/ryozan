@@ -7,7 +7,7 @@ orientation layer of Viber (the app-applied form of the Atlas scroll).
 v1 is intentionally introspection-driven and degrades gracefully:
   - If the backend exposes OpenAPI, we group its paths into resource clusters.
   - Row counts come from a provided table-count map (the connector supplies them;
-    for BTTCO that is the bttco_query path). Absent counts -> node marked unknown.
+    for the Ryozan API connector that is its table-count query). Absent counts -> node marked unknown.
 
 The output is a typed graph (nodes + edges) the web UI renders as a mind-map.
 No assumptions are baked as fact: a node only claims a table/count when the data

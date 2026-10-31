@@ -15,7 +15,7 @@ import httpx
 from app.core.config import get_settings
 from app.services.sms import normalise_phone
 
-logger = logging.getLogger("bttco.whatsapp")
+logger = logging.getLogger("ryozan.whatsapp")
 
 
 class WhatsAppSendError(Exception):

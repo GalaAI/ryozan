@@ -14,7 +14,7 @@ os.environ["ENABLE_API_DOCS"] = "false"
 os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 
 from app.api.v1.endpoints import artists
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import storage
 
 
@@ -85,8 +85,8 @@ class R2DeleteTests(unittest.IsolatedAsyncioTestCase):
 
 
 class GalleryDeleteEndpointTests(unittest.IsolatedAsyncioTestCase):
-    def _artist(self, url: str) -> BTTCOUser:
-        return BTTCOUser(
+    def _artist(self, url: str) -> User:
+        return User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -230,8 +230,8 @@ if __name__ == "__main__":
 class StaffGalleryEndpointTests(unittest.IsolatedAsyncioTestCase):
     """The owner fills another artist's gallery; the /me routes only ever touch the caller."""
 
-    def _user(self, *, slug: str, role: str = "artist", images: list[str] | None = None) -> BTTCOUser:
-        return BTTCOUser(
+    def _user(self, *, slug: str, role: str = "artist", images: list[str] | None = None) -> User:
+        return User(
             id=uuid.uuid4(),
             email=f"{slug}@example.test",
             password_hash="disabled",

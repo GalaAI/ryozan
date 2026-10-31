@@ -34,7 +34,7 @@ from app.models.booking import Booking
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.flash import FlashDesign
 from app.models.quote import Quote
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.pos import POSTransactionCreate
 from app.schemas.quote import QuoteAccept
 from app.services.artifact_handlers.quote_proposal import INITIAL_STATE, _apply_confirm
@@ -126,7 +126,7 @@ _FAKE_SETTINGS = type(
 )()
 
 
-def _artist(**overrides) -> BTTCOUser:
+def _artist(**overrides) -> User:
     fields = {
         "id": uuid.uuid4(),
         "email": "artist@example.test",
@@ -137,7 +137,7 @@ def _artist(**overrides) -> BTTCOUser:
         "commission_rate": 70,
     }
     fields.update(overrides)
-    return BTTCOUser(**fields)
+    return User(**fields)
 
 
 class FlashCheckoutWebhookTests(unittest.IsolatedAsyncioTestCase):
@@ -376,7 +376,7 @@ class CheckoutPaymentStatusTests(unittest.IsolatedAsyncioTestCase):
 
 
 class QuoteRoutingTests(unittest.IsolatedAsyncioTestCase):
-    def _quote_fixtures(self, artist: BTTCOUser):
+    def _quote_fixtures(self, artist: User):
         booking = Booking(
             id=uuid.uuid4(),
             artist_id=artist.id,
@@ -396,7 +396,7 @@ class QuoteRoutingTests(unittest.IsolatedAsyncioTestCase):
         )
         return booking, quote
 
-    async def _accept(self, artist: BTTCOUser):
+    async def _accept(self, artist: User):
         booking, quote = self._quote_fixtures(artist)
         db = _EndpointSession([[quote], [booking], [artist]])
         created = {}
@@ -447,7 +447,7 @@ class QuoteRoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(request_options["stripe_account"], "acct_full_onboarded")
         self.assertNotIn("on_behalf_of", payment_intent_data)
         # The customer sees one $156 price. The artist still earns 70% of the
-        # configured $150 service price, while BTTCO keeps $45 plus the $6
+        # configured $150 service price, while Ryozan keeps $45 plus the $6
         # all-in price adjustment.
         self.assertEqual(created["line_items"][0]["price_data"]["unit_amount"], 15600)
         self.assertEqual(payment_intent_data["application_fee_amount"], 5100)

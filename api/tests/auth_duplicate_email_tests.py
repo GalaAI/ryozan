@@ -34,7 +34,7 @@ from app.core.rate_limit import limiter  # noqa: E402
 from app.core.schema_compare import BASELINE_SQL_PATH  # noqa: E402
 from app.core.security import hash_password  # noqa: E402
 from app.core.user_lookup import rank_candidates  # noqa: E402
-from app.models.user import BTTCOUser, normalize_email  # noqa: E402
+from app.models.user import User, normalize_email  # noqa: E402
 
 DUPLICATE_EMAIL = "client.alpha@ryozan.app"
 DUPLICATE_EMAIL_MIXED = "Client.Alpha@ryozan.app"
@@ -128,7 +128,7 @@ def _build_app(session):
 
 
 def _user(email, *, password=None, password_hash=None, created_at=None, **kwargs):
-    return BTTCOUser(
+    return User(
         id=kwargs.pop("id", uuid.uuid4()),
         email=email,
         password_hash=password_hash if password_hash is not None else hash_password(password or "unused-password"),
@@ -345,7 +345,7 @@ class GoogleSignInDuplicateTests(unittest.TestCase):
         }
 
         with (
-            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", "bttco-client-id"),
+            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", "ryozan-client-id"),
             patch(
                 "app.api.v1.endpoints.auth.google_id_token.verify_oauth2_token",
                 return_value=payload,
@@ -366,7 +366,7 @@ class GoogleSignInDuplicateTests(unittest.TestCase):
         client = TestClient(_build_app(session))
 
         with (
-            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", "bttco-client-id"),
+            patch.object(auth._settings, "GOOGLE_SIGNIN_CLIENT_ID", "ryozan-client-id"),
             patch(
                 "app.api.v1.endpoints.auth.google_id_token.verify_oauth2_token",
                 return_value={
@@ -405,12 +405,12 @@ class EmailNormalizationTests(unittest.TestCase):
         and quote and flash guest paths, and the sync scripts all build the
         same model — none of them can store mixed case any more.
         """
-        user = BTTCOUser(email="  Client.Alpha@Ryozan.APP ", password_hash="x", name="M", role="collector")
+        user = User(email="  Client.Alpha@Ryozan.APP ", password_hash="x", name="M", role="collector")
 
         self.assertEqual(user.email, "client.alpha@ryozan.app")
 
     def test_model_normalizes_on_later_assignment(self):
-        user = BTTCOUser(email=DUPLICATE_EMAIL, password_hash="x", name="M", role="collector")
+        user = User(email=DUPLICATE_EMAIL, password_hash="x", name="M", role="collector")
 
         user.email = "Client.Beta@RYOZAN.app"
 

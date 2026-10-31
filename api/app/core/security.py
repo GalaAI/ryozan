@@ -209,7 +209,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ):
     """Decode JWT and return the authenticated user row."""
-    from app.models.user import BTTCOUser  # deferred to avoid circular import
+    from app.models.user import User  # deferred to avoid circular import
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -233,7 +233,7 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception from None
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_uuid))
+    result = await db.execute(select(User).where(User.id == user_uuid))
     user = result.scalar_one_or_none()
     if user is None:
         raise credentials_exception

@@ -1,4 +1,4 @@
-"""Schemas for the BTTCO rewards ledger and collector inventory."""
+"""Schemas for the Ryozan rewards ledger and collector inventory."""
 
 from datetime import datetime
 from uuid import UUID

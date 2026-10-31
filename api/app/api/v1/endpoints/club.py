@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.club import ClubPost, ClubPostLike
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 router = APIRouter(prefix="/club", tags=["club"])
 
@@ -56,7 +56,7 @@ class ClubPostListResponse(BaseModel):
 
 async def _enrich_post(post: ClubPost, db: AsyncSession, current_user_id: UUID) -> ClubPostResponse:
     """Add author info and like status to a post."""
-    author = await db.get(BTTCOUser, post.author_id)
+    author = await db.get(User, post.author_id)
 
     liked = await db.execute(
         select(ClubPostLike.id).where(and_(ClubPostLike.post_id == post.id, ClubPostLike.user_id == current_user_id))
@@ -80,7 +80,7 @@ async def _enrich_post(post: ClubPost, db: AsyncSession, current_user_id: UUID) 
 async def create_post(
     data: ClubPostCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Create a new club post. Any authenticated user."""
     post = ClubPost(
@@ -103,7 +103,7 @@ async def list_posts(
     limit: int = Query(default=20, le=50),
     post_type: str | None = None,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List club posts, newest first."""
     # `not ClubPost.is_deleted` looks right and is not. Python's `not` calls
@@ -138,7 +138,7 @@ async def list_posts(
 async def toggle_like(
     post_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Toggle like on a post. Returns new like count."""
     post = await db.get(ClubPost, post_id)
@@ -165,7 +165,7 @@ async def toggle_like(
 async def delete_post(
     post_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Soft-delete a post. Author or admin+."""
     post = await db.get(ClubPost, post_id)

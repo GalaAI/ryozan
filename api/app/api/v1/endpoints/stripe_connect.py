@@ -25,11 +25,11 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.econ import EconLedgerEntry
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.payments import connect_account_ready, effective_artist_rate
 from app.services.stripe_client import get_stripe_client
 
-logger = logging.getLogger("bttco.stripe")
+logger = logging.getLogger("ryozan.stripe")
 router = APIRouter(prefix="/stripe", tags=["stripe"])
 
 BOOTH_RENT_ACTIVE_STATUSES = {"active", "trialing", "past_due", "unpaid", "incomplete", "paused"}
@@ -76,7 +76,7 @@ def _not_connected_status(
     }
 
 
-def _create_connected_account(user: BTTCOUser):
+def _create_connected_account(user: User):
     """Create one Accounts v2 identity that can sell and pay booth rent."""
     return _init_stripe().v2.core.accounts.create(
         {
@@ -188,7 +188,7 @@ def _connect_onboarding_error(exc: stripe.error.StripeError) -> HTTPException:
     )
 
 
-def _artist_connect_projection(user: BTTCOUser) -> dict:
+def _artist_connect_projection(user: User) -> dict:
     projection = {
         "id": str(user.id),
         "name": user.name,
@@ -281,7 +281,7 @@ def _subscription_period_end(subscription: dict) -> datetime | None:
 MANUALLY_RECORDED_BOOTH_METHODS = frozenset({"cash", "venmo"})
 
 
-def _booth_payment_method(user: BTTCOUser) -> str:
+def _booth_payment_method(user: User) -> str:
     method = str(getattr(user, "booth_rent_payment_method", "cash") or "cash")
     return "autodraft" if method == "stripe" else method
 
@@ -323,7 +323,7 @@ def _booth_rent_period(interval: str, next_due_date: date | None = None) -> tupl
     return period, _due_datetime(period_end)
 
 
-def _sync_booth_rent_subscription(user: BTTCOUser, subscription) -> None:
+def _sync_booth_rent_subscription(user: User, subscription) -> None:
     data = _stripe_dict(subscription)
     status = str(data.get("status") or "pending")
     user.booth_rent_status = status
@@ -336,7 +336,7 @@ def _sync_booth_rent_subscription(user: BTTCOUser, subscription) -> None:
     user.updated_at = datetime.now(UTC)
 
 
-def _booth_rent_projection(user: BTTCOUser) -> dict:
+def _booth_rent_projection(user: User) -> dict:
     amount_cents = getattr(user, "booth_rent_amount_cents", None)
     commission_rate = getattr(user, "commission_rate", None)
     current_period_end = getattr(user, "booth_rent_current_period_end", None)
@@ -368,17 +368,17 @@ def _booth_rent_projection(user: BTTCOUser) -> dict:
     }
 
 
-def _require_role(user: BTTCOUser, min_role: str):
+def _require_role(user: User, min_role: str):
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get(min_role, 99):
         raise HTTPException(status_code=403, detail=f"Requires {min_role} role or higher")
 
 
-def _require_artist(user: BTTCOUser) -> None:
+def _require_artist(user: User) -> None:
     if user.role != "artist":
         raise HTTPException(status_code=403, detail="Requires an artist account")
 
 
-def _require_connect_artist(user: BTTCOUser) -> None:
+def _require_connect_artist(user: User) -> None:
     if user.role not in STRIPE_CONNECT_ROLES:
         raise HTTPException(status_code=403, detail="Requires an artist-capable account")
 
@@ -386,7 +386,7 @@ def _require_connect_artist(user: BTTCOUser) -> None:
 @router.post("/connect/onboard")
 async def create_connect_account(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Create a Stripe Connected Account for the current artist and return
@@ -443,7 +443,7 @@ async def create_connect_account(
 @router.get("/connect/status")
 async def get_connect_status(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Check current artist's Stripe Connect onboarding status."""
     _require_connect_artist(current_user)
@@ -478,7 +478,7 @@ async def get_connect_status(
 async def admin_create_connect_account(
     user_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin: create a Connect account for a specific artist and return onboarding link."""
     _require_role(current_user, "admin")
@@ -491,7 +491,7 @@ async def admin_create_connect_account(
     refresh_url = _connect_hub_url(settings.STRIPE_CONNECT_RETURN_URL, "refresh")
     return_url = _connect_hub_url(settings.STRIPE_CONNECT_RETURN_URL, "return")
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     artist = result.scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="User not found")
@@ -537,12 +537,12 @@ async def admin_create_connect_account(
 @router.get("/connect/artists")
 async def list_artist_stripe_status(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin: list all artists with their Stripe Connect status."""
     _require_role(current_user, "admin")
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.role.in_(STRIPE_CONNECT_ROLES)))
+    result = await db.execute(select(User).where(User.role.in_(STRIPE_CONNECT_ROLES)))
     artists = result.scalars().all()
 
     projections = [_artist_connect_projection(artist) for artist in artists]
@@ -555,11 +555,11 @@ async def configure_artist_booth_rent(
     user_id: UUID,
     payload: BoothRentConfigRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Founder/admin: configure booth rent or return an artist to commission."""
     _require_role(current_user, "admin")
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id).with_for_update())
+    result = await db.execute(select(User).where(User.id == user_id).with_for_update())
     artist = result.scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="User not found")
@@ -632,11 +632,11 @@ async def record_artist_booth_rent_cash_payment(
     user_id: UUID,
     payload: BoothRentCashPaymentRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Founder/admin: record one cash booth-rent contractor contribution."""
     _require_role(current_user, "admin")
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id).with_for_update())
+    result = await db.execute(select(User).where(User.id == user_id).with_for_update())
     artist = result.scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="User not found")
@@ -724,7 +724,7 @@ async def record_artist_booth_rent_cash_payment(
 @router.get("/booth-rent/status")
 async def get_booth_rent_status(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Artist: inspect configured rent and synchronize the Stripe subscription."""
     _require_artist(current_user)
@@ -746,14 +746,14 @@ async def get_booth_rent_status(
 @router.post("/booth-rent/checkout")
 async def create_booth_rent_checkout(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Artist: start one-time or automatic Stripe booth-rent payment."""
     _require_artist(current_user)
     if not _stripe_configured():
         raise HTTPException(status_code=503, detail="Stripe Billing is not configured")
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == current_user.id).with_for_update())
+    result = await db.execute(select(User).where(User.id == current_user.id).with_for_update())
     artist = result.scalar_one()
     amount_cents = artist.booth_rent_amount_cents
     interval = _normalize_booth_interval(artist.booth_rent_interval)
@@ -865,7 +865,7 @@ async def create_booth_rent_checkout(
 
 @router.post("/booth-rent/portal")
 async def create_booth_rent_portal(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Artist: open Stripe-hosted payment method and cancellation management."""
     _require_artist(current_user)

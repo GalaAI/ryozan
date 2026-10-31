@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.models.reward import RewardGrant, RewardOffer
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.reward import (
     BTTCoinAwardRequest,
     BTTCoinSpendRequest,
@@ -43,7 +43,7 @@ def _transaction(grant: RewardGrant, balance_after: int) -> BTTCoinTransactionRe
     )
 
 
-async def _transactions_with_balances(db: AsyncSession, user: BTTCOUser) -> list[BTTCoinTransactionResponse]:
+async def _transactions_with_balances(db: AsyncSession, user: User) -> list[BTTCoinTransactionResponse]:
     rows = (
         (
             await db.execute(
@@ -66,7 +66,7 @@ async def _transactions_with_balances(db: AsyncSession, user: BTTCOUser) -> list
 @router.post("/portal-activity", response_model=PortalActivityResponse)
 async def record_portal_activity(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Award one modest portal-use reward per collector per UTC day."""
     if current_user.role != "collector":
@@ -84,7 +84,7 @@ async def record_portal_activity(
 @router.get("/inventory", response_model=RewardInventoryResponse)
 async def get_reward_inventory(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     grants = (
         (
@@ -117,7 +117,7 @@ async def get_reward_inventory(
 async def complete_offer(
     offer_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Redeem one server-issued minigame opportunity after the game reports completion."""
     try:
@@ -137,7 +137,7 @@ async def complete_offer(
 @wallet_router.get("/wallet", response_model=BTTCoinWalletResponse)
 async def get_wallet(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     transactions = await _transactions_with_balances(db, current_user)
     total_earned = sum(tx.amount for tx in transactions if tx.type != "spend")
@@ -156,7 +156,7 @@ async def list_transactions(
     skip: int = 0,
     limit: int = Query(default=50, le=200),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     transactions = await _transactions_with_balances(db, current_user)
     if transaction_type:
@@ -169,9 +169,9 @@ async def list_transactions(
 async def award_bttcoin(
     body: BTTCoinAwardRequest,
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("admin")),
+    _caller: User = Depends(require_role("admin")),
 ):
-    user = await db.get(BTTCOUser, body.user_id)
+    user = await db.get(User, body.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     source_id = f"{body.user_id}:{datetime.now(UTC).isoformat()}"
@@ -191,9 +191,9 @@ async def award_bttcoin(
 async def spend_bttcoin(
     body: BTTCoinSpendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    locked_user = await db.scalar(select(BTTCOUser).where(BTTCOUser.id == current_user.id).with_for_update())
+    locked_user = await db.scalar(select(User).where(User.id == current_user.id).with_for_update())
     if not locked_user:
         raise HTTPException(status_code=404, detail="User not found")
     if (locked_user.bttcoin_balance or 0) < body.amount:

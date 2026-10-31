@@ -26,9 +26,9 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.econ import EconConnection, EconLedgerEntry, EconSyncRun
-from app.models.user import BTTCOUser
+from app.models.user import User
 
-logger = logging.getLogger("bttco.econ")
+logger = logging.getLogger("ryozan.econ")
 router = APIRouter(prefix="/econ", tags=["econ"])
 
 
@@ -39,7 +39,7 @@ class EconSyncRequest(BaseModel):
     mercury_account_id: str | None = None
 
 
-def _require_role(user: BTTCOUser, min_role: str):
+def _require_role(user: User, min_role: str):
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get(min_role, 99):
         raise HTTPException(status_code=403, detail=f"Requires {min_role} role or higher")
 
@@ -380,7 +380,7 @@ def _parse_iso_datetime(value) -> datetime | None:
 async def _get_or_create_connection(
     db: AsyncSession,
     provider: str,
-    user: BTTCOUser,
+    user: User,
     *,
     display_name: str,
     status: str = "connected",
@@ -664,7 +664,7 @@ async def _sync_single_provider(
     safe_limit: int,
     persist: bool,
     mercury_account_id: str | None,
-    current_user: BTTCOUser,
+    current_user: User,
     db: AsyncSession,
 ) -> dict[str, Any]:
     settings = get_settings()
@@ -744,7 +744,7 @@ async def _sync_single_provider(
         return _sync_provider_payload(provider, "error", detail=str(exc)[:300])
 
 
-async def _diagnose_plaid(*, live: bool, current_user: BTTCOUser) -> dict[str, Any]:
+async def _diagnose_plaid(*, live: bool, current_user: User) -> dict[str, Any]:
     settings = get_settings()
     missing = _missing_fields(
         {
@@ -853,7 +853,7 @@ async def _diagnose_mercury(*, live: bool) -> dict[str, Any]:
 
 @router.get("/integrations/status")
 async def get_econ_integrations_status(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Return E-con rail readiness without exposing secrets."""
@@ -943,7 +943,7 @@ async def get_econ_integrations_status(
 async def get_econ_integrations_diagnostics(
     providers: list[str] | None = Query(default=None),
     live: bool = Query(default=False),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Check Plaid, Clover, and Mercury setup, with optional live read tests."""
     _require_role(current_user, "assistant")
@@ -984,7 +984,7 @@ async def get_econ_integrations_diagnostics(
 @router.post("/sync")
 async def sync_econ_integrations(
     body: EconSyncRequest,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Sync configured read-only E-con rails into the normalized ledger."""
@@ -1018,7 +1018,7 @@ async def sync_econ_integrations(
 async def list_econ_sync_runs(
     provider: str | None = None,
     limit: int = 25,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Return recent Plaid, Clover, and Mercury sync attempts for audit."""
@@ -1039,7 +1039,7 @@ async def list_econ_sync_runs(
 
 @router.get("/clover/oauth-url")
 async def get_clover_oauth_url(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Build the Clover OAuth URL for dashboard setup."""
     _require_role(current_user, "admin")
@@ -1080,7 +1080,7 @@ async def clover_oauth_callback(
     )
     conn = None
     if state:
-        user_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == state))
+        user_result = await db.execute(select(User).where(User.id == state))
         user = user_result.scalar_one_or_none()
         if user and ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("admin", 99):
             token_metadata: dict[str, Any] | None = None
@@ -1117,7 +1117,7 @@ async def clover_oauth_callback(
 async def list_clover_orders(
     limit: int = 25,
     persist: bool = True,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Read recent Clover orders for E-con reconciliation."""
@@ -1196,7 +1196,7 @@ async def clover_webhook(
 
 @router.get("/mercury/accounts")
 async def list_mercury_accounts(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Read Mercury accounts for E-con cash position."""
@@ -1257,7 +1257,7 @@ async def list_mercury_transactions(
     status: str | None = None,
     order: str = "desc",
     persist: bool = True,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Read recent Mercury transactions for E-con reconciliation."""
@@ -1335,7 +1335,7 @@ async def list_mercury_transactions(
 async def list_ledger_entries(
     provider: str | None = None,
     limit: int = 50,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Return normalized E-con ledger entries for finance review."""
@@ -1369,7 +1369,7 @@ async def list_ledger_entries(
 async def get_ledger_summary(
     period_start: date | None = Query(None, description="Shop-time start date; omit for all time"),
     period_end: date | None = Query(None, description="Shop-time end date; omit for all time"),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Summarize normalized E-con entries for gamified finance and tax prep.
@@ -1389,7 +1389,7 @@ async def get_ledger_summary(
 async def get_payroll_tax_summary(
     period_start: date | None = Query(None, description="Shop-time start date; omit for all time"),
     period_end: date | None = Query(None, description="Shop-time end date; omit for all time"),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Project payroll and tax prep totals from normalized E-con entries.

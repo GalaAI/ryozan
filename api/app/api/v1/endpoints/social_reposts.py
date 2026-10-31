@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.core.security import get_current_user
-from app.models.user import BTTCOUser  # noqa: TC001
+from app.models.user import User  # noqa: TC001
 from app.services.agent_evolution import AgentEvolutionBridgeError, request_ark_bridge
 
 router = APIRouter(prefix="/herald/reposts", tags=["herald"])
@@ -51,7 +51,7 @@ class RepostPublishRequest(BaseModel):
     approval_reason: str | None = Field(default=None, min_length=1, max_length=400)
 
 
-def _require_herald_operator(user: BTTCOUser) -> None:
+def _require_herald_operator(user: User) -> None:
     if user.role not in {"founder", "admin"}:
         raise HTTPException(403, "Artist reposts are limited to founder and admin accounts.")
 
@@ -62,7 +62,7 @@ def _draft_path(draft_id: str) -> str:
     return f"{_ARK_REPOSTS}/{draft_id}"
 
 
-def _gate(user: BTTCOUser, **payload: Any) -> dict[str, Any]:
+def _gate(user: User, **payload: Any) -> dict[str, Any]:
     """Carry the signed-in operator as the approval across the signed Ark bridge."""
     return {
         **{key: value for key, value in payload.items() if value is not None},
@@ -86,7 +86,7 @@ async def _ark(
 @router.get("")
 async def list_reposts(
     status: str | None = Query(default=None),
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     _require_herald_operator(user)
     query = f"?status={status}" if status in _STATUSES else ""
@@ -94,7 +94,7 @@ async def list_reposts(
 
 
 @router.get("/location")
-async def repost_location(user: BTTCOUser = Depends(get_current_user)) -> dict[str, Any]:
+async def repost_location(user: User = Depends(get_current_user)) -> dict[str, Any]:
     _require_herald_operator(user)
     return await _ark("GET", f"{_ARK_REPOSTS}/location", timeout=30.0)
 
@@ -102,7 +102,7 @@ async def repost_location(user: BTTCOUser = Depends(get_current_user)) -> dict[s
 @router.post("/scan")
 async def scan_reposts(
     request: RepostScanRequest,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     _require_herald_operator(user)
     return await _ark(
@@ -114,7 +114,7 @@ async def scan_reposts(
 
 
 @router.get("/{draft_id}")
-async def get_repost(draft_id: str, user: BTTCOUser = Depends(get_current_user)) -> dict[str, Any]:
+async def get_repost(draft_id: str, user: User = Depends(get_current_user)) -> dict[str, Any]:
     _require_herald_operator(user)
     return await _ark("GET", _draft_path(draft_id))
 
@@ -123,7 +123,7 @@ async def get_repost(draft_id: str, user: BTTCOUser = Depends(get_current_user))
 async def edit_repost(
     draft_id: str,
     request: RepostPatchRequest,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     _require_herald_operator(user)
     payload = _gate(
@@ -141,7 +141,7 @@ async def edit_repost(
 async def review_repost(
     draft_id: str,
     request: RepostReviewRequest,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     _require_herald_operator(user)
     return await _ark(
@@ -155,7 +155,7 @@ async def review_repost(
 async def publish_repost(
     draft_id: str,
     request: RepostPublishRequest,
-    user: BTTCOUser = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     _require_herald_operator(user)
     # A failed publish comes back as an error here; the draft keeps Meta's reason for the card.

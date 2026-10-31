@@ -1,5 +1,5 @@
 """
-Google Calendar sync service for BTTCO bookings.
+Google Calendar sync service for Ryozan bookings.
 
 Creates, updates, and deletes calendar events when bookings change.
 Also provides availability and upcoming-event queries for the dashboard
@@ -25,7 +25,7 @@ from googleapiclient.errors import HttpError
 
 from app.core.config import get_settings
 
-logger = logging.getLogger("bttco.calendar_sync")
+logger = logging.getLogger("ryozan.calendar_sync")
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 WORKSPACE_DELEGATED_MODE = "workspace_delegated"
@@ -63,7 +63,7 @@ def artist_calendar_id(artist: Any) -> str:
 
 
 def artist_calendar_connected(artist: Any) -> bool:
-    """Return whether BTTCO can attempt Calendar operations for an artist."""
+    """Return whether Ryozan can attempt Calendar operations for an artist."""
     if workspace_delegation_enabled():
         return bool(artist_calendar_id(artist) and calendar_connection_configured())
     return calendar_connection_configured(getattr(artist, "google_refresh_token", None))

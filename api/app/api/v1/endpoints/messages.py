@@ -20,15 +20,15 @@ from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.message import ConversationParticipant, Message
-from app.models.user import BTTCOUser  # noqa: TC001
+from app.models.user import User  # noqa: TC001
 from app.schemas.message import ArtifactActionRequest, ArtifactActionResponse
 from app.services import artifacts
 
-logger = logging.getLogger("bttco.messages")
+logger = logging.getLogger("ryozan.messages")
 router = APIRouter(prefix="/messages", tags=["messages"])
 
 
-async def _verify_can_act(db: AsyncSession, message: Message, user: BTTCOUser) -> None:
+async def _verify_can_act(db: AsyncSession, message: Message, user: User) -> None:
     """
     Guardrail: the actor must be a participant in the message's
     conversation. Stricter per-action checks (e.g. "only the client
@@ -56,7 +56,7 @@ async def apply_artifact_action(
     message_id: UUID,
     body: ArtifactActionRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Dispatch an action against a message's artifact state.
@@ -99,7 +99,7 @@ async def apply_artifact_action(
 
 @router.get("/types")
 async def list_artifact_types(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Introspection endpoint: returns every registered artifact type

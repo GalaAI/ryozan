@@ -25,7 +25,7 @@ from app.core.config import Settings
 from app.core.database import get_db
 from app.models.message import Conversation
 from app.models.sms_message import SmsMessage
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import sms as sms_service
 
 
@@ -253,8 +253,8 @@ class _ConversationSession:
 
 class CourierConversationIdentityTests(unittest.IsolatedAsyncioTestCase):
     async def test_same_caller_has_distinct_conversation_identity_per_lane(self):
-        owner = BTTCOUser(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
-        sender = BTTCOUser(id=uuid.uuid4(), email="caller@example.test", name="Caller", role="collector")
+        owner = User(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
+        sender = User(id=uuid.uuid4(), email="caller@example.test", name="Caller", role="collector")
         db = _ConversationSession()
         bella = await sms._resolve_sms_conversation(
             db,
@@ -278,8 +278,8 @@ class CourierConversationIdentityTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Gala", gala.name or "")
 
     async def test_existing_lookup_is_lane_qualified(self):
-        owner = BTTCOUser(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
-        sender = BTTCOUser(id=uuid.uuid4(), email="caller@example.test", name="Caller", role="collector")
+        owner = User(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
+        sender = User(id=uuid.uuid4(), email="caller@example.test", name="Caller", role="collector")
         existing_bella = Conversation(
             id=uuid.uuid4(),
             name="SMS - Bella: +15550002000",
@@ -399,8 +399,8 @@ class InboundSigmaCaptureTests(unittest.TestCase):
             is_group=False,
             created_by=uuid.uuid4(),
         )
-        owner = BTTCOUser(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
-        sender = BTTCOUser(id=uuid.uuid4(), email="caller@example.test", name="Caller", role="collector")
+        owner = User(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
+        sender = User(id=uuid.uuid4(), email="caller@example.test", name="Caller", role="collector")
         courier_message = SimpleNamespace(id=uuid.uuid4())
         with (
             patch.object(sms, "_validate_twilio_signature", return_value=True),
@@ -464,8 +464,8 @@ class InboundBookingRoutedAutoReplyTests(unittest.TestCase):
 
         app.dependency_overrides[get_db] = fake_db
         conversation = Conversation(id=uuid.uuid4(), name="Booking thread", is_group=False, created_by=uuid.uuid4())
-        owner = BTTCOUser(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
-        sender = BTTCOUser(id=uuid.uuid4(), email="caller@example.test", name="Caller", role=sender_role)
+        owner = User(id=uuid.uuid4(), email="owner@example.test", name="Owner", role="founder")
+        sender = User(id=uuid.uuid4(), email="caller@example.test", name="Caller", role=sender_role)
         courier_message = SimpleNamespace(id=uuid.uuid4(), metadata_json=json.dumps(metadata))
         settings = _settings(BELLA_SMS_AUTO_REPLY_ENABLED=True)
         with (
@@ -502,10 +502,10 @@ class InboundBookingRoutedAutoReplyTests(unittest.TestCase):
 
 class SmsOriginNotificationTests(unittest.IsolatedAsyncioTestCase):
     async def test_sms_origin_message_texts_staff_but_never_collectors(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(), email="a@example.test", name="Artist", role="artist", phone="+15550107777", sms_opt_in=True
         )
-        other_collector = BTTCOUser(
+        other_collector = User(
             id=uuid.uuid4(),
             email="c@example.test",
             name="Other",
@@ -513,7 +513,7 @@ class SmsOriginNotificationTests(unittest.IsolatedAsyncioTestCase):
             phone="+15550108888",
             sms_opt_in=True,
         )
-        sender = BTTCOUser(id=uuid.uuid4(), email="s@example.test", name="Maria", role="collector")
+        sender = User(id=uuid.uuid4(), email="s@example.test", name="Maria", role="collector")
         conversation = Conversation(id=uuid.uuid4(), name="Booking thread", is_group=False, created_by=artist.id)
         message = SimpleNamespace(id=uuid.uuid4(), content="How much?", message_type="sms", metadata_json="{}")
 

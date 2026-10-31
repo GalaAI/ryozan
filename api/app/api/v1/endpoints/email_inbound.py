@@ -23,10 +23,10 @@ from app.core.database import get_db
 from app.core.user_lookup import find_user_by_email
 from app.models.email_route import EmailRoute
 from app.models.message import Conversation, ConversationParticipant, Message
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.conversation_threads import conversation_reply_to, find_direct_conversation
 
-logger = logging.getLogger("bttco.email_inbound")
+logger = logging.getLogger("ryozan.email_inbound")
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
@@ -173,8 +173,8 @@ async def _resolve_conversation_reply(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Invalid conversation reply address") from exc
     result = await db.execute(
-        select(BTTCOUser.email, BTTCOUser.id, BTTCOUser.role, ConversationParticipant.role)
-        .join(ConversationParticipant, ConversationParticipant.user_id == BTTCOUser.id)
+        select(User.email, User.id, User.role, ConversationParticipant.role)
+        .join(ConversationParticipant, ConversationParticipant.user_id == User.id)
         .join(Conversation, Conversation.id == ConversationParticipant.conversation_id)
         .where(Conversation.id == conversation_id)
     )
@@ -286,10 +286,10 @@ async def _resolve_destination(
         # Check static fallbacks
         destination = _fallback_destination(local_part)
         if destination:
-            user_result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.email == destination))
+            user_result = await db.execute(select(User.id).where(User.email == destination))
             return InboundRoute(destination, user_result.scalar_one_or_none(), local_part)
 
-    user_result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.email == FOUNDER_EMAIL))
+    user_result = await db.execute(select(User.id).where(User.email == FOUNDER_EMAIL))
     return InboundRoute(FOUNDER_EMAIL, user_result.scalar_one_or_none(), None)
 
 
@@ -359,11 +359,11 @@ async def _archive_email_to_courier(
         # a guessed UUID or a global email lookup that may match another user.
         participant_result = await db.execute(
             select(ConversationParticipant.id)
-            .join(BTTCOUser, BTTCOUser.id == ConversationParticipant.user_id)
+            .join(User, User.id == ConversationParticipant.user_id)
             .where(
                 ConversationParticipant.conversation_id == conversation_id,
                 ConversationParticipant.user_id == resolved_sender_id,
-                func.lower(func.trim(BTTCOUser.email)) == from_email,
+                func.lower(func.trim(User.email)) == from_email,
             )
         )
         if not resolved_sender_id or not participant_result.scalar_one_or_none():

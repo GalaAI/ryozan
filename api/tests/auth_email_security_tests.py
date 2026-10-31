@@ -10,7 +10,7 @@ os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 from pydantic import ValidationError
 
 from app.api.v1.endpoints.auth import DevImpersonateRequest, _normalize_email, _user_email_matches
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 
 class AuthEmailSecurityTests(unittest.TestCase):
@@ -21,7 +21,7 @@ class AuthEmailSecurityTests(unittest.TestCase):
         )
 
     def test_user_email_lookup_is_case_insensitive(self):
-        stmt = select(BTTCOUser).where(_user_email_matches("ADMIN@ryozan.app"))
+        stmt = select(User).where(_user_email_matches("ADMIN@ryozan.app"))
 
         compiled = stmt.compile(dialect=postgresql.dialect())
 

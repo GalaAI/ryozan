@@ -13,7 +13,7 @@ from fastapi import HTTPException
 
 from app.core import security
 from app.core.config import SHARED_SECRET_FIELDS, Settings
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import ai_routing
 from app.services.ai_routing import AILaneDecision, agent_model_lane
 
@@ -162,7 +162,7 @@ class _Result:
 
 class SignOutTests(unittest.TestCase):
     def _user(self):
-        return BTTCOUser(
+        return User(
             id=uuid.uuid4(),
             email="artist@ryozan.app",
             name="Artist",
@@ -284,7 +284,7 @@ class JudgeQaRoundTests(unittest.TestCase):
             LOCAL_DEV_MODE=False,
         )
         with patch.object(gala_chat, "get_settings", return_value=settings):
-            result = asyncio.run(gala_chat.get_agent_capabilities(BTTCOUser(id=uuid.uuid4(), role="founder")))
+            result = asyncio.run(gala_chat.get_agent_capabilities(User(id=uuid.uuid4(), role="founder")))
         self.assertIs(result["access_editing"], False)
         self.assertIs(result["ai_configured"], False)
 

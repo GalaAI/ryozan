@@ -18,10 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.reference import Reference, ReferenceView
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.storage import upload_file
 
-logger = logging.getLogger("bttco.references")
+logger = logging.getLogger("ryozan.references")
 router = APIRouter(prefix="/references", tags=["references"])
 
 MAX_FILE_SIZE = 25 * 1024 * 1024  # 25 MB
@@ -61,7 +61,7 @@ class PinBody(BaseModel):
 # -- Helpers -------------------------------------------------------
 
 
-def _require_artist(user: BTTCOUser) -> None:
+def _require_artist(user: User) -> None:
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("artist", 2):
         raise HTTPException(status_code=403, detail="Artist role or higher required")
 
@@ -72,7 +72,7 @@ def _require_artist(user: BTTCOUser) -> None:
 @router.get("/", response_model=ReferenceListResponse)
 async def list_references(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List all references: pinned first (by pin_order), then unpinned alphabetically."""
     _require_artist(current_user)
@@ -104,7 +104,7 @@ async def list_references(
 async def upload_reference(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Upload a reference file (image or PDF, max 25 MB)."""
     _require_artist(current_user)
@@ -146,7 +146,7 @@ async def upload_reference(
 async def record_view(
     reference_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Record a view on a reference (upsert per-user, increment view_count)."""
     _require_artist(current_user)
@@ -188,7 +188,7 @@ async def toggle_pin(
     reference_id: uuid.UUID,
     body: PinBody,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Pin or unpin a reference."""
     _require_artist(current_user)
@@ -217,7 +217,7 @@ async def toggle_pin(
 async def delete_reference(
     reference_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a reference. Only the uploader or founder/admin can delete."""
     _require_artist(current_user)

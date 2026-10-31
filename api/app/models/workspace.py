@@ -4,7 +4,7 @@ A workspace is a small, project-scoped shared surface (dev tracker, landing
 page prep, signup capture, countdown, etc.) that the owner and staff collaborate
 on, surfaced in Discord and a Vercel micro-app, backed by this database.
 
-This is the reusable "BTTCO micro-app" core: the dev tracker is workspace #1.
+This is the reusable "Ryozan micro-app" core: the dev tracker is workspace #1.
 Notes, todos, and log entries are all scoped by workspace_id so the next
 micro-app is just another workspace row, not a new schema.
 

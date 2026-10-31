@@ -2,7 +2,7 @@
 Quest models — ryozan_quests (quest definitions) + ryozan_user_quests (per-user progress).
 
 Quests are the gamification layer of the Collector's Club. Each quest has
-XP and BTTcoin rewards. Users track progress and claim rewards when complete.
+XP and RYO rewards. Users track progress and claim rewards when complete.
 """
 
 import uuid

@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.core.config import get_settings
 from app.core.database import async_session
 from app.core.security import hash_password
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 
 def _is_local_database(url: str) -> bool:
@@ -61,13 +61,13 @@ async def _free_slug(session, wanted: str) -> str:
     mirror happened to bring in, and must never overwrite an unrelated account
     that merely shares a slug, so step aside instead.
     """
-    taken = await session.execute(select(BTTCOUser).where(BTTCOUser.slug == wanted))
+    taken = await session.execute(select(User).where(User.slug == wanted))
     if taken.scalars().first() is None:
         return wanted
 
     for suffix in range(1, 100):
         candidate = f"{wanted}-dev" if suffix == 1 else f"{wanted}-dev-{suffix}"
-        clash = await session.execute(select(BTTCOUser).where(BTTCOUser.slug == candidate))
+        clash = await session.execute(select(User).where(User.slug == candidate))
         if clash.scalars().first() is None:
             print(f"Slug '{wanted}' is already taken locally; using '{candidate}'.")
             return candidate
@@ -85,10 +85,10 @@ async def bootstrap_dev_login(args: argparse.Namespace) -> int:
     password = _load_or_create_password(args.password)
 
     async with async_session() as session:
-        result = await session.execute(select(BTTCOUser).where(func.lower(BTTCOUser.email) == email))
+        result = await session.execute(select(User).where(func.lower(User.email) == email))
         user = result.scalar_one_or_none()
         if user is None:
-            user = BTTCOUser(
+            user = User(
                 email=email,
                 password_hash=hash_password(password),
                 name=args.name,
@@ -112,11 +112,11 @@ async def bootstrap_dev_login(args: argparse.Namespace) -> int:
         if args.with_admin:
             manager_email = args.manager_email.strip().lower()
             manager_result = await session.execute(
-                select(BTTCOUser).where(func.lower(BTTCOUser.email) == manager_email)
+                select(User).where(func.lower(User.email) == manager_email)
             )
             manager = manager_result.scalar_one_or_none()
             if manager is None:
-                manager = BTTCOUser(
+                manager = User(
                     email=manager_email,
                     password_hash=hash_password(password),
                     name=args.manager_name,

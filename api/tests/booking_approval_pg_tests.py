@@ -21,16 +21,17 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.v1.endpoints import bookings as bookings_endpoint
 from app.constants.status import BookingStatus, QuoteStatus
+from app.core import legacy_env
 from app.core.database import Base
 from app.models.booking import Booking
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.message import Conversation, Message
 from app.models.quote import Quote
 from app.models.session_type import ArtistSessionType
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.booking import BookingApprove, BookingReschedule, BookingResponse
 
-TEST_DATABASE_URL = os.environ.get("BTTCO_TEST_DATABASE_URL", "")
+TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "")
 if TEST_DATABASE_URL.startswith("postgresql://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
@@ -46,7 +47,7 @@ def _next_open_day() -> date:
 SLOT_DAY = _next_open_day()
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "set BTTCO_TEST_DATABASE_URL to run real booking approval")
+@unittest.skipUnless(TEST_DATABASE_URL, "set RYOZAN_TEST_DATABASE_URL to run real booking approval")
 class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.schema = f"booking_approval_{uuid4().hex}"
@@ -62,17 +63,17 @@ class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
         async with self.engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
 
-        self.artist = BTTCOUser(
+        self.artist = User(
             id=uuid4(),
             email=f"artist-{uuid4().hex}@example.test",
             password_hash="disabled",
             name="Rowan",
             role="artist",
         )
-        self.other_artist = BTTCOUser(
+        self.other_artist = User(
             id=uuid4(), email=f"other-{uuid4().hex}@example.test", password_hash="disabled", name="Jade", role="artist"
         )
-        self.collector = BTTCOUser(
+        self.collector = User(
             id=uuid4(),
             email=f"maria-{uuid4().hex}@example.test",
             password_hash="disabled",
@@ -121,7 +122,7 @@ class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
 
     async def _set_stripe(self, ready: bool):
         async with self.sessions() as db:
-            artist = await db.get(BTTCOUser, self.artist.id)
+            artist = await db.get(User, self.artist.id)
             artist.stripe_account_id = "acct_fixture" if ready else None
             artist.stripe_onboarding_complete = ready
             await db.commit()
@@ -131,7 +132,7 @@ class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
             scheduled_date=SLOT_DAY, scheduled_time=time, duration_minutes=120, deposit_amount=deposit
         )
         async with self.sessions() as db:
-            actor = await db.get(BTTCOUser, (user or self.artist).id)
+            actor = await db.get(User, (user or self.artist).id)
             return await bookings_endpoint.approve_booking_request(self.booking.id, body, db=db, current_user=actor)
 
     async def _intents(self, db):
@@ -261,7 +262,7 @@ class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
         await self._approve(deposit=100)
         body = BookingReschedule(scheduled_date=SLOT_DAY, scheduled_time="15:00")
         async with self.sessions() as db:
-            actor = await db.get(BTTCOUser, self.artist.id)
+            actor = await db.get(User, self.artist.id)
             with self.assertRaises(HTTPException) as ctx:
                 await bookings_endpoint.reschedule_booking(self.booking.id, body, db=db, current_user=actor)
         self.assertEqual(ctx.exception.status_code, 409)
@@ -409,7 +410,7 @@ class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
             )
             await db.commit()
         async with self.sessions() as db:
-            artist = await db.get(BTTCOUser, self.artist.id)
+            artist = await db.get(User, self.artist.id)
             defaults = await bookings_endpoint.get_booking_approval_defaults(
                 self.booking.id, db=db, current_user=artist
             )
@@ -419,7 +420,7 @@ class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_defaults_fall_back_to_duration_rule_and_consultation_zero(self):
         async with self.sessions() as db:
-            artist = await db.get(BTTCOUser, self.artist.id)
+            artist = await db.get(User, self.artist.id)
             defaults = await bookings_endpoint.get_booking_approval_defaults(
                 self.booking.id, db=db, current_user=artist
             )
@@ -428,7 +429,7 @@ class BookingApprovalPostgresTests(unittest.IsolatedAsyncioTestCase):
             booking.booking_kind = "consultation"
             await db.commit()
         async with self.sessions() as db:
-            artist = await db.get(BTTCOUser, self.artist.id)
+            artist = await db.get(User, self.artist.id)
             defaults = await bookings_endpoint.get_booking_approval_defaults(
                 self.booking.id, db=db, current_user=artist
             )

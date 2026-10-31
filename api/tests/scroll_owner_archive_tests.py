@@ -39,7 +39,7 @@ from app.api.v1.endpoints.documents import get_my_scroll, submit_scroll
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email import SCROLL_REQUEST_TEMPLATE_MARKER, build_scroll_request_html
 from app.services.email_foundry import STARSEED_TILE_URL
 from app.services.email_template_seeder import get_seed_templates
@@ -120,8 +120,8 @@ def _upload(name: str, data: bytes, content_type: str) -> UploadFile:
     )
 
 
-def _user(role: str, name: str, email: str) -> BTTCOUser:
-    user = BTTCOUser(email=email, password_hash="x", name=name, role=role)
+def _user(role: str, name: str, email: str) -> User:
+    user = User(email=email, password_hash="x", name=name, role=role)
     user.id = uuid.uuid4()
     user.bttcoin_balance = 0
     user.quest_points = 0
@@ -236,7 +236,7 @@ class ArtistScrollRequestEmailTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('href="{{action_url}}"', template["html_body"])
 
     async def test_stale_database_template_falls_back_to_current_foundry_email(self):
-        artist = _user("artist", "Jade", "jade@bttco.test")
+        artist = _user("artist", "Jade", "jade@ryozan.test")
         session = FakeSession([])
         sent = []
 
@@ -380,8 +380,8 @@ async def _submit(
 
 class OwnerArchiveFilingTests(unittest.IsolatedAsyncioTestCase):
     async def test_submission_creates_artist_and_founder_instances(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin Walker", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin Walker", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
         r2 = _R2Stub()
 
@@ -411,8 +411,8 @@ class OwnerArchiveFilingTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(data["submitted_at"])
 
     async def test_founder_copy_is_filed_for_every_founder(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founders = [_user("founder", "A", "a@bttco.test"), _user("founder", "B", "b@bttco.test")]
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founders = [_user("founder", "A", "a@ryozan.test"), _user("founder", "B", "b@ryozan.test")]
         session = _ArtistScrollSession(founders, caller=artist)
 
         with patch("app.services.scroll_archive.send_email", return_value=True):
@@ -421,7 +421,7 @@ class OwnerArchiveFilingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["owner_copies_filed"], 2)
 
     async def test_no_founder_skips_archive_without_failing_submission(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
         session = _ArtistScrollSession([], caller=artist)
 
         result = await _submit(session, artist, _R2Stub())
@@ -434,8 +434,8 @@ class OwnerArchiveFilingTests(unittest.IsolatedAsyncioTestCase):
 
 class OwnerArchiveInputAndAccessTests(unittest.IsolatedAsyncioTestCase):
     async def test_artist_form_submits_without_an_owner_signature(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
         r2 = _R2Stub()
 
@@ -448,8 +448,8 @@ class OwnerArchiveInputAndAccessTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("owner_signature", inspect.signature(submit_scroll).parameters)
 
     async def test_per_file_limit_rejects_before_storage_or_upsert(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
         r2 = _R2Stub()
 
@@ -466,8 +466,8 @@ class OwnerArchiveInputAndAccessTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(session.deleted, [])
 
     def test_owner_archive_is_founder_only_in_both_api_surfaces(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
 
         for guard, category in (
             (documents_module._require_owner_archive_access, OWNER_ARCHIVE_CATEGORY),
@@ -480,8 +480,8 @@ class OwnerArchiveInputAndAccessTests(unittest.IsolatedAsyncioTestCase):
                 guard(founder, category)
 
     async def test_artist_file_url_is_the_scroll_pdf_not_the_bbp_cert(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
         r2 = _R2Stub()
 
@@ -499,8 +499,8 @@ class OwnerArchiveInputAndAccessTests(unittest.IsolatedAsyncioTestCase):
 
 class OwnerScrollIsolationTests(unittest.IsolatedAsyncioTestCase):
     async def test_get_my_scroll_as_founder_does_not_return_an_artist_scroll(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
 
         with patch("app.services.scroll_archive.send_email", return_value=True):
@@ -523,8 +523,8 @@ class OwnerScrollIsolationTests(unittest.IsolatedAsyncioTestCase):
 
 class ResubmissionImmutabilityTests(unittest.IsolatedAsyncioTestCase):
     async def test_second_submission_preserves_founder_archive_and_objects(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
 
         r2_first = _R2Stub()
@@ -593,7 +593,7 @@ class ScrollPdfContentTests(unittest.TestCase):
         return build_scroll_pdf(
             ScrollPdfInput(
                 artist_name="Rae Vance",
-                artist_email="rae@bttco.test",
+                artist_email="rae@ryozan.test",
                 artist_user_id="artist-123",
                 submission_id="sub-abc",
                 fields={"license_number": "SC-TATTOO-9931", "bbp_expires": "2027-04-01"},
@@ -751,8 +751,8 @@ class ScrollPdfContentTests(unittest.TestCase):
 
 class OwnerNotificationTests(unittest.IsolatedAsyncioTestCase):
     async def test_notification_row_created_for_founder(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
 
         with patch("app.services.scroll_archive.send_email", return_value=True):
@@ -772,15 +772,15 @@ class OwnerNotificationTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_email_is_durably_queued_with_the_pdf_attached(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
 
         result = await _submit(session, artist, _R2Stub())
 
         rows = [r for r in session.added if isinstance(r, ScrollOwnerEmailOutbox)]
         self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0].to_email, "justin@bttco.test")
+        self.assertEqual(rows[0].to_email, "justin@ryozan.test")
         self.assertIn("Rae Vance", rows[0].subject)
         self.assertTrue(rows[0].attachment_content.startswith(b"%PDF"))
         self.assertEqual(rows[0].status, "queued")
@@ -788,8 +788,8 @@ class OwnerNotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["owner_emails_sent"], 0)
 
     async def test_email_provider_is_not_called_on_the_request_path(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
 
         with patch("app.services.scroll_archive.send_email") as sender:
@@ -804,8 +804,8 @@ class OwnerNotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(session.commits, 1)
 
     async def test_notification_failure_still_returns_success_to_the_artist(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
 
         with patch("app.services.scroll_archive.Notification", side_effect=RuntimeError("notif exploded")):
@@ -821,7 +821,7 @@ class OwnerEmailOutboxProcessorTests(unittest.IsolatedAsyncioTestCase):
         row = ScrollOwnerEmailOutbox(
             founder_id=uuid.uuid4(),
             submission_id="submission-1",
-            to_email="justin@bttco.test",
+            to_email="justin@ryozan.test",
             subject="Artist Scroll Submitted: Rae Vance",
             html_body="<p>ready</p>",
             attachment_filename="artist-scroll-Rae_Vance.pdf",
@@ -874,8 +874,8 @@ class OwnerEmailOutboxProcessorTests(unittest.IsolatedAsyncioTestCase):
 
 class PartialUploadVisibilityTests(unittest.IsolatedAsyncioTestCase):
     async def test_failed_cert_upload_is_recorded_in_both_copies(self):
-        artist = _user("artist", "Rae Vance", "rae@bttco.test")
-        founder = _user("founder", "Justin", "justin@bttco.test")
+        artist = _user("artist", "Rae Vance", "rae@ryozan.test")
+        founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
 
         with patch("app.services.scroll_archive.send_email", return_value=True):
@@ -1008,7 +1008,7 @@ class EmailAttachmentTransportTests(unittest.TestCase):
         ):
             gs.return_value.SMTP_USER = "mailhog"
             gs.return_value.SMTP_PASSWORD = "mailhog"
-            gs.return_value.SMTP_FROM_NAME = "BTTCO Dev"
+            gs.return_value.SMTP_FROM_NAME = "Ryozan Dev"
             gs.return_value.SMTP_FROM_EMAIL = "dev@ryozan-studio.local"
             gs.return_value.SMTP_HOST = "127.0.0.1"
             gs.return_value.SMTP_PORT = 1025

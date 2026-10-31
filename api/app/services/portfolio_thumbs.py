@@ -10,8 +10,8 @@ original one small WebP companion:
     portfolios/<slug>/thumbs/<file>.webp         640px long edge, quality 82 (tiles)
     portfolios/<slug>/focus/<file>.webp          1400px long edge, quality 82 (enlarged view)
 
-The mappings original_url -> derivative_url live on BTTCOUser.portfolio_thumbs and
-BTTCOUser.portfolio_focus (JSONB). Dicts rather than parallel lists, so removing or
+The mappings original_url -> derivative_url live on User.portfolio_thumbs and
+User.portfolio_focus (JSONB). Dicts rather than parallel lists, so removing or
 reordering an original never desyncs them. Consumers read the thumb for grid tiles and the
 focus derivative when a piece is enlarged; the original is never decoded in a browser. A
 missing derivative falls back to the original, so a failed one never breaks a gallery.
@@ -35,7 +35,7 @@ from PIL import Image, ImageChops, ImageOps, UnidentifiedImageError
 
 from app.services.storage import upload_file
 
-logger = logging.getLogger("bttco.portfolio_thumbs")
+logger = logging.getLogger("ryozan.portfolio_thumbs")
 
 # Long-edge size for gallery tiles. The booking wall renders tiles at ~17vw (about 330px
 # on a 1920 display, 2x on retina), the portfolio page grid at roughly the same. 640 covers
@@ -212,7 +212,7 @@ async def backfill_missing_portfolio_derivatives(
     import httpx
     from sqlalchemy import select
 
-    from app.models.user import BTTCOUser
+    from app.models.user import User
 
     report = BackfillReport()
     async with httpx.AsyncClient(follow_redirects=True, timeout=60.0) as client:
@@ -232,9 +232,7 @@ async def backfill_missing_portfolio_derivatives(
         rows = (
             (
                 await db.execute(
-                    select(BTTCOUser)
-                    .where(BTTCOUser.role.in_(("artist", "founder")), BTTCOUser.slug.isnot(None))
-                    .order_by(BTTCOUser.name)
+                    select(User).where(User.role.in_(("artist", "founder")), User.slug.isnot(None)).order_by(User.name)
                 )
             )
             .scalars()

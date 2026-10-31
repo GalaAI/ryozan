@@ -1,6 +1,6 @@
 """Viber endpoints — accounts, project connections, AI providers.
 
-Viber connects OUT to project backends (BTTCO API first) as an extension.
+Viber connects OUT to project backends (Ryozan API first) as an extension.
 Founder-gated: this is operator tooling, not collector-facing.
 
 Secrets (connection tokens, BYOK keys) are accepted at create-time and stored
@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.models.viber import ViberAccount, ViberAIProvider, ViberConnection, ViberProposal
 from app.schemas.viber import (
     ConnectionTestResult,
@@ -36,12 +36,12 @@ from app.schemas.viber import (
     ViberProposalRecord,
 )
 
-logger = logging.getLogger("bttco.viber")
+logger = logging.getLogger("ryozan.viber")
 
 router = APIRouter(prefix="/viber", tags=["viber"])
 
 
-def _require_founder(user: BTTCOUser) -> None:
+def _require_founder(user: User) -> None:
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("founder", 99):
         raise HTTPException(status_code=403, detail="Viber is founder-only for now")
 
@@ -161,7 +161,7 @@ def _smith_scaffold_proposal(intent: str, atlas: dict, connection: ViberConnecti
 @router.post("/accounts", response_model=ViberAccountRecord, status_code=201)
 async def create_account(
     payload: ViberAccountCreate,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_founder(current_user)
@@ -177,7 +177,7 @@ async def create_account(
 
 @router.get("/accounts", response_model=list[ViberAccountRecord])
 async def list_accounts(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_founder(current_user)
@@ -200,7 +200,7 @@ async def _get_account(account_id: UUID, db: AsyncSession) -> ViberAccount:
 async def create_connection(
     account_id: UUID,
     payload: ViberConnectionCreate,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_founder(current_user)
@@ -226,7 +226,7 @@ async def create_connection(
 @router.get("/accounts/{account_id}/connections", response_model=list[ViberConnectionRecord])
 async def list_connections(
     account_id: UUID,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_founder(current_user)
@@ -240,7 +240,7 @@ async def list_connections(
 @router.post("/connections/{connection_id}/test", response_model=ConnectionTestResult)
 async def test_connection(
     connection_id: UUID,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Probe a connected backend and cache an introspection map.
@@ -306,7 +306,7 @@ async def test_connection(
 @router.get("/connections/{connection_id}/atlas")
 async def connection_atlas(
     connection_id: UUID,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Build the Atlas mind-map graph for a connection.
@@ -359,7 +359,7 @@ async def connection_atlas(
 async def gala_orchestrate(
     account_id: UUID,
     payload: ViberGalaIntentRequest,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Route a natural-language intent through Gala.
@@ -450,7 +450,7 @@ async def gala_orchestrate(
 async def approve_proposal(
     proposal_id: UUID,
     payload: ViberProposalApproveRequest,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Approve a staged proposal without executing it.
@@ -487,7 +487,7 @@ async def approve_proposal(
 async def create_ai_provider(
     account_id: UUID,
     payload: ViberAIProviderCreate,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_founder(current_user)
@@ -520,7 +520,7 @@ async def create_ai_provider(
 @router.get("/accounts/{account_id}/ai-providers", response_model=list[ViberAIProviderRecord])
 async def list_ai_providers(
     account_id: UUID,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     _require_founder(current_user)

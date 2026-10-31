@@ -35,7 +35,7 @@ from app.api.v1.endpoints.calendar import (
 from app.constants.status import BookingStatus
 from app.core.security import ROLE_RANK
 from app.models.booking import Booking
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.artifacts import (
     ArtifactActionError,
     ArtifactError,
@@ -49,7 +49,7 @@ from app.services.calendar_sync import (
     get_availability,
 )
 
-logger = logging.getLogger("bttco.artifacts.slot_proposal")
+logger = logging.getLogger("ryozan.artifacts.slot_proposal")
 
 
 # ── Payload schema ───────────────────────────────────────────────
@@ -99,7 +99,7 @@ async def _load_booking(db: AsyncSession, booking_id: UUID) -> Booking:
 async def _apply_select_slot(
     db: AsyncSession,
     message: Any,
-    actor: BTTCOUser | None,
+    actor: User | None,
     payload: dict[str, Any],
     state: dict[str, Any],
     data: dict[str, Any],
@@ -118,7 +118,7 @@ async def _apply_select_slot(
 
     selected = slots[index]
     booking = await _load_booking(db, UUID(payload["booking_id"]))
-    artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+    artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
     artist_user = artist_r.scalar_one_or_none()
     if artist_user is None:
         raise ArtifactActionError("booking has no assigned artist")
@@ -203,9 +203,7 @@ async def _apply_select_slot(
             client_name = booking.guest_name or "Client"
             client_email = booking.guest_email
             if booking.client_id:
-                client_r = await db.execute(
-                    select(BTTCOUser.name, BTTCOUser.email).where(BTTCOUser.id == booking.client_id)
-                )
+                client_r = await db.execute(select(User.name, User.email).where(User.id == booking.client_id))
                 client_row = client_r.first()
                 if client_row:
                     client_name = client_row[0] or client_name
@@ -244,7 +242,7 @@ async def _apply_action(
     db: AsyncSession,
     message: Any,
     action: str,
-    actor: BTTCOUser | None,
+    actor: User | None,
     data: dict[str, Any],
 ) -> dict[str, Any]:
     payload = dict(message.artifact_payload or {})

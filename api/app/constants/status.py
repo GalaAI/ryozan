@@ -1,5 +1,5 @@
 """
-Status constants for BTTCO entities.
+Status constants for Ryozan entities.
 
 Single source of truth for all status values across the codebase.
 Import these instead of using raw strings.

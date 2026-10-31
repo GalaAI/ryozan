@@ -19,7 +19,7 @@ from sqlalchemy import select
 
 from app.core.config import get_settings
 from app.core.security import hash_password, verify_password
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,12 +32,12 @@ def _demo_email() -> str:
     return normalize_email(raw) if raw else ""
 
 
-def is_demo_account(user: BTTCOUser | None) -> bool:
+def is_demo_account(user: User | None) -> bool:
     email = _demo_email()
     return bool(email and user is not None and normalize_email(user.email or "") == email)
 
 
-def refuse_if_demo_account(user: BTTCOUser | None) -> None:
+def refuse_if_demo_account(user: User | None) -> None:
     if is_demo_account(user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -55,10 +55,10 @@ async def ensure_demo_account(db: AsyncSession) -> str:
     if len(password) < 12:
         # A short shared password is refused rather than published to judges.
         return "skipped: DEMO_ACCOUNT_PASSWORD must be 12 or more characters"
-    user = (await db.execute(select(BTTCOUser).where(BTTCOUser.email == email))).scalar_one_or_none()
+    user = (await db.execute(select(User).where(User.email == email))).scalar_one_or_none()
     now = datetime.now(UTC)
     if user is None:
-        user = BTTCOUser(email=email, name=DEMO_ACCOUNT_NAME, role="collector")
+        user = User(email=email, name=DEMO_ACCOUNT_NAME, role="collector")
         db.add(user)
         outcome = "created"
     else:

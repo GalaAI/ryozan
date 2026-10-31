@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.calendar_sync import (
     artist_calendar_connected,
     artist_calendar_id,
@@ -29,7 +29,7 @@ from app.services.calendar_sync import (
     workspace_delegation_enabled,
 )
 
-logger = logging.getLogger("bttco.google_auth")
+logger = logging.getLogger("ryozan.google_auth")
 
 router = APIRouter(prefix="/auth/google", tags=["google-auth"])
 
@@ -88,7 +88,7 @@ def _build_flow() -> Flow:
 
 @router.get("/connect", response_model=GoogleConnectResponse)
 async def google_connect(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Generate a Google OAuth authorization URL for the current user.
@@ -151,7 +151,7 @@ async def google_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state parameter") from exc
 
     # Look up the user
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -198,7 +198,7 @@ async def google_callback(
 @router.delete("/disconnect", status_code=204)
 async def google_disconnect(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Remove the legacy Google refresh token from the current user's record."""
     if workspace_delegation_enabled():
@@ -216,7 +216,7 @@ async def google_disconnect(
 
 @router.get("/status", response_model=GoogleStatusResponse)
 async def google_status(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Check the active Calendar authority for the current staff user."""
@@ -227,7 +227,7 @@ async def google_status(
             "artist",
             "founder",
         }:
-            result = await db.execute(select(BTTCOUser).where(BTTCOUser.role == "founder"))
+            result = await db.execute(select(User).where(User.role == "founder"))
             founder = result.scalar_one_or_none()
             if founder:
                 calendar_user = founder
@@ -276,9 +276,9 @@ async def google_status(
     # Admin fallback: check if any founder has Google Calendar
     if ROLE_RANK.get(current_user.role, 0) >= ROLE_RANK.get("admin", 3):
         result = await db.execute(
-            select(BTTCOUser).where(
-                BTTCOUser.role == "founder",
-                BTTCOUser.google_refresh_token.isnot(None),
+            select(User).where(
+                User.role == "founder",
+                User.google_refresh_token.isnot(None),
             )
         )
         founder = result.scalar_one_or_none()

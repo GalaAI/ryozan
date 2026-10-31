@@ -71,7 +71,7 @@ from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.notification import Notification as NotificationModel
 from app.models.quote import Quote
 from app.models.session_type import ArtistSessionType
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 from app.schemas.booking import (
     BookingApprovalDefaults,
     BookingApprovalResult,
@@ -143,7 +143,7 @@ from app.services.sms import send_sms
 from app.services.storage import upload_file
 from app.services.stripe_client import get_stripe_client
 
-logger = logging.getLogger("bttco.bookings")
+logger = logging.getLogger("ryozan.bookings")
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -238,13 +238,13 @@ def _queue_booking_email_intent(
     )
 
 
-def _require_role(user: BTTCOUser, min_role: str):
+def _require_role(user: User, min_role: str):
     """Raise 403 if user doesn't meet minimum role."""
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get(min_role, 99):
         raise HTTPException(status_code=403, detail=f"Requires {min_role} role or higher")
 
 
-def _require_booking_management_access(user: BTTCOUser, booking: Booking) -> None:
+def _require_booking_management_access(user: User, booking: Booking) -> None:
     """Require shop management scope or the assigned artist's own scope."""
     role_rank = ROLE_RANK.get(user.role, 0)
     is_shop_manager = user.role == "assistant" or role_rank >= ROLE_RANK.get("admin", 3)
@@ -393,7 +393,7 @@ async def _schedule_blocking_reasons(
 async def _authorize_schedule_override(
     db: AsyncSession,
     *,
-    current_user: BTTCOUser,
+    current_user: User,
     artist_id: UUID,
     scheduled_date,
     scheduled_time: str,
@@ -468,7 +468,7 @@ def _booking_calendar_payload(
 
 async def _booking_contact(db: AsyncSession, booking: Booking) -> tuple[str, str | None]:
     if booking.client_id:
-        result = await db.execute(select(BTTCOUser.name, BTTCOUser.email).where(BTTCOUser.id == booking.client_id))
+        result = await db.execute(select(User.name, User.email).where(User.id == booking.client_id))
         row = result.one_or_none()
         if row:
             return row[0] or booking.guest_name or "Client", row[1] or booking.guest_email
@@ -503,7 +503,7 @@ async def _notify_booking_lifecycle(
 async def _post_booking_calendar_event(
     db: AsyncSession,
     booking: Booking,
-    artist: BTTCOUser | None,
+    artist: User | None,
     actor_id: UUID | None,
 ) -> bool:
     """Create (or update) the Google Calendar event for a scheduled booking.
@@ -556,9 +556,7 @@ async def _send_booking_confirmed_sms(db: AsyncSession, booking: Booking) -> Non
     phone: str | None = None
     user_id: UUID | None = None
     if booking.client_id:
-        row = (
-            await db.execute(select(BTTCOUser.phone, BTTCOUser.id).where(BTTCOUser.id == booking.client_id))
-        ).one_or_none()
+        row = (await db.execute(select(User.phone, User.id).where(User.id == booking.client_id))).one_or_none()
         if row:
             phone, user_id = row[0], row[1]
     phone = phone or booking.guest_phone
@@ -616,7 +614,7 @@ async def _send_booking_request_received_sms(
 async def _on_booking_confirmed(
     db: AsyncSession,
     booking: Booking,
-    artist: BTTCOUser | None,
+    artist: User | None,
     actor_id: UUID | None,
     *,
     notify_client: bool = True,
@@ -686,14 +684,12 @@ async def _enrich_booking(booking: Booking, db: AsyncSession) -> BookingResponse
     """Add client_name, artist_name, and resolved identity fields."""
     client_row = None
     if booking.client_id:
-        client_r = await db.execute(
-            select(BTTCOUser.name, BTTCOUser.email, BTTCOUser.phone).where(BTTCOUser.id == booking.client_id)
-        )
+        client_r = await db.execute(select(User.name, User.email, User.phone).where(User.id == booking.client_id))
         client_row = client_r.one_or_none()
 
     artist_name = None
     if booking.artist_id:
-        artist_r = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+        artist_r = await db.execute(select(User.name).where(User.id == booking.artist_id))
         artist_name = artist_r.scalar_one_or_none()
 
     # Resolved identity - coalesce guest fields with user record
@@ -1058,7 +1054,7 @@ async def _recover_booky_stage_commit_failure(
     db: AsyncSession,
     *,
     booking_id: UUID,
-    artist: BTTCOUser,
+    artist: User,
     action_id: str,
     hold_token: str | None,
     stage: str,
@@ -1124,7 +1120,7 @@ async def _run_booky_confirmation_saga(
     db: AsyncSession,
     *,
     booking: Booking,
-    artist: BTTCOUser,
+    artist: User,
     conversation: Conversation,
     client_name: str,
     client_email: str,
@@ -1510,7 +1506,7 @@ async def _find_or_create_collector(
     email: str,
     name: str,
     phone: str | None = None,
-) -> BTTCOUser:
+) -> User:
     """Resolve one collector, surviving concurrent inserts on normalized email."""
     user, _created = await _find_or_create_collector_with_status(db, email, name, phone)
     return user
@@ -1521,14 +1517,14 @@ async def _find_or_create_collector_with_status(
     email: str,
     name: str,
     phone: str | None = None,
-) -> tuple[BTTCOUser, bool]:
+) -> tuple[User, bool]:
     """Resolve one collector and report whether this request created the account."""
     normalized = normalize_email(email)
     existing = await find_user_by_email(db, normalized)
     if existing:
         return existing, False
 
-    candidate = BTTCOUser(
+    candidate = User(
         email=normalized,
         password_hash=hash_password(secrets.token_urlsafe(24)),
         name=name,
@@ -2023,7 +2019,7 @@ async def list_booking_drafts(
     skip: int = 0,
     limit: int = Query(default=50, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Staff: list recoverable public booking drafts.
@@ -2059,7 +2055,7 @@ async def backfill_booking_conversations(
     limit: int = Query(default=100, le=500),
     repair_existing: bool = Query(default=False),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Admin: backfill Courier threads for bookings missing conversation_id.
@@ -2101,7 +2097,7 @@ async def backfill_booking_conversations(
 async def backfill_booking_intake_messages(
     limit: int = Query(default=100, le=500),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Admin: seed missing Courier intake messages for existing booking threads.
@@ -2154,7 +2150,7 @@ async def backfill_booking_intake_messages(
     return {"fixed": fixed, "skipped": skipped, "total": len(bookings)}
 
 
-def _booky_settings_response(artist: BTTCOUser) -> BookySettingsResponse:
+def _booky_settings_response(artist: User) -> BookySettingsResponse:
     settings = get_settings()
     return BookySettingsResponse(
         artist_id=artist.id,
@@ -2171,7 +2167,7 @@ def _booky_settings_response(artist: BTTCOUser) -> BookySettingsResponse:
 @router.post("/booky/capability", response_model=BookyCapabilityResponse)
 async def create_booky_capability(
     body: BookyCapabilityRequest,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Create an inquiry-scoped capability for an authenticated collector."""
     now = datetime.now(UTC)
@@ -2215,9 +2211,9 @@ def _verify_existing_inquiry_capability(
 async def get_booky_settings(
     artist_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    artist = await db.get(BTTCOUser, artist_id)
+    artist = await db.get(User, artist_id)
     if not artist or ROLE_RANK.get(artist.role, 0) < ROLE_RANK.get("artist", 2):
         raise HTTPException(status_code=404, detail="Artist not found")
     is_admin = ROLE_RANK.get(current_user.role, 0) >= ROLE_RANK.get("admin", 3)
@@ -2231,9 +2227,9 @@ async def update_booky_settings(
     artist_id: UUID,
     body: BookySettingsUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
-    artist = await db.get(BTTCOUser, artist_id)
+    artist = await db.get(User, artist_id)
     if not artist or ROLE_RANK.get(artist.role, 0) < ROLE_RANK.get("artist", 2):
         raise HTTPException(status_code=404, detail="Artist not found")
     is_admin = ROLE_RANK.get(current_user.role, 0) >= ROLE_RANK.get("admin", 3)
@@ -2298,7 +2294,7 @@ async def update_booky_settings(
 async def get_booky_projection(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     booking = await db.get(Booking, booking_id)
     if not booking:
@@ -2315,7 +2311,7 @@ async def _booky_retry_blockers(
     db: AsyncSession,
     *,
     booking: Booking,
-    artist: BTTCOUser,
+    artist: User,
 ) -> list[str]:
     if not booking.scheduled_date or not booking.scheduled_time:
         return ["scheduled_slot_missing"]
@@ -2447,7 +2443,7 @@ async def _claim_booky_retry_lease(
 async def retry_booky_confirmation(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     booking_result = await db.execute(select(Booking).where(Booking.id == booking_id))
     booking = booking_result.scalar_one_or_none()
@@ -2536,7 +2532,7 @@ async def retry_booky_confirmation(
     if booking.status != BookingStatus.PENDING:
         raise HTTPException(status_code=409, detail="Only a pending confirmation or failed delivery can be retried")
 
-    artist = await db.get(BTTCOUser, booking.artist_id)
+    artist = await db.get(User, booking.artist_id)
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
     client_name, client_email = await _booking_contact(db, booking)
@@ -2732,7 +2728,7 @@ async def submit_public_inquiry(
         ) from exc
 
 
-async def _resolve_inquiry_staff(db: AsyncSession, artist_slug: str | None) -> tuple[list[BTTCOUser], BTTCOUser | None]:
+async def _resolve_inquiry_staff(db: AsyncSession, artist_slug: str | None) -> tuple[list[User], User | None]:
     """Return the staff accounts an inquiry thread belongs to, plus the artist when one was named.
 
     Conversations carry no artist column; ownership is participant identity.
@@ -2741,9 +2737,7 @@ async def _resolve_inquiry_staff(db: AsyncSession, artist_slug: str | None) -> t
     """
     slug = (artist_slug or "").strip().lower()
     if slug in {"", "any"}:
-        result = await db.execute(
-            select(BTTCOUser).where(BTTCOUser.role.in_(["founder", "admin"])).order_by(BTTCOUser.created_at)
-        )
+        result = await db.execute(select(User).where(User.role.in_(["founder", "admin"])).order_by(User.created_at))
         managers = list(result.scalars().all())
         managers.sort(key=lambda user: 0 if user.role == "founder" else 1)
         if not managers:
@@ -2751,7 +2745,7 @@ async def _resolve_inquiry_staff(db: AsyncSession, artist_slug: str | None) -> t
         return managers, None
 
     result = await db.execute(
-        select(BTTCOUser).where(BTTCOUser.slug == slug).where(BTTCOUser.role.in_(["artist", "admin", "founder"]))
+        select(User).where(User.slug == slug).where(User.role.in_(["artist", "admin", "founder"]))
     )
     artist = result.scalar_one_or_none()
     if not artist:
@@ -2979,7 +2973,7 @@ async def _create_public_booking_checkout(
     db: AsyncSession,
     *,
     booking: Booking,
-    artist: BTTCOUser,
+    artist: User,
     slot_hold: BookingSlotHold | None,
     client_email: str,
     deposit_amount: float,
@@ -3116,7 +3110,7 @@ async def _create_public_booking_checkout(
     return session.url
 
 
-def _byof_stripe_request_options(booking: Booking, artist: BTTCOUser, *, action: str) -> dict | None:
+def _byof_stripe_request_options(booking: Booking, artist: User, *, action: str) -> dict | None:
     service_price_cents = int(round(float(booking.deposit_amount or 0) * 100))
     routing = resolve_charge_routing(
         artist,
@@ -3126,7 +3120,7 @@ def _byof_stripe_request_options(booking: Booking, artist: BTTCOUser, *, action:
     return routing.request_options(idempotency_key=f"byof-{action}-{booking.id}")
 
 
-async def _capture_byof_authorization(booking: Booking, artist: BTTCOUser) -> None:
+async def _capture_byof_authorization(booking: Booking, artist: User) -> None:
     if not booking.is_bring_your_own_flash or booking.deposit_authorization_status != "authorized":
         return
     if not booking.stripe_payment_intent_id:
@@ -3151,7 +3145,7 @@ async def _capture_byof_authorization(booking: Booking, artist: BTTCOUser) -> No
 
 async def _release_byof_authorization(
     booking: Booking,
-    artist: BTTCOUser,
+    artist: User,
     *,
     final_status: str = "released",
 ) -> None:
@@ -3210,7 +3204,7 @@ async def process_byof_deposit_reviews_once(limit: int = 20) -> int:
             .with_for_update(skip_locked=True)
         )
         for booking in result.scalars().all():
-            artist = await db.get(BTTCOUser, booking.artist_id)
+            artist = await db.get(User, booking.artist_id)
             if not artist:
                 continue
             if booking.deposit_review_deadline_at and booking.deposit_review_deadline_at <= now:
@@ -3270,7 +3264,7 @@ async def _do_submit_public_booking(
         raise HTTPException(status_code=400, detail="Choose an artist for this booking request")
 
     result = await db.execute(
-        select(BTTCOUser).where(BTTCOUser.slug == slug).where(BTTCOUser.role.in_(["artist", "admin", "founder"]))
+        select(User).where(User.slug == slug).where(User.role.in_(["artist", "admin", "founder"]))
     )
     artist = result.scalar_one_or_none()
     if not artist:
@@ -3747,7 +3741,7 @@ async def _do_submit_public_booking(
         )
 
     # Also notify founder + admin users (shop managers) if different from the artist
-    manager_result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.role.in_(["founder", "admin"])))
+    manager_result = await db.execute(select(User.id).where(User.role.in_(["founder", "admin"])))
     manager_ids = [row[0] for row in manager_result.all()]
     for mgr_id in manager_ids:
         if mgr_id != artist_id:
@@ -3877,7 +3871,7 @@ async def _do_submit_public_booking(
 async def link_booking_to_account(
     reference_code: str,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Auth required: link an existing guest booking to a newly-created account.
@@ -4217,7 +4211,7 @@ async def process_booking_email_outbox_once(limit: int = 20) -> int:
                 elif kind == "request_approved":
                     delivery_status = "sent" if await _send_request_approved(to=recipient, **payload) else "failed"
                 elif kind == "client_account_setup":
-                    user = await session.get(BTTCOUser, UUID(payload["user_id"]), populate_existing=True)
+                    user = await session.get(User, UUID(payload["user_id"]), populate_existing=True)
                     if user is None or normalize_email(user.email) != normalize_email(recipient):
                         raise ValueError("Account setup recipient no longer matches the account")
                     delivery_status = "sent"
@@ -4278,14 +4272,14 @@ async def process_booking_email_outbox_once(limit: int = 20) -> int:
 async def create_booking(
     body: BookingCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Client submits a booking request to an artist.
     Auto-creates a conversation thread between client and artist.
     """
     # Verify artist exists and is actually an artist
-    artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == body.artist_id))
+    artist_result = await db.execute(select(User).where(User.id == body.artist_id))
     artist = artist_result.scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
@@ -4348,7 +4342,7 @@ async def create_booking(
     )
 
     # Also notify founder + admin users (shop managers)
-    mgr_result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.role.in_(["founder", "admin"])))
+    mgr_result = await db.execute(select(User.id).where(User.role.in_(["founder", "admin"])))
     for (mgr_id,) in mgr_result.all():
         if mgr_id != body.artist_id and mgr_id != current_user.id:
             db.add(
@@ -4369,7 +4363,7 @@ async def create_booking(
 async def staff_create_booking(
     body: StaffBookingCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin/founder books on behalf of an artist (e.g. a front desk booking an artist's clients).
 
@@ -4382,7 +4376,7 @@ async def staff_create_booking(
     if not get_settings().ADMIN_BOOK_ON_BEHALF_ENABLED:
         raise HTTPException(status_code=403, detail="Booking on behalf of an artist is not enabled for this studio")
 
-    artist = (await db.execute(select(BTTCOUser).where(BTTCOUser.id == body.artist_id))).scalar_one_or_none()
+    artist = (await db.execute(select(User).where(User.id == body.artist_id))).scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
     if ROLE_RANK.get(artist.role, 0) < ROLE_RANK.get("artist", 2):
@@ -4390,7 +4384,7 @@ async def staff_create_booking(
 
     client = None
     if body.client_id:
-        client = (await db.execute(select(BTTCOUser).where(BTTCOUser.id == body.client_id))).scalar_one_or_none()
+        client = (await db.execute(select(User).where(User.id == body.client_id))).scalar_one_or_none()
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
     if client is None and not (body.guest_name and (body.guest_email or body.guest_phone)):
@@ -4476,7 +4470,7 @@ async def list_bookings(
     skip: int = 0,
     limit: int = Query(default=50, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List bookings relevant to the current user.
@@ -4532,7 +4526,7 @@ async def list_bookings(
 async def get_booking_history(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff view: append-only lifecycle timeline for one booking."""
     result = await db.execute(select(Booking).where(Booking.id == booking_id))
@@ -4555,7 +4549,7 @@ async def get_booking_schedule_suggestions(
     days: int = Query(default=45, ge=1, le=180),
     limit: int = Query(default=5, ge=1, le=10),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff view: deterministic schedule suggestions from the shared scheduler."""
     result = await db.execute(select(Booking).where(Booking.id == booking_id))
@@ -4564,7 +4558,7 @@ async def get_booking_schedule_suggestions(
         raise HTTPException(status_code=404, detail="Booking not found")
     _require_booking_management_access(current_user, booking)
 
-    artist = await db.get(BTTCOUser, booking.artist_id)
+    artist = await db.get(User, booking.artist_id)
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
 
@@ -4655,7 +4649,7 @@ async def get_booking_schedule_suggestions(
 async def get_booking(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a single booking. Must be client, artist, or admin."""
     result = await db.execute(select(Booking).where(Booking.id == booking_id))
@@ -4674,7 +4668,7 @@ async def update_booking(
     booking_id: UUID,
     body: BookingUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Update a booking. Only the assigned artist or admin can modify.
@@ -4702,7 +4696,7 @@ async def update_booking(
         next_date = update_data.get("scheduled_date", booking.scheduled_date)
         next_time_raw = update_data.get("scheduled_time", booking.scheduled_time)
         if next_date and next_time_raw:
-            artist = await db.get(BTTCOUser, booking.artist_id)
+            artist = await db.get(User, booking.artist_id)
             if not artist:
                 raise HTTPException(status_code=404, detail="Artist not found")
             scheduled_time = _parse_local_time(next_time_raw)
@@ -4762,7 +4756,7 @@ async def update_booking(
             update_data["scheduled_time"] = scheduled_time
             update_data["duration_minutes"] = duration
     if update_data.get("status") == BookingStatus.CONFIRMED and booking.deposit_authorization_status == "authorized":
-        current_artist = await db.get(BTTCOUser, booking.artist_id)
+        current_artist = await db.get(User, booking.artist_id)
         if not current_artist:
             raise HTTPException(status_code=404, detail="Artist not found")
         await _capture_byof_authorization(booking, current_artist)
@@ -4806,8 +4800,8 @@ async def update_booking(
         )
 
     if next_artist_id and next_artist_id != booking.artist_id:
-        previous_artist = await db.get(BTTCOUser, booking.artist_id)
-        next_artist = await db.get(BTTCOUser, next_artist_id)
+        previous_artist = await db.get(User, booking.artist_id)
+        next_artist = await db.get(User, next_artist_id)
         if not previous_artist or not next_artist or next_artist.role not in {"artist", "admin", "founder"}:
             raise HTTPException(status_code=422, detail="The receiving artist is not available")
         if current_user.role not in {"admin", "founder"}:
@@ -4862,7 +4856,7 @@ async def update_booking(
     # On manual confirm: post to Google Calendar + email + SMS the client.
     # Idempotent vs the Stripe-deposit path (won't duplicate the calendar event).
     if booking.status == BookingStatus.CONFIRMED and old_status != BookingStatus.CONFIRMED:
-        artist_row = await db.get(BTTCOUser, booking.artist_id)
+        artist_row = await db.get(User, booking.artist_id)
         await _on_booking_confirmed(
             db,
             booking,
@@ -4875,7 +4869,7 @@ async def update_booking(
         await _close_booking_pipeline_tasks(db, booking.id)
         await db.flush()
     client_name, client_email = await _booking_contact(db, booking)
-    artist_name_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+    artist_name_result = await db.execute(select(User.name).where(User.id == booking.artist_id))
     await _sync_hustl_deposit_followup_task(
         db=db,
         booking=booking,
@@ -4892,8 +4886,8 @@ async def _validate_staff_slot(
     db: AsyncSession,
     *,
     booking: Booking,
-    artist: BTTCOUser,
-    current_user: BTTCOUser,
+    artist: User,
+    current_user: User,
     scheduled_date: date,
     scheduled_time_raw: str,
     duration_minutes: int | None,
@@ -4972,7 +4966,7 @@ async def reschedule_booking(
     booking_id: UUID,
     body: BookingReschedule,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Staff action: move a booking to a validated available slot.
@@ -4989,7 +4983,7 @@ async def reschedule_booking(
     if booking.status in {BookingStatus.CANCELLED, BookingStatus.NO_SHOW, BookingStatus.EXPIRED}:
         raise HTTPException(status_code=409, detail=f"Cannot reschedule a {booking.status} booking")
 
-    artist = await db.get(BTTCOUser, booking.artist_id)
+    artist = await db.get(User, booking.artist_id)
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
 
@@ -5108,7 +5102,7 @@ async def reschedule_booking(
     return await _enrich_booking(booking, db)
 
 
-def _artist_stripe_ready(artist: BTTCOUser) -> bool:
+def _artist_stripe_ready(artist: User) -> bool:
     """Deposit links route to the artist's Connect account, so both fields must be set."""
     return bool(artist.stripe_account_id and artist.stripe_onboarding_complete)
 
@@ -5153,7 +5147,7 @@ async def _supersede_request_approved_intents(db: AsyncSession, booking: Booking
         event.details = {**(event.details or {}), "status": "superseded", "updated_at": now}
 
 
-async def _close_quote_checkout(quote: Quote, artist: BTTCOUser) -> None:
+async def _close_quote_checkout(quote: Quote, artist: User) -> None:
     """Expire the Stripe Checkout a superseded quote opened, so its old slot and amount cannot be paid.
 
     A session the collector already completed means that deposit is paid: the
@@ -5169,7 +5163,7 @@ async def _close_quote_checkout(quote: Quote, artist: BTTCOUser) -> None:
 
 async def _close_checkout_session(
     session_id: str | None,
-    artist: BTTCOUser,
+    artist: User,
     *,
     deposit_amount,
     idempotency_key: str,
@@ -5203,14 +5197,14 @@ async def _close_checkout_session(
 async def get_booking_approval_defaults(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff: what the approval card prefills and whether a deposit link can go out."""
     booking = await db.get(Booking, booking_id)
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
     _require_booking_management_access(current_user, booking)
-    artist = await db.get(BTTCOUser, booking.artist_id)
+    artist = await db.get(User, booking.artist_id)
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
     duration = booking.duration_minutes or await _resolve_slot_duration(
@@ -5237,7 +5231,7 @@ async def approve_booking_request(
     booking_id: UUID,
     body: BookingApprove,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff approves a request with one validated time and a deposit amount.
 
@@ -5261,7 +5255,7 @@ async def approve_booking_request(
             status_code=409,
             detail="This booking already has a held deposit. Confirm it from the booking to capture that deposit.",
         )
-    artist = await db.get(BTTCOUser, booking.artist_id)
+    artist = await db.get(User, booking.artist_id)
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
 
@@ -5493,7 +5487,7 @@ async def cancel_booking(
     booking_id: UUID,
     body: BookingCancel,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff action: cancel a booking and optionally remove its calendar event."""
     result = await db.execute(select(Booking).where(Booking.id == booking_id).with_for_update())
@@ -5504,7 +5498,7 @@ async def cancel_booking(
     if booking.status == BookingStatus.CANCELLED:
         return await _enrich_booking(booking, db)
 
-    artist = await db.get(BTTCOUser, booking.artist_id)
+    artist = await db.get(User, booking.artist_id)
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
 
@@ -5571,7 +5565,7 @@ async def cancel_booking(
 async def gala_assist(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Ask Gala to draft a response message for a pending booking request.
@@ -5591,7 +5585,7 @@ async def gala_assist(
     # Resolve client name
     client_name = "there"
     if booking.client_id:
-        r = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.client_id))
+        r = await db.execute(select(User.name).where(User.id == booking.client_id))
         client_name = r.scalar_one_or_none() or "there"
     elif booking.guest_name:
         client_name = booking.guest_name.split()[0]
@@ -5667,7 +5661,7 @@ Write only the message body."""
 async def ensure_booking_conversation(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Ensure a conversation thread exists for this booking and return

@@ -201,7 +201,7 @@ def test_customer_receipt_merges_routing_and_exact_payment_context():
     result = apply_customer_receipt(
         params,
         customer_email="client@example.test",
-        description="BTTCO tattoo deposit - BKG-TEST1",
+        description="Ryozan tattoo deposit - BKG-TEST1",
         metadata={"booking_id": "booking-1", "reference_code": "BKG-TEST1"},
     )
 
@@ -209,7 +209,7 @@ def test_customer_receipt_merges_routing_and_exact_payment_context():
     assert result["customer_email"] == "client@example.test"
     assert result["custom_text"]["submit"]["message"].startswith("All payments are final")
     assert payment_intent["receipt_email"] == "client@example.test"
-    assert payment_intent["description"] == "BTTCO tattoo deposit - BKG-TEST1"
+    assert payment_intent["description"] == "Ryozan tattoo deposit - BKG-TEST1"
     assert payment_intent["transfer_data"] == {"destination": "acct_1"}
     assert payment_intent["metadata"] == {
         "existing": "kept",
@@ -233,7 +233,7 @@ def test_customer_receipt_preserves_other_checkout_custom_text():
     result = apply_customer_receipt(
         params,
         customer_email=None,
-        description="BTTCO tattoo payment",
+        description="Ryozan tattoo payment",
         metadata={},
     )
 

@@ -8,7 +8,7 @@ from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm.attributes import set_committed_value
 
 from app.api.v1.endpoints import email_templates
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email_foundry import (
     FOUNDRY_STATE_DEFAULTS,
     _probe_foundry_connector,
@@ -25,7 +25,7 @@ from app.services.email_foundry import (
 # owns the separate persistence contract required by the locked Foundry adapter.
 class EmailFoundryStateTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        self.user = BTTCOUser(
+        self.user = User(
             id=uuid.uuid4(),
             email="founder@example.com",
             name="Founder",
@@ -155,7 +155,7 @@ class EmailFoundryStateTests(unittest.IsolatedAsyncioTestCase):
             self.user.nexus_profile["email_foundry_state"]["bttco-foundry-connectors-v1"]["cloudflare-r2"]["enabled"]
         )
 
-    async def test_provider_connect_reports_missing_bttco_credential_without_exposing_values(self):
+    async def test_provider_connect_reports_missing_ryozan_credential_without_exposing_values(self):
         with patch("app.services.email_foundry._foundry_connector_configured", return_value=False):
             result = await email_templates.update_foundry_connector(
                 "resend",
@@ -315,7 +315,7 @@ class EmailFoundryStateTests(unittest.IsolatedAsyncioTestCase):
         send_email.assert_not_awaited()
 
     async def test_due_campaign_sends_once_to_marketing_opted_in_audience(self):
-        recipient = BTTCOUser(
+        recipient = User(
             id=uuid.uuid4(),
             email="collector@example.test",
             name="Casey Collector",
@@ -643,7 +643,7 @@ class EmailFoundryStateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(send_email.await_args.kwargs["to"], "proof@example.test")
 
     async def test_flash_published_trigger_uses_only_marketing_opted_in_audience(self):
-        recipient = BTTCOUser(
+        recipient = User(
             id=uuid.uuid4(),
             email="collector@example.test",
             name="Casey Collector",
@@ -681,7 +681,7 @@ class EmailFoundryStateTests(unittest.IsolatedAsyncioTestCase):
     async def test_manual_send_uses_locked_foundry_template_without_db_seed(self):
         request = email_templates.TemplateSendRequest(
             recipients=[{"email": "casey@example.test", "name": "Casey"}],
-            variables={"artist_name": "Justin Walker", "reference_code": "BTTCO-PROOF"},
+            variables={"artist_name": "Justin Walker", "reference_code": "RYOZAN-PROOF"},
         )
 
         with patch("app.services.email.send_email", new_callable=AsyncMock, return_value=True) as send_email:
@@ -697,7 +697,7 @@ class EmailFoundryStateTests(unittest.IsolatedAsyncioTestCase):
         call = send_email.await_args.kwargs
         self.assertEqual(call["subject"], "We got your request — Ryozan Studio")
         self.assertEqual(call["tags"], ["booking_confirmation"])
-        self.assertIn("BTTCO-PROOF", call["html_body"])
+        self.assertIn("RYOZAN-PROOF", call["html_body"])
         self.assertNotIn("{{", call["html_body"])
 
     async def test_herald_control_routes_through_approved_gateway(self):

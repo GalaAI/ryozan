@@ -10,7 +10,7 @@ os.environ["ENABLE_API_DOCS"] = "false"
 os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 
 from app.api.v1.endpoints import google_auth, pinterest  # noqa: E402
-from app.models.user import BTTCOUser  # noqa: E402
+from app.models.user import User  # noqa: E402
 
 # Boundary: auth_rate_limit_tests covers login and OAuth rate limits. These tests
 # isolate Google Calendar connector health plus Google and Pinterest callback
@@ -48,7 +48,7 @@ def _health(**overrides):
         "healthy": True,
         "calendar_accessible": True,
         "calendar_id": "primary",
-        "summary": "BTTCO Calendar",
+        "summary": "Ryozan Calendar",
         "reason": None,
         "reconnect_required": False,
     }
@@ -58,7 +58,7 @@ def _health(**overrides):
 
 class GoogleAuthStatusTests(unittest.IsolatedAsyncioTestCase):
     async def test_workspace_managed_status_uses_artist_calendar_without_oauth_token(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",
@@ -81,7 +81,7 @@ class GoogleAuthStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(status.reconnect_required)
 
     async def test_workspace_managed_connect_refuses_per_user_calendar_oauth(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",
@@ -97,7 +97,7 @@ class GoogleAuthStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raised.exception.status_code, 409)
 
     async def test_status_validates_current_user_token(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",
@@ -113,16 +113,16 @@ class GoogleAuthStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(status.healthy)
         self.assertEqual(status.source, "self")
         self.assertEqual(status.email, "artist@example.com")
-        self.assertEqual(status.calendar_summary, "BTTCO Calendar")
+        self.assertEqual(status.calendar_summary, "Ryozan Calendar")
 
     async def test_admin_without_token_uses_founder_calendar_health(self):
-        admin = BTTCOUser(
+        admin = User(
             id=uuid.uuid4(),
             email="admin@example.com",
             name="Admin",
             role="admin",
         )
-        founder = BTTCOUser(
+        founder = User(
             id=uuid.uuid4(),
             email="founder@example.com",
             name="Founder",
@@ -141,7 +141,7 @@ class GoogleAuthStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(status.email, "founder@example.com")
 
     async def test_disconnected_user_requires_reconnect(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="collector@example.com",
             name="Collector",
@@ -159,7 +159,7 @@ class GoogleAuthStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(status.reconnect_required)
 
     async def test_connected_but_stale_token_reports_reconnect_required(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",
@@ -186,7 +186,7 @@ class GoogleAuthStatusTests(unittest.IsolatedAsyncioTestCase):
 
 class ConnectionCallbackReturnTests(unittest.IsolatedAsyncioTestCase):
     async def test_google_callback_returns_to_hub_connections(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",
@@ -216,7 +216,7 @@ class ConnectionCallbackReturnTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(db.flush_count, 1)
 
     async def test_google_callback_error_returns_to_hub_connections(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",
@@ -247,7 +247,7 @@ class ConnectionCallbackReturnTests(unittest.IsolatedAsyncioTestCase):
         )
 
     async def test_pinterest_callback_returns_to_hub_connections(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",
@@ -279,7 +279,7 @@ class ConnectionCallbackReturnTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(db.commit_count, 1)
 
     async def test_pinterest_callback_error_returns_to_hub_connections(self):
-        user = BTTCOUser(
+        user = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Artist",

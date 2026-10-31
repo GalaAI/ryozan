@@ -18,7 +18,7 @@ import httpx
 
 from app.core.config import get_settings
 
-logger = logging.getLogger("bttco.pinterest.service")
+logger = logging.getLogger("ryozan.pinterest.service")
 
 
 class PinterestError(Exception):

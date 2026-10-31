@@ -11,7 +11,7 @@ from app.core.database import get_db
 from app.core.security import ROLE_RANK, require_role
 from app.models.flash import FlashDesign, FlashSheet
 from app.models.stash import StashCanvasSession, StashItem
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.stash import (
     CanvasSessionCreate,
     CanvasSessionResponse,
@@ -26,23 +26,23 @@ from app.schemas.user import UserResponse
 router = APIRouter(prefix="/stash", tags=["stash"])
 
 
-def _can_manage_artist(current_user: BTTCOUser, artist_id: UUID) -> bool:
+def _can_manage_artist(current_user: User, artist_id: UUID) -> bool:
     return current_user.id == artist_id or ROLE_RANK.get(current_user.role, 0) >= ROLE_RANK.get("admin", 3)
 
 
 async def _resolve_artist_owner(
     db: AsyncSession,
-    current_user: BTTCOUser,
+    current_user: User,
     artist_id: UUID | None,
-) -> BTTCOUser:
+) -> User:
     if artist_id is None or artist_id == current_user.id:
         return current_user
     if ROLE_RANK.get(current_user.role, 0) < ROLE_RANK.get("admin", 3):
         raise HTTPException(status_code=403, detail="Cannot manage another creator's Stash")
     result = await db.execute(
-        select(BTTCOUser).where(
-            BTTCOUser.id == artist_id,
-            BTTCOUser.role.in_(["artist", "admin", "founder"]),
+        select(User).where(
+            User.id == artist_id,
+            User.role.in_(["artist", "admin", "founder"]),
         )
     )
     owner = result.scalar_one_or_none()
@@ -54,13 +54,11 @@ async def _resolve_artist_owner(
 @router.get("/creators", response_model=list[UserResponse])
 async def list_hustle_creators(
     db: AsyncSession = Depends(get_db),
-    _current_user: BTTCOUser = Depends(require_role("admin")),
+    _current_user: User = Depends(require_role("admin")),
 ):
     """Admin+: list creator accounts that Hustle can target."""
     result = await db.execute(
-        select(BTTCOUser)
-        .where(BTTCOUser.role.in_(["artist", "admin", "founder"]))
-        .order_by(BTTCOUser.name, BTTCOUser.email)
+        select(User).where(User.role.in_(["artist", "admin", "founder"])).order_by(User.name, User.email)
     )
     return result.scalars().all()
 
@@ -101,7 +99,7 @@ async def list_stash_items(
     skip: int = 0,
     limit: int = Query(default=50, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     owner = await _resolve_artist_owner(db, current_user, artist_id)
     filters = [StashItem.artist_id == owner.id]
@@ -123,7 +121,7 @@ async def list_stash_items(
 async def create_stash_item(
     body: StashItemCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     owner = await _resolve_artist_owner(db, current_user, body.artist_id)
     if body.source_flash_design_id:
@@ -167,7 +165,7 @@ async def update_stash_item(
     item_id: UUID,
     body: StashItemUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     result = await db.execute(select(StashItem).where(StashItem.id == item_id))
     item = result.scalar_one_or_none()
@@ -198,7 +196,7 @@ async def update_stash_item(
 async def create_stash_item_from_flash(
     design_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     result = await db.execute(select(FlashDesign).where(FlashDesign.id == design_id))
     design = result.scalar_one_or_none()
@@ -238,7 +236,7 @@ async def create_stash_item_from_flash(
 async def create_canvas_session(
     body: CanvasSessionCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     owner = await _resolve_artist_owner(db, current_user, body.artist_id)
     if body.sheet_id:
@@ -270,7 +268,7 @@ async def update_canvas_session(
     session_id: UUID,
     body: CanvasSessionUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     result = await db.execute(select(StashCanvasSession).where(StashCanvasSession.id == session_id))
     session = result.scalar_one_or_none()

@@ -15,7 +15,7 @@ from app.core.database import get_db
 from app.core.security import require_role
 from app.models.booking import Booking
 from app.models.gift_card import GiftCard, GiftCardRedemption
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email import FROM_SERVICE, send_email
 from app.services.email_foundry import render_gift_card_receipt
 from app.services.payments import apply_customer_receipt, customer_price_cents, resolve_charge_routing
@@ -124,7 +124,7 @@ async def activate_paid_gift_card(session: dict) -> None:
             card.activated_at = datetime.now(UTC)
             card.stripe_payment_intent_id = str(session.get("payment_intent") or "") or None
             await db.commit()
-        artist = await db.get(BTTCOUser, card.artist_id)
+        artist = await db.get(User, card.artist_id)
         if card.delivered_at is None:
             if not artist:
                 raise HTTPException(status_code=500, detail="Gift-card artist is unavailable")
@@ -189,7 +189,7 @@ async def void_refunded_gift_card(payment_intent_id: str | None) -> None:
 
 @router.post("/checkout", response_model=GiftCardCheckoutResponse)
 async def create_gift_card_checkout(body: GiftCardCheckoutRequest, db: AsyncSession = Depends(get_db)):
-    artist = await db.get(BTTCOUser, body.artist_id)
+    artist = await db.get(User, body.artist_id)
     if not artist or artist.role not in ARTIST_ROLES or not artist.slug:
         raise HTTPException(status_code=404, detail="Artist not found")
 
@@ -291,7 +291,7 @@ async def get_gift_card_status(session_id: str, db: AsyncSession = Depends(get_d
 async def redeem_gift_card(
     body: GiftCardRedeemRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("assistant")),
+    current_user: User = Depends(require_role("assistant")),
 ):
     code = body.code.strip().upper()
     card = (await db.execute(select(GiftCard).where(GiftCard.code == code).with_for_update())).scalar_one_or_none()

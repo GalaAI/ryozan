@@ -18,7 +18,7 @@ from app.core.routes import ROUTES
 from app.models.notification import Notification
 from app.models.quest import Quest, UserQuest
 
-logger = logging.getLogger("bttco.quest_hooks")
+logger = logging.getLogger("ryozan.quest_hooks")
 
 
 async def check_and_complete_quest(

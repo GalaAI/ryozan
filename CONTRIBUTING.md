@@ -38,7 +38,7 @@ If you change the database schema, add an Alembic migration under `api/alembic`.
 
 ## UI comes from `packages/ui` only
 
-All UI components come from `packages/ui` (imported in the app as `@bttco/ui`). Do not write new components or inline-styled elements in `app/`. Read [`packages/ui/README.md`](packages/ui/README.md) before touching UI.
+All UI components come from `packages/ui` (imported in the app as `@ryozan/ui`). Do not write new components or inline-styled elements in `app/`. Read [`packages/ui/README.md`](packages/ui/README.md) before touching UI.
 
 - No hex colors, px literals or fonts outside the allowlist in app code. `npm run lint:adherence:src` in `app/` checks this.
 - A change in `packages/ui/src` reaches the app only after you repack and relock the tarball. Follow [`docs/release/UI_TARBALL_VENDORING.md`](docs/release/UI_TARBALL_VENDORING.md), then run `npm run check:ui-tarball` in `app/`.

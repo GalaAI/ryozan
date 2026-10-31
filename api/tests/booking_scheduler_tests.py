@@ -70,7 +70,7 @@ from app.models.booking_draft import BookingDraft
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.booking_slot_hold import BookingSlotHold
 from app.models.session_type import ArtistSessionType
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.booking import BookingReschedule, BookingUpdate, PublicBookingSubmit
 from app.services import calendar_sync as calendar_sync_service
 from app.services.email import build_booking_confirmation_html
@@ -166,7 +166,7 @@ class _ScriptedSession:
 
 
 class _PatchSession:
-    def __init__(self, booking: Booking, artist: BTTCOUser, rows_by_call):
+    def __init__(self, booking: Booking, artist: User, rows_by_call):
         self.booking = booking
         self.artist = artist
         self.rows_by_call = list(rows_by_call)
@@ -181,7 +181,7 @@ class _PatchSession:
         return _ScalarRows(self.rows_by_call.pop(0))
 
     async def get(self, model, item_id):
-        if model is BTTCOUser and item_id == self.artist.id:
+        if model is User and item_id == self.artist.id:
             return self.artist
         return None
 
@@ -193,7 +193,7 @@ class _PatchSession:
 
 
 class _RescheduleSession(_PatchSession):
-    def __init__(self, booking: Booking, artist: BTTCOUser, rows_by_call):
+    def __init__(self, booking: Booking, artist: User, rows_by_call):
         super().__init__(booking, artist, rows_by_call)
         self.committed = False
         self.refreshed = False
@@ -375,7 +375,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         artist_id = uuid.uuid4()
         booking = Booking(id=uuid.uuid4(), artist_id=artist_id, description="Scope test")
         users = {
-            role: BTTCOUser(
+            role: User(
                 id=artist_id if role == "artist" else uuid.uuid4(),
                 email=f"{role}@example.test",
                 password_hash="disabled",
@@ -390,7 +390,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
                 _require_booking_management_access(user, booking)
 
         for role in ("artist", "collector"):
-            outsider = BTTCOUser(
+            outsider = User(
                 id=uuid.uuid4(),
                 email=f"outside-{role}@example.test",
                 password_hash="disabled",
@@ -409,7 +409,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             description="Scope test",
             status="pending",
         )
-        assistant = BTTCOUser(
+        assistant = User(
             id=uuid.uuid4(),
             email="assistant@example.test",
             password_hash="disabled",
@@ -685,7 +685,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_public_submit_is_idempotent_by_submitted_inquiry_id(self):
         artist_id = uuid.uuid4()
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="justin@example.test",
             password_hash="disabled",
@@ -734,7 +734,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_public_idempotent_projection_requires_matching_capability(self):
         artist_id = uuid.uuid4()
         collector_id = uuid.uuid4()
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id, email="justin@example.test", password_hash="disabled",
             name="Justin Walker", role="artist", slug="justin", booking_mode="mailto",
         )
@@ -1104,7 +1104,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("https://meet.google.com/test-room", html)
 
     async def test_public_booking_checkout_uses_shop_fallback_without_artist_connect(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -1183,7 +1183,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("stripe_account", request_options)
 
     async def test_public_booking_checkout_routes_to_artist_connect_and_saves_payment_method(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -1261,7 +1261,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(events[0].details["artist_connect_account"])
 
     async def test_public_booking_checkout_rejects_live_stripe_key_in_local_dev(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -1330,7 +1330,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             scheduled_time="13:00",
             duration_minutes=120,
         )
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1381,7 +1381,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             scheduled_time="13:00",
             duration_minutes=120,
         )
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1393,7 +1393,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             booking_max_advance_days=180,
             booking_allow_same_day=True,
         )
-        admin = BTTCOUser(
+        admin = User(
             id=admin_id,
             email="admin@example.test",
             password_hash="disabled",
@@ -1442,7 +1442,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1493,7 +1493,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             scheduled_date=_next_weekday(4),
             scheduled_time="12:00",
         )
-        artist = BTTCOUser(
+        artist = User(
             id=booking.artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1539,7 +1539,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             updated_at=datetime.now(UTC),
         )
         slot_day = _next_weekday(4)
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1593,7 +1593,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(events[0].actor_id, artist.id)
 
     async def test_booking_history_returns_staff_lifecycle_events(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -1637,7 +1637,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(db.calls, 2)
 
     async def test_booking_schedule_suggestions_rank_preferred_time(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -1702,7 +1702,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             scheduled_time="11:00",
             duration_minutes=120,
         )
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1756,7 +1756,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             scheduled_time="11:00",
             duration_minutes=120,
         )
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1768,7 +1768,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             booking_max_advance_days=180,
             booking_allow_same_day=True,
         )
-        admin = BTTCOUser(
+        admin = User(
             id=admin_id,
             email="admin@example.test",
             password_hash="disabled",
@@ -1821,7 +1821,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             scheduled_time="11:00",
             duration_minutes=120,
         )
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1869,7 +1869,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -1881,7 +1881,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             booking_max_advance_days=180,
             booking_allow_same_day=True,
         )
-        admin = BTTCOUser(
+        admin = User(
             id=admin_id,
             email="admin@example.test",
             password_hash="disabled",
@@ -2213,7 +2213,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(available)
 
     async def test_public_slots_fall_back_when_google_availability_fails(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2261,7 +2261,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual({slot.confidence for slot in response.slots}, {"fallback"})
 
     async def test_consultation_slots_fail_closed_when_google_availability_fails(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2308,7 +2308,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(response.blocked_slots)
 
     async def test_slot_hold_fails_closed_when_google_availability_fails(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2344,7 +2344,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(err.exception.status_code, 502)
 
     async def test_slot_hold_replaces_previous_active_hold_for_same_inquiry(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2402,7 +2402,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.time, "13:00")
 
     async def test_flash_slot_hold_preserves_booking_kind_for_submit_and_checkout(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2491,7 +2491,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(db.flushed)
 
     async def test_public_scheduler_contract_exposes_galaxev3_actions(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2557,7 +2557,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.booky.outcome_schema_ref, "BookingOutcomeEnvelope")
 
     async def test_public_slots_use_placement_specific_session_duration(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2634,7 +2634,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(duration, 420)
 
     async def test_slot_hold_uses_placement_specific_session_duration(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2682,7 +2682,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(db.flushed)
 
     async def test_public_slots_use_explicit_session_type_duration(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2733,7 +2733,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(slot.duration_minutes == 240 for slot in response.slots))
 
     async def test_public_slots_reject_explicit_session_type_for_disallowed_placement(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2787,7 +2787,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(db.calls, 1)
 
     async def test_slot_hold_uses_explicit_session_type_duration(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2834,7 +2834,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(db.flushed)
 
     async def test_slot_hold_rejects_explicit_session_type_for_disallowed_placement(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.test",
             password_hash="disabled",
@@ -2882,7 +2882,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_quote_acceptance_reuses_scheduler_rules(self):
         artist_id = uuid.uuid4()
         blocked_day = _next_weekday(0)
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -2918,7 +2918,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_flash_booking_reuses_scheduler_rules(self):
         artist_id = uuid.uuid4()
         slot_day = _next_weekday(4)
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -2953,7 +2953,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
     async def test_flash_booking_allows_open_scheduler_slot(self):
         artist_id = uuid.uuid4()
         slot_day = _next_weekday(4)
-        artist = BTTCOUser(
+        artist = User(
             id=artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -3183,7 +3183,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         booking.scheduled_date = _next_weekday(4)
         booking.scheduled_time = "11:00"
         booking.duration_minutes = 120
-        artist = BTTCOUser(
+        artist = User(
             id=booking.artist_id,
             email="artist@example.test",
             password_hash="disabled",
@@ -3497,7 +3497,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             artist_notes="Imported from Google Calendar",
             created_at=datetime(2026, 7, 2, tzinfo=UTC),
         )
-        user = BTTCOUser(
+        user = User(
             id=artist_id,
             email="founder@example.com",
             name="Founder",
@@ -3540,7 +3540,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
 
 
     def test_custom_artist_working_hours_override_default_schedule(self):
-        artist = BTTCOUser(
+        artist = User(
             id=uuid.uuid4(),
             email="artist@example.com",
             name="Custom Artist",

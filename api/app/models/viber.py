@@ -1,15 +1,15 @@
 """Viber — the vibe-coder dev cockpit.
 
 Viber is its own product (separate identity) that connects OUT to project
-backends as an extension. The first connector is the BTTCO API. These tables
-live in nexus alongside BTTCO but model Viber's own accounts and connections,
+backends as an extension. The first connector is the Ryozan API. These tables
+live in nexus alongside Ryozan but model Viber's own accounts and connections,
 keeping the standalone-product story clean.
 
 Connections carry a capability gate (read | read_write). Per the Axiom Delivery
 Flow canon, write operations must pass approval gates before touching anything
 real — the model stores the capability; the API/agent layer enforces the gate.
 
-The original product spec lived with the BTTCO dev tracker and is not part of Ryozan.
+The original product spec lived with the old dev tracker and is not part of Ryozan.
 """
 
 import uuid
@@ -41,7 +41,7 @@ class ViberAccount(Base):
 
 
 class ViberConnection(Base):
-    """A connection from a Viber account to a project backend (e.g. BTTCO API).
+    """A connection from a Viber account to a project backend (e.g. Ryozan API).
 
     capability gates what Viber may do through this connection:
       - 'read'        : introspection only (Atlas, Oversight)

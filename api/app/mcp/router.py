@@ -4,7 +4,7 @@ Stateless and JSON-response only, which the Streamable HTTP spec permits:
 no session id is issued and GET (server-initiated SSE) is answered 405.
 That keeps the transport dependency-free so the Railway image is unchanged.
 
-Auth: remote clients use BTTCO OAuth. The MCP grant is verified and translated
+Auth: remote clients use Ryozan OAuth. The MCP grant is verified and translated
 to a short-lived internal site token, so REST role checks remain authoritative
 without accepting an MCP audience token on ordinary API routes.
 """

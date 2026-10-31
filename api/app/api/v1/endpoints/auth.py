@@ -51,7 +51,7 @@ from app.core.user_lookup import (
 )
 from app.models.booking import Booking
 from app.models.quote import Quote
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 from app.schemas.user import (
     ChangePassword,
     Token,
@@ -96,7 +96,7 @@ class RegistrationPending(BaseModel):
     token_type: str | None = None
 
 
-def _queue_account_setup(background_tasks: BackgroundTasks, user: BTTCOUser) -> None:
+def _queue_account_setup(background_tasks: BackgroundTasks, user: User) -> None:
     background_tasks.add_task(
         send_account_setup_email,
         user_id=user.id,
@@ -125,9 +125,7 @@ def instant_signup_open(settings) -> bool:
     return datetime.now(UTC).date() <= last_day
 
 
-async def _instant_signup(
-    db: AsyncSession, body: UserCreate, email: str, existing: BTTCOUser | None
-) -> RegistrationPending:
+async def _instant_signup(db: AsyncSession, body: UserCreate, email: str, existing: User | None) -> RegistrationPending:
     """Create a verified collector with the caller's password and sign it in.
 
     Only for an install where instant_signup_open() holds. It requires the
@@ -143,13 +141,11 @@ async def _instant_signup(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="That invite code is not valid.")
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
-    created = await db.scalar(
-        select(func.count()).select_from(BTTCOUser).where(BTTCOUser.password_change_method == "signup")
-    )
+    created = await db.scalar(select(func.count()).select_from(User).where(User.password_change_method == "signup"))
     if (created or 0) >= settings.OPEN_SIGNUP_MAX_ACCOUNTS:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Sign-up is full on this demo.")
     now = datetime.now(UTC)
-    user = BTTCOUser(
+    user = User(
         email=email,
         password_hash=hash_password(body.password),
         name=body.name,
@@ -202,7 +198,7 @@ async def register(
         _queue_account_setup(background_tasks, existing)
         return RegistrationPending()
 
-    user = BTTCOUser(
+    user = User(
         email=email,
         # A public caller must never choose the mailbox owner's credential.
         password_hash=hash_password(secrets.token_urlsafe(32)),
@@ -255,7 +251,7 @@ class DevImpersonateRequest(BaseModel):
 async def dev_impersonate(
     body: DevImpersonateRequest,
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """LOCAL DEV ONLY: founder mints a token for another local account.
 
@@ -300,7 +296,7 @@ async def auth_options():
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Sign out everywhere: retire every access token issued to this account."""
@@ -309,7 +305,7 @@ async def logout(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: BTTCOUser = Depends(get_current_user)):
+async def get_me(current_user: User = Depends(get_current_user)):
     """Return the currently authenticated user's profile."""
     return current_user
 
@@ -318,7 +314,7 @@ async def get_me(current_user: BTTCOUser = Depends(get_current_user)):
 async def change_password(
     body: ChangePassword,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Change a password, allowing an authenticated first-login reset."""
     refuse_if_demo_account(current_user)
@@ -370,7 +366,7 @@ _RESET_TOKEN_ERROR = "This reset link is invalid or has expired. Request a new o
 
 def _locked_user_by_id(user_id: UUID):
     """Select one user while serializing password-reset redemption."""
-    return select(BTTCOUser).where(BTTCOUser.id == user_id).with_for_update()
+    return select(User).where(User.id == user_id).with_for_update()
 
 
 @router.post("/forgot-password", response_model=ForgotPasswordResponse)
@@ -435,7 +431,7 @@ async def validate_reset_token(request: Request, token: str = "", db: AsyncSessi
     except (ValueError, TypeError):
         return ResetTokenStatus(usable=False)
 
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_uuid))
+    result = await db.execute(select(User).where(User.id == user_uuid))
     user = result.scalar_one_or_none()
     if user is None or not user.password_hash:
         return ResetTokenStatus(usable=False)
@@ -605,7 +601,7 @@ async def register_via_invite(
         user.email_verified_at = datetime.now(UTC)
     else:
         # Brand new account
-        user = BTTCOUser(
+        user = User(
             email=email,
             name=name,
             role=role,
@@ -692,7 +688,7 @@ async def register_from_booking(
         return RegistrationPending()
 
     # Create collector account
-    user = BTTCOUser(
+    user = User(
         email=email,
         password_hash=hash_password(secrets.token_urlsafe(32)),
         name=name,
@@ -714,10 +710,10 @@ class GoogleAuthRequest(BaseModel):
 
 
 def _verify_google_credential(credential: str) -> dict:
-    """Verify a Google ID token for the BTTCO client and require a verified email."""
+    """Verify a Google ID token for the Ryozan client and require a verified email."""
     #
-    # The audience must be the BTTCO client ID rendered by the browser. An
-    # explicit browser override is supported, otherwise the active BTTCO web
+    # The audience must be the Ryozan client ID rendered by the browser. An
+    # explicit browser override is supported, otherwise the active Ryozan web
     # OAuth client is shared with the server-side Calendar flow.
     google_audience = _settings.GOOGLE_SIGNIN_CLIENT_ID or _settings.GOOGLE_CLIENT_ID
     if not google_audience:
@@ -750,7 +746,7 @@ async def _resolve_google_user(
     credential: str,
     quote_token: str | None,
     background_tasks: BackgroundTasks,
-) -> BTTCOUser:
+) -> User:
     """Verify a Google ID token and return the account it authenticates.
 
     Sole owner of "which account does this Google credential belong to".
@@ -797,14 +793,14 @@ async def _resolve_google_user(
     if google_sub:
         from app.core.user_lookup import user_google_matches
 
-        result = await db.execute(select(BTTCOUser).where(user_google_matches(google_sub)))
+        result = await db.execute(select(User).where(user_google_matches(google_sub)))
         user = result.scalar_one_or_none()
     if user is None:
         user = await find_user_by_email(db, email)
 
     if not user:
         # Create new collector account — random password since they use Google
-        user = BTTCOUser(
+        user = User(
             email=email,
             password_hash=hash_password(secrets.token_urlsafe(32)),
             name=name,
@@ -952,7 +948,7 @@ def _link_result(outcome: str) -> RedirectResponse:
 
 @router.get("/google/link", response_model=GoogleLinkResponse)
 @limiter.limit("10/minute")
-async def google_link_start(request: Request, current_user: BTTCOUser = Depends(require_role("assistant"))):
+async def google_link_start(request: Request, current_user: User = Depends(require_role("assistant"))):
     """Begin linking a Google login to the signed-in account.
 
     Google sign-in finds an account by its linked Google ID first, then by email,
@@ -991,7 +987,7 @@ async def google_link_start(request: Request, current_user: BTTCOUser = Depends(
 
 
 @router.get("/google/link/status", response_model=GoogleLinkStatus)
-async def google_link_status(current_user: BTTCOUser = Depends(get_current_user)):
+async def google_link_status(current_user: User = Depends(get_current_user)):
     """Whether a Google login is linked to the signed-in account."""
     return GoogleLinkStatus(linked=bool(current_user.google_id))
 
@@ -1007,7 +1003,7 @@ async def _finish_google_link(db: AsyncSession, user_id: object, id_token_str: s
     if not google_sub:
         return _link_result("error")
 
-    target = (await db.execute(select(BTTCOUser).where(BTTCOUser.id == target_id))).scalar_one_or_none()
+    target = (await db.execute(select(User).where(User.id == target_id))).scalar_one_or_none()
     # This is the staff identity-repair flow. Historical public collector
     # sessions could mint link state before this mailbox protection existed;
     # never let that state reattach a preclaimant after mailbox redemption.
@@ -1020,7 +1016,7 @@ async def _finish_google_link(db: AsyncSession, user_id: object, id_token_str: s
     # collector a mismatched Google sign-in created) before attaching it here.
     from app.core.user_lookup import user_google_matches
 
-    holder = (await db.execute(select(BTTCOUser).where(user_google_matches(google_sub)))).scalar_one_or_none()
+    holder = (await db.execute(select(User).where(user_google_matches(google_sub)))).scalar_one_or_none()
     if holder is not None and holder.id == target.id:
         return _link_result("linked")
     if holder is not None and holder.role != "collector":

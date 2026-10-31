@@ -22,7 +22,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.email_route import EmailRoute
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email import FROM_ADMIN, send_email
 from app.services.quest_hooks import check_and_complete_quest
 
@@ -112,7 +112,7 @@ async def check_handle_availability(
 async def connect_email(
     body: EmailConnectRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Artist claims a @ryozan.app handle and links their personal email.
@@ -232,7 +232,7 @@ async def verify_email(
 @router.get("/status", response_model=EmailStatusResponse)
 async def email_status(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get the current user's email route status."""
     result = await db.execute(select(EmailRoute).where(EmailRoute.user_id == current_user.id))
@@ -252,7 +252,7 @@ async def email_status(
 @router.delete("/release", status_code=204)
 async def release_email(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Release the current user's @ryozan.app email handle.

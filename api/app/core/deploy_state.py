@@ -1,7 +1,7 @@
 """
 Deployment metadata helper for health probes and local deploy-state checks.
 
-BTTCO already had health probes, but it did not expose which branch and commit
+Ryozan already had health probes, but it did not expose which branch and commit
 were actually live. This module keeps that truth in one place so the API,
 operator docs, and local comparison script all report the same deploy state.
 """

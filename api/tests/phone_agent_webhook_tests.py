@@ -56,7 +56,7 @@ class WebhookRouteTests(unittest.TestCase):
         self.settings = SimpleNamespace(
             ELEVENLABS_WEBHOOK_SECRET=SECRET,
             ELEVENLABS_TOOL_SECRET="fixture-tool-secret",
-            ELEVENLABS_BTTCO_AGENT_ID="bella-agent",
+            ELEVENLABS_RYOZAN_AGENT_ID="bella-agent",
             ELEVENLABS_JUSTIN_AGENT_ID="gala-agent",
         )
 
@@ -69,7 +69,7 @@ class WebhookRouteTests(unittest.TestCase):
             )
         self.assertEqual(response.status_code, 401)
 
-    def test_routes_gala_to_pack_bridge_without_writing_bttco_business_state(self):
+    def test_routes_gala_to_pack_bridge_without_writing_ryozan_business_state(self):
         payload = {
             "type": "post_call_transcription",
             "data": {

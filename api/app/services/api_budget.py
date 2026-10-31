@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.api_usage import COST_PER_INPUT_TOKEN, COST_PER_OUTPUT_TOKEN, APIUsage
 
-logger = logging.getLogger("bttco.api_budget")
+logger = logging.getLogger("ryozan.api_budget")
 
 
 async def check_budget(db: AsyncSession, cap: float) -> None:

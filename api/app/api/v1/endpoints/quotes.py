@@ -34,7 +34,7 @@ from app.models.booking import Booking
 from app.models.booking_slot_hold import BookingSlotHold
 from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.quote import Quote
-from app.models.user import BTTCOUser, normalize_email
+from app.models.user import User, normalize_email
 from app.schemas.quote import QuoteAccept, QuoteCreate, QuotePublicView, QuoteResponse, TimeSlot
 from app.services.calendar_sync import artist_calendar_connected, artist_calendar_id, get_availability
 from app.services.email import FROM_SHOP, build_quote_email_html, render_transactional_email, send_email
@@ -42,11 +42,11 @@ from app.services.email_foundry import dispatch_foundry_trigger
 from app.services.payments import apply_customer_receipt, customer_price_cents, resolve_charge_routing
 from app.services.stripe_client import get_stripe_client
 
-logger = logging.getLogger("bttco.quotes")
+logger = logging.getLogger("ryozan.quotes")
 router = APIRouter(prefix="/quotes", tags=["quotes"])
 
 
-def _require_role(user: BTTCOUser, min_role: str):
+def _require_role(user: User, min_role: str):
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get(min_role, 99):
         raise HTTPException(status_code=403, detail=f"Requires {min_role} role")
 
@@ -60,7 +60,7 @@ async def _assert_quote_slot_available(
     *,
     db: AsyncSession,
     booking: Booking,
-    artist: BTTCOUser,
+    artist: User,
     selected: dict,
 ) -> tuple:
     selected_date = _parse_local_date(str(selected.get("date") or ""), "date")
@@ -107,7 +107,7 @@ async def _assert_quote_slot_available(
 async def create_quote(
     body: QuoteCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Staff creates a quote (or conversational reply) for a pending booking.
@@ -163,15 +163,13 @@ async def create_quote(
     client_email = booking.guest_email
     client_name = booking.guest_name or "Client"
     if booking.client_id:
-        client_result = await db.execute(
-            select(BTTCOUser.email, BTTCOUser.name).where(BTTCOUser.id == booking.client_id)
-        )
+        client_result = await db.execute(select(User.email, User.name).where(User.id == booking.client_id))
         client_row = client_result.first()
         if client_row:
             client_email, client_name = client_row
 
     # Get artist name
-    artist_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+    artist_result = await db.execute(select(User.name).where(User.id == booking.artist_id))
     artist_name = artist_result.scalar_one_or_none() or "Your Artist"
 
     # Send quote email
@@ -329,7 +327,7 @@ async def create_quote(
 async def get_quotes_for_booking(
     booking_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get all quotes for a booking (staff view — assistant+)."""
     _require_role(current_user, "assistant")
@@ -391,12 +389,12 @@ async def get_public_quote(
     booking_r = await db.execute(select(Booking).where(Booking.id == quote.booking_id))
     booking = booking_r.scalar_one()
 
-    artist_r = await db.execute(select(BTTCOUser.name, BTTCOUser.avatar_url).where(BTTCOUser.id == booking.artist_id))
+    artist_r = await db.execute(select(User.name, User.avatar_url).where(User.id == booking.artist_id))
     artist_row = artist_r.first()
 
     client_name = booking.guest_name or "Client"
     if booking.client_id:
-        client_r = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.client_id))
+        client_r = await db.execute(select(User.name).where(User.id == booking.client_id))
         client_name = client_r.scalar_one_or_none() or client_name
 
     slots = json.loads(quote.available_slots_json) if quote.available_slots_json else []
@@ -463,7 +461,7 @@ async def accept_quote(
     booking_r = await db.execute(select(Booking).where(Booking.id == quote.booking_id))
     booking = booking_r.scalar_one()
 
-    artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+    artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
     artist = artist_r.scalar_one()
     selected_date, selected_time, selected_duration = await _assert_quote_slot_available(
         db=db,
@@ -474,7 +472,7 @@ async def accept_quote(
 
     client_email = booking.guest_email
     if booking.client_id:
-        client_r = await db.execute(select(BTTCOUser.email).where(BTTCOUser.id == booking.client_id))
+        client_r = await db.execute(select(User.email).where(User.id == booking.client_id))
         client_row = client_r.first()
         if client_row:
             client_email = client_row[0]
@@ -608,7 +606,7 @@ class GuestQuoteReply(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
 
 
-async def _ensure_guest_user(db: AsyncSession, email: str, name: str | None) -> BTTCOUser:
+async def _ensure_guest_user(db: AsyncSession, email: str, name: str | None) -> User:
     """
     Look up (or create) a pending-account collector row for a guest
     email. Ensures every guest conversation has a real sender_id to
@@ -626,7 +624,7 @@ async def _ensure_guest_user(db: AsyncSession, email: str, name: str | None) -> 
     # Random 32-char disabled password — the guest can never log in with
     # this. They'll only gain portal access via the password-reset flow.
     disabled_pw = hash_password(secrets.token_urlsafe(24))
-    user = BTTCOUser(
+    user = User(
         email=normalized,
         password_hash=disabled_pw,
         name=(name or "Guest").strip()[:255],
@@ -643,7 +641,7 @@ async def _ensure_conversation_for_booking(
     db: AsyncSession,
     booking: Booking,
     artist_id: UUID,
-    client_user: BTTCOUser,
+    client_user: User,
 ) -> Conversation:
     """
     Resolve or create the 1:1 conversation between this booking's
@@ -730,7 +728,7 @@ async def public_quote_reply(
     # Resolve the client — registered account takes precedence, else
     # promote the guest_email into a pending-account row.
     if booking.client_id:
-        client_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.client_id))
+        client_r = await db.execute(select(User).where(User.id == booking.client_id))
         client_user = client_r.scalar_one_or_none()
         if not client_user:
             raise HTTPException(status_code=404, detail="Client account missing")

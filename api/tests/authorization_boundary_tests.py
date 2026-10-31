@@ -15,13 +15,13 @@ from fastapi import HTTPException
 
 from app.api.v1.endpoints import ai_memories, conversations, documents, pos, users
 from app.models.booking import Booking
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.message import ConversationCreate
 from app.schemas.user import UserRoleUpdate
 
 
-def _user(role: str, *, user_id=None) -> BTTCOUser:
-    return BTTCOUser(
+def _user(role: str, *, user_id=None) -> User:
+    return User(
         id=user_id or uuid.uuid4(),
         email=f"{role}-{uuid.uuid4()}@example.test",
         name=role.title(),
@@ -317,8 +317,8 @@ class POSBookingBoundaryTests(unittest.IsolatedAsyncioTestCase):
         routing.reason = "test"
         stripe_client = MagicMock()
         stripe_client.v1.checkout.sessions.create.return_value = SimpleNamespace(
-            id="cs_test_bttco_pos",
-            url="https://checkout.stripe.com/c/pay/cs_test_bttco_pos",
+            id="cs_test_ryozan_pos",
+            url="https://checkout.stripe.com/c/pay/cs_test_ryozan_pos",
         )
 
         with (
@@ -336,7 +336,7 @@ class POSBookingBoundaryTests(unittest.IsolatedAsyncioTestCase):
                 artist,
             )
 
-        self.assertEqual(result.session_id, "cs_test_bttco_pos")
+        self.assertEqual(result.session_id, "cs_test_ryozan_pos")
         self.assertRegex(result.checkout_url, r"^https://checkout\.stripe\.com/")
         stripe_client.v1.checkout.sessions.create.assert_called_once()
 
@@ -351,8 +351,8 @@ class POSBookingBoundaryTests(unittest.IsolatedAsyncioTestCase):
         routing.reason = "test"
         stripe_client = MagicMock()
         stripe_client.v1.checkout.sessions.create.return_value = SimpleNamespace(
-            id="cs_test_bttco_invoice",
-            url="https://checkout.stripe.com/c/pay/cs_test_bttco_invoice",
+            id="cs_test_ryozan_invoice",
+            url="https://checkout.stripe.com/c/pay/cs_test_ryozan_invoice",
         )
         email_send = AsyncMock(return_value=True)
 
@@ -373,7 +373,7 @@ class POSBookingBoundaryTests(unittest.IsolatedAsyncioTestCase):
                 artist,
             )
 
-        self.assertEqual(result.session_id, "cs_test_bttco_invoice")
+        self.assertEqual(result.session_id, "cs_test_ryozan_invoice")
         self.assertEqual(str(result.recipient_email), "collector@example.com")
         self.assertTrue(result.email_sent)
         email_send.assert_awaited_once()

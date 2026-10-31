@@ -31,7 +31,7 @@ from app.models.message import Message
 from app.models.notification import Notification as NotificationModel
 from app.models.pos_transaction import POSTransaction
 from app.models.quote import Quote
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.calendar_sync import artist_calendar_connected, artist_calendar_id, create_booking_event
 from app.services.email import (
     FROM_ADMIN,
@@ -48,7 +48,7 @@ from app.services.quest_hooks import check_and_complete_quest
 from app.services.reward_engine import grant_reward, reward_user_by_id
 from app.services.stripe_client import get_stripe_client
 
-logger = logging.getLogger("bttco.stripe.webhooks")
+logger = logging.getLogger("ryozan.stripe.webhooks")
 router = APIRouter(prefix="/stripe", tags=["stripe-webhooks"])
 
 CHECKOUT_EVENTS = {
@@ -309,7 +309,7 @@ async def stripe_connect_thin_webhook(request: Request):
 
     routing_ready = connect_account_ready(account)
     async with async_session() as db:
-        result = await db.execute(select(BTTCOUser).where(BTTCOUser.stripe_account_id == account_id))
+        result = await db.execute(select(User).where(User.stripe_account_id == account_id))
         user = result.scalar_one_or_none()
         if user:
             user.stripe_onboarding_complete = routing_ready
@@ -732,12 +732,12 @@ async def _handle_invoice_event(event_type: str, invoice):
         metadata_user_id = _parse_uuid(subscription_metadata.get("bttco_user_id"))
         condition = None
         if metadata_user_id:
-            condition = BTTCOUser.id == metadata_user_id
+            condition = User.id == metadata_user_id
         elif subscription_id and subscription_metadata.get("bttco_billing_kind") == "booth_rent":
-            condition = BTTCOUser.booth_rent_subscription_id == subscription_id
+            condition = User.booth_rent_subscription_id == subscription_id
         else:
-            condition = BTTCOUser.stripe_customer_id == customer_id
-        result = await db.execute(select(BTTCOUser).where(condition))
+            condition = User.stripe_customer_id == customer_id
+        result = await db.execute(select(User).where(condition))
         user = result.scalars().first()
         if not user:
             logger.info(
@@ -800,11 +800,11 @@ async def _handle_booth_rent_checkout_event(event_type: str, session: dict) -> N
     metadata = session.get("metadata", {}) or {}
     user_id = _parse_uuid(metadata.get("bttco_user_id"))
     if not user_id:
-        logger.warning("Booth-rent Checkout event missing BTTCO user id: event=%s", event_type)
+        logger.warning("Booth-rent Checkout event missing Ryozan user id: event=%s", event_type)
         return
 
     async with async_session() as db:
-        result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id).with_for_update())
+        result = await db.execute(select(User).where(User.id == user_id).with_for_update())
         artist = result.scalar_one_or_none()
         if not artist:
             logger.warning("Booth-rent Checkout event had no matching artist: event=%s", event_type)
@@ -882,7 +882,7 @@ async def _handle_booth_rent_checkout_event(event_type: str, session: dict) -> N
         await db.commit()
 
 
-async def _handle_booth_rent_invoice(db, event_type, invoice, artist: BTTCOUser, subscription_id: str | None):
+async def _handle_booth_rent_invoice(db, event_type, invoice, artist: User, subscription_id: str | None):
     invoice_id = invoice.get("id")
     customer_id = invoice.get("customer")
     if customer_id:
@@ -1021,14 +1021,12 @@ async def _sync_hustl_deposit_task_with_visibility(
         "deposit_amount": float(booking.deposit_amount or 0),
     }
     try:
-        artist_result = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == booking.artist_id))
+        artist_result = await db.execute(select(User.name).where(User.id == booking.artist_id))
         artist_name = artist_result.scalar_one_or_none() or "Unassigned artist"
         client_name = booking.guest_name or "Client"
         client_email = booking.guest_email
         if booking.client_id:
-            client_result = await db.execute(
-                select(BTTCOUser.name, BTTCOUser.email).where(BTTCOUser.id == booking.client_id)
-            )
+            client_result = await db.execute(select(User.name, User.email).where(User.id == booking.client_id))
             client_row = client_result.first()
             if client_row:
                 client_name = client_row[0] or client_name
@@ -1269,19 +1267,19 @@ async def _find_booking_by_payment_intent(db, payment_intent_id: str) -> Booking
     return booking_r.scalar_one_or_none()
 
 
-async def _find_user_for_customer(db, customer) -> BTTCOUser | None:
+async def _find_user_for_customer(db, customer) -> User | None:
     customer_id = customer.get("id")
     email = customer.get("email")
     metadata = customer.get("metadata", {}) or {}
     metadata_user_id = _parse_uuid(metadata.get("bttco_user_id") or metadata.get("user_id"))
 
-    conditions: list[Any] = [BTTCOUser.stripe_customer_id == customer_id]
+    conditions: list[Any] = [User.stripe_customer_id == customer_id]
     if metadata_user_id:
-        conditions.append(BTTCOUser.id == metadata_user_id)
+        conditions.append(User.id == metadata_user_id)
     if email:
-        conditions.append(BTTCOUser.email == email)
+        conditions.append(User.email == email)
 
-    result = await db.execute(select(BTTCOUser).where(or_(*conditions)))
+    result = await db.execute(select(User).where(or_(*conditions)))
     return result.scalars().first()
 
 
@@ -1530,15 +1528,13 @@ async def _handle_checkout_completed(session, *, provider_event_id: str | None =
 
         # Auto-sync to Google Calendar if the artist has it connected
         try:
-            artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+            artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
             artist_for_cal = artist_r.scalar_one_or_none()
             if artist_for_cal and artist_calendar_connected(artist_for_cal) and booking.scheduled_date:
                 client_name_cal = booking.guest_name or "Client"
                 client_email_cal = booking.guest_email
                 if booking.client_id:
-                    client_r_cal = await db.execute(
-                        select(BTTCOUser.name, BTTCOUser.email).where(BTTCOUser.id == booking.client_id)
-                    )
+                    client_r_cal = await db.execute(select(User.name, User.email).where(User.id == booking.client_id))
                     client_row_cal = client_r_cal.first()
                     if client_row_cal:
                         client_name_cal = client_row_cal[0] or client_name_cal
@@ -1566,7 +1562,7 @@ async def _handle_checkout_completed(session, *, provider_event_id: str | None =
         # Send deposit confirmation email to client
         try:
             # Get artist name
-            artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+            artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
             artist = artist_r.scalar_one_or_none()
             artist_name = artist.name if artist else "your artist"
 
@@ -1735,14 +1731,12 @@ async def _handle_quote_proposal_checkout_completed(session, *, provider_event_i
         client_name = booking.guest_name or "there"
 
         try:
-            artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+            artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
             artist = artist_r.scalar_one_or_none()
             artist_name = artist.name if artist else "your artist"
 
             if booking.client_id:
-                client_r = await db.execute(
-                    select(BTTCOUser.email, BTTCOUser.name).where(BTTCOUser.id == booking.client_id)
-                )
+                client_r = await db.execute(select(User.email, User.name).where(User.id == booking.client_id))
                 client_row = client_r.first()
                 if client_row:
                     client_email, client_name = client_row
@@ -1873,13 +1867,11 @@ async def _handle_public_booking_checkout_completed(session, *, provider_event_i
         client_email = booking.guest_email
         client_name = booking.guest_name or "there"
         try:
-            artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+            artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
             artist = artist_r.scalar_one_or_none()
             artist_name = artist.name if artist else artist_name
             if booking.client_id:
-                client_r = await db.execute(
-                    select(BTTCOUser.email, BTTCOUser.name).where(BTTCOUser.id == booking.client_id)
-                )
+                client_r = await db.execute(select(User.email, User.name).where(User.id == booking.client_id))
                 client_row = client_r.first()
                 if client_row:
                     client_email, client_name = client_row
@@ -2025,7 +2017,7 @@ async def _handle_flash_checkout_completed(session, *, provider_event_id: str | 
         booking.stripe_payment_intent_id = session.get("payment_intent")
         booking.updated_at = datetime.now(UTC)
         if booking.client_id and design:
-            client_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.client_id))
+            client_r = await db.execute(select(User).where(User.id == booking.client_id))
             client = client_r.scalar_one_or_none()
             if client:
                 reward_amount = max(0, int(metadata.get("bttcoin_reward") or 0))
@@ -2056,13 +2048,11 @@ async def _handle_flash_checkout_completed(session, *, provider_event_id: str | 
         client_email = booking.guest_email
         client_name = booking.guest_name or "there"
         try:
-            artist_r = await db.execute(select(BTTCOUser).where(BTTCOUser.id == booking.artist_id))
+            artist_r = await db.execute(select(User).where(User.id == booking.artist_id))
             artist = artist_r.scalar_one_or_none()
             artist_name = artist.name if artist else artist_name
             if booking.client_id:
-                client_r = await db.execute(
-                    select(BTTCOUser.email, BTTCOUser.name).where(BTTCOUser.id == booking.client_id)
-                )
+                client_r = await db.execute(select(User.email, User.name).where(User.id == booking.client_id))
                 client_row = client_r.first()
                 if client_row:
                     client_email, client_name = client_row
@@ -2251,7 +2241,7 @@ async def _handle_pos_completed(session):
 
     if client_email:
         amount_display = f"${amount / 100:,.2f}"
-        receipt_number = str(session.get("id") or "BTTCO")[-12:].upper()
+        receipt_number = str(session.get("id") or "Ryozan")[-12:].upper()
         paid_at = datetime.now(SHOP_TIMEZONE)
         rendered = await render_transactional_email(
             "transaction_receipt",
@@ -2297,7 +2287,7 @@ async def _handle_account_updated(account):
 
     onboarding_complete = connect_account_ready(account)
     async with async_session() as db:
-        result = await db.execute(select(BTTCOUser).where(BTTCOUser.stripe_account_id == account_id))
+        result = await db.execute(select(User).where(User.stripe_account_id == account_id))
         user = result.scalar_one_or_none()
         if user and user.stripe_onboarding_complete != onboarding_complete:
             user.stripe_onboarding_complete = onboarding_complete

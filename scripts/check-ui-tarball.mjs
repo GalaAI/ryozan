@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * New artifact justification:
- * BTTCO had no way to notice that `packages/ui/src` and the vendored tarball
+ * Ryozan had no way to notice that `packages/ui/src` and the vendored tarball
  * the app actually installs had drifted apart. The drift is silent by design
  * of the setup, so it needed its own guard rather than a change to an existing
  * script.

@@ -26,14 +26,15 @@ from app.api.v1.endpoints import bookings as bookings_endpoint
 from app.api.v1.endpoints import calendar as calendar_endpoint
 from app.api.v1.endpoints import stripe_webhooks
 from app.constants.status import BookingStatus
+from app.core import legacy_env
 from app.core.database import async_session
 from app.models.booking import Booking
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.session_type import ArtistSessionType
-from app.models.user import BTTCOUser
+from app.models.user import User
 from main import app
 
-RUN_SANDBOX = os.environ.get("BTTCO_E2E_SANDBOX") == "1"
+RUN_SANDBOX = legacy_env.getenv("RYOZAN_E2E_SANDBOX") == "1"
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 LOCAL_DATABASE = "@127.0.0.1:5433/" in DATABASE_URL or "@localhost:5433/" in DATABASE_URL
@@ -75,7 +76,7 @@ def _message_recipients(message: dict) -> set[str]:
     return recipients
 
 
-@unittest.skipUnless(RUN_SANDBOX, "set BTTCO_E2E_SANDBOX=1 to run the local booking gauntlet")
+@unittest.skipUnless(RUN_SANDBOX, "set RYOZAN_E2E_SANDBOX=1 to run the local booking gauntlet")
 @unittest.skipUnless(LOCAL_DATABASE, "booking gauntlet requires the isolated PostgreSQL database on port 5433")
 @unittest.skipUnless(TEST_STRIPE, "booking gauntlet requires a Stripe sk_test key")
 class BookingEndToEndSandboxTests(unittest.IsolatedAsyncioTestCase):
@@ -90,7 +91,7 @@ class BookingEndToEndSandboxTests(unittest.IsolatedAsyncioTestCase):
         self.consultation_email = f"consultation-{stamp}@example.test"
         self.deposit_email = f"deposit-{stamp}@example.test"
         self.webhook_secret = os.environ["STRIPE_WEBHOOK_SECRET"]
-        self.artist = BTTCOUser(
+        self.artist = User(
             id=uuid.uuid4(),
             email=self.artist_email,
             password_hash="disabled",

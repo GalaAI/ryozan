@@ -13,7 +13,7 @@ from app.core.security import get_current_user
 from app.services.agent_evolution import (
     _replace_managed_section,
     apply_profile_to_elevenlabs,
-    project_agent_evolution_for_bttco,
+    project_agent_evolution_for_ryozan,
     render_managed_behavior,
 )
 
@@ -43,9 +43,9 @@ class AgentEvolutionPromptTests(unittest.TestCase):
         self.assertIn("revision 5", second)
         self.assertNotIn("revision 4", second)
 
-    def test_projects_ark_evaluation_status_into_plain_bttco_language(self):
+    def test_projects_ark_evaluation_status_into_plain_ryozan_language(self):
         raw_status = "cru" + "cible_passed"
-        projected = project_agent_evolution_for_bttco(
+        projected = project_agent_evolution_for_ryozan(
             {"profile": {"status": raw_status}, "versions": [{"status": raw_status}]}
         )
         self.assertEqual(projected["profile"]["status"], "evaluation_passed")
@@ -100,7 +100,7 @@ class AgentEvolutionProviderTests(unittest.IsolatedAsyncioTestCase):
                 "app.services.agent_evolution.get_settings",
                 return_value=SimpleNamespace(
                     ELEVENLABS_API_KEY="provider-key",
-                    ELEVENLABS_BTTCO_AGENT_ID="bella-provider-agent",
+                    ELEVENLABS_RYOZAN_AGENT_ID="bella-provider-agent",
                     ELEVENLABS_JUSTIN_AGENT_ID="gala-provider-agent",
                 ),
             ),
@@ -165,7 +165,7 @@ class AgentEvolutionProviderTests(unittest.IsolatedAsyncioTestCase):
                 "app.services.agent_evolution.get_settings",
                 return_value=SimpleNamespace(
                     ELEVENLABS_API_KEY="provider-key",
-                    ELEVENLABS_BTTCO_AGENT_ID="bella-provider-agent",
+                    ELEVENLABS_RYOZAN_AGENT_ID="bella-provider-agent",
                     ELEVENLABS_JUSTIN_AGENT_ID="gala-provider-agent",
                 ),
             ),
@@ -177,12 +177,12 @@ class AgentEvolutionProviderTests(unittest.IsolatedAsyncioTestCase):
 
 class OrchestraModelRoutingTests(unittest.IsolatedAsyncioTestCase):
     async def test_local_override_is_limited_to_model_configuration(self):
-        from app.services.agent_evolution import BTTCO_ORCHESTRA_MODELS_PATH, request_apex_agent
+        from app.services.agent_evolution import ORCHESTRA_MODELS_PATH, request_apex_agent
         response = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"ok": True})
         for local_mode, path, expected_origin in [
-            (True, BTTCO_ORCHESTRA_MODELS_PATH, "http://127.0.0.1:8790"),
+            (True, ORCHESTRA_MODELS_PATH, "http://127.0.0.1:8790"),
             (True, "agents/gala", "https://hosted.example"),
-            (False, BTTCO_ORCHESTRA_MODELS_PATH, "https://hosted.example"),
+            (False, ORCHESTRA_MODELS_PATH, "https://hosted.example"),
         ]:
             client = AsyncMock()
             client.__aenter__.return_value = client
@@ -206,7 +206,7 @@ class OrchestraModelRoutingTests(unittest.IsolatedAsyncioTestCase):
     async def test_each_request_reads_the_shared_assignment_and_preserves_global_lane(self):
         from dataclasses import make_dataclass
 
-        from app.services.agent_evolution import BTTCO_ORCHESTRA_MODELS_PATH, resolve_orchestra_model_lane
+        from app.services.agent_evolution import ORCHESTRA_MODELS_PATH, resolve_orchestra_model_lane
         lane_type = make_dataclass("Lane", [("primary_model", str), ("fallback_models", list)])
         inherited = lane_type("ark/bttco/gemini", ["ark/deepseek"])
         def snapshot(primary):
@@ -220,7 +220,7 @@ class OrchestraModelRoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(third, inherited)
         self.assertEqual(inherited.primary_model, "ark/bttco/gemini")
         self.assertEqual(api.await_count, 3)
-        api.assert_awaited_with("GET", BTTCO_ORCHESTRA_MODELS_PATH)
+        api.assert_awaited_with("GET", ORCHESTRA_MODELS_PATH)
 
     async def test_wrong_orchestra_and_missing_agent_fail_closed(self):
         from app.services.agent_evolution import AgentEvolutionBridgeError, resolve_orchestra_model_lane

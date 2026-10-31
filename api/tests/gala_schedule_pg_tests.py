@@ -16,17 +16,18 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.api.v1.endpoints import gala_chat
+from app.core import legacy_env
 from app.core.database import Base
 from app.models.booking import Booking
 from app.models.message import Conversation
-from app.models.user import BTTCOUser
+from app.models.user import User
 
-TEST_DATABASE_URL = os.environ.get("BTTCO_TEST_DATABASE_URL", "")
+TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "")
 if TEST_DATABASE_URL.startswith("postgresql://"):
     TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 
-@unittest.skipUnless(TEST_DATABASE_URL, "set BTTCO_TEST_DATABASE_URL to run the schedule tool on PostgreSQL")
+@unittest.skipUnless(TEST_DATABASE_URL, "set RYOZAN_TEST_DATABASE_URL to run the schedule tool on PostgreSQL")
 class GalaSchedulePostgresTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.schema = f"gala_schedule_{uuid4().hex}"
@@ -39,11 +40,11 @@ class GalaSchedulePostgresTests(unittest.IsolatedAsyncioTestCase):
             connect_args={"server_settings": {"search_path": self.schema}},
         )
         self.sessions = async_sessionmaker(self.engine, expire_on_commit=False)
-        tables = [BTTCOUser.__table__, Conversation.__table__, Booking.__table__]
+        tables = [User.__table__, Conversation.__table__, Booking.__table__]
         async with self.engine.begin() as connection:
             await connection.run_sync(lambda sync: Base.metadata.create_all(sync, tables=tables))
 
-        self.founder = BTTCOUser(
+        self.founder = User(
             id=uuid4(), email=f"founder-{uuid4().hex}@example.test", password_hash="x", name="Founder", role="founder"
         )
         today = date.today()

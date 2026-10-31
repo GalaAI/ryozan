@@ -21,11 +21,12 @@ from fastapi import FastAPI
 from sqlalchemy import select
 
 from app.api.v1.endpoints import documents
+from app.core import legacy_env
 from app.core.database import Base, async_session, engine
 from app.core.rate_limit import limiter
 from app.models.document import DocumentInstance, DocumentTemplate
 
-ENABLED = os.environ.get("BTTCO_CHECKIN_PG_TESTS") == "1"
+ENABLED = legacy_env.getenv("RYOZAN_CHECKIN_PG_TESTS") == "1"
 FIXTURE_DB = os.environ.get("DATABASE_URL") == "postgresql+asyncpg://fixture@127.0.0.1:55435/checkin_test"
 
 HEALTH = {"pregnant": "No", "blood_thinners": "No", "allergies": "Latex"}

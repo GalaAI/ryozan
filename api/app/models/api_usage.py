@@ -21,7 +21,7 @@ COST_PER_OUTPUT_TOKEN = 0.000015
 
 
 class APIUsage(Base):
-    """One row per Anthropic API call made by any BTTCO endpoint."""
+    """One row per Anthropic API call made by any Ryozan endpoint."""
 
     __tablename__ = "ryozan_api_usage"
     __table_args__ = (Index("idx_ryozan_api_usage_created_at", "created_at"),)

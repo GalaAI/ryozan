@@ -32,17 +32,17 @@ from app.models.api_usage import APIUsage
 from app.models.booking import Booking
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.agent_evolution import (
     APEX_EVALUATION_SEGMENT,
-    BTTCO_ORCHESTRA_MODELS_PATH,
+    ORCHESTRA_MODELS_PATH,
     AgentEvolutionBridgeError,
     apply_profile_to_elevenlabs,
-    bttco_actor_ref,
-    project_agent_evolution_for_bttco,
+    project_agent_evolution_for_ryozan,
     render_managed_behavior,
     request_apex_agent,
     resolve_orchestra_model_lane,
+    ryozan_actor_ref,
 )
 from app.services.ai_routing import (
     STAFF_ROLES,
@@ -64,7 +64,7 @@ from app.services.pack_bridge import (
 from app.services.web_search import WebSearchError, tavily_search, web_search_configured
 
 router = APIRouter(prefix="/gala", tags=["gala"])
-logger = logging.getLogger("bttco.gala")
+logger = logging.getLogger("ryozan.gala")
 
 _COMPLETED_ACTION_CLAIM = re.compile(
     r"\b(?:i|we)(?:(?:\s+have|['’]ve)\s+(?!not\b)(?:already\s+)?|\s+(?:already\s+)?)"
@@ -237,7 +237,7 @@ class EvolutionEvaluationRequest(BaseModel):
     evaluation_artifact_id: str = Field(min_length=3, max_length=160)
 
 
-def _require_evolution_operator(user: BTTCOUser) -> None:
+def _require_evolution_operator(user: User) -> None:
     if user.role not in {"founder", "admin"}:
         raise HTTPException(403, "Bella and Gala evolution is limited to founder and admin accounts.")
 
@@ -253,7 +253,7 @@ def _bridge_http_error(exc: AgentEvolutionBridgeError) -> HTTPException:
     return HTTPException(exc.status_code, str(exc))
 
 
-def _apex_write_payload(user: BTTCOUser, **payload: Any) -> dict[str, Any]:
+def _apex_write_payload(user: User, **payload: Any) -> dict[str, Any]:
     """Carry authenticated Ryozan operator approval across the signed Ark bridge."""
     approved_by = str(user.name or user.email)
     return {
@@ -265,7 +265,7 @@ def _apex_write_payload(user: BTTCOUser, **payload: Any) -> dict[str, Any]:
     }
 
 
-async def _promote_apex_profile(agent_id: str, user: BTTCOUser) -> dict[str, Any]:
+async def _promote_apex_profile(agent_id: str, user: User) -> dict[str, Any]:
     """Promote a verified profile, treating an already-promoted profile as idempotent."""
     try:
         return await request_apex_agent(
@@ -520,7 +520,7 @@ TRUSTED_ACCOUNT_CONTEXT: dict[str, dict[str, str]] = {
 }
 
 
-def _trusted_account_identity(user: BTTCOUser) -> tuple[str, str]:
+def _trusted_account_identity(user: User) -> tuple[str, str]:
     """Return server-owned identity context for known operator accounts."""
     email = str(user.email or "").strip().lower()
     trusted = TRUSTED_ACCOUNT_CONTEXT.get(email)
@@ -606,7 +606,7 @@ def resolve_action_intent(
     return tool_name, dict(action["input"])
 
 
-def resolve_agent_id(user: BTTCOUser, requested_agent: Any = None) -> str:
+def resolve_agent_id(user: User, requested_agent: Any = None) -> str:
     """Resolve a caller-supplied surface to a server-owned agent profile."""
     fallback = {
         "collector": "smoku",
@@ -809,20 +809,20 @@ def _access_editing_enabled() -> bool:
     return bool(get_settings().LOCAL_DEV_MODE)
 
 
-def _require_access_reader(user: BTTCOUser, agent_id: str) -> None:
+def _require_access_reader(user: User, agent_id: str) -> None:
     if user.role != "founder":
         raise HTTPException(403, "Agent access is visible to founder accounts.")
     if agent_id not in AGENT_PROFILES:
         raise HTTPException(404, "This agent has no registered chat tools yet.")
 
 
-def _require_access_editor(user: BTTCOUser, agent_id: str) -> None:
+def _require_access_editor(user: User, agent_id: str) -> None:
     _require_access_reader(user, agent_id)
     if not _access_editing_enabled():
         raise HTTPException(403, "Agent access editing is enabled only in local development.")
 
 
-def _access_snapshot(user: BTTCOUser, agent_id: str) -> dict:
+def _access_snapshot(user: User, agent_id: str) -> dict:
     editable = _access_editing_enabled()
     # A stored policy is enforced only where it can be edited; elsewhere the
     # snapshot reports the role defaults that chat actually applies.
@@ -855,7 +855,7 @@ def _access_snapshot(user: BTTCOUser, agent_id: str) -> dict:
 
 @router.get("/agents/{agent_id}/access")
 async def get_agent_access(
-    agent_id: str, db: AsyncSession = Depends(get_db), current_user: BTTCOUser = Depends(get_current_user)
+    agent_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     _require_access_reader(current_user, agent_id)
     return _access_snapshot(current_user, agent_id)
@@ -866,7 +866,7 @@ async def update_agent_access(
     agent_id: str,
     body: AgentAccessUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_access_editor(current_user, agent_id)
     known_tools = {tool["name"] for tool in GALA_TOOLS}
@@ -878,10 +878,7 @@ async def update_agent_access(
     # a newer revision or another preference saved before this request.
     owner = (
         await db.execute(
-            select(BTTCOUser)
-            .where(BTTCOUser.id == current_user.id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
+            select(User).where(User.id == current_user.id).with_for_update().execution_options(populate_existing=True)
         )
     ).scalar_one()
     if owner.role != "founder":
@@ -902,7 +899,7 @@ async def update_agent_access(
     return _access_snapshot(owner, agent_id)
 
 
-def _desktop_access(user: BTTCOUser, agent_id: str, context: dict) -> dict | None:
+def _desktop_access(user: User, agent_id: str, context: dict) -> dict | None:
     if user.role != "founder" or context.get("surface") != "desktop" or not get_settings().LOCAL_DEV_MODE:
         return None
     return (getattr(user, "nexus_profile", None) or {}).get("desktop_agent_access", {}).get(agent_id)
@@ -915,7 +912,7 @@ class OrchestraModelUpdate(BaseModel):
     fallbacks: list[str] = Field(max_length=4)
 
 
-def _require_model_editor(user: BTTCOUser):
+def _require_model_editor(user: User):
     if user.role != "founder" or not get_settings().LOCAL_DEV_MODE:
         raise HTTPException(403, "Orchestra model editing currently requires a local founder session.")
 
@@ -945,7 +942,7 @@ def _standalone_model_routing() -> dict:
             models[model] = {"id": model, "label": model.split("/", 1)[-1], "provider": "nebius-token-factory"}
         members.append(
             {
-                "actorRef": bttco_actor_ref(agent_id),
+                "actorRef": ryozan_actor_ref(agent_id),
                 "displayName": profile["name"],
                 "responsibility": profile["purpose"],
                 "assignment": {
@@ -970,7 +967,7 @@ def _standalone_model_routing() -> dict:
 
 
 @router.get("/capabilities")
-async def get_agent_capabilities(current_user: BTTCOUser = Depends(get_current_user)):
+async def get_agent_capabilities(current_user: User = Depends(get_current_user)):
     """Which agent surfaces this install can actually serve.
 
     Agent evolution (Bench, trials) and shared model routing live in Ark; a
@@ -990,14 +987,14 @@ async def get_agent_capabilities(current_user: BTTCOUser = Depends(get_current_u
 
 
 @router.get("/orchestra/model-routing")
-async def get_orchestra_models(current_user: BTTCOUser = Depends(get_current_user)):
+async def get_orchestra_models(current_user: User = Depends(get_current_user)):
     if not _ark_bridge_configured():
         if current_user.role != "founder":
             raise HTTPException(403, "Model routing is visible to founder accounts.")
         return _standalone_model_routing()
     _require_model_editor(current_user)
     try:
-        return await request_apex_agent("GET", BTTCO_ORCHESTRA_MODELS_PATH)
+        return await request_apex_agent("GET", ORCHESTRA_MODELS_PATH)
     except AgentEvolutionBridgeError as exc:
         if exc.status_code == 404:
             raise HTTPException(
@@ -1008,14 +1005,14 @@ async def get_orchestra_models(current_user: BTTCOUser = Depends(get_current_use
 
 
 @router.post("/orchestra/model-routing")
-async def save_orchestra_models(body: OrchestraModelUpdate, current_user: BTTCOUser = Depends(get_current_user)):
+async def save_orchestra_models(body: OrchestraModelUpdate, current_user: User = Depends(get_current_user)):
     if not _ark_bridge_configured():
         raise HTTPException(409, "Model routing is fixed by the agent profiles in a standalone install.")
     _require_model_editor(current_user)
     try:
         return await request_apex_agent(
             "POST",
-            BTTCO_ORCHESTRA_MODELS_PATH,
+            ORCHESTRA_MODELS_PATH,
             {
                 **body.model_dump(by_alias=True),
                 "operatorGate": {"confirmed": True, "approvedBy": str(current_user.id)},
@@ -1055,7 +1052,7 @@ async def preview_agent_response(
     agent_id: str,
     body: BenchPreviewRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Rehearse configuration changes without tools, profile writes or dispatch.
 
@@ -1260,7 +1257,7 @@ async def _monthly_web_searches_used(db: AsyncSession, user_id: UUID) -> int:
 async def execute_tool(
     tool_name: str,
     tool_input: dict,
-    user: BTTCOUser,
+    user: User,
     db: AsyncSession,
     agent_id: str = "gala",
     access: dict | None = None,
@@ -1333,7 +1330,7 @@ async def execute_tool(
         query_str = tool_input["query"].strip().lower()
 
         # Search users by name or email
-        from app.models.user import BTTCOUser as UserModel
+        from app.models.user import User as UserModel
 
         user_query = select(UserModel).where(
             (func.lower(UserModel.name).contains(query_str)) | (func.lower(UserModel.email).contains(query_str))
@@ -1639,7 +1636,7 @@ async def execute_tool(
         confirmed_count = confirmed.scalar()
 
         # Active users
-        users_count = await db.execute(select(func.count()).select_from(BTTCOUser))
+        users_count = await db.execute(select(func.count()).select_from(User))
         user_count = users_count.scalar()
 
         text = (
@@ -1863,7 +1860,7 @@ async def build_memory_context(user_id: UUID, agent: str, db: AsyncSession) -> s
 
 
 def get_agent_system_prompt(
-    user: BTTCOUser,
+    user: User,
     agent_id: str,
     memory_context: str,
     request_context: dict[str, Any] | None = None,
@@ -1998,12 +1995,12 @@ async def _upsert_session_memory(
 
 @router.get("/evolution")
 async def get_agent_evolution(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Read the Apex-owned Bella and Gala profile projection for Ryozan."""
     _require_evolution_operator(current_user)
     try:
-        return project_agent_evolution_for_bttco(await request_apex_agent("GET", "agents"))
+        return project_agent_evolution_for_ryozan(await request_apex_agent("GET", "agents"))
     except AgentEvolutionBridgeError as exc:
         raise _bridge_http_error(exc) from exc
 
@@ -2011,7 +2008,7 @@ async def get_agent_evolution(
 @router.post("/evolution/recover-learning-captures")
 async def recover_learning_captures(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Replay only learning rows exhausted by Ark source registration drift."""
     _require_evolution_operator(current_user)
@@ -2028,12 +2025,12 @@ async def recover_learning_captures(
 @router.get("/evolution/{agent_id}")
 async def get_one_agent_evolution(
     agent_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_evolution_operator(current_user)
     normalized = _validate_evolution_agent(agent_id)
     try:
-        return project_agent_evolution_for_bttco(await request_apex_agent("GET", f"agents/{normalized}"))
+        return project_agent_evolution_for_ryozan(await request_apex_agent("GET", f"agents/{normalized}"))
     except AgentEvolutionBridgeError as exc:
         raise _bridge_http_error(exc) from exc
 
@@ -2042,7 +2039,7 @@ async def get_one_agent_evolution(
 async def train_agent_through_dialogue(
     agent_id: str,
     body: EvolutionDialogueRequest,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_evolution_operator(current_user)
     normalized = _validate_evolution_agent(agent_id)
@@ -2080,7 +2077,7 @@ async def train_agent_through_dialogue(
         )
     apex_input_refs = [*body.input_refs, f"urn:ainbox:item:{receipt.item_id}"]
     try:
-        return project_agent_evolution_for_bttco(
+        return project_agent_evolution_for_ryozan(
             await request_apex_agent(
                 "POST",
                 f"agents/{normalized}/dialogue",
@@ -2101,12 +2098,12 @@ async def train_agent_through_dialogue(
 async def save_agent_visual_profile(
     agent_id: str,
     body: EvolutionProfileRequest,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_evolution_operator(current_user)
     normalized = _validate_evolution_agent(agent_id)
     try:
-        return project_agent_evolution_for_bttco(
+        return project_agent_evolution_for_ryozan(
             await request_apex_agent(
                 "POST",
                 f"agents/{normalized}/profile",
@@ -2129,12 +2126,12 @@ async def save_agent_visual_profile(
 @router.post("/evolution/{agent_id}/gauntlet")
 async def run_agent_profile_gauntlet(
     agent_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_evolution_operator(current_user)
     normalized = _validate_evolution_agent(agent_id)
     try:
-        return project_agent_evolution_for_bttco(
+        return project_agent_evolution_for_ryozan(
             await request_apex_agent(
                 "POST",
                 f"agents/{normalized}/gauntlets",
@@ -2149,12 +2146,12 @@ async def run_agent_profile_gauntlet(
 async def record_agent_evaluation(
     agent_id: str,
     body: EvolutionEvaluationRequest,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_evolution_operator(current_user)
     normalized = _validate_evolution_agent(agent_id)
     try:
-        return project_agent_evolution_for_bttco(
+        return project_agent_evolution_for_ryozan(
             await request_apex_agent(
                 "POST",
                 f"agents/{normalized}/{APEX_EVALUATION_SEGMENT}",
@@ -2172,7 +2169,7 @@ async def record_agent_evaluation(
 @router.post("/evolution/{agent_id}/promote-and-apply")
 async def promote_and_apply_agent_profile(
     agent_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Promote through Apex/Aegis, then apply only that promoted profile live."""
     _require_evolution_operator(current_user)
@@ -2188,7 +2185,7 @@ async def promote_and_apply_agent_profile(
             f"agents/{normalized}/provider-sync",
             {"receipt": provider_receipt},
         )
-        return project_agent_evolution_for_bttco(
+        return project_agent_evolution_for_ryozan(
             {"ok": True, "profile": sync.get("profile"), "provider_receipt": provider_receipt}
         )
     except AgentEvolutionBridgeError as exc:
@@ -2198,13 +2195,13 @@ async def promote_and_apply_agent_profile(
 @router.post("/evolution/{agent_id}/promote")
 async def promote_agent_profile_for_portal(
     agent_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Promote an Apex profile into authenticated Portal chat without phone sync."""
     _require_evolution_operator(current_user)
     normalized = _validate_evolution_agent(agent_id)
     try:
-        return project_agent_evolution_for_bttco(await _promote_apex_profile(normalized, current_user))
+        return project_agent_evolution_for_ryozan(await _promote_apex_profile(normalized, current_user))
     except AgentEvolutionBridgeError as exc:
         raise _bridge_http_error(exc) from exc
 
@@ -2213,7 +2210,7 @@ async def promote_agent_profile_for_portal(
 async def close_agent_session(
     body: SessionCloseRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Compact one ephemeral panel session into scoped memory, then discard raw turns."""
     settings = get_settings()
@@ -2332,7 +2329,7 @@ Session turns:
 async def gala_chat(
     body: ChatRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Conversational AI endpoint with tool calling."""
     settings = get_settings()
@@ -2430,7 +2427,7 @@ async def gala_chat(
         except AgentEvolutionBridgeError as exc:
             import logging
 
-            logging.getLogger("bttco.gala").warning(
+            logging.getLogger("ryozan.gala").warning(
                 "Apex promoted profile unavailable for %s: %s", agent_name, type(exc).__name__
             )
 
@@ -2530,7 +2527,7 @@ async def gala_chat(
                 except Exception as e:
                     import logging
 
-                    logging.getLogger("bttco.gala").error(f"Tool {tool_name} failed: {e}")
+                    logging.getLogger("ryozan.gala").error(f"Tool {tool_name} failed: {e}")
                     tool_text = f"Tool error: {str(e)[:200]}"
                     tool_components = []
                     tool_status = "failed"
@@ -2667,7 +2664,7 @@ async def gala_smart_upload(
     note: str = Form(""),
     memory_consent: bool = Form(False),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Smart file upload — Gala routes the file based on category.
@@ -2685,7 +2682,7 @@ async def gala_smart_upload(
 
     from app.services.storage import upload_file as upload_to_r2
 
-    logger = logging.getLogger("bttco.gala")
+    logger = logging.getLogger("ryozan.gala")
 
     if file is None:
         raise HTTPException(status_code=422, detail="No file provided")
@@ -2902,7 +2899,7 @@ def _heuristic_classify(filename: str, mime: str) -> str:
 
 async def _maybe_write_upload_memory(
     db: AsyncSession,
-    user: BTTCOUser,
+    user: User,
     filename: str,
     category: str,
     note: str,
@@ -2911,7 +2908,7 @@ async def _maybe_write_upload_memory(
     """Optionally persist a Gala memory about a significant upload."""
     import logging
 
-    logger = logging.getLogger("bttco.gala")
+    logger = logging.getLogger("ryozan.gala")
     try:
         from app.models.ai_memory import AIMemory
 

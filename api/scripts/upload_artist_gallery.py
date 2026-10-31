@@ -10,8 +10,8 @@ NAME-thumb.jpg); the server makes its own derivatives, so one original per piece
 thumbs are skipped.
 
 Environment:
-    BTTCO_API_BASE   API root, for example http://localhost:8801/api/v1
-    BTTCO_TOKEN      a founder session token (never printed)
+    RYOZAN_API_BASE   API root, for example http://localhost:8801/api/v1
+    RYOZAN_TOKEN      a founder session token (never printed)
 
 Usage:
     python scripts/upload_artist_gallery.py --slug devin --source devin-burnett-portfolio.zip
@@ -22,12 +22,15 @@ Without --apply it lists what would be sent and exits.
 
 import argparse
 import mimetypes
-import os
 import sys
 import zipfile
 from pathlib import Path
 
 import httpx
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from app.core import legacy_env  # noqa: E402
 
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 # One original per piece; first match wins.
@@ -85,10 +88,10 @@ def main() -> int:
         print("Dry run. Add --apply to upload.")
         return 0
 
-    api_base = os.environ.get("BTTCO_API_BASE", "").rstrip("/")
-    token = os.environ.get("BTTCO_TOKEN", "")
+    api_base = legacy_env.getenv("RYOZAN_API_BASE", "").rstrip("/")
+    token = legacy_env.getenv("RYOZAN_TOKEN", "")
     if not api_base or not token:
-        print("Set BTTCO_API_BASE and BTTCO_TOKEN before using --apply.", file=sys.stderr)
+        print("Set RYOZAN_API_BASE and RYOZAN_TOKEN before using --apply.", file=sys.stderr)
         return 2
 
     url = f"{api_base}/artists/{args.slug}/gallery/upload"

@@ -18,7 +18,7 @@ from mailbox_ownership_tests import FixtureSession, fixture_app, user
 from app.api.v1.endpoints import auth, users
 from app.core.rate_limit import limiter
 from app.core.security import create_access_token, create_password_reset_token, create_user_access_token, hash_password
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.user import UserResponse
 from app.services.account_status import password_status, record_password_setup
 
@@ -226,15 +226,15 @@ class AccountStatusTests(unittest.TestCase):
             "/auth/register-invite", json={"invite_token": invite, "password": secrets.token_urlsafe(24)}
         )
         self.assertEqual(response.status_code, 201)
-        created = next(row for row in self.db.rows if isinstance(row, BTTCOUser) and row.email == email)
+        created = next(row for row in self.db.rows if isinstance(row, User) and row.email == email)
         self.assertEqual(password_status(created), "user_set")
         self.assertEqual(created.password_change_method, "invite")
         self.assertEqual(created.last_login_method, "invite")
 
     def test_new_orm_accounts_default_to_setup_not_user_choice(self):
         for field in ("password_state", "password_changed_at", "password_change_method"):
-            self.assertIsNotNone(BTTCOUser.__table__.c[field].default)
-            self.assertIsNone(BTTCOUser.__table__.c[field].server_default)
+            self.assertIsNotNone(User.__table__.c[field].default)
+            self.assertIsNone(User.__table__.c[field].server_default)
 
 
 class AccountStatusFrontendTests(unittest.TestCase):

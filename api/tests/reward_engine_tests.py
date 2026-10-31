@@ -5,12 +5,12 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 from app.models.reward import RewardGrant
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.reward_engine import REWARD_RULES, grant_reward, profile_is_complete, reward_source_key
 
 
-def _collector() -> BTTCOUser:
-    return BTTCOUser(
+def _collector() -> User:
+    return User(
         id=uuid.uuid4(),
         email="collector@example.com",
         password_hash="test",

@@ -21,15 +21,15 @@ from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.booking import Booking
 from app.models.document import DocumentInstance
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.archive import ArchiveListResponse, ArchiveRecord
 
-logger = logging.getLogger("bttco.archive")
+logger = logging.getLogger("ryozan.archive")
 
 router = APIRouter(prefix="/archive", tags=["archive"])
 
 
-def _require_staff(user: BTTCOUser):
+def _require_staff(user: User):
     """Raise 403 if below artist role (staff floor)."""
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("artist", 99):
         raise HTTPException(
@@ -46,7 +46,7 @@ async def list_archive(
     limit: int = Query(25, ge=1, le=100),
     sort_by: str = Query("date", pattern="^(date|type|client)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -84,7 +84,7 @@ async def list_archive(
         all_ids = user_ids | artist_ids
         user_map: dict[UUID, str] = {}
         if all_ids:
-            name_result = await db.execute(select(BTTCOUser.id, BTTCOUser.name).where(BTTCOUser.id.in_(all_ids)))
+            name_result = await db.execute(select(User.id, User.name).where(User.id.in_(all_ids)))
             user_map = {row.id: row.name for row in name_result}
 
         for w in waivers:
@@ -125,7 +125,7 @@ async def list_archive(
         d_ids = {d.user_id for d in docs if d.user_id}
         d_user_map: dict[UUID, str] = {}
         if d_ids:
-            name_result = await db.execute(select(BTTCOUser.id, BTTCOUser.name).where(BTTCOUser.id.in_(d_ids)))
+            name_result = await db.execute(select(User.id, User.name).where(User.id.in_(d_ids)))
             d_user_map = {row.id: row.name for row in name_result}
 
         for d in docs:
@@ -165,9 +165,7 @@ async def list_archive(
         b_all_ids = b_client_ids | b_artist_ids
         b_user_map: dict[UUID, tuple[str, str]] = {}  # id -> (name, email)
         if b_all_ids:
-            name_result = await db.execute(
-                select(BTTCOUser.id, BTTCOUser.name, BTTCOUser.email).where(BTTCOUser.id.in_(b_all_ids))
-            )
+            name_result = await db.execute(select(User.id, User.name, User.email).where(User.id.in_(b_all_ids)))
             b_user_map = {row.id: (row.name, row.email) for row in name_result}
 
         # Also search by resolved client name if search is active
@@ -227,9 +225,7 @@ async def list_archive(
         r_ids = {r.client_id for r in receipts if r.client_id} | {r.artist_id for r in receipts}
         r_user_map: dict[UUID, tuple[str, str]] = {}
         if r_ids:
-            name_result = await db.execute(
-                select(BTTCOUser.id, BTTCOUser.name, BTTCOUser.email).where(BTTCOUser.id.in_(r_ids))
-            )
+            name_result = await db.execute(select(User.id, User.name, User.email).where(User.id.in_(r_ids)))
             r_user_map = {row.id: (row.name, row.email) for row in name_result}
 
         # Deduplicate: skip receipts whose booking ID is already in records
@@ -294,7 +290,7 @@ async def list_archive(
 @router.get("/{record_id}/detail")
 async def get_archive_detail(
     record_id: UUID,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -311,7 +307,7 @@ async def get_archive_detail(
         data = json.loads(doc.data_json) if doc.data_json else {}
         artist_name = None
         if doc.artist_id_reviewed:
-            ar = await db.execute(select(BTTCOUser.name).where(BTTCOUser.id == doc.artist_id_reviewed))
+            ar = await db.execute(select(User.name).where(User.id == doc.artist_id_reviewed))
             artist_name = ar.scalar_one_or_none()
 
         return {

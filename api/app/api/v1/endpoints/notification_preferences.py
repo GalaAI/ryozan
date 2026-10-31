@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.notification_preferences import NotificationPreferences
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.notification_preferences import (
     NotificationPreferencesResponse,
     NotificationPreferencesUpdate,
@@ -39,7 +39,7 @@ async def _get_or_create_prefs(user_id, db: AsyncSession) -> NotificationPrefere
 @router.get("/", response_model=NotificationPreferencesResponse)
 async def get_notification_preferences(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get current user's notification preferences (creates defaults if none)."""
     prefs = await _get_or_create_prefs(current_user.id, db)
@@ -50,7 +50,7 @@ async def get_notification_preferences(
 async def update_notification_preferences(
     body: NotificationPreferencesUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Update notification preferences (partial — only send fields you want to change)."""
     prefs = await _get_or_create_prefs(current_user.id, db)

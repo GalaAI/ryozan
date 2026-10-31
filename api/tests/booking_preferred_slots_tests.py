@@ -30,7 +30,7 @@ from app.models.booking import Booking
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
 from app.models.booking_slot_hold import BookingSlotHold
 from app.models.flash import FlashDesign
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.booking import PreferredSlot, PublicBookingDraft, PublicBookingSubmit
 from app.schemas.flash import FlashBookRequest
 
@@ -85,8 +85,8 @@ class _RecordingSession:
         self.commits += 1
 
 
-def _artist() -> BTTCOUser:
-    return BTTCOUser(
+def _artist() -> User:
+    return User(
         id=uuid.uuid4(),
         email="artist@example.test",
         password_hash="disabled",
@@ -178,11 +178,11 @@ class PreferredSlotsSubmitTests(unittest.IsolatedAsyncioTestCase):
     async def _run_submit(
         self,
         body: PublicBookingSubmit,
-        artist: BTTCOUser,
+        artist: User,
         *,
         account_created: bool = True,
     ):
-        client = BTTCOUser(
+        client = User(
             id=uuid.uuid4(),
             email=body.email,
             password_hash="disabled",
@@ -378,7 +378,7 @@ class FlashHoldCompatibilityTests(unittest.IsolatedAsyncioTestCase):
             image_url="https://cdn.example.test/panther.png",
         )
         artist_row = (artist.id, artist.name, artist.slug, 0, False)
-        collector = BTTCOUser(
+        collector = User(
             id=uuid.uuid4(), email="client@example.test", password_hash="disabled", name="Client", role="collector"
         )
         # design lookup, artist row, hold lookup
@@ -423,7 +423,7 @@ class FlashHoldCompatibilityTests(unittest.IsolatedAsyncioTestCase):
             status="published",
         )
         artist_row = (artist.id, artist.name, artist.slug, 0, False)
-        collector = BTTCOUser(
+        collector = User(
             id=uuid.uuid4(), email="client@example.test", password_hash="disabled", name="Client", role="collector"
         )
         db = _RecordingSession([[design], [artist_row], []], get_rows={artist.id: artist})

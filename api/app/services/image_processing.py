@@ -30,7 +30,7 @@ from dataclasses import dataclass
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-logger = logging.getLogger("bttco.image")
+logger = logging.getLogger("ryozan.image")
 
 # Formats we accept on input and can serve safely to browsers.
 # Pillow format name -> (canonical mime, safe file extension)

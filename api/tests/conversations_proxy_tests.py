@@ -20,7 +20,7 @@ os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 from app.api.v1.endpoints import conversations
 from app.models.booking import Booking
 from app.models.message import Conversation, ConversationParticipant, Message
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.message import ConversationCreate
 
 
@@ -169,7 +169,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_collector_message_response_redacts_booky_operational_metadata(self):
         conversation_id = uuid.uuid4()
-        collector = BTTCOUser(
+        collector = User(
             id=uuid.uuid4(),
             email="collector@example.test",
             name="Collector",
@@ -202,7 +202,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_staff_message_response_retains_booky_operational_metadata(self):
         conversation_id = uuid.uuid4()
-        staff = BTTCOUser(
+        staff = User(
             id=uuid.uuid4(),
             email="assistant@example.test",
             name="Assistant",
@@ -242,14 +242,14 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
         proxy_user_id = uuid.uuid4()
         target_user_id = uuid.uuid4()
         client_user_id = uuid.uuid4()
-        proxy_user = BTTCOUser(
+        proxy_user = User(
             id=proxy_user_id,
             email="assistant@example.com",
             name="Assistant",
             role="assistant",
             proxy_for=target_user_id,
         )
-        target_user = BTTCOUser(
+        target_user = User(
             id=target_user_id,
             email="artist@example.com",
             name="Artist",
@@ -292,7 +292,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
         target_user_id = uuid.uuid4()
         conversation_id = uuid.uuid4()
         message_id = uuid.uuid4()
-        proxy_user = BTTCOUser(
+        proxy_user = User(
             id=proxy_user_id,
             email="assistant@example.com",
             name="Assistant",
@@ -325,7 +325,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
         conversation_id = uuid.uuid4()
         sender_id = uuid.uuid4()
         recipient_id = uuid.uuid4()
-        recipient = BTTCOUser(
+        recipient = User(
             id=recipient_id,
             email="client@example.com",
             name="Client",
@@ -333,7 +333,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
             phone=None,
             sms_opt_in=False,
         )
-        sender = BTTCOUser(id=sender_id, email="artist@example.com", name="Artist", role="artist")
+        sender = User(id=sender_id, email="artist@example.com", name="Artist", role="artist")
         conversation = Conversation(
             id=conversation_id,
             name="Booking thread",
@@ -380,7 +380,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
         conversation_id = uuid.uuid4()
         sender_id = uuid.uuid4()
         recipient_id = uuid.uuid4()
-        recipient = BTTCOUser(
+        recipient = User(
             id=recipient_id,
             email="client@example.com",
             name="Client",
@@ -389,7 +389,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
             sms_opt_in=True,
             sms_opt_out_at=None,
         )
-        sender = BTTCOUser(id=sender_id, email="artist@example.com", name="Artist", role="artist")
+        sender = User(id=sender_id, email="artist@example.com", name="Artist", role="artist")
         conversation = Conversation(
             id=conversation_id,
             name="Booking thread",
@@ -425,7 +425,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
     async def test_explicit_phone_recipient_must_be_another_participant(self):
         conversation_id = uuid.uuid4()
         current_id = uuid.uuid4()
-        participant = BTTCOUser(
+        participant = User(
             id=uuid.uuid4(),
             email="client@example.com",
             name="Client",
@@ -445,14 +445,14 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
         proxy_user_id = uuid.uuid4()
         target_user_id = uuid.uuid4()
         conversation_id = uuid.uuid4()
-        proxy_user = BTTCOUser(
+        proxy_user = User(
             id=proxy_user_id,
             email="assistant@example.com",
             name="Assistant",
             role="assistant",
             proxy_for=target_user_id,
         )
-        target_user = BTTCOUser(
+        target_user = User(
             id=target_user_id,
             email="artist@example.com",
             name="Artist",
@@ -476,7 +476,7 @@ class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
         proxy_user_id = uuid.uuid4()
         target_user_id = uuid.uuid4()
         conversation_id = uuid.uuid4()
-        proxy_user = BTTCOUser(
+        proxy_user = User(
             id=proxy_user_id,
             email="assistant@example.com",
             name="Assistant",

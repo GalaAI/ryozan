@@ -79,7 +79,7 @@ _daily_email_counts: dict[tuple[str, str], int] = defaultdict(int)
 ARTIST_DAILY_EMAIL_CAP = 20  # marketing emails per artist per day
 UNCAPPED_ROLES = {"founder", "admin"}  # these roles bypass the cap
 
-logger = logging.getLogger("bttco.email")
+logger = logging.getLogger("ryozan.email")
 
 # ── Brand assets (hosted on ryozan.app) ─────────────────────────
 LOGO_URL = "https://ryozan.app/assets/images/logo-round.png"
@@ -2284,7 +2284,7 @@ def build_login_welcome_html(
 ) -> str:
     """
     Branded welcome email sent to existing artist accounts with their
-    login credentials.  Dark/gold theme matching all other BTTCO emails.
+    login credentials.  Dark/gold theme matching all other Ryozan emails.
     """
     return f"""<!DOCTYPE html>
 <html lang="en">

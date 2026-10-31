@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import require_role
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -95,7 +95,7 @@ def _require_gateway(s, current_user=None):
 @router.post("/generate-template", response_model=GenerateResponse)
 async def generate_template(
     body: GenerateTemplateRequest,
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
     db: AsyncSession = Depends(get_db),
 ):
     """Generate an AI-powered response template for an artist."""
@@ -156,7 +156,7 @@ Write only the template text, nothing else."""
 @router.post("/generate-message", response_model=GenerateResponse)
 async def generate_message(
     body: GenerateMessageRequest,
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
     db: AsyncSession = Depends(get_db),
 ):
     """Generate an AI-powered message for client communication (Courier, booking replies)."""

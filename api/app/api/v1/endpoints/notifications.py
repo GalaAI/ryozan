@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.notification import Notification
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.notification import NotificationListResponse, NotificationResponse
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
@@ -27,7 +27,7 @@ async def list_notifications(
     skip: int = 0,
     limit: int = Query(default=50, le=100),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List notifications for the current user."""
     base_filter = [Notification.user_id == current_user.id]
@@ -77,7 +77,7 @@ async def list_notifications(
 async def mark_notification_read(
     notification_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Mark a single notification as read."""
     result = await db.execute(
@@ -94,7 +94,7 @@ async def mark_notification_read(
 @router.post("/read-all", status_code=204)
 async def mark_all_read(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Mark all of the current user's notifications as read."""
     await db.execute(
@@ -109,7 +109,7 @@ async def mark_all_read(
 async def dismiss_notification(
     notification_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete a single notification."""
     result = await db.execute(
@@ -125,7 +125,7 @@ async def dismiss_notification(
 @router.delete("/", status_code=204)
 async def clear_all_notifications(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete all notifications for the current user."""
     await db.execute(delete(Notification).where(Notification.user_id == current_user.id))

@@ -28,7 +28,7 @@ from starlette.requests import Request
 from app.api.v1.endpoints import email_inbound
 from app.core.config import SHARED_SECRET_FIELDS, Settings
 from app.models.message import Conversation, ConversationParticipant, Message
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services import conversation_threads
 
 # Non-development settings refuse to load without private shared secrets.
@@ -276,7 +276,7 @@ class CourierInboundEmailTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_archive_reply_uses_existing_thread_and_known_sender(self):
         owner_user_id = uuid.uuid4()
-        sender = BTTCOUser(
+        sender = User(
             id=uuid.uuid4(),
             email="client@example.com",
             password_hash="placeholder",

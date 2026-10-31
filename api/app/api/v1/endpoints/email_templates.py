@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.email_template import EmailTemplate
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.email_foundry import (
     FOUNDRY_CONNECTORS_KEY,
     FOUNDRY_OUTBOX_KEY,
@@ -38,7 +38,7 @@ from app.services.email_foundry import (
     validate_foundry_state_value,
 )
 
-logger = logging.getLogger("bttco.email_templates")
+logger = logging.getLogger("ryozan.email_templates")
 router = APIRouter(prefix="/email-templates", tags=["email-templates"])
 
 # ── Schemas ──────────────────────────────────────────
@@ -87,7 +87,7 @@ class FoundryAssistRequest(BaseModel):
 # ── Helpers ──────────────────────────────────────────
 
 
-def _require_admin(user: BTTCOUser) -> None:
+def _require_admin(user: User) -> None:
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("admin", 3):
         raise HTTPException(status_code=403, detail="Admin role or higher required")
 
@@ -107,7 +107,7 @@ def render_template(html: str, data: dict[str, str]) -> str:
 
 @router.get("/foundry/state")
 async def get_foundry_state(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: hydrate the locked Email Foundry dependency state."""
     _require_admin(current_user)
@@ -119,7 +119,7 @@ async def put_foundry_state(
     key: str,
     value: Any = Body(...),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: persist one exact STORE_KEYS value from Email Foundry."""
     _require_admin(current_user)
@@ -143,12 +143,12 @@ async def put_foundry_state(
     return {"key": key, "saved": True, "value": foundry_state[key], "state": foundry_state}
 
 
-# Provider credentials already belong to BTTCO, but no founder-scoped control surface existed for
+# Provider credentials already belong to Ryozan, but no founder-scoped control surface existed for
 # attaching those providers to Courier. These routes extend the existing Foundry state boundary and
 # expose only booleans plus probe receipts, never the underlying credential values.
 @router.get("/foundry/connectors")
 async def get_foundry_connectors(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Founder: project provider configuration and Courier binding state."""
     if current_user.role != "founder":
@@ -161,7 +161,7 @@ async def update_foundry_connector(
     connector_id: str,
     action: str,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Founder: connect, reconnect, disconnect, or test one Ryozan-owned provider binding."""
     if current_user.role != "founder":
@@ -181,7 +181,7 @@ async def update_foundry_connector(
 async def approve_foundry_outbox(
     entry_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Founder: approve one held list send, execute it, and return its receipt."""
     if current_user.role != "founder":
@@ -209,7 +209,7 @@ async def approve_foundry_outbox(
 async def assist_foundry(
     body: FoundryAssistRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: execute the locked Herald drafting control through Ark's model gateway."""
     _require_admin(current_user)
@@ -279,7 +279,7 @@ async def unsubscribe_foundry(
         user_id = decode_foundry_unsubscribe_token(token)
     except ValueError:
         return _unsubscribe_page(body="This unsubscribe link is invalid.", status_code=400)
-    user = await db.get(BTTCOUser, user_id)
+    user = await db.get(User, user_id)
     if user:
         user.marketing_opt_in = False
         await db.flush()
@@ -289,7 +289,7 @@ async def unsubscribe_foundry(
 @router.get("/", response_model=list[TemplateResponse])
 async def list_templates(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: list all email templates."""
     _require_admin(current_user)
@@ -301,7 +301,7 @@ async def list_templates(
 async def get_template(
     slug: str,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: get a single template by slug."""
     _require_admin(current_user)
@@ -317,7 +317,7 @@ async def update_template(
     slug: str,
     body: TemplateUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: update a template's content, subject, or status."""
     _require_admin(current_user)
@@ -336,7 +336,7 @@ async def update_template(
 @router.post("/preview")
 async def preview_template(
     body: TemplatePreview,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: render a template with sample data and return the HTML."""
     _require_admin(current_user)
@@ -354,7 +354,7 @@ async def send_template_manual(
     slug: str,
     body: TemplateSendRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Admin+: manually send the locked Foundry template when available."""
     _require_admin(current_user)
@@ -399,7 +399,7 @@ async def send_template_manual(
 @router.post("/seed", status_code=200)
 async def seed_templates(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Founder only: seed all hardcoded email templates into the DB.

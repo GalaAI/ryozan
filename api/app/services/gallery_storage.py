@@ -14,7 +14,7 @@ from app.core.database import async_session
 from app.models.gallery_deletion_outbox import GalleryDeletionOutbox
 from app.services.storage import delete_file
 
-logger = logging.getLogger("bttco.gallery_storage")
+logger = logging.getLogger("ryozan.gallery_storage")
 GALLERY_DELETE_MAX_ATTEMPTS = 8
 GALLERY_DELETE_STALE_MINUTES = 10
 

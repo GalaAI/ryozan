@@ -24,7 +24,7 @@ from app.core.routes import ROUTES
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.booking import Booking
 from app.models.pos_transaction import POSTransaction
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.pos import POSTransactionCreate, POSTransactionResponse
 from app.services.email import FROM_SERVICE, render_transactional_email, send_email
 from app.services.payments import (
@@ -35,7 +35,7 @@ from app.services.payments import (
 )
 from app.services.stripe_client import get_stripe_client, stripe_request_options
 
-logger = logging.getLogger("bttco.pos")
+logger = logging.getLogger("ryozan.pos")
 router = APIRouter(prefix="/pos", tags=["pos"])
 
 
@@ -44,12 +44,12 @@ def _init_stripe():
     stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
-def _require_role(user: BTTCOUser, min_role: str):
+def _require_role(user: User, min_role: str):
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get(min_role, 99):
         raise HTTPException(status_code=403, detail=f"Requires {min_role} role or higher")
 
 
-def _require_booking_charge_access(booking: Booking, current_user: BTTCOUser) -> None:
+def _require_booking_charge_access(booking: Booking, current_user: User) -> None:
     """Limit artist POS charges to bookings assigned to that artist."""
     if current_user.role in {"admin", "founder"}:
         return
@@ -126,7 +126,7 @@ class POSIntegrationSummary(BaseModel):
 async def _create_pos_checkout(
     body: POSChargeRequest,
     db: AsyncSession,
-    current_user: BTTCOUser,
+    current_user: User,
 ) -> POSChargeResponse:
     _require_role(current_user, "artist")
 
@@ -237,7 +237,7 @@ async def _create_pos_checkout(
 async def create_pos_charge(
     body: POSChargeRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Create a Stripe Checkout Session for a POS charge.
@@ -290,11 +290,11 @@ def _build_pos_invoice_email_html(
 async def send_pos_invoice(
     body: POSInvoiceRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     # A POS invoice deliberately reuses the existing Checkout contract so pricing,
     # Connect routing, booking scope, receipts, and webhook evidence stay authoritative.
-    # It adds delivery through the shared BTTCO email service, not a second accounting path.
+    # It adds delivery through the shared Ryozan email service, not a second accounting path.
     checkout = await _create_pos_checkout(body, db, current_user)
     recipient = str(body.client_email)
     client_name = body.client_name or "there"
@@ -342,7 +342,7 @@ async def send_pos_invoice(
 @router.get("/status/{session_id}", response_model=POSStatusResponse)
 async def get_pos_status(
     session_id: str,
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Poll the payment status of a POS Checkout Session.
@@ -374,7 +374,7 @@ async def get_pos_summary(
     period_start: date | None = Query(None, description="Start date, defaults to first day of current year"),
     period_end: date | None = Query(None, description="End date, defaults to today"),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Finance summary for Hustle E-con.
@@ -408,9 +408,9 @@ async def get_pos_summary(
     transactions = result.scalars().all()
 
     artist_ids = {txn.artist_id for txn in transactions}
-    artists_by_id: dict[UUID, BTTCOUser] = {}
+    artists_by_id: dict[UUID, User] = {}
     if artist_ids:
-        artist_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id.in_(artist_ids)))
+        artist_result = await db.execute(select(User).where(User.id.in_(artist_ids)))
         artists_by_id = {artist.id: artist for artist in artist_result.scalars().all()}
 
     gross_cents = sum(txn.amount_cents for txn in transactions)
@@ -473,7 +473,7 @@ async def get_pos_summary(
 async def record_pos_transaction(
     body: POSTransactionCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Record a POS transaction (cash or card).
@@ -521,7 +521,7 @@ async def record_pos_transaction(
 async def list_pos_transactions(
     date_filter: date | None = Query(None, alias="date", description="Filter by date (YYYY-MM-DD)"),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List POS transactions.

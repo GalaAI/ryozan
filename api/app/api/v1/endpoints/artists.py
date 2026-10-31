@@ -2,7 +2,7 @@
 Public artist endpoints — no auth required (listing/detail).
 Protected endpoints for profile management + gallery uploads.
 
-Artists are BTTCOUsers with role='artist' (or 'founder') and a slug set.
+Artists are Users with role='artist' (or 'founder') and a slug set.
 Founders inherit all artist capabilities via the role hierarchy.
 """
 
@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.core.security import require_role
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.artist import ArtistDetail, ArtistProfileUpdate, ArtistSummary
 from app.services.gallery_storage import process_gallery_deletion_outbox_once, queue_gallery_deletion
 from app.services.image_processing import MAX_UPLOAD_BYTES, ImageValidationError, validate_and_normalize_image
@@ -49,7 +49,7 @@ async def _read_artist_image(file: UploadFile):
 async def list_artists(db: AsyncSession = Depends(get_db)):
     """Public: get all artists for the crew page (includes founders)."""
     result = await db.execute(
-        select(BTTCOUser).where(BTTCOUser.role.in_(ARTIST_ROLES), BTTCOUser.slug.isnot(None)).order_by(BTTCOUser.name)
+        select(User).where(User.role.in_(ARTIST_ROLES), User.slug.isnot(None)).order_by(User.name)
     )
     return result.scalars().all()
 
@@ -57,7 +57,7 @@ async def list_artists(db: AsyncSession = Depends(get_db)):
 @router.get("/{slug}", response_model=ArtistDetail)
 async def get_artist(slug: str, db: AsyncSession = Depends(get_db)):
     """Public: get a single artist's full profile by slug."""
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.slug == slug, BTTCOUser.role.in_(ARTIST_ROLES)))
+    result = await db.execute(select(User).where(User.slug == slug, User.role.in_(ARTIST_ROLES)))
     artist = result.scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
@@ -68,7 +68,7 @@ async def get_artist(slug: str, db: AsyncSession = Depends(get_db)):
 async def update_artist_profile(
     body: ArtistProfileUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: update your own artist-specific profile fields."""
     update_data = body.model_dump(exclude_unset=True)
@@ -88,7 +88,7 @@ async def update_artist_profile(
 async def upload_avatar(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: upload a profile picture."""
     normalized = await _read_artist_image(file)
@@ -117,7 +117,7 @@ async def upload_avatar(
 # ── Gallery management ─────────────────────────────────────────
 
 
-async def _append_gallery_image(db: AsyncSession, artist: BTTCOUser, file: UploadFile) -> BTTCOUser:
+async def _append_gallery_image(db: AsyncSession, artist: User, file: UploadFile) -> User:
     """Store one image and append it to the given artist's public gallery."""
     images = list(artist.portfolio_images or [])
     if len(images) >= ARTIST_GALLERY_MAX_IMAGES:
@@ -157,7 +157,7 @@ async def _append_gallery_image(db: AsyncSession, artist: BTTCOUser, file: Uploa
     return artist
 
 
-async def _remove_gallery_image(db: AsyncSession, artist: BTTCOUser, url: str) -> BTTCOUser:
+async def _remove_gallery_image(db: AsyncSession, artist: User, url: str) -> User:
     """Remove one image from the given artist's public gallery and queue its R2 cleanup."""
     images = list(artist.portfolio_images or [])
     if url not in images:
@@ -195,8 +195,8 @@ async def _remove_gallery_image(db: AsyncSession, artist: BTTCOUser, url: str) -
     return artist
 
 
-async def _artist_by_slug(db: AsyncSession, slug: str) -> BTTCOUser:
-    result = await db.execute(select(BTTCOUser).where(BTTCOUser.slug == slug, BTTCOUser.role.in_(ARTIST_ROLES)))
+async def _artist_by_slug(db: AsyncSession, slug: str) -> User:
+    result = await db.execute(select(User).where(User.slug == slug, User.role.in_(ARTIST_ROLES)))
     artist = result.scalar_one_or_none()
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
@@ -207,7 +207,7 @@ async def _artist_by_slug(db: AsyncSession, slug: str) -> BTTCOUser:
 async def upload_gallery_image(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: upload an image to your portfolio gallery."""
     return await _append_gallery_image(db, current_user, file)
@@ -221,7 +221,7 @@ class GalleryRemoveRequest(BaseModel):
 async def remove_gallery_image(
     body: GalleryRemoveRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(require_role("artist")),
+    current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: remove an image from your portfolio gallery."""
     return await _remove_gallery_image(db, current_user, body.url)
@@ -237,7 +237,7 @@ async def upload_gallery_image_for_artist(
     slug: str,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: upload an image to the named artist's portfolio gallery."""
     return await _append_gallery_image(db, await _artist_by_slug(db, slug), file)
@@ -248,7 +248,7 @@ async def remove_gallery_image_for_artist(
     slug: str,
     body: GalleryRemoveRequest,
     db: AsyncSession = Depends(get_db),
-    _caller: BTTCOUser = Depends(require_role("founder")),
+    _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: remove an image from the named artist's portfolio gallery."""
     return await _remove_gallery_image(db, await _artist_by_slug(db, slug), body.url)

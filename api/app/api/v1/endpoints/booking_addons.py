@@ -16,7 +16,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.booking_addon import BookingAddOn
-from app.models.user import BTTCOUser
+from app.models.user import User
 
 router = APIRouter(prefix="/booking-addons", tags=["booking-addons"])
 
@@ -52,18 +52,18 @@ class BookingAddOnResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-def _require_staff(user: BTTCOUser) -> None:
+def _require_staff(user: User) -> None:
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("artist", 2):
         raise HTTPException(status_code=403, detail="Artist role or higher required")
 
 
-def _is_admin(user: BTTCOUser) -> bool:
+def _is_admin(user: User) -> bool:
     return ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("admin", 3)
 
 
 async def _resolve_artist_id(
     db: AsyncSession,
-    current_user: BTTCOUser,
+    current_user: User,
     requested_artist_id: UUID | None,
 ) -> UUID:
     if requested_artist_id is None or requested_artist_id == current_user.id:
@@ -71,9 +71,9 @@ async def _resolve_artist_id(
     if not _is_admin(current_user):
         raise HTTPException(status_code=403, detail="Cannot manage another artist's add-ons")
     result = await db.execute(
-        select(BTTCOUser.id).where(
-            BTTCOUser.id == requested_artist_id,
-            BTTCOUser.role.in_(["artist", "admin", "founder"]),
+        select(User.id).where(
+            User.id == requested_artist_id,
+            User.role.in_(["artist", "admin", "founder"]),
         )
     )
     artist_id = result.scalar_one_or_none()
@@ -92,9 +92,9 @@ async def list_public_booking_addons(
     if slug is None:
         return []
     artist_result = await db.execute(
-        select(BTTCOUser.id).where(
-            BTTCOUser.slug == slug,
-            BTTCOUser.role.in_(["artist", "admin", "founder"]),
+        select(User.id).where(
+            User.slug == slug,
+            User.role.in_(["artist", "admin", "founder"]),
         )
     )
     artist_id = artist_result.scalar_one_or_none()
@@ -113,7 +113,7 @@ async def list_public_booking_addons(
 async def list_my_booking_addons(
     artist_id: UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
     resolved_artist_id = await _resolve_artist_id(db, current_user, artist_id)
@@ -129,7 +129,7 @@ async def list_my_booking_addons(
 async def create_booking_addon(
     body: BookingAddOnCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
     artist_id = await _resolve_artist_id(db, current_user, body.artist_id)
@@ -151,7 +151,7 @@ async def update_booking_addon(
     add_on_id: UUID,
     body: BookingAddOnUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
     result = await db.execute(select(BookingAddOn).where(BookingAddOn.id == add_on_id))
@@ -174,7 +174,7 @@ async def update_booking_addon(
 async def delete_booking_addon(
     add_on_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
     result = await db.execute(select(BookingAddOn).where(BookingAddOn.id == add_on_id))

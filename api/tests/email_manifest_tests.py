@@ -1,4 +1,4 @@
-"""Evidence-backed BTTCO email manifest classification tests.
+"""Evidence-backed Ryozan email manifest classification tests.
 
 The existing catalog tests prove individual renderers. This separate contract
 proves the cross-renderer inventory and receipt classification consumed by Ark.

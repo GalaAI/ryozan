@@ -1,7 +1,7 @@
 """
 Interactive Message Artifacts — service layer.
 
-A message in BTTCO's Courier can either be plain text or a typed "artifact"
+A message in Ryozan's Courier can either be plain text or a typed "artifact"
 with a structured JSON payload and mutable state. This module is the central
 registry + dispatcher for artifact behavior. Each artifact type declares:
 
@@ -32,9 +32,9 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: TC002
 
 from app.models.message import Message  # noqa: TC001
-from app.models.user import BTTCOUser  # noqa: TC001
+from app.models.user import User  # noqa: TC001
 
-logger = logging.getLogger("bttco.artifacts")
+logger = logging.getLogger("ryozan.artifacts")
 
 
 class ArtifactError(Exception):
@@ -71,7 +71,7 @@ class ArtifactHandler:
     initial_state: dict[str, Any]
     allowed_actions: frozenset[str]
     apply_action: Callable[
-        [AsyncSession, Message, str, BTTCOUser | None, dict[str, Any]],
+        [AsyncSession, Message, str, User | None, dict[str, Any]],
         Any,
     ]
 
@@ -130,7 +130,7 @@ async def apply_artifact_action(
     db: AsyncSession,
     message: Message,
     action: str,
-    actor: BTTCOUser | None,
+    actor: User | None,
     data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
@@ -167,7 +167,7 @@ async def _text_apply_action(
     db: AsyncSession,
     message: Message,
     action: str,
-    actor: BTTCOUser | None,
+    actor: User | None,
     data: dict[str, Any],
 ) -> dict[str, Any]:
     state = dict(message.artifact_state or {})

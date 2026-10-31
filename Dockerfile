@@ -1,4 +1,4 @@
-# BTTCO Unified Build
+# Ryozan Unified Build
 # Stage 1: Build React frontend
 # Stage 2: Python API + built frontend as static files
 

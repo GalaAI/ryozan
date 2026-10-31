@@ -16,7 +16,7 @@ from app.api.v1.endpoints import bookings as bookings_endpoint
 from app.api.v1.endpoints import stripe_webhooks
 from app.models.booking import Booking
 from app.models.booking_lifecycle_event import BookingLifecycleEvent
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.booking import PublicBookingSubmit
 
 
@@ -28,8 +28,8 @@ def _settings():
     )
 
 
-def _artist() -> BTTCOUser:
-    return BTTCOUser(
+def _artist() -> User:
+    return User(
         id=uuid.uuid4(),
         email="artist@example.test",
         password_hash="disabled",

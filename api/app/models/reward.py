@@ -18,7 +18,7 @@ from app.core.database import Base
 
 
 class RewardGrant(Base):
-    """Append-only XP, BTTCOIN, and inventory receipt."""
+    """Append-only XP, RYO, and inventory receipt."""
 
     __tablename__ = "ryozan_reward_grants"
     __table_args__ = (UniqueConstraint("user_id", "idempotency_key", name="uq_reward_grant_user_key"),)

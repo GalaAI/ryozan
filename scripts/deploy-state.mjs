@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * New artifact justification:
- * BTTCO already had deploy docs, but not a single command that answers whether
+ * Ryozan already had deploy docs, but not a single command that answers whether
  * a fix is local only, pushed, merged, or actually live. This script stays
  * narrow: it compares local git state with the live commit exposed by
  * /health/deploy so UI review handoffs stop relying on guesswork.
@@ -13,7 +13,12 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '..')
-const liveUrl = process.env.BTTCO_LIVE_DEPLOY_URL ?? 'https://ryozan.app/health/deploy'
+// RYOZAN_LIVE_DEPLOY_URL replaced BTTCO_LIVE_DEPLOY_URL; the old name still works with a warning.
+const legacyLiveUrl = process.env.BTTCO_LIVE_DEPLOY_URL
+if (process.env.RYOZAN_LIVE_DEPLOY_URL === undefined && legacyLiveUrl !== undefined) {
+  console.warn('BTTCO_LIVE_DEPLOY_URL is deprecated; set RYOZAN_LIVE_DEPLOY_URL instead.')
+}
+const liveUrl = process.env.RYOZAN_LIVE_DEPLOY_URL ?? legacyLiveUrl ?? 'https://ryozan.app/health/deploy'
 const wantJson = process.argv.includes('--json')
 
 function git(args, allowFailure = false) {

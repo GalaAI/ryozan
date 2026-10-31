@@ -1,4 +1,4 @@
-"""BTTCO to Ark Pack bridge adapter tests."""
+"""Ryozan to Ark Pack bridge adapter tests."""
 
 import json
 import unittest
@@ -33,11 +33,11 @@ class PackBridgeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(capture["kind"], "courier")
         self.assertEqual(capture["metadata"]["packTargets"], ["ainbox", "courier", "huddle"])
 
-    def test_learning_capture_keeps_raw_courier_content_in_bttco(self):
+    def test_learning_capture_keeps_raw_courier_content_in_ryozan(self):
         message = SimpleNamespace(
             id=uuid.uuid4(),
             conversation_id=uuid.uuid4(),
-            content="private client message that must remain in BTTCO",
+            content="private client message that must remain in Ryozan",
             message_type="text",
             created_at=datetime.now(UTC),
         )

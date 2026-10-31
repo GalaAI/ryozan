@@ -27,9 +27,9 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.econ import EconConnection, EconLedgerEntry, EconSyncRun
-from app.models.user import BTTCOUser
+from app.models.user import User
 
-logger = logging.getLogger("bttco.plaid")
+logger = logging.getLogger("ryozan.plaid")
 router = APIRouter(prefix="/plaid", tags=["plaid"])
 
 
@@ -58,7 +58,7 @@ def _get_plaid_client() -> plaid_api.PlaidApi:
     return plaid_api.PlaidApi(api_client)
 
 
-def _require_role(user: BTTCOUser, min_role: str):
+def _require_role(user: User, min_role: str):
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get(min_role, 99):
         raise HTTPException(status_code=403, detail=f"Requires {min_role} role or higher")
 
@@ -96,7 +96,7 @@ def _parse_plaid_date(value) -> datetime | None:
         return None
 
 
-async def _get_or_create_plaid_connection(db: AsyncSession, user: BTTCOUser) -> EconConnection:
+async def _get_or_create_plaid_connection(db: AsyncSession, user: User) -> EconConnection:
     result = await db.execute(
         select(EconConnection).where(
             EconConnection.provider == "plaid",
@@ -172,7 +172,7 @@ async def _upsert_plaid_ledger_entry(db: AsyncSession, conn: EconConnection, txn
 @router.get("/balance")
 async def get_balance(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Return Plaid account balances for the current user.
@@ -216,7 +216,7 @@ async def get_balance(
 async def sync_transactions(
     body: PlaidTransactionsSyncRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Fetch Plaid transaction updates for E-con.
@@ -293,7 +293,7 @@ async def sync_transactions(
 
 @router.post("/link-token")
 async def create_link_token(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Create a Plaid Link token so the frontend can open Plaid Link
@@ -325,7 +325,7 @@ async def create_link_token(
 async def exchange_public_token(
     body: ExchangeTokenRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Exchange a public_token from Plaid Link for a permanent access_token.
@@ -358,7 +358,7 @@ async def exchange_public_token(
 
 @router.get("/status")
 async def get_plaid_status(
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Check whether the current user has a Plaid bank account linked."""
     return {
@@ -369,7 +369,7 @@ async def get_plaid_status(
 @router.delete("/disconnect", status_code=204)
 async def disconnect_plaid(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Remove the stored Plaid access token for the current user."""
     current_user.plaid_access_token = None

@@ -214,7 +214,7 @@ class ImageValidationTests(unittest.TestCase):
 
 class FlashVisionContractTests(unittest.IsolatedAsyncioTestCase):
     def test_context_labels_never_become_design_inventory(self):
-        for label in ("context:signature", "$350 price", "BTTCO logo", "artist stamp"):
+        for label in ("context:signature", "$350 price", "Ryozan logo", "artist stamp"):
             role, _context_type = classify_detection_role(label)
             self.assertEqual(role, "context", label)
 

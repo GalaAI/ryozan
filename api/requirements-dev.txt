@@ -1,4 +1,4 @@
-# BTTCO API development-only dependencies
+# Ryozan API development-only dependencies
 # Install: pip install -r requirements-dev.txt
 #
 # This file pins the same versions CI uses so local lint/format

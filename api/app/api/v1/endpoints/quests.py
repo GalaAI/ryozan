@@ -18,7 +18,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.quest import Quest, UserQuest
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.schemas.quest import (
     QuestClaimResponse,
     QuestListResponse,
@@ -57,7 +57,7 @@ def quest_available(slug: str) -> bool:
     return True
 
 
-def _require_staff(user: BTTCOUser):
+def _require_staff(user: User):
     if ROLE_RANK.get(user.role, 0) < ROLE_RANK.get("artist", 99):
         raise HTTPException(status_code=403, detail="Staff access required")
 
@@ -66,7 +66,7 @@ def _require_staff(user: BTTCOUser):
 async def list_quests(
     category: str | None = None,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """List all active quests with the current user's progress."""
     query = select(Quest).where(Quest.is_active).order_by(Quest.sort_order, Quest.created_at)
@@ -107,7 +107,7 @@ async def list_quests(
 @router.get("/summary", response_model=QuestSummary)
 async def quest_summary(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Get quest completion stats for the current user."""
     active_result = await db.execute(select(Quest.slug).where(Quest.is_active))
@@ -143,7 +143,7 @@ async def quest_summary(
 async def claim_quest(
     quest_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Claim the reward for a completed quest."""
     # Fetch quest
@@ -197,7 +197,7 @@ async def update_quest_progress(
     quest_id: UUID,
     body: QuestProgressUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Staff-only manual override of quest progress.
 
@@ -209,8 +209,8 @@ async def update_quest_progress(
 
     It was previously ungated. `_require_staff` was defined and never called,
     so any collector could POST their own progress straight to the target
-    count, auto-complete the quest, and claim the XP and BTTCOIN without ever
-    performing the action. That is harmless only while BTTCOIN has no
+    count, auto-complete the quest, and claim the XP and RYO without ever
+    performing the action. That is harmless only while RYO has no
     redemption path, and stops being harmless the day a member store ships.
 
     Nothing in the app called it: `quests.updateProgress` exists in
@@ -258,7 +258,7 @@ async def update_quest_progress(
 @router.post("/check-mobile")
 async def check_mobile_quest(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Frontend calls this when it detects it's running as a PWA
@@ -271,7 +271,7 @@ async def check_mobile_quest(
 @router.post("/push-subscription")
 async def save_push_subscription(
     db: AsyncSession = Depends(get_db),
-    current_user: BTTCOUser = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Save the user's push notification subscription and auto-complete

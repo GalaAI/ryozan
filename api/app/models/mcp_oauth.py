@@ -1,6 +1,6 @@
-"""Durable OAuth records for the remote BTTCO MCP authorization server.
+"""Durable OAuth records for the remote Ryozan MCP authorization server.
 
-Net-new justification: BTTCO already owns user identity and MCP tools, but it
+Net-new justification: Ryozan already owns user identity and MCP tools, but it
 has no durable OAuth client, one-time authorization code, or refresh-token
 records. These records extend that authority without creating a second user
 system and keep remote client grants revocable and auditable.

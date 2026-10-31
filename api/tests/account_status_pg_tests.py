@@ -16,13 +16,14 @@ import httpx
 from fastapi import FastAPI
 
 from app.api.v1.endpoints import auth, users
+from app.core import legacy_env
 from app.core.database import Base, async_session, engine
 from app.core.rate_limit import limiter
 from app.core.security import create_password_reset_token, create_user_access_token, hash_password
-from app.models.user import BTTCOUser
+from app.models.user import User
 from app.services.account_status import set_user_password
 
-ENABLED = os.environ.get("BTTCO_ACCOUNT_STATUS_PG_TESTS") == "1"
+ENABLED = legacy_env.getenv("RYOZAN_ACCOUNT_STATUS_PG_TESTS") == "1"
 FIXTURE_DB = os.environ.get("DATABASE_URL") == "postgresql+asyncpg://fixture@127.0.0.1:55434/account_status_test"
 
 
@@ -40,14 +41,14 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
             await conn.run_sync(Base.metadata.create_all)
         self.secret = secrets.token_urlsafe(24)
         async with async_session() as db:
-            self.artist = BTTCOUser(
+            self.artist = User(
                 email=f"{secrets.token_hex(8)}@example.com",
                 name="Fixture Artist",
                 role="artist",
                 password_hash=hash_password(self.secret),
                 must_reset_password=True,
             )
-            self.owner = BTTCOUser(
+            self.owner = User(
                 email=f"{secrets.token_hex(8)}@example.com",
                 name="Fixture Owner",
                 role="founder",
@@ -71,7 +72,7 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_reset_and_successful_login_are_persisted_in_separate_sessions(self):
         async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
+            artist = await db.get(User, self.artist_id)
             self.assertEqual(artist.password_state, "setup_required")
             token = create_password_reset_token(artist.id, artist.password_hash, email=artist.email)
             email = artist.email
@@ -79,7 +80,7 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.post("/auth/reset-password", json={"token": token, "new_password": chosen})
         self.assertEqual(response.status_code, 204)
         async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
+            artist = await db.get(User, self.artist_id)
             self.assertEqual(artist.password_state, "user_set")
             self.assertEqual(artist.password_change_method, "reset")
             self.assertIsNotNone(artist.password_changed_at)
@@ -87,7 +88,7 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.post("/auth/login", json={"email": email, "password": chosen})
         self.assertEqual(response.status_code, 200)
         async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
+            artist = await db.get(User, self.artist_id)
             self.assertEqual(artist.last_login_method, "password")
             self.assertIsNotNone(artist.last_login_at)
         response = await self.client.get("/users/artist-account-status", headers=self.owner_headers)
@@ -117,14 +118,14 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
             self.stack.enter_context(patch.object(main, worker, new=AsyncMock()))
         self.stack.enter_context(patch.object(main.settings, "PORTFOLIO_DERIVATIVES_ON_STARTUP", False))
         async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
+            artist = await db.get(User, self.artist_id)
             set_user_password(artist, self.secret, "change")
-            owner = await db.get(BTTCOUser, self.owner.id)
+            owner = await db.get(User, self.owner.id)
             owner.must_reset_password = False
             owner.password_state = None
             owner.password_changed_at = None
             owner.password_change_method = None
-            collector = BTTCOUser(
+            collector = User(
                 email=f"{secrets.token_hex(8)}@example.com", name="Fixture Collector", role="collector"
             )
             set_user_password(collector, secrets.token_urlsafe(24), "change")
@@ -154,8 +155,8 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
         row = next(row for row in response.json() if row["id"] == str(self.artist_id))
         self.assertEqual(row["password_status"], "user_set")
         async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
-            owner = await db.get(BTTCOUser, self.owner.id)
+            artist = await db.get(User, self.artist_id)
+            owner = await db.get(User, self.owner.id)
             self.assertEqual(artist.password_changed_at, artist_change_time)
             self.assertEqual(owner.password_hash, original_owner_hash)
             self.assertIsNone(owner.password_state)
@@ -164,8 +165,8 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
         # This flag is set only within this exact loopback-fixture test.
         self.assertEqual((await boot("1")).status_code, 401)  # Previous fixture bearer is revoked.
         async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
-            owner = await db.get(BTTCOUser, self.owner.id)
+            artist = await db.get(User, self.artist_id)
+            owner = await db.get(User, self.owner.id)
             for actor in (artist, owner):
                 self.assertTrue(actor.must_reset_password)
                 self.assertEqual(actor.password_state, "setup_required")
@@ -175,13 +176,13 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotEqual(owner.password_hash, original_owner_hash)
             reset_time = artist.password_changed_at
             self.owner_headers = {"Authorization": f"Bearer {create_user_access_token(owner)}"}
-            collector = await db.get(BTTCOUser, collector_id)
+            collector = await db.get(User, collector_id)
             self.assertEqual(collector.password_hash, collector_hash)
             self.assertEqual(collector.password_changed_at, collector_change_time)
             self.assertEqual(collector.password_state, "user_set")
         response = await boot("0")
         self.assertEqual(response.status_code, 200)
         async with async_session() as db:
-            artist = await db.get(BTTCOUser, self.artist_id)
+            artist = await db.get(User, self.artist_id)
             self.assertEqual(artist.password_changed_at, reset_time)
             self.assertIsNone(artist.last_login_at)

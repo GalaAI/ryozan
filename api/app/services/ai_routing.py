@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from app.core.config import Settings
-    from app.models.user import BTTCOUser
+    from app.models.user import User
 
 STAFF_ROLES = {"assistant", "artist", "admin", "founder"}
 
@@ -47,8 +47,8 @@ def _is_token_factory_model(model_name: str) -> bool:
 ACTIVE_STATUSES = {"active", "trialing"}
 
 
-def ai_access_allowed(_settings: Settings, user: BTTCOUser | None) -> bool:
-    """Allow model calls only for a real authenticated BTTCO account.
+def ai_access_allowed(_settings: Settings, user: User | None) -> bool:
+    """Allow model calls only for a real authenticated Ryozan account.
 
     Endpoint authorization, agent ``allowed_roles``, tool scopes, and the
     membership lane remain the owners of what that account may do. Background
@@ -57,7 +57,7 @@ def ai_access_allowed(_settings: Settings, user: BTTCOUser | None) -> bool:
     return bool(user and getattr(user, "role", None))
 
 
-def require_ai_access(settings: Settings, user: BTTCOUser | None) -> None:
+def require_ai_access(settings: Settings, user: User | None) -> None:
     """Require an authenticated account before any user-initiated model call."""
     if not ai_access_allowed(settings, user):
         raise HTTPException(
@@ -68,7 +68,7 @@ def require_ai_access(settings: Settings, user: BTTCOUser | None) -> None:
         raise HTTPException(status_code=403, detail="This demo account's AI access has ended.")
 
 
-def demo_account_expired(settings: Settings, user: BTTCOUser | None) -> bool:
+def demo_account_expired(settings: Settings, user: User | None) -> bool:
     """An instant sign-up account past OPEN_SIGNUP_UNTIL (UTC, inclusive) has no AI access."""
     if getattr(user, "password_change_method", None) != "signup":
         return False
@@ -135,7 +135,7 @@ def _default_entitlements(tier: str) -> dict:
     }
 
 
-def _normalize_tier(user: BTTCOUser) -> str:
+def _normalize_tier(user: User) -> str:
     if (user.role or "") in STAFF_ROLES:
         return "staff"
     raw = (user.membership_tier or "freemium").strip().lower()
@@ -158,7 +158,7 @@ async def _monthly_ai_messages_used(db: AsyncSession, user_id) -> int:
 
 
 async def resolve_ai_lane(
-    user: BTTCOUser,
+    user: User,
     db: AsyncSession,
     settings: Settings,
     *,
