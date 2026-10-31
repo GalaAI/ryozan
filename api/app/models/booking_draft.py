@@ -18,7 +18,7 @@ from app.core.database import Base
 class BookingDraft(Base):
     """Public booking form snapshot keyed by a browser-generated inquiry id."""
 
-    __tablename__ = "bttco_booking_drafts"
+    __tablename__ = "ryozan_booking_drafts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     inquiry_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)

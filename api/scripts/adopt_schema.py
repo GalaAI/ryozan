@@ -24,6 +24,11 @@ It connects to ``DATABASE_URL`` (the same setting the API uses) and:
    ``20261031_baseline`` in ``alembic_version``, and commits, all in ONE
    transaction. Any failure rolls everything back.
 
+Adoption is always against the baseline, so the names it compares and accepts
+are the baseline's ``bttco_`` names. After it stamps ``20261031_baseline``,
+``alembic upgrade head`` applies the later revisions, including
+``20261031_ryozan_prefix``, which renames them to ``ryozan_``.
+
 Nothing is ever dropped. Back the database up first (see the runbook in
 ``alembic/README.md``).
 """
@@ -177,7 +182,10 @@ def main(argv: list[str] | None = None) -> int:
             _stamp_baseline(conn)
             # leaving conn.begin() commits: reconciliation and stamp land together or not at all
         print(f"\nAdopted: {len(plan.statements)} statement(s) applied, stamped {BASELINE_REVISION}.")
-        print("Next: deploy. The container runs `alembic upgrade head` before the API starts.")
+        print(
+            "Next: deploy. The container runs `alembic upgrade head` before the API starts, which applies "
+            "every later revision (20261031_ryozan_prefix renames the bttco_ objects to ryozan_)."
+        )
         return 0
     finally:
         engine.dispose()

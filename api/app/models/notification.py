@@ -1,5 +1,5 @@
 """
-Notification model — maps to existing bttco_notifications table.
+Notification model — maps to existing ryozan_notifications table.
 
 7 rows already in the database.
 """
@@ -15,16 +15,16 @@ from app.core.database import Base
 
 
 class Notification(Base):
-    __tablename__ = "bttco_notifications"
+    __tablename__ = "ryozan_notifications"
     __table_args__ = (
         # "read" is the column name; the attribute is is_read.
-        Index("idx_bttco_notifications_read", "user_id", "read", postgresql_where=text("read = false")),
-        Index("idx_bttco_notifications_user_id", "user_id"),
+        Index("idx_ryozan_notifications_read", "user_id", "read", postgresql_where=text("read = false")),
+        Index("idx_ryozan_notifications_user_id", "user_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)

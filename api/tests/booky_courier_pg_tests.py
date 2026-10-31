@@ -238,14 +238,14 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             async with self.engine.connect() as connection:
                 indexes = await connection.run_sync(
                     lambda sync_connection: inspect(sync_connection).get_indexes(
-                        "bttco_email_log"
+                        "ryozan_email_log"
                     )
                 )
             attempt_index = next(
                 index
                 for index in indexes
                 if index["name"]
-                == "ix_bttco_email_log_courier_message_attempt"
+                == "ix_ryozan_email_log_courier_message_attempt"
             )
             self.assertFalse(attempt_index["unique"])
             self.assertEqual(

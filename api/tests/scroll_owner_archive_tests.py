@@ -169,9 +169,9 @@ class FakeSession:
         sql = str(stmt)
         if sql.strip().upper().startswith("UPDATE"):
             return _Result([])
-        if "bttco_users" in sql:
+        if "ryozan_users" in sql:
             return _Result(self.founders)
-        if "bttco_document_instances" in sql:
+        if "ryozan_document_instances" in sql:
             rows = self.instances
             if "category" in sql and "scroll" in sql.lower():
                 pass
@@ -279,9 +279,9 @@ class _ArtistScrollSession(FakeSession):
         sql = str(stmt)
         if sql.strip().upper().startswith("UPDATE"):
             return _Result([])
-        if "bttco_users" in sql:
+        if "ryozan_users" in sql:
             return _Result(self.founders)
-        if "bttco_document_instances" in sql:
+        if "ryozan_document_instances" in sql:
             rows = [
                 i
                 for i in self.instances

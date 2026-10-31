@@ -80,13 +80,13 @@ from app.services.sms import send_from_template
 def _is_time_block_query(stmt) -> bool:
     """True if the SQL statement selects personal time blocks.
 
-    The scheduler's _slot_is_available now also queries bttco_time_blocks. These
+    The scheduler's _slot_is_available now also queries ryozan_time_blocks. These
     mocks script results per-query by position; rather than thread an empty result
     into every test, the mocks detect the time-blocks query and return empty for
     it (no blocks configured in these tests), serving queued rows to all others.
     """
     try:
-        return "bttco_time_blocks" in str(stmt)
+        return "ryozan_time_blocks" in str(stmt)
     except Exception:
         return False
 

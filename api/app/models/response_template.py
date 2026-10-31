@@ -9,14 +9,14 @@ from app.core.database import Base
 
 
 class ResponseTemplate(Base):
-    __tablename__ = "bttco_response_templates"
+    __tablename__ = "ryozan_response_templates"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(120), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="SET NULL"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)

@@ -15,8 +15,10 @@ Everything is read with ``search_path = pg_catalog`` so object references are
 always schema-qualified and the text is stable across sessions.
 
 Scope is the tables Ryozan owns: every table in the baseline plus any live
-``bttco_``/``viber_`` table (the same prefixes ``alembic/env.py`` scopes
-autogenerate to), because production shares its database with other systems.
+``bttco_``/``ryozan_``/``viber_`` table, because production shares its database
+with other systems. ``bttco_`` is the baseline's prefix (what an unadopted
+legacy database has); revision ``20261031_ryozan_prefix`` renames it to
+``ryozan_``, the prefix ``alembic/env.py`` scopes autogenerate to.
 Column order is deliberately not compared: a column added later by
 ``ALTER TABLE`` sits at the end of the table, which changes nothing a query sees.
 """
@@ -29,7 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-OWNED_TABLE_PREFIXES = ("bttco_", "viber_")
+OWNED_TABLE_PREFIXES = ("bttco_", "ryozan_", "viber_")
 IGNORED_TABLES = frozenset({"alembic_version"})
 
 API_ROOT = Path(__file__).resolve().parents[2]

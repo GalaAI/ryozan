@@ -150,7 +150,7 @@ class MailboxPostgresTests(unittest.IsolatedAsyncioTestCase):
             column = (
                 await db.execute(
                     text(
-                        "SELECT is_nullable, column_default FROM information_schema.columns WHERE table_name='bttco_users' AND column_name='email_verified_at'"
+                        "SELECT is_nullable, column_default FROM information_schema.columns WHERE table_name='ryozan_users' AND column_name='email_verified_at'"
                     )
                 )
             ).one()

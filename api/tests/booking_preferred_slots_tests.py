@@ -243,7 +243,7 @@ class PreferredSlotsSubmitTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(setup[0].details["payload"]), {"user_id"})
 
         # No hold row is read or written on this path.
-        self.assertFalse(any("bttco_booking_slot_holds" in stmt for stmt in db.statements))
+        self.assertFalse(any("ryozan_booking_slot_holds" in stmt for stmt in db.statements))
         self.assertFalse(any(isinstance(row, BookingSlotHold) for row in db.added))
         events = {row.event_type for row in db.added if isinstance(row, BookingLifecycleEvent)}
         self.assertNotIn("hold_consumed", events)
@@ -290,7 +290,7 @@ class PreferredSlotsSubmitTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.booking_status, "pending")
         self.assertIsNone(response.conference_url)
         self.assertIsNone(response.checkout_url)
-        self.assertFalse(any("bttco_booking_slot_holds" in stmt for stmt in db.statements))
+        self.assertFalse(any("ryozan_booking_slot_holds" in stmt for stmt in db.statements))
 
     async def test_booking_response_exposes_preferred_slots(self):
         artist = _artist()
@@ -340,7 +340,7 @@ class FlashHoldCompatibilityTests(unittest.IsolatedAsyncioTestCase):
             async def execute(self, stmt):
                 text = str(stmt)
                 self.statements.append(text)
-                return _Rows([hold] if "bttco_booking_slot_holds" in text else [])
+                return _Rows([hold] if "ryozan_booking_slot_holds" in text else [])
 
         with self.assertRaises(HTTPException) as err:
             await _assert_flash_slot_available(
@@ -446,7 +446,7 @@ class FlashHoldCompatibilityTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertIsNone(slot_check.await_args.kwargs["exclude_hold_token"])
-        self.assertTrue(any("bttco_booking_slot_holds" in stmt for stmt in db.statements))
+        self.assertTrue(any("ryozan_booking_slot_holds" in stmt for stmt in db.statements))
 
 
 if __name__ == "__main__":

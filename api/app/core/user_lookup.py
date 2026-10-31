@@ -1,8 +1,8 @@
-"""Duplicate-tolerant email lookups for `bttco_users`.
+"""Duplicate-tolerant email lookups for `ryozan_users`.
 
 Why this module exists
 ----------------------
-`bttco_users` has never had a unique index on email, and several account
+`ryozan_users` has never had a unique index on email, and several account
 creation paths stored the address exactly as the client typed it. Two rows
 that differ only by capitalization are therefore possible, and production has
 two such pairs.
@@ -119,7 +119,7 @@ def _warn_on_duplicates(email: str, users: list[BTTCOUser]) -> None:
     if len(users) > 1:
         correlation = hashlib.sha256(normalize_email(email).encode("utf-8")).hexdigest()[:12]
         logger.warning(
-            "duplicate bttco_users rows: count=%d correlation=%s; run scripts/dedupe_user_emails.py",
+            "duplicate ryozan_users rows: count=%d correlation=%s; run scripts/dedupe_user_emails.py",
             len(users),
             correlation,
         )

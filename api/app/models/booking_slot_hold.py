@@ -20,11 +20,11 @@ from app.core.database import Base
 class BookingSlotHold(Base):
     """Temporary reservation for one public booking slot."""
 
-    __tablename__ = "bttco_booking_slot_holds"
+    __tablename__ = "ryozan_booking_slot_holds"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     hold_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
-    artist_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=False)
+    artist_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=False)
     artist_slug: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     scheduled_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     scheduled_time: Mapped[str] = mapped_column(String(5), nullable=False)
@@ -34,7 +34,7 @@ class BookingSlotHold(Base):
     inquiry_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
     guest_email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     booking_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_bookings.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_bookings.id"), nullable=True
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(

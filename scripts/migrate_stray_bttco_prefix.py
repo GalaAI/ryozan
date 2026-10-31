@@ -15,7 +15,7 @@ Usage:
     #   R2_SECRET_ACCESS_KEY
     #   R2_BUCKET_NAME        (default: bttco-assets)
     # Optional:
-    #   DATABASE_URL          (if set, also rewrites bttco_users.avatar_url
+    #   DATABASE_URL          (if set, also rewrites ryozan_users.avatar_url
     #                          and bookings.reference_images JSON array)
     #   DRY_RUN=1             (list only, no copies or deletes)
 
@@ -115,12 +115,12 @@ def rewrite_db(moves: list[tuple[str, str]]) -> None:
             # avatars: swap /BTTCO/Avatars/ -> /avatars/
             cur.execute(
                 """
-                UPDATE bttco_users
+                UPDATE ryozan_users
                 SET avatar_url = REPLACE(avatar_url, '/BTTCO/Avatars/', '/avatars/')
                 WHERE avatar_url LIKE '%/BTTCO/Avatars/%'
                 """
             )
-            print(f"bttco_users.avatar_url rows updated: {cur.rowcount}")
+            print(f"ryozan_users.avatar_url rows updated: {cur.rowcount}")
 
             # bookings.reference_images: JSONB array of URL strings
             cur.execute(

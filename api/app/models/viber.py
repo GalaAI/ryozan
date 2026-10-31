@@ -27,7 +27,7 @@ def _now() -> datetime:
 
 
 class ViberAccount(Base):
-    """A Viber user. Separate from bttco_users — Viber is its own product."""
+    """A Viber user. Separate from ryozan_users — Viber is its own product."""
 
     __tablename__ = "viber_accounts"
 

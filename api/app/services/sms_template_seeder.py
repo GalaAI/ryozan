@@ -1,6 +1,6 @@
 """Seed data for the editable SMS template library.
 
-These hardcoded defaults populate `bttco_sms_templates` on first deploy.
+These hardcoded defaults populate `ryozan_sms_templates` on first deploy.
 Re-running the seed endpoint upserts in place so edits aren't clobbered
 unless the founder explicitly chooses to reseed.
 

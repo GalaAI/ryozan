@@ -29,7 +29,7 @@ def _now() -> datetime:
 class Workspace(Base):
     """A shared project surface. dev-tracker is the first instance."""
 
-    __tablename__ = "bttco_workspaces"
+    __tablename__ = "ryozan_workspaces"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slug: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
@@ -44,7 +44,7 @@ class Workspace(Base):
 class WorkspaceNote(Base):
     """Free-form shared note in a workspace."""
 
-    __tablename__ = "bttco_workspace_notes"
+    __tablename__ = "ryozan_workspace_notes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
@@ -57,7 +57,7 @@ class WorkspaceNote(Base):
 class WorkspaceTodo(Base):
     """Shared punch-list item."""
 
-    __tablename__ = "bttco_workspace_todos"
+    __tablename__ = "ryozan_workspace_todos"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
@@ -73,7 +73,7 @@ class WorkspaceTodo(Base):
 class WorkspaceLog(Base):
     """Chronological dev journal entry — who did what, when."""
 
-    __tablename__ = "bttco_workspace_log"
+    __tablename__ = "ryozan_workspace_log"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
@@ -90,7 +90,7 @@ class WorkspaceChannel(Base):
     workspace by the channel it was issued in. Bind once with /bind <slug>.
     """
 
-    __tablename__ = "bttco_workspace_channels"
+    __tablename__ = "ryozan_workspace_channels"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
@@ -107,7 +107,7 @@ class WorkspaceFeatureStatus(Base):
     changes can be tracked over time rather than living only in a JSON file.
     """
 
-    __tablename__ = "bttco_workspace_feature_status"
+    __tablename__ = "ryozan_workspace_feature_status"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)

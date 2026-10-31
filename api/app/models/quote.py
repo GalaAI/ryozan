@@ -22,10 +22,10 @@ from app.core.database import Base
 class Quote(Base):
     """A pricing + availability offer sent to a client for a booking."""
 
-    __tablename__ = "bttco_quotes"
+    __tablename__ = "ryozan_quotes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    booking_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_bookings.id"), nullable=False)
+    booking_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_bookings.id"), nullable=False)
 
     # Token for public access (client clicks link in email)
     token: Mapped[str] = mapped_column(

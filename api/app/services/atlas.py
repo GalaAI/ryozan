@@ -70,14 +70,14 @@ def build_atlas_graph(
         clusters.setdefault(res, []).append(p)
 
     def match_table(resource: str) -> tuple[str | None, int | None]:
-        # try exact, plural, and bttco_-prefixed variants
+        # try exact, plural, and ryozan_-prefixed variants
         candidates = [
             resource,
-            f"bttco_{resource}",
+            f"ryozan_{resource}",
             f"{resource}s",
-            f"bttco_{resource}s",
+            f"ryozan_{resource}s",
             resource.rstrip("s"),
-            f"bttco_{resource.rstrip('s')}",
+            f"ryozan_{resource.rstrip('s')}",
         ]
         for c in candidates:
             if c in table_counts:

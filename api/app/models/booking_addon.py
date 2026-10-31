@@ -20,11 +20,11 @@ from app.core.database import Base
 class BookingAddOn(Base):
     """Configurable public booking add-on owned by an artist."""
 
-    __tablename__ = "bttco_booking_addons"
+    __tablename__ = "ryozan_booking_addons"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -43,14 +43,14 @@ class BookingAddOn(Base):
 class BookingAddOnSelection(Base):
     """Selected add-ons copied onto a booking at submit time."""
 
-    __tablename__ = "bttco_booking_addon_selections"
+    __tablename__ = "ryozan_booking_addon_selections"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     booking_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_bookings.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("ryozan_bookings.id", ondelete="CASCADE"), nullable=False, index=True
     )
     add_on_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_booking_addons.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_booking_addons.id", ondelete="SET NULL"), nullable=True
     )
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -1,9 +1,9 @@
-"""POS card payments must reach bttco_pos_transactions from the webhook.
+"""POS card payments must reach ryozan_pos_transactions from the webhook.
 
 Net-new artifact justification: the existing POS tests cover the charge and
 manual-record endpoints, and the Stripe webhook tests cover deposits, booth rent
 and gift cards. Neither covered the POS ledger write, which is exactly why it was
-missing in production: bttco_pos_transactions held zero rows while Stripe had
+missing in production: ryozan_pos_transactions held zero rows while Stripe had
 taken a real $520.00 POS payment on 2026-09-25, because the only writer was a
 fire-and-forget call from a browser polling loop that died with the modal.
 

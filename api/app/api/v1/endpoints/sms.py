@@ -215,7 +215,7 @@ async def sms_stats(
 async def _staff_can_text(db: AsyncSession, sender: BTTCOUser, phone_e164: str) -> bool:
     """Return True if `sender` (non-admin staff) is allowed to text this number.
 
-    Allowed when at least one `bttco_users` row with that phone shares a
+    Allowed when at least one `ryozan_users` row with that phone shares a
     Courier conversation with `sender`. Implemented as: find users with this
     phone, then check whether any participate alongside `sender` in a
     conversation.

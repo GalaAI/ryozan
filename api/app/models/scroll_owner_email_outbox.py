@@ -16,11 +16,11 @@ from app.core.database import Base
 
 
 class ScrollOwnerEmailOutbox(Base):
-    __tablename__ = "bttco_scroll_owner_email_outbox"
+    __tablename__ = "ryozan_scroll_owner_email_outbox"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     founder_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="SET NULL"), nullable=True
     )
     submission_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     to_email: Mapped[str] = mapped_column(String(320), nullable=False)

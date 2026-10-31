@@ -1,6 +1,6 @@
 """
 Resend inbound email webhook -- receives email.received events and routes
-incoming mail via DB-driven routing table (bttco_email_routes).
+incoming mail via DB-driven routing table (ryozan_email_routes).
 
 Static fallback routes handle reserved addresses (info, bookings, admin).
 Artist routes are created dynamically via the email connect flow.

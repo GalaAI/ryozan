@@ -594,7 +594,7 @@ async def accept_quote(
 #
 # This endpoint fixes that by:
 #   1. Resolving a conversation for the booking, creating one on demand
-#      if the client is a guest (no bttco_users row yet).
+#      if the client is a guest (no ryozan_users row yet).
 #   2. Creating a "pending account" for the guest keyed by their email
 #      with a random unusable password + must_reset_password=True. On
 #      their next real login they'll be upgraded into a real collector.
@@ -612,7 +612,7 @@ async def _ensure_guest_user(db: AsyncSession, email: str, name: str | None) -> 
     """
     Look up (or create) a pending-account collector row for a guest
     email. Ensures every guest conversation has a real sender_id to
-    satisfy the bttco_messages.sender_id NOT NULL constraint.
+    satisfy the ryozan_messages.sender_id NOT NULL constraint.
 
     Guests created this way get `must_reset_password=True` so their
     next password-reset link upgrades them into a full account with

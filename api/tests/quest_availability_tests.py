@@ -15,7 +15,7 @@ from app.api.v1.endpoints import quests
 
 API = Path(__file__).resolve().parents[1]
 _MAIN = (API / "main.py").read_text(encoding="utf-8")
-_SEED = _MAIN[_MAIN.index("INSERT INTO bttco_quests") : _MAIN.index("ON CONFLICT (slug)", _MAIN.index("INSERT INTO bttco_quests"))]
+_SEED = _MAIN[_MAIN.index("INSERT INTO ryozan_quests") : _MAIN.index("ON CONFLICT (slug)", _MAIN.index("INSERT INTO ryozan_quests"))]
 SEEDED = set(re.findall(r"gen_random_uuid\(\), '([a-z-]+)',", _SEED))
 
 

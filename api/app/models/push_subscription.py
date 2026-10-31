@@ -16,12 +16,12 @@ from app.core.database import Base
 
 
 class PushSubscription(Base):
-    __tablename__ = "bttco_push_subscriptions"
+    __tablename__ = "ryozan_push_subscriptions"
     __table_args__ = (UniqueConstraint("user_id", "endpoint", name="uq_push_user_endpoint"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
     endpoint: Mapped[str] = mapped_column(Text, nullable=False)
     p256dh: Mapped[str] = mapped_column(Text, nullable=False)

@@ -11,7 +11,7 @@ from app.core.database import Base
 
 
 class CrmPipelineTask(Base):
-    __tablename__ = "bttco_crm_pipeline_tasks"
+    __tablename__ = "ryozan_crm_pipeline_tasks"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(255), nullable=False)

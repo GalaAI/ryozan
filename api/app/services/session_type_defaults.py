@@ -97,16 +97,16 @@ def missing_default_session_rows(
 def seed_default_session_types(connection) -> int:
     """Insert only missing default labels for every artist/founder account."""
     inspector = sa.inspect(connection)
-    if not inspector.has_table("bttco_users") or not inspector.has_table("bttco_artist_session_types"):
+    if not inspector.has_table("ryozan_users") or not inspector.has_table("ryozan_artist_session_types"):
         return 0
 
     users = sa.table(
-        "bttco_users",
+        "ryozan_users",
         sa.column("id", UUID(as_uuid=True)),
         sa.column("role", sa.String()),
     )
     session_types = sa.table(
-        "bttco_artist_session_types",
+        "ryozan_artist_session_types",
         sa.column("id", UUID(as_uuid=True)),
         sa.column("artist_id", UUID(as_uuid=True)),
         sa.column("label", sa.String()),

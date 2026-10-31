@@ -2131,7 +2131,7 @@ async def _record_pos_transaction(session, metadata: dict) -> None:
     payment_status=paid, fire-and-forget with the error swallowed. That write
     died with the modal: a back button at the QR step, a closed tab, a navigation
     or a sleeping tablet lost the row permanently and silently, while Stripe had
-    the money. bttco_pos_transactions held zero rows as a result, so
+    the money. ryozan_pos_transactions held zero rows as a result, so
     /pos/summary and /pos/transactions -- the Hustle E-con finance surfaces --
     reported no POS revenue at all.
 
@@ -2200,7 +2200,7 @@ async def _record_pos_transaction(session, metadata: dict) -> None:
         try:
             await db.commit()
         except IntegrityError:
-            # ux_bttco_pos_transactions_stripe_session_id fired: a concurrent
+            # ux_ryozan_pos_transactions_stripe_session_id fired: a concurrent
             # Stripe retry won the race after our existence check above. The row
             # exists, which is the outcome we wanted.
             await db.rollback()

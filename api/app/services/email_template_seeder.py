@@ -3,7 +3,7 @@ Seed data for email templates.
 
 Calls each build_*_html() function with {{placeholder}} strings
 to capture the full rendered HTML with variable markers intact.
-These get inserted into bttco_email_templates so the portal
+These get inserted into ryozan_email_templates so the portal
 editor has working templates to start from.
 """
 

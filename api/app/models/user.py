@@ -1,5 +1,5 @@
 """
-User model - maps to existing bttco_users table in nexus.
+User model - maps to existing ryozan_users table in nexus.
 
 7 users already seeded. Schema matches what Tauri/Rust backend created.
 
@@ -37,10 +37,10 @@ class UserIdentityAlias(Base):
     second account system. No public profile or signup API can create aliases.
     """
 
-    __tablename__ = "bttco_user_identity_aliases"
+    __tablename__ = "ryozan_user_identity_aliases"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_users.id"), index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     google_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -51,25 +51,25 @@ class UserIdentityAlias(Base):
 
 
 class BTTCOUser(Base):
-    __tablename__ = "bttco_users"
+    __tablename__ = "ryozan_users"
     __table_args__ = (
-        Index("idx_bttco_users_role", "role"),
-        Index("ix_bttco_users_membership_tier", "membership_tier"),
-        # Alongside the plain google_id unique constraint (bttco_users_google_id_key).
+        Index("idx_ryozan_users_role", "role"),
+        Index("ix_ryozan_users_membership_tier", "membership_tier"),
+        # Alongside the plain google_id unique constraint (ryozan_users_google_id_key).
         Index(
-            "ix_bttco_users_google_id",
+            "ix_ryozan_users_google_id",
             "google_id",
             unique=True,
             postgresql_where=text("google_id IS NOT NULL"),
         ),
         Index(
-            "ux_bttco_users_booth_rent_subscription_id",
+            "ux_ryozan_users_booth_rent_subscription_id",
             "booth_rent_subscription_id",
             unique=True,
             postgresql_where=text("booth_rent_subscription_id IS NOT NULL"),
         ),
         # Case-insensitive email uniqueness; normalize_email() keeps writes lowercase.
-        Index("ux_bttco_users_email_lower", text("lower(email)"), unique=True),
+        Index("ux_ryozan_users_email_lower", text("lower(email)"), unique=True),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -235,7 +235,7 @@ class BTTCOUser(Base):
         This is the owner of email casing. Call sites do not need to remember
         to `.lower()`, and the ones that forgot (quotes, flash, booking repair,
         the sync scripts) are fixed by this alone. Paired with the
-        `ux_bttco_users_email_lower` unique index so the invariant is enforced
+        `ux_ryozan_users_email_lower` unique index so the invariant is enforced
         in the database too, not only in Python.
         """
         normalized = normalize_email(value)

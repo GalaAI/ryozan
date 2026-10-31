@@ -3,7 +3,7 @@
 The schema is Alembic's (the 20261031 baseline is schema only); these rows are
 data that every deploy refreshes, so they are seeded on boot. History: before
 the baseline, production never ran Alembic, the rows lived only in Alembic
-revisions, and bttco_scroll_categories shipped with zero rows, so every
+revisions, and ryozan_scroll_categories shipped with zero rows, so every
 /scrolls/{category_slug} lookup raised 404 and the whole feature was dead.
 
 The seed carries SEVEN rows, not the three the migrations know about.
@@ -74,16 +74,16 @@ _FRONTEND_ROW = re.compile(r"slug:\s*'([^']*)'.*?label:\s*'([^']*)'.*?icon:\s*'(
 
 
 def _seed_statement() -> str:
-    """The INSERT INTO bttco_scroll_categories statement inside the boot path."""
+    """The INSERT INTO ryozan_scroll_categories statement inside the boot path."""
     source = inspect.getsource(main._run_startup_seeds)
-    match = re.search(r"INSERT INTO bttco_scroll_categories.*?(?=\"\"\")", source, re.DOTALL)
-    assert match, "no bttco_scroll_categories seed found in _run_startup_seeds"
+    match = re.search(r"INSERT INTO ryozan_scroll_categories.*?(?=\"\"\")", source, re.DOTALL)
+    assert match, "no ryozan_scroll_categories seed found in _run_startup_seeds"
     return match.group(0)
 
 
 def _seeded_columns() -> list[str]:
     """Column names the seed INSERT supplies."""
-    match = re.search(r"INSERT INTO bttco_scroll_categories\s*\(([^)]*)\)", _seed_statement())
+    match = re.search(r"INSERT INTO ryozan_scroll_categories\s*\(([^)]*)\)", _seed_statement())
     assert match, "seed INSERT does not name its columns"
     return [name.strip() for name in match.group(1).split(",")]
 
@@ -111,7 +111,7 @@ def _frontend_builtin_categories() -> list[tuple[str, str, str, int]]:
 class ScrollCategorySeedTests(unittest.TestCase):
     def test_boot_path_seeds_the_categories(self):
         """The seed lives in the boot path, which is the only thing production runs."""
-        self.assertIn("INSERT INTO bttco_scroll_categories", inspect.getsource(main._run_startup_seeds))
+        self.assertIn("INSERT INTO ryozan_scroll_categories", inspect.getsource(main._run_startup_seeds))
 
     def test_seeds_every_builtin_category(self):
         got = [(slug, label, icon, order) for slug, label, icon, _, _, order, _ in _seeded_rows()]
@@ -236,18 +236,18 @@ class ScrollCategorySeedTests(unittest.TestCase):
     def test_boot_log_counts_only_builtin_categories(self):
         startup = inspect.getsource(main._run_startup_seeds)
         self.assertIn(
-            "SELECT count(*) FROM bttco_scroll_categories WHERE is_builtin = TRUE",
+            "SELECT count(*) FROM ryozan_scroll_categories WHERE is_builtin = TRUE",
             startup,
         )
         self.assertNotIn(
-            'fetchval("SELECT count(*) FROM bttco_scroll_categories")',
+            'fetchval("SELECT count(*) FROM ryozan_scroll_categories")',
             startup,
         )
 
     def test_supplies_every_column_the_database_has_no_server_default_for(self):
         """create_all gives Python-side defaults no server default; the seed must fill them.
 
-        This is the bug PR #181 fixed for bttco_quests. Omitting one of these
+        This is the bug PR #181 fixed for ryozan_quests. Omitting one of these
         makes the INSERT raise NotNullViolation, which the shared non-fatal
         handler swallows -- taking every later statement with it.
         """

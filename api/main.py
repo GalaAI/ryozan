@@ -268,7 +268,7 @@ async def _run_startup_seeds() -> None:
         async with engine.begin() as conn:
             await conn.execute(
                 sa_text(
-                    "UPDATE bttco_pos_transactions "
+                    "UPDATE ryozan_pos_transactions "
                     "SET commission_base_cents = amount_cents "
                     "WHERE attempt_version IS NULL AND commission_base_cents = 0 AND price_adjustment_cents = 0"
                 )
@@ -316,20 +316,20 @@ async def _run_startup_seeds() -> None:
             # upsert. If templates already exists, the stale built-in row is simply
             # removed. A custom misc row is left alone.
             await conn.execute("""
-                DELETE FROM bttco_scroll_categories
+                DELETE FROM ryozan_scroll_categories
                 WHERE slug = 'misc'
                   AND is_builtin = TRUE
                   AND EXISTS (
-                      SELECT 1 FROM bttco_scroll_categories WHERE slug = 'templates'
+                      SELECT 1 FROM ryozan_scroll_categories WHERE slug = 'templates'
                   )
             """)
             await conn.execute("""
-                UPDATE bttco_scroll_categories
+                UPDATE ryozan_scroll_categories
                 SET slug = 'templates'
                 WHERE slug = 'misc'
                   AND is_builtin = TRUE
                   AND NOT EXISTS (
-                      SELECT 1 FROM bttco_scroll_categories WHERE slug = 'templates'
+                      SELECT 1 FROM ryozan_scroll_categories WHERE slug = 'templates'
                   )
             """)
 
@@ -360,7 +360,7 @@ async def _run_startup_seeds() -> None:
             # so it could not be recreated with the slug the backend matches on
             # either.
             await conn.execute("""
-                INSERT INTO bttco_scroll_categories (id, slug, label, icon, description, is_builtin, sort_order, ai_digest_enabled, created_at)
+                INSERT INTO ryozan_scroll_categories (id, slug, label, icon, description, is_builtin, sort_order, ai_digest_enabled, created_at)
                 VALUES
                     (gen_random_uuid(), 'artist',    'Artist',    '📜',             'Artist compliance scrolls: BBP cert, employment agreements, license records.', TRUE, 0, FALSE, now()),
                     (gen_random_uuid(), 'shop',      'Shop',      '🏪',             'Shop-level documents: vendor agreements, insurance, lease summaries.',         TRUE, 1, FALSE, now()),
@@ -378,7 +378,7 @@ async def _run_startup_seeds() -> None:
                     ai_digest_enabled = FALSE
             """)
             builtin_scroll_categories = await conn.fetchval(
-                "SELECT count(*) FROM bttco_scroll_categories WHERE is_builtin = TRUE"
+                "SELECT count(*) FROM ryozan_scroll_categories WHERE is_builtin = TRUE"
             )
             print(
                 f"[Ryozan] built-in scroll categories reconciled: {builtin_scroll_categories}",
@@ -387,12 +387,12 @@ async def _run_startup_seeds() -> None:
 
         async def booth_rent_values() -> None:
             await conn.execute("""
-                UPDATE bttco_users
+                UPDATE ryozan_users
                 SET booth_rent_payment_method = 'autodraft'
                 WHERE booth_rent_payment_method = 'stripe'
             """)
             await conn.execute("""
-                UPDATE bttco_users
+                UPDATE ryozan_users
                 SET booth_rent_interval = 'biweekly'
                 WHERE booth_rent_interval = 'week'
             """)
@@ -408,7 +408,7 @@ async def _run_startup_seeds() -> None:
             _default_pw = _bcrypt.hashpw(b"tattoo", _bcrypt.gensalt()).decode()
             fixed = await conn.execute(
                 """
-                UPDATE bttco_users
+                UPDATE ryozan_users
                 SET password_hash = $1, must_reset_password = TRUE,
                     password_state = 'setup_required', password_changed_at = now(), password_change_method = 'setup'
                 WHERE length(password_hash) != 60
@@ -423,7 +423,7 @@ async def _run_startup_seeds() -> None:
             if _os.environ.get("RESET_ALL_PASSWORDS") == "1":
                 reset_result = await conn.execute(
                     """
-                    UPDATE bttco_users
+                    UPDATE ryozan_users
                     SET password_hash = $1, must_reset_password = TRUE,
                         password_state = 'setup_required', password_changed_at = now(), password_change_method = 'setup'
                     WHERE role IN ('artist', 'admin', 'founder', 'assistant')
@@ -434,7 +434,7 @@ async def _run_startup_seeds() -> None:
 
             # ── Seed starter quests (idempotent; copy refreshes on every boot) ──
             await conn.execute("""
-                INSERT INTO bttco_quests (id, slug, title, description, category, xp_reward, coin_reward, requirement, target_count, sort_order, is_active, created_at)
+                INSERT INTO ryozan_quests (id, slug, title, description, category, xp_reward, coin_reward, requirement, target_count, sort_order, is_active, created_at)
                 VALUES
                     (gen_random_uuid(), 'first-booking',   'First Session',     'Every master was once a disaster. Book your first session and let the ritual begin. The needle remembers what the mind forgets.',                'onboarding', 50,  10, 'Submit a booking request',    1, 1, TRUE, now()),
                     (gen_random_uuid(), 'profile-pic',     'Face Card',         'An artist without a face is just a rumor. Upload your portrait so the mortals know who wields the machine.',                      'onboarding', 25,   5, 'Set a profile avatar',        1, 2, TRUE, now()),
@@ -608,15 +608,19 @@ async def readiness_check():
     Unlike /health, this fails when critical tables are missing or production
     is running with development defaults.
     """
-    critical_tables = [
-        "bttco_users",
-        "bttco_bookings",
-        "bttco_booking_slot_holds",
-        "bttco_booking_lifecycle_events",
-        "bttco_conversations",
-        "bttco_messages",
-        "bttco_crm_pipeline_tasks",
-    ]
+    # Response key -> table checked. The keys are part of this endpoint's JSON
+    # contract (scripts/verify-huddl-scheduler.ps1 reads checks.bttco_*), so they
+    # keep the pre-20261031_ryozan_prefix table names until the API-naming PR
+    # renames them; only the database object names changed.
+    critical_tables = {
+        "bttco_users": "ryozan_users",
+        "bttco_bookings": "ryozan_bookings",
+        "bttco_booking_slot_holds": "ryozan_booking_slot_holds",
+        "bttco_booking_lifecycle_events": "ryozan_booking_lifecycle_events",
+        "bttco_conversations": "ryozan_conversations",
+        "bttco_messages": "ryozan_messages",
+        "bttco_crm_pipeline_tasks": "ryozan_crm_pipeline_tasks",
+    }
     checks: dict[str, str] = {}
     failures: list[str] = []
 
@@ -624,13 +628,13 @@ async def readiness_check():
         async with async_session() as session:
             await session.execute(sa_text("SELECT 1"))
             checks["db"] = "connected"
-            for table in critical_tables:
+            for key, table in critical_tables.items():
                 result = await session.execute(sa_text("SELECT to_regclass(:table_name)"), {"table_name": table})
                 if result.scalar():
-                    checks[table] = "ok"
+                    checks[key] = "ok"
                 else:
-                    checks[table] = "missing_or_unreadable"
-                    failures.append(table)
+                    checks[key] = "missing_or_unreadable"
+                    failures.append(key)
     except Exception:
         return JSONResponse(
             status_code=503,

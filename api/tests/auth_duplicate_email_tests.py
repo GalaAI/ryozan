@@ -1,6 +1,6 @@
 """Duplicate-email login must never be an HTTP 500.
 
-`bttco_users` had no unique index on email and several creation paths stored
+`ryozan_users` had no unique index on email and several creation paths stored
 the address exactly as typed, so the database can hold pairs of rows differing only
 by capitalization. Login looked users up
 with `lower(email)` and `scalar_one_or_none()`, which raises
@@ -87,7 +87,7 @@ class _UsersSession:
         _, _, where = sql.partition("WHERE")
         if "google_id" in where:
             return _FakeResult(self.google_rows)
-        if "lower(bttco_users.email)" in where:
+        if "lower(ryozan_users.email)" in where:
             return _FakeResult(self.users)
         return _FakeResult([])
 
@@ -470,7 +470,7 @@ class CreationPathNormalizationTests(unittest.TestCase):
                 self.lookups = 0
 
             async def execute(self, stmt):
-                if "lower(bttco_users.email)" in str(stmt):
+                if "lower(ryozan_users.email)" in str(stmt):
                     self.lookups += 1
                     return _FakeResult([] if self.lookups == 1 else [winner])
                 return await super().execute(stmt)
@@ -575,8 +575,8 @@ class DedupeSafetyTests(unittest.IsolatedAsyncioTestCase):
         from scripts.dedupe_user_emails import orm_soft_reference_candidates
 
         candidates = {(ref.table, ref.column) for ref in orm_soft_reference_candidates()}
-        self.assertIn(("bttco_messages", "sender_id"), candidates)
-        self.assertIn(("bttco_conversation_participants", "user_id"), candidates)
+        self.assertIn(("ryozan_messages", "sender_id"), candidates)
+        self.assertIn(("ryozan_conversation_participants", "user_id"), candidates)
 
     def test_crm_assignee_soft_reference_is_discovered(self):
         from scripts.dedupe_user_emails import _SOFT_REFERENCE_COLUMN_NAMES
@@ -674,8 +674,8 @@ class DedupeSafetyTests(unittest.IsolatedAsyncioTestCase):
             await apply_group(
                 conn,
                 group,
-                [Reference("bttco_ai_memories", "user_id", "fk")],
-                [UniqueKey("bttco_ai_memories", "uq_memory", ("user_id", "key"))],
+                [Reference("ryozan_ai_memories", "user_id", "fk")],
+                [UniqueKey("ryozan_ai_memories", "uq_memory", ("user_id", "key"))],
             )
 
         self.assertEqual(conn.executed, [])

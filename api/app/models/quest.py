@@ -1,5 +1,5 @@
 """
-Quest models — bttco_quests (quest definitions) + bttco_user_quests (per-user progress).
+Quest models — ryozan_quests (quest definitions) + ryozan_user_quests (per-user progress).
 
 Quests are the gamification layer of the Collector's Club. Each quest has
 XP and BTTcoin rewards. Users track progress and claim rewards when complete.
@@ -16,10 +16,10 @@ from app.core.database import Base
 
 
 class Quest(Base):
-    __tablename__ = "bttco_quests"
-    # Redundant with the slug unique constraint (bttco_quests_slug_key), but the
+    __tablename__ = "ryozan_quests"
+    # Redundant with the slug unique constraint (ryozan_quests_slug_key), but the
     # schema has both; declared so autogenerate does not propose dropping it.
-    __table_args__ = (Index("idx_bttco_quests_slug_unique", "slug", unique=True),)
+    __table_args__ = (Index("idx_ryozan_quests_slug_unique", "slug", unique=True),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
@@ -40,15 +40,15 @@ class Quest(Base):
 
 
 class UserQuest(Base):
-    __tablename__ = "bttco_user_quests"
+    __tablename__ = "ryozan_user_quests"
     __table_args__ = (UniqueConstraint("user_id", "quest_id", name="uq_user_quest"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
     quest_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_quests.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_quests.id", ondelete="CASCADE"), nullable=False
     )
     progress: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

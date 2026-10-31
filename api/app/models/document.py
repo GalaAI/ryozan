@@ -2,8 +2,8 @@
 Document models — templates + instances for waivers, forms, and uploads.
 
 Two tables:
-  bttco_document_templates — reusable form definitions (waiver, job app, etc.)
-  bttco_document_instances — each filled/signed/uploaded document
+  ryozan_document_templates — reusable form definitions (waiver, job app, etc.)
+  ryozan_document_instances — each filled/signed/uploaded document
 
 Categories:
   waiver        — tattoo consent / liability waivers
@@ -30,7 +30,7 @@ from app.core.database import Base
 class DocumentTemplate(Base):
     """Reusable form definition — one per form type (e.g. 'Tattoo Waiver v2')."""
 
-    __tablename__ = "bttco_document_templates"
+    __tablename__ = "ryozan_document_templates"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -43,7 +43,7 @@ class DocumentTemplate(Base):
     requires_signature: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
@@ -56,13 +56,13 @@ class DocumentTemplate(Base):
 class DocumentInstance(Base):
     """A single filled/signed/uploaded document belonging to a user."""
 
-    __tablename__ = "bttco_document_instances"
+    __tablename__ = "ryozan_document_instances"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     template_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_document_templates.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_document_templates.id"), nullable=True
     )
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=True)
     # Guest fields — populated when a public waiver is submitted without login
     guest_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     guest_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -82,7 +82,7 @@ class DocumentInstance(Base):
     recipient_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     recipient_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    sent_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=True)
+    sent_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=True)
     viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminder_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -92,7 +92,7 @@ class DocumentInstance(Base):
     artist_signature: Mapped[str | None] = mapped_column(Text, nullable=True)  # base64 signature data
     artist_signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     artist_id_reviewed: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

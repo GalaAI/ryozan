@@ -2,9 +2,9 @@
 Archive endpoints — unified search across completed records.
 
 Part of the Vault module. Merges data from:
-  - bttco_document_instances (completed waivers)
-  - bttco_bookings (completed / cancelled bookings)
-  - Stripe payment records (via bttco_bookings with stripe_payment_intent_id)
+  - ryozan_document_instances (completed waivers)
+  - ryozan_bookings (completed / cancelled bookings)
+  - Stripe payment records (via ryozan_bookings with stripe_payment_intent_id)
 
 Staff+ access only.
 """

@@ -58,7 +58,7 @@ _ACTIVE_SQL = ", ".join(f"'{state}'" for state in POS_ATTEMPT_ACTIVE_STATES)
 class POSTransaction(Base):
     """Legacy payment records and versioned, durable QR/reader attempts."""
 
-    __tablename__ = "bttco_pos_transactions"
+    __tablename__ = "ryozan_pos_transactions"
     __table_args__ = (
         CheckConstraint(
             "(" + " AND ".join(f"{name} IS NULL" for name in POS_ATTEMPT_V1_COLUMNS) + ") OR ("
@@ -178,7 +178,7 @@ class POSTransaction(Base):
             ),
         ),
         Index(
-            "ux_bttco_pos_transactions_stripe_session_id",
+            "ux_ryozan_pos_transactions_stripe_session_id",
             "stripe_session_id",
             unique=True,
             postgresql_where=text("stripe_session_id IS NOT NULL"),
@@ -188,11 +188,11 @@ class POSTransaction(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # The artist who performed the service
-    artist_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=False)
+    artist_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=False)
 
     # Optional link to a booking
     booking_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_bookings.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_bookings.id"), nullable=True
     )
 
     # Payment details
@@ -256,4 +256,4 @@ class POSTransaction(Base):
     )
 
     # The staff member who recorded this transaction (may differ from artist)
-    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=False)
+    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=False)

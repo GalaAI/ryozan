@@ -476,9 +476,9 @@ class FlashPublicStorefrontTests(unittest.IsolatedAsyncioTestCase):
 
         sheet_query = str(db.statements[1])
         where_clause = sheet_query.split("WHERE", 1)[1]
-        self.assertIn("JOIN bttco_flash_designs", sheet_query)
-        self.assertIn("bttco_flash_designs.status", where_clause)
-        self.assertNotIn("bttco_flash_sheets.status", where_clause)
+        self.assertIn("JOIN ryozan_flash_designs", sheet_query)
+        self.assertIn("ryozan_flash_designs.status", where_clause)
+        self.assertNotIn("ryozan_flash_sheets.status", where_clause)
         self.assertEqual(response.sheets[0].design_count, 1)
         self.assertEqual(response.sheets[0].designs[0].id, str(design.id))
 

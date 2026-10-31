@@ -33,11 +33,11 @@ class ArtistSessionType(Base):
       - "Touch-Up" — size=small, duration=60min, deposit=$50, price=$75-100
     """
 
-    __tablename__ = "bttco_artist_session_types"
+    __tablename__ = "ryozan_artist_session_types"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
     label: Mapped[str] = mapped_column(String(255), nullable=False)
     # Artist-facing blurb shown under the label on the booking form. Optional.

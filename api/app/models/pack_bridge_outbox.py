@@ -17,7 +17,7 @@ from app.core.database import Base
 
 
 class PackBridgeOutbox(Base):
-    __tablename__ = "bttco_pack_bridge_outbox"
+    __tablename__ = "ryozan_pack_bridge_outbox"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     source_id: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
@@ -25,7 +25,7 @@ class PackBridgeOutbox(Base):
     payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
     courier_message_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("bttco_messages.id", ondelete="SET NULL"),
+        ForeignKey("ryozan_messages.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )

@@ -185,7 +185,7 @@ class InquirySubmitTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(run.response.idempotent_acknowledgement)
 
         self.assertFalse(any(isinstance(row, Booking) for row in run.db.added))
-        self.assertFalse(any("bttco_bookings" in stmt and "INSERT" in stmt for stmt in run.db.statements))
+        self.assertFalse(any("ryozan_bookings" in stmt and "INSERT" in stmt for stmt in run.db.statements))
         messages = [row for row in run.db.added if isinstance(row, Message)]
         self.assertEqual(len(messages), 1)
         message = messages[0]
@@ -231,7 +231,7 @@ class InquirySubmitTests(unittest.IsolatedAsyncioTestCase):
         # one whose staff participants are the shop managers, not an artist.
         self.assertEqual(run.created_calls[0]["participant_ids"], {founder.id, admin.id, run.client.id})
         self.assertEqual(run.created_calls[0]["name"], "General inquiry: Client Name")
-        self.assertFalse(any("WHERE bttco_users.slug" in stmt for stmt in run.db.statements))
+        self.assertFalse(any("WHERE ryozan_users.slug" in stmt for stmt in run.db.statements))
         events = [row for row in run.db.added if isinstance(row, BookingLifecycleEvent)]
         self.assertIsNone(events[0].artist_id)
         run.upsert_draft.assert_not_awaited()
@@ -248,7 +248,7 @@ class InquirySubmitTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(run.created_calls[0]["participant_ids"], {artist.id, run.client.id})
         self.assertEqual(run.created_calls[0]["created_by"], artist.id)
-        self.assertTrue(any("WHERE bttco_users.slug" in stmt for stmt in run.db.statements))
+        self.assertTrue(any("WHERE ryozan_users.slug" in stmt for stmt in run.db.statements))
         notified = {row.user_id for row in run.db.added if isinstance(row, Notification)}
         self.assertEqual(notified, {artist.id})
         events = [row for row in run.db.added if isinstance(row, BookingLifecycleEvent)]

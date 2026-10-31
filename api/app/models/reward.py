@@ -20,12 +20,12 @@ from app.core.database import Base
 class RewardGrant(Base):
     """Append-only XP, BTTCOIN, and inventory receipt."""
 
-    __tablename__ = "bttco_reward_grants"
+    __tablename__ = "ryozan_reward_grants"
     __table_args__ = (UniqueConstraint("user_id", "idempotency_key", name="uq_reward_grant_user_key"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     event_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     source_id: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -44,15 +44,15 @@ class RewardGrant(Base):
 class RewardOffer(Base):
     """Server-issued minigame opportunity with a fixed unlock receipt."""
 
-    __tablename__ = "bttco_reward_offers"
+    __tablename__ = "ryozan_reward_offers"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False, index=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     trigger_grant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("bttco_reward_grants.id", ondelete="CASCADE"),
+        ForeignKey("ryozan_reward_grants.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
     )

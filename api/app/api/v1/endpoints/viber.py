@@ -327,7 +327,7 @@ async def connection_atlas(
     openapi_paths = introspection.get("sample_paths")
 
     # Live table counts: only when this connection points at the local DB we can
-    # read directly. We pull counts for bttco_/viber_/workspace tables present.
+    # read directly. We pull counts for ryozan_/viber_ tables present.
     table_counts: dict[str, int] = {}
     if conn.kind == "bttco_api":
         from sqlalchemy import text as sa_text
@@ -335,7 +335,7 @@ async def connection_atlas(
         rows = await db.execute(
             sa_text(
                 "SELECT relname, n_live_tup FROM pg_stat_user_tables "
-                "WHERE relname LIKE 'bttco_%' OR relname LIKE 'viber_%' "
+                "WHERE relname LIKE 'ryozan_%' OR relname LIKE 'viber_%' "
                 "ORDER BY relname"
             )
         )

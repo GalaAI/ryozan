@@ -1,7 +1,7 @@
 """
 API usage tracking model — logs every Anthropic call for budget management.
 
-Table: bttco_api_usage
+Table: ryozan_api_usage
 """
 
 import uuid
@@ -23,8 +23,8 @@ COST_PER_OUTPUT_TOKEN = 0.000015
 class APIUsage(Base):
     """One row per Anthropic API call made by any BTTCO endpoint."""
 
-    __tablename__ = "bttco_api_usage"
-    __table_args__ = (Index("idx_bttco_api_usage_created_at", "created_at"),)
+    __tablename__ = "ryozan_api_usage"
+    __table_args__ = (Index("idx_ryozan_api_usage_created_at", "created_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)

@@ -1,7 +1,7 @@
 """
 Email log endpoints — Courier module.
 
-Founder/admin-only access. Exposes the bttco_email_log table for
+Founder/admin-only access. Exposes the ryozan_email_log table for
 observability, failure inspection, and manual retry.
 
 Routes:
@@ -622,7 +622,7 @@ def _build_email_type_manifest(
             "category": str(row["category"]),
             "trigger_mode": "manual",
             "manual_available": bool(row["is_active"]),
-            "renderer": "bttco_email_templates",
+            "renderer": "ryozan_email_templates",
             "replacement": None,
             "subject_template": str(row["subject"]),
             "subjects": (),

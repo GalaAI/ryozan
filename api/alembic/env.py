@@ -37,7 +37,7 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-BTTCO_OWNED_TABLE_PREFIXES = ("bttco_", "viber_")
+BTTCO_OWNED_TABLE_PREFIXES = ("ryozan_", "viber_")
 BTTCO_OWNED_TABLES = set(target_metadata.tables)
 
 

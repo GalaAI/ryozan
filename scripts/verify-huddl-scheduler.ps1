@@ -176,124 +176,124 @@ function Invoke-LocalVerifierCleanup {
   $safeInquiry = $InquiryId.Replace("'", "''")
   $sql = @"
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
   SELECT id, conversation_id, reference_code
-  FROM bttco_bookings
+  FROM ryozan_bookings
   WHERE guest_email = '$safeEmail'
      OR client_id IN (SELECT id FROM target_user)
 ),
 target_conversation AS (
   SELECT conversation_id AS id FROM target_booking WHERE conversation_id IS NOT NULL
 )
-DELETE FROM bttco_email_log
+DELETE FROM ryozan_email_log
 WHERE to_email = '$safeEmail'
    OR subject LIKE '%Huddl Verifier%'
    OR error LIKE '%$safeEmail%';
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
   SELECT id, conversation_id, reference_code
-  FROM bttco_bookings
+  FROM ryozan_bookings
   WHERE guest_email = '$safeEmail'
      OR client_id IN (SELECT id FROM target_user)
 )
-DELETE FROM bttco_notifications
+DELETE FROM ryozan_notifications
 WHERE body LIKE '%Huddl Verifier%'
    OR action_url IN (SELECT '/dashboard/bookings/' || reference_code FROM target_booking WHERE reference_code IS NOT NULL);
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
-  SELECT id FROM bttco_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
+  SELECT id FROM ryozan_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
 )
-DELETE FROM bttco_booking_lifecycle_events
+DELETE FROM ryozan_booking_lifecycle_events
 WHERE guest_email = '$safeEmail'
    OR booking_id IN (SELECT id FROM target_booking)
    OR hold_token IN (
-      SELECT hold_token FROM bttco_booking_slot_holds
+      SELECT hold_token FROM ryozan_booking_slot_holds
       WHERE guest_email = '$safeEmail' OR inquiry_id = '$safeInquiry'
    );
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
-  SELECT id FROM bttco_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
+  SELECT id FROM ryozan_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
 )
-DELETE FROM bttco_crm_pipeline_tasks
+DELETE FROM ryozan_crm_pipeline_tasks
 WHERE booking_id IN (SELECT id FROM target_booking);
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
-  SELECT id, conversation_id FROM bttco_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
+  SELECT id, conversation_id FROM ryozan_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
 ),
 target_conversation AS (
   SELECT conversation_id AS id FROM target_booking WHERE conversation_id IS NOT NULL
 )
-DELETE FROM bttco_messages
+DELETE FROM ryozan_messages
 WHERE conversation_id IN (SELECT id FROM target_conversation);
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
-  SELECT id, conversation_id FROM bttco_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
+  SELECT id, conversation_id FROM ryozan_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
 ),
 target_conversation AS (
   SELECT conversation_id AS id FROM target_booking WHERE conversation_id IS NOT NULL
 )
-DELETE FROM bttco_conversation_participants
+DELETE FROM ryozan_conversation_participants
 WHERE conversation_id IN (SELECT id FROM target_conversation);
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
-  SELECT id FROM bttco_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
+  SELECT id FROM ryozan_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
 )
-DELETE FROM bttco_booking_slot_holds
+DELETE FROM ryozan_booking_slot_holds
 WHERE guest_email = '$safeEmail'
    OR inquiry_id = '$safeInquiry'
    OR booking_id IN (SELECT id FROM target_booking);
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
-  SELECT id, conversation_id FROM bttco_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
+  SELECT id, conversation_id FROM ryozan_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
 )
-DELETE FROM bttco_bookings
+DELETE FROM ryozan_bookings
 WHERE id IN (SELECT id FROM target_booking);
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_conversation AS (
   SELECT c.id
-  FROM bttco_conversations c
+  FROM ryozan_conversations c
   WHERE c.created_by IN (SELECT id FROM target_user)
      OR c.name LIKE '%Huddl Verifier%'
 )
-DELETE FROM bttco_conversations
+DELETE FROM ryozan_conversations
 WHERE id IN (SELECT id FROM target_conversation);
 
-DELETE FROM bttco_booking_drafts
+DELETE FROM ryozan_booking_drafts
 WHERE guest_email = '$safeEmail' OR inquiry_id = '$safeInquiry';
 
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 )
-DELETE FROM bttco_user_quests
+DELETE FROM ryozan_user_quests
 WHERE user_id IN (SELECT id FROM target_user);
 
-DELETE FROM bttco_users
+DELETE FROM ryozan_users
 WHERE email = '$safeEmail';
 "@
 
@@ -302,16 +302,16 @@ WHERE email = '$safeEmail';
 
   $countSql = @"
 WITH target_user AS (
-  SELECT id FROM bttco_users WHERE email = '$safeEmail'
+  SELECT id FROM ryozan_users WHERE email = '$safeEmail'
 ),
 target_booking AS (
-  SELECT id FROM bttco_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
+  SELECT id FROM ryozan_bookings WHERE guest_email = '$safeEmail' OR client_id IN (SELECT id FROM target_user)
 )
 SELECT
   (SELECT count(*) FROM target_user) +
   (SELECT count(*) FROM target_booking) +
-  (SELECT count(*) FROM bttco_booking_slot_holds WHERE guest_email = '$safeEmail' OR inquiry_id = '$safeInquiry') +
-  (SELECT count(*) FROM bttco_booking_drafts WHERE guest_email = '$safeEmail' OR inquiry_id = '$safeInquiry') AS remaining;
+  (SELECT count(*) FROM ryozan_booking_slot_holds WHERE guest_email = '$safeEmail' OR inquiry_id = '$safeInquiry') +
+  (SELECT count(*) FROM ryozan_booking_drafts WHERE guest_email = '$safeEmail' OR inquiry_id = '$safeInquiry') AS remaining;
 "@
   $remaining = (& psql -X -q -t -A -v ON_ERROR_STOP=1 $DatabaseSyncUrl -c $countSql 2>&1 | Out-String).Trim()
   return [ordered]@{

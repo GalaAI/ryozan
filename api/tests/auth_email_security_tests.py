@@ -25,7 +25,7 @@ class AuthEmailSecurityTests(unittest.TestCase):
 
         compiled = stmt.compile(dialect=postgresql.dialect())
 
-        self.assertIn("lower(bttco_users.email)", str(compiled))
+        self.assertIn("lower(ryozan_users.email)", str(compiled))
         self.assertEqual(compiled.params["lower_1"], "admin@ryozan.app")
 
     def test_dev_impersonation_accepts_mirrored_test_domain_accounts(self):

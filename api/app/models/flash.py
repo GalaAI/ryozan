@@ -2,8 +2,8 @@
 Flash design models — flash sheets and individual segmented designs.
 
 Three tables:
-  bttco_flash_sheets    — uploaded flash sheet images
-  bttco_flash_designs   — individual designs segmented from sheets
+  ryozan_flash_sheets    — uploaded flash sheet images
+  ryozan_flash_designs   — individual designs segmented from sheets
   feedback_samples      — accepted, corrected, and rejected model evidence
 
 Lifecycle:
@@ -23,11 +23,11 @@ from app.core.database import Base
 class FlashSheet(Base):
     """An uploaded flash sheet image containing multiple designs."""
 
-    __tablename__ = "bttco_flash_sheets"
+    __tablename__ = "ryozan_flash_sheets"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
     image_url: Mapped[str] = mapped_column(Text, nullable=False)  # Google Drive or stored URL
     source_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -51,14 +51,14 @@ class FlashSheet(Base):
 class FlashDesign(Base):
     """An individual design segmented from a flash sheet."""
 
-    __tablename__ = "bttco_flash_designs"
+    __tablename__ = "ryozan_flash_designs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sheet_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_flash_sheets.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_flash_sheets.id", ondelete="CASCADE"), nullable=False
     )
     artist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
 
     # Crop coordinates on the original sheet (x, y, width, height as % of image)
@@ -88,11 +88,11 @@ class FlashDesign(Base):
         String(50), nullable=False, default="draft"
     )  # draft | published | claimed | archived
     claimed_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=True
     )
     claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     booking_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_bookings.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_bookings.id"), nullable=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

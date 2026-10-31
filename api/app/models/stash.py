@@ -13,21 +13,21 @@ from app.core.database import Base
 class StashItem(Base):
     """Creator-scoped sellable inventory across flash, physical goods, and digital products."""
 
-    __tablename__ = "bttco_stash_items"
+    __tablename__ = "ryozan_stash_items"
     __table_args__ = (
-        Index("ix_bttco_stash_items_artist_lane", "artist_id", "lane"),
-        Index("ix_bttco_stash_items_status", "status"),
+        Index("ix_ryozan_stash_items_artist_lane", "artist_id", "lane"),
+        Index("ix_ryozan_stash_items_status", "status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="SET NULL"), nullable=True
     )
     source_flash_design_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_flash_designs.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_flash_designs.id", ondelete="SET NULL"), nullable=True
     )
 
     lane: Mapped[str] = mapped_column(String(32), nullable=False)  # flash | crafts | digital
@@ -61,21 +61,21 @@ class StashItem(Base):
 class StashCanvasSession(Base):
     """Canvas state for AI-assisted segmentation review and metadata enrichment."""
 
-    __tablename__ = "bttco_stash_canvas_sessions"
+    __tablename__ = "ryozan_stash_canvas_sessions"
     __table_args__ = (
-        Index("ix_bttco_stash_canvas_artist_lane", "artist_id", "lane"),
-        Index("ix_bttco_stash_canvas_sheet_id", "sheet_id"),
+        Index("ix_ryozan_stash_canvas_artist_lane", "artist_id", "lane"),
+        Index("ix_ryozan_stash_canvas_sheet_id", "sheet_id"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False
     )
     sheet_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_flash_sheets.id", ondelete="CASCADE"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_flash_sheets.id", ondelete="CASCADE"), nullable=True
     )
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="SET NULL"), nullable=True
     )
 
     lane: Mapped[str] = mapped_column(String(32), nullable=False, default="flash")

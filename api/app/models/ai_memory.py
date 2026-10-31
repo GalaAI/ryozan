@@ -10,10 +10,10 @@ from app.core.database import Base
 
 
 class AIMemory(Base):
-    __tablename__ = "bttco_ai_memories"
+    __tablename__ = "ryozan_ai_memories"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="CASCADE"), nullable=False)
     agent = Column(String(20), nullable=False, default="gala")
     category = Column(String(30), nullable=False)
     key = Column(String(100), nullable=False)

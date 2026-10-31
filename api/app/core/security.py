@@ -1,7 +1,7 @@
 """
 Authentication and authorization.
 
-JWT-based auth matching the existing bttco_users table.
+JWT-based auth matching the existing ryozan_users table.
 Role hierarchy: founder > admin > artist > assistant > collector (client)
 
 Uses bcrypt directly (passlib is abandoned and incompatible with bcrypt 4.1+).

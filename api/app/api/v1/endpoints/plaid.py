@@ -2,7 +2,7 @@
 Plaid endpoints -- bank account linking, balance retrieval.
 
 Uses the plaid-python SDK to communicate with Plaid's API.
-Each user stores their own plaid_access_token on the bttco_users row.
+Each user stores their own plaid_access_token on the ryozan_users row.
 """
 
 import logging
@@ -117,7 +117,7 @@ async def _get_or_create_plaid_connection(db: AsyncSession, user: BTTCOUser) -> 
         display_name=f"Plaid bank link for {user.email}",
         status="connected",
         environment=settings.PLAID_ENVIRONMENT,
-        auth_secret_ref="bttco_users.plaid_access_token",
+        auth_secret_ref="ryozan_users.plaid_access_token",
     )
     db.add(conn)
     await db.flush()

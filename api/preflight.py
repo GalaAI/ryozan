@@ -269,7 +269,7 @@ def _parse_model_columns() -> list[ModelColumn]:
                                 columns.append(item.value.args[0].value)
                             else:
                                 columns.append(col_name)
-            if tablename and tablename.startswith("bttco_"):
+            if tablename and tablename.startswith("ryozan_"):
                 for col in columns:
                     results.append(ModelColumn(tablename, col, mf.name))
     return results
@@ -302,7 +302,7 @@ async def check_schema_drift(fix: bool = False):
             SELECT table_name, column_name
             FROM information_schema.columns
             WHERE table_schema = 'public'
-              AND table_name LIKE 'bttco_%%'
+              AND table_name LIKE 'ryozan_%%'
             ORDER BY table_name, ordinal_position
         """)
         db_columns: dict[str, set[str]] = {}

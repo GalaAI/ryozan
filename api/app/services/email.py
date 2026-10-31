@@ -206,7 +206,7 @@ def _increment_email_count(sender_id: str | None) -> None:
 
 async def render_db_template(slug: str, variables: dict[str, str]) -> str | None:
     """
-    Look up an email template by slug in bttco_email_templates.
+    Look up an email template by slug in ryozan_email_templates.
 
     If found and active, replace all {{key}} placeholders with values
     from `variables` and return the rendered HTML + subject tuple.
@@ -450,7 +450,7 @@ async def _log_email_send(
     courier_message_id: str | None = None,
     courier_attempt: int | None = None,
 ) -> None:
-    """Write a record to bttco_email_log. Uses its own short-lived session."""
+    """Write a record to ryozan_email_log. Uses its own short-lived session."""
     try:
         from app.core.database import async_session
         from app.models.email_log import EmailLog

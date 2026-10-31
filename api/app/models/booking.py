@@ -18,34 +18,36 @@ from app.core.database import Base
 class Booking(Base):
     """A tattoo appointment request / scheduled session."""
 
-    __tablename__ = "bttco_bookings"
+    __tablename__ = "ryozan_bookings"
     __table_args__ = (
-        Index("idx_bttco_bookings_artist_id", "artist_id"),
-        Index("idx_bttco_bookings_artist_status", "artist_id", "status"),
-        Index("idx_bttco_bookings_client_id", "client_id"),
+        Index("idx_ryozan_bookings_artist_id", "artist_id"),
+        Index("idx_ryozan_bookings_artist_status", "artist_id", "status"),
+        Index("idx_ryozan_bookings_client_id", "client_id"),
         Index(
-            "idx_bttco_bookings_conversation_id",
+            "idx_ryozan_bookings_conversation_id",
             "conversation_id",
             postgresql_where=text("conversation_id IS NOT NULL"),
         ),
-        Index("idx_bttco_bookings_created_at", "created_at"),
+        Index("idx_ryozan_bookings_created_at", "created_at"),
         Index(
-            "idx_bttco_bookings_reference_code",
+            "idx_ryozan_bookings_reference_code",
             "reference_code",
             postgresql_where=text("reference_code IS NOT NULL"),
         ),
         Index(
-            "idx_bttco_bookings_scheduled_date",
+            "idx_ryozan_bookings_scheduled_date",
             "scheduled_date",
             postgresql_where=text("scheduled_date IS NOT NULL"),
         ),
-        Index("idx_bttco_bookings_status", "status"),
+        Index("idx_ryozan_bookings_status", "status"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # Who's involved (client_id nullable for guest bookings)
-    client_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=True)
-    artist_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=False)
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=True
+    )
+    artist_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=False)
 
     # Guest info (populated when no account; cleared on link-account)
     guest_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -122,7 +124,7 @@ class Booking(Base):
 
     # Linked conversation (auto-created when booking is made)
     conversation_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_conversations.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_conversations.id"), nullable=True
     )
 
     # Timestamps

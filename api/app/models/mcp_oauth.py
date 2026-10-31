@@ -18,7 +18,7 @@ from app.core.database import Base
 
 
 class McpOAuthClient(Base):
-    __tablename__ = "bttco_mcp_oauth_clients"
+    __tablename__ = "ryozan_mcp_oauth_clients"
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     client_id: Mapped[str] = mapped_column(String(160), unique=True, nullable=False, index=True)
@@ -33,7 +33,7 @@ class McpOAuthClient(Base):
 
 
 class McpOAuthAuthorizationCode(Base):
-    __tablename__ = "bttco_mcp_oauth_authorization_codes"
+    __tablename__ = "ryozan_mcp_oauth_authorization_codes"
 
     code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
@@ -50,7 +50,7 @@ class McpOAuthAuthorizationCode(Base):
 
 
 class McpOAuthRefreshToken(Base):
-    __tablename__ = "bttco_mcp_oauth_refresh_tokens"
+    __tablename__ = "ryozan_mcp_oauth_refresh_tokens"
 
     token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     client_id: Mapped[str] = mapped_column(String(160), nullable=False, index=True)

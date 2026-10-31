@@ -17,7 +17,7 @@ from app.core.database import Base
 
 
 class SmsTemplate(Base):
-    __tablename__ = "bttco_sms_templates"
+    __tablename__ = "ryozan_sms_templates"
     __table_args__ = (Index("ix_sms_templates_owner_id", "owner_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

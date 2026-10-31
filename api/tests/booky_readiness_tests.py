@@ -1333,7 +1333,7 @@ class SessionDefaultsTests(unittest.TestCase):
 class BookyMigrationTests(unittest.TestCase):
     def test_email_log_model_defines_non_unique_attempt_lookup_index(self):
         indexes = {index.name: index for index in EmailLog.__table__.indexes}
-        attempt_index = indexes["ix_bttco_email_log_courier_message_attempt"]
+        attempt_index = indexes["ix_ryozan_email_log_courier_message_attempt"]
         self.assertFalse(bool(attempt_index.unique))
         self.assertEqual(
             [column.name for column in attempt_index.columns],

@@ -57,7 +57,7 @@ async def _free_slug(session, wanted: str) -> str:
     Users are matched by email, but `slug` carries its own unique constraint.
     After a mirror import the local database can already hold the wanted slug
     under a different address, and inserting then fails on
-    bttco_users_slug_key. Creating a dev login must not depend on which rows a
+    ryozan_users_slug_key. Creating a dev login must not depend on which rows a
     mirror happened to bring in, and must never overwrite an unrelated account
     that merely shares a slug, so step aside instead.
     """

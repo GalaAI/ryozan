@@ -1,8 +1,8 @@
-"""Merge `bttco_users` rows that share an email, ignoring capitalization.
+"""Merge `ryozan_users` rows that share an email, ignoring capitalization.
 
 WHY
 ---
-`bttco_users` has never had a unique index on email, and several account
+`ryozan_users` has never had a unique index on email, and several account
 creation paths stored the address exactly as the client typed it. Production
 therefore holds pairs of rows differing only by capitalization. Login resolves
 users with `lower(email)`, so such a pair used to raise `MultipleResultsFound`
@@ -11,7 +11,7 @@ and surface as an HTTP 500 -- the affected people could not sign in at all.
 The application-side fix makes login duplicate-tolerant and normalizes every
 write, but the duplicate rows themselves are real client records with real
 bookings, waivers and messages attached. They have to be merged deliberately,
-by a human, before the `ux_bttco_users_email_lower` unique index can be
+by a human, before the `ux_ryozan_users_email_lower` unique index can be
 created.
 
 WHAT IT DOES
@@ -47,11 +47,11 @@ REFERENCE DISCOVERY
 -------------------
 Referencing columns are DISCOVERED, never guessed:
 
-  * hard references -- every FOREIGN KEY pointing at `bttco_users.id`, read
+  * hard references -- every FOREIGN KEY pointing at `ryozan_users.id`, read
     from `pg_constraint` in the live database.
   * soft references -- UUID columns that hold a user id without a FK
-    constraint (`bttco_sms_messages.sender_id`, `bttco_api_usage.user_id`,
-    `bttco_users.proxy_for`, `bttco_crm_pipeline_tasks.assignee_id`, ...).
+    constraint (`ryozan_sms_messages.sender_id`, `ryozan_api_usage.user_id`,
+    `ryozan_users.proxy_for`, `ryozan_crm_pipeline_tasks.assignee_id`, ...).
     Derived from the ORM metadata by matching
     known user-reference column names, then verified to exist in the database.
 
@@ -104,9 +104,9 @@ from app.core.config import get_settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
 from app.core.security import password_hash_fingerprint  # noqa: E402
 
-USERS_TABLE = "bttco_users"
+USERS_TABLE = "ryozan_users"
 
-# Column names that hold a bttco_users.id without a FOREIGN KEY declaring it.
+# Column names that hold a ryozan_users.id without a FOREIGN KEY declaring it.
 # Used only to filter ORM columns that are already UUID-typed and unconstrained;
 # every hit is verified against the live database before it is touched.
 _SOFT_REFERENCE_COLUMN_NAMES = frozenset(
@@ -153,9 +153,9 @@ _NON_STATE_FIELDS = frozenset({"id", "email"})
 # other live unique-key collision fails closed before a user row is deleted.
 _KNOWN_UNIQUE_REFERENCE_TABLES = frozenset(
     {
-        "bttco_notification_preferences",
-        "bttco_user_quests",
-        "bttco_push_subscriptions",
+        "ryozan_notification_preferences",
+        "ryozan_user_quests",
+        "ryozan_push_subscriptions",
     }
 )
 
@@ -410,7 +410,7 @@ def normalize(email: str | None) -> str:
 
 
 async def discover_fk_references(conn: asyncpg.Connection) -> list[Reference]:
-    """Every FOREIGN KEY column pointing at bttco_users.id, from the live DB."""
+    """Every FOREIGN KEY column pointing at ryozan_users.id, from the live DB."""
     rows = await conn.fetch(
         """
         SELECT src.relname AS table_name, src_col.attname AS column_name
@@ -437,7 +437,7 @@ def orm_soft_reference_candidates() -> list[Reference]:
     found: list[Reference] = []
     for table in Base.metadata.sorted_tables:
         for column in table.columns:
-            user_fk = any(fk.target_fullname == "bttco_users.id" for fk in column.foreign_keys)
+            user_fk = any(fk.target_fullname == "ryozan_users.id" for fk in column.foreign_keys)
             if column.name not in _SOFT_REFERENCE_COLUMN_NAMES and not user_fk:
                 continue
             # Production boot may have created the column without the ORM's
@@ -541,7 +541,7 @@ async def merge_known_unique_rows(
     survivor_id = group.survivor["id"]
     loser_ids = [row["id"] for row in group.losers]
 
-    if ref.table == "bttco_notification_preferences" and ref.column == "user_id":
+    if ref.table == "ryozan_notification_preferences" and ref.column == "user_id":
         await conn.execute(
             """
             WITH merged AS (
@@ -553,10 +553,10 @@ async def merge_known_unique_rows(
                        bool_and(push_messages) AS push_messages,
                        bool_and(push_quests) AS push_quests,
                        max(updated_at) AS updated_at
-                FROM bttco_notification_preferences
+                FROM ryozan_notification_preferences
                 WHERE user_id = $1 OR user_id = ANY($2::uuid[])
             )
-            UPDATE bttco_notification_preferences target
+            UPDATE ryozan_notification_preferences target
             SET email_bookings = merged.email_bookings,
                 email_messages = merged.email_messages,
                 email_quests = merged.email_quests,
@@ -571,10 +571,10 @@ async def merge_known_unique_rows(
             survivor_id,
             loser_ids,
         )
-        await conn.execute("DELETE FROM bttco_notification_preferences WHERE user_id = ANY($1::uuid[])", loser_ids)
+        await conn.execute("DELETE FROM ryozan_notification_preferences WHERE user_id = ANY($1::uuid[])", loser_ids)
         return
 
-    if ref.table == "bttco_user_quests" and ref.column == "user_id":
+    if ref.table == "ryozan_user_quests" and ref.column == "user_id":
         await conn.execute(
             """
             WITH merged_rows AS (
@@ -585,12 +585,12 @@ async def merge_known_unique_rows(
                        min(completed_at) FILTER (WHERE completed_at IS NOT NULL) AS completed_at,
                        min(claimed_at) FILTER (WHERE claimed_at IS NOT NULL) AS claimed_at,
                        min(created_at) AS created_at
-                FROM bttco_user_quests
+                FROM ryozan_user_quests
                 WHERE user_id = $1 OR user_id = ANY($2::uuid[])
                 GROUP BY quest_id
                 HAVING bool_or(user_id = $1) AND bool_or(user_id = ANY($2::uuid[]))
             )
-            UPDATE bttco_user_quests target
+            UPDATE ryozan_user_quests target
             SET progress = merged_rows.progress,
                 completed = merged_rows.completed,
                 claimed = merged_rows.claimed,
@@ -605,8 +605,8 @@ async def merge_known_unique_rows(
         )
         await conn.execute(
             """
-            DELETE FROM bttco_user_quests loser
-            USING bttco_user_quests survivor
+            DELETE FROM ryozan_user_quests loser
+            USING ryozan_user_quests survivor
             WHERE loser.user_id = ANY($1::uuid[])
               AND survivor.user_id = $2
               AND survivor.quest_id = loser.quest_id
@@ -616,16 +616,16 @@ async def merge_known_unique_rows(
         )
         return
 
-    if ref.table == "bttco_push_subscriptions" and ref.column == "user_id":
+    if ref.table == "ryozan_push_subscriptions" and ref.column == "user_id":
         await conn.execute(
             """
             WITH latest AS (
                 SELECT DISTINCT ON (endpoint) endpoint, p256dh, auth
-                FROM bttco_push_subscriptions
+                FROM ryozan_push_subscriptions
                 WHERE user_id = $1 OR user_id = ANY($2::uuid[])
                 ORDER BY endpoint, created_at DESC
             )
-            UPDATE bttco_push_subscriptions target
+            UPDATE ryozan_push_subscriptions target
             SET p256dh = latest.p256dh, auth = latest.auth
             FROM latest
             WHERE target.user_id = $1 AND target.endpoint = latest.endpoint
@@ -635,8 +635,8 @@ async def merge_known_unique_rows(
         )
         await conn.execute(
             """
-            DELETE FROM bttco_push_subscriptions loser
-            USING bttco_push_subscriptions survivor
+            DELETE FROM ryozan_push_subscriptions loser
+            USING ryozan_push_subscriptions survivor
             WHERE loser.user_id = ANY($1::uuid[])
               AND survivor.user_id = $2
               AND survivor.endpoint = loser.endpoint
@@ -747,17 +747,17 @@ async def apply_group(
             """WITH state AS (
                  SELECT conversation_id, min(joined_at) AS joined_at,
                    CASE WHEN bool_or(last_read_at IS NULL) THEN NULL ELSE min(last_read_at) END AS last_read_at
-                 FROM bttco_conversation_participants WHERE user_id=$1 GROUP BY conversation_id
-               ) UPDATE bttco_conversation_participants p
+                 FROM ryozan_conversation_participants WHERE user_id=$1 GROUP BY conversation_id
+               ) UPDATE ryozan_conversation_participants p
                  SET joined_at=s.joined_at,last_read_at=s.last_read_at
                  FROM state s WHERE p.user_id=$1 AND p.conversation_id=s.conversation_id""",
             survivor_id,
         )
         await conn.execute(
-            """DELETE FROM bttco_conversation_participants WHERE id IN (
+            """DELETE FROM ryozan_conversation_participants WHERE id IN (
                  SELECT id FROM (
                    SELECT id,row_number() OVER(PARTITION BY conversation_id ORDER BY joined_at,id) AS n
-                   FROM bttco_conversation_participants WHERE user_id=$1
+                   FROM ryozan_conversation_participants WHERE user_id=$1
                  ) repeated WHERE n>1
                )""",
             survivor_id,
@@ -790,7 +790,7 @@ async def preserve_artist_identities(conn, group, references) -> None:
         if not row.get("google_id") and not row.get("email_verified_at"):
             raise RuntimeError("Collector identity has no mailbox/provider proof; explicit identity review is required")
         await conn.execute(
-            """INSERT INTO bttco_user_identity_aliases
+            """INSERT INTO ryozan_user_identity_aliases
                (id,user_id,email,google_id,password_hash,password_binding,source_snapshot,reference_snapshot,created_at)
                VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,now())""",
             row["id"],
@@ -819,7 +819,7 @@ async def find_artist_group(conn, args, *, for_update=False):
     ]
     if len(rows) != len(ids):
         aliases = await conn.fetch(
-            "SELECT id,user_id FROM bttco_user_identity_aliases WHERE id = ANY($1::uuid[])",
+            "SELECT id,user_id FROM ryozan_user_identity_aliases WHERE id = ANY($1::uuid[])",
             loser_ids,
         )
         if (
@@ -843,8 +843,8 @@ async def find_artist_group(conn, args, *, for_update=False):
     if email not in {row["email"].strip().lower() for row in rows}:
         raise ValueError("Canonical email must belong to a reviewed source account")
     conflict = await conn.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM bttco_users WHERE lower(email)=$1 AND NOT(id=ANY($2::uuid[]))) "
-        "OR EXISTS(SELECT 1 FROM bttco_user_identity_aliases WHERE email=$1 AND NOT(user_id=ANY($2::uuid[])))",
+        "SELECT EXISTS(SELECT 1 FROM ryozan_users WHERE lower(email)=$1 AND NOT(id=ANY($2::uuid[]))) "
+        "OR EXISTS(SELECT 1 FROM ryozan_user_identity_aliases WHERE email=$1 AND NOT(user_id=ANY($2::uuid[])))",
         email,
         ids,
     )
@@ -876,7 +876,7 @@ async def run(args: argparse.Namespace) -> int:
     mode = "APPLY (writes)" if args.apply else "DRY RUN (no writes)"
 
     print("=" * 78)
-    print(f"bttco_users email dedupe — {mode}")
+    print(f"ryozan_users email dedupe — {mode}")
     print(f"database: {redacted}")
     print("=" * 78)
 
@@ -899,7 +899,7 @@ async def run(args: argparse.Namespace) -> int:
         )
         if not groups:
             print("\nNo duplicate email groups found. Nothing to do.")
-            print("The ux_bttco_users_email_lower unique index can be created.")
+            print("The ux_ryozan_users_email_lower unique index can be created.")
             return 0
 
         print(f"\nduplicate groups: {len(groups)}")

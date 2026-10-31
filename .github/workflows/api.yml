@@ -223,11 +223,12 @@ jobs:
           from app.core.config import get_settings
           e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
           names = sa.inspect(e).get_table_names()
-          bttco = [n for n in names if n.startswith('bttco_')]
-          print(f'bttco tables created: {len(bttco)}')
-          missing = {'bttco_users', 'bttco_bookings'} - set(names)
+          ryozan = [n for n in names if n.startswith('ryozan_')]
+          print(f'ryozan tables created: {len(ryozan)}')
+          missing = {'ryozan_users', 'ryozan_bookings'} - set(names)
           assert not missing, f'missing core tables: {missing}'
-          assert len(bttco) > 40, f'suspiciously few tables: {len(bttco)}'
+          assert not [n for n in names if n.startswith('bttco_')], 'bttco_ tables survived upgrade head'
+          assert len(ryozan) > 40, f'suspiciously few tables: {len(ryozan)}'
           "
 
       - name: Starter quests seeded
@@ -240,8 +241,8 @@ jobs:
           from app.core.config import get_settings
           e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
           with e.connect() as c:
-              n = c.execute(sa.text('SELECT count(*) FROM bttco_quests')).scalar()
-          assert n > 0, 'bttco_quests is empty after the startup seeds; the seed INSERT failed.'
+              n = c.execute(sa.text('SELECT count(*) FROM ryozan_quests')).scalar()
+          assert n > 0, 'ryozan_quests is empty after the startup seeds; the seed INSERT failed.'
           print(f'starter quests seeded: {n}')
           "
 
@@ -257,7 +258,7 @@ jobs:
           e = sa.create_engine(get_settings().DATABASE_SYNC_URL)
           with e.connect() as c:
               rows = c.execute(sa.text(
-                  'SELECT slug, label, icon, sort_order, is_builtin FROM bttco_scroll_categories '
+                  'SELECT slug, label, icon, sort_order, is_builtin FROM ryozan_scroll_categories '
                   'ORDER BY sort_order'
               )).all()
           got = [tuple(r) for r in rows]

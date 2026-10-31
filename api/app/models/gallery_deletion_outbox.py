@@ -17,12 +17,12 @@ from app.core.database import Base
 
 
 class GalleryDeletionOutbox(Base):
-    __tablename__ = "bttco_gallery_deletion_outbox"
+    __tablename__ = "ryozan_gallery_deletion_outbox"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("bttco_users.id", ondelete="CASCADE"),
+        ForeignKey("ryozan_users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )

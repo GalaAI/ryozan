@@ -11,7 +11,7 @@ from app.core.database import Base
 
 
 class SmsMessage(Base):
-    __tablename__ = "bttco_sms_messages"
+    __tablename__ = "ryozan_sms_messages"
     __table_args__ = (
         Index("ix_sms_messages_created_at", "created_at"),
         Index("ix_sms_messages_direction", "direction"),
@@ -34,7 +34,7 @@ class SmsMessage(Base):
     conversation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     courier_message_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("bttco_messages.id", ondelete="SET NULL"),
+        ForeignKey("ryozan_messages.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )

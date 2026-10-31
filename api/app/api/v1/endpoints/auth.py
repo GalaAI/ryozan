@@ -1,7 +1,7 @@
 """
 Auth endpoints — register + login + invite flow.
 
-These map to the existing bttco_users table.
+These map to the existing ryozan_users table.
 Passwords are bcrypt-hashed; responses are JWT tokens.
 
 Invite flow:

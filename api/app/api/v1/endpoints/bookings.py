@@ -2281,7 +2281,7 @@ async def update_booky_settings(
                 "to_mode": body.mode,
                 "policy_version": get_settings().BOOKY_POLICY_VERSION,
                 "initial_opt_in_at": artist.booky_opted_in_at.isoformat() if artist.booky_opted_in_at else None,
-                "consent_evidence_owner": "bttco_bookings",
+                "consent_evidence_owner": "ryozan_bookings",
                 "consent_evidence_retained": True,
             },
         )

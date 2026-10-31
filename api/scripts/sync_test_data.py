@@ -260,7 +260,7 @@ async def _upsert_user(session, row: dict, id_map: dict[uuid.UUID, uuid.UUID]) -
         # already holding this slug is this person.
         #
         # Without this the import tried to INSERT a second row carrying the
-        # same slug and died on bttco_users_slug_key.
+        # same slug and died on ryozan_users_slug_key.
         by_slug = await session.execute(select(BTTCOUser).where(BTTCOUser.slug == slug))
         user = by_slug.scalars().first()
         if user:

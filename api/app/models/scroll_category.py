@@ -16,10 +16,10 @@ from app.core.database import Base
 
 
 class ScrollCategory(Base):
-    __tablename__ = "bttco_scroll_categories"
-    # Redundant with the slug unique constraint (bttco_scroll_categories_slug_key),
+    __tablename__ = "ryozan_scroll_categories"
+    # Redundant with the slug unique constraint (ryozan_scroll_categories_slug_key),
     # but the schema has both; declared so autogenerate does not propose dropping it.
-    __table_args__ = (Index("ux_bttco_scroll_categories_slug", "slug", unique=True),)
+    __table_args__ = (Index("ux_ryozan_scroll_categories_slug", "slug", unique=True),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
@@ -33,7 +33,7 @@ class ScrollCategory(Base):
     ai_digest_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)

@@ -1,11 +1,11 @@
 """SMS service — Twilio Programmable Messaging.
 
 Mirrors `app.services.email` structurally so the conversation notifier and
-other call sites can branch identically. Every send logs to `bttco_sms_messages`
+other call sites can branch identically. Every send logs to `ryozan_sms_messages`
 regardless of outcome, so the founder UI has a real audit trail.
 
 Hard rules:
-  * Never send SMS to a number that has opted out (`bttco_users.sms_opt_out_at IS NOT NULL`)
+  * Never send SMS to a number that has opted out (`ryozan_users.sms_opt_out_at IS NOT NULL`)
     or has never opted in (`sms_opt_in = false`). Returns `False` silently so the
     caller falls back to email.
   * Always include a STOP footer on marketing/broadcast messages. Transactional
@@ -283,7 +283,7 @@ SMS_ERROR_CODE_MAX = 40
 
 
 def _clip_error_code(code: object) -> str | None:
-    """Fit a provider or lane error code into bttco_sms_messages.error_code.
+    """Fit a provider or lane error code into ryozan_sms_messages.error_code.
 
     A code longer than the column would fail the flush and roll back the whole
     request session, turning a logged SMS failure into a failed booking.
@@ -436,7 +436,7 @@ async def send_sms(
         to: Phone number in any reasonable format; normalised to E.164 here.
         body: Message body. `{{vars}}` already rendered by caller.
         template_slug: Slug if this was rendered from a template (for logging).
-        conversation_id: Optional link to a `bttco_conversations` row.
+        conversation_id: Optional link to a `ryozan_conversations` row.
         courier_message_id: Optional owning Courier Message for callback projection.
         user_id: The recipient user, if known.
         sender_id: The staff user initiating the send (None for system/automation).

@@ -21,17 +21,17 @@ from app.core.database import Base
 class BookingLifecycleEvent(Base):
     """Append-only booking lifecycle event for Huddl and scheduler audits."""
 
-    __tablename__ = "bttco_booking_lifecycle_events"
+    __tablename__ = "ryozan_booking_lifecycle_events"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     booking_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_bookings.id", ondelete="CASCADE"), nullable=True, index=True
+        UUID(as_uuid=True), ForeignKey("ryozan_bookings.id", ondelete="CASCADE"), nullable=True, index=True
     )
     artist_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="SET NULL"), nullable=True, index=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     actor_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("bttco_users.id", ondelete="SET NULL"), nullable=True
+        UUID(as_uuid=True), ForeignKey("ryozan_users.id", ondelete="SET NULL"), nullable=True
     )
     event_type: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
     source: Mapped[str] = mapped_column(String(80), nullable=False, default="system")

@@ -11,7 +11,7 @@ async def main():
     now = datetime.now(timezone.utc)
 
     # Delete existing designs
-    await conn.execute('DELETE FROM bttco_flash_designs WHERE sheet_id = $1', sheet_id)
+    await conn.execute('DELETE FROM ryozan_flash_designs WHERE sheet_id = $1', sheet_id)
     print('Deleted old designs')
 
     designs = [
@@ -26,7 +26,7 @@ async def main():
     for name, ai_name, price, mins, size_lbl, cx, cy, cw, ch, img_url in designs:
         meta = json.dumps({'asset_version': 3, 'transparent_cutout': True})
         await conn.execute('''
-            INSERT INTO bttco_flash_designs (
+            INSERT INTO ryozan_flash_designs (
                 id, sheet_id, artist_id, name, ai_suggested_name, price, estimated_minutes,
                 size_label, crop_x, crop_y, crop_w, crop_h, image_url, style, status,
                 gala_sync_enabled, ai_metadata, created_at, updated_at
@@ -38,7 +38,7 @@ async def main():
         print('Inserted design:', name)
 
     await conn.execute('''
-        UPDATE bttco_flash_sheets
+        UPDATE ryozan_flash_sheets
         SET design_count = 6,
             status = $1,
             image_url = $2,

@@ -1165,7 +1165,7 @@ export default function BookingsManager() {
       // ── Legacy path: uses the /quotes/ endpoint ──
       // Fires when neither composer is active or has content.
       // Sends via the legacy create-quote flow which fires an email +
-      // creates a bttco_quotes row. Kept for backward compatibility
+      // creates a ryozan_quotes row. Kept for backward compatibility
       // until the client-side quote page is migrated to artifact cards.
       const date = editSchedDate[bookingId] ?? booking.scheduled_date ?? ''
       const time = editSchedTime[bookingId] ?? booking.scheduled_time ?? ''

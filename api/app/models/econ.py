@@ -24,7 +24,7 @@ def _now() -> datetime:
 class EconConnection(Base):
     """Provider connection state for Plaid, Clover, Mercury, and future rails."""
 
-    __tablename__ = "bttco_econ_connections"
+    __tablename__ = "ryozan_econ_connections"
     __table_args__ = (UniqueConstraint("provider", "owner_user_id", name="uq_econ_connection_provider_owner"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -45,7 +45,7 @@ class EconConnection(Base):
 class EconSyncRun(Base):
     """Audit record for each provider pull or webhook ingest."""
 
-    __tablename__ = "bttco_econ_sync_runs"
+    __tablename__ = "ryozan_econ_sync_runs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     provider: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
@@ -63,7 +63,7 @@ class EconSyncRun(Base):
 class EconLedgerEntry(Base):
     """Normalized finance entry from POS, Plaid, Clover, Mercury, or Stripe."""
 
-    __tablename__ = "bttco_econ_ledger_entries"
+    __tablename__ = "ryozan_econ_ledger_entries"
     __table_args__ = (UniqueConstraint("provider", "external_id", name="uq_econ_ledger_provider_external_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

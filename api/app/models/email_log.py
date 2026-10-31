@@ -18,10 +18,10 @@ from app.core.database import Base
 class EmailLog(Base):
     """Record of a single outbound email send."""
 
-    __tablename__ = "bttco_email_log"
+    __tablename__ = "ryozan_email_log"
     __table_args__ = (
         Index(
-            "ix_bttco_email_log_courier_message_attempt",
+            "ix_ryozan_email_log_courier_message_attempt",
             "courier_message_id",
             "courier_attempt",
         ),

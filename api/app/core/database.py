@@ -2,7 +2,8 @@
 Database session management.
 
 Uses SQLAlchemy 2.0 async engine connected to the nexus PostgreSQL database.
-All BTTCO tables currently live in the 'public' schema with 'bttco_' prefix.
+All Ryozan tables live in the 'public' schema with the 'ryozan_' prefix
+(renamed from 'bttco_' by Alembic revision 20261031_ryozan_prefix).
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine

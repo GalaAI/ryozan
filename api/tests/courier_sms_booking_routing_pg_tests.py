@@ -198,7 +198,7 @@ class CourierSmsBookingRoutingPostgresTests(unittest.IsolatedAsyncioTestCase):
             _booking, thread = await self._booking_thread(db, guest_phone="(555) 010-4961")
             await db.execute(
                 text(
-                    "UPDATE bttco_users SET phone = NULL WHERE id = :id",
+                    "UPDATE ryozan_users SET phone = NULL WHERE id = :id",
                 ),
                 {"id": self.collector.id},
             )
@@ -339,7 +339,7 @@ class CourierSmsBookingRoutingPostgresTests(unittest.IsolatedAsyncioTestCase):
             await db.commit()
         async with self.sessions() as db:
             self.assertEqual((await db.get(BTTCOUser, account.id)).phone, "(555) 010-4961")
-            await db.execute(text("UPDATE bttco_users SET phone = NULL WHERE id = :id"), {"id": self.collector.id})
+            await db.execute(text("UPDATE ryozan_users SET phone = NULL WHERE id = :id"), {"id": self.collector.id})
             await db.commit()
         async with self.sessions() as db:
             _log, (conversation, *_rest) = await self._inbound(db)
