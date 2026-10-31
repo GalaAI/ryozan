@@ -4,9 +4,10 @@ name: Deploy Watchdog
 # on /health, or /api/v1/auth/me returns 500 instead of the expected 401),
 # opens a GitHub issue tagged 'incident' so the operator gets notified.
 #
-# The former 15-minute schedule consumed hosted Actions minutes even while the
-# application was healthy. Continuous monitoring belongs in the deployment
-# platform or ED3N; this workflow remains as an explicit diagnostic probe.
+# Manual only: continuous monitoring belongs in the deployment platform. The
+# probe targets the operator's own production deployment, so the job runs only
+# in the GalaAI repositories; on a fork it is skipped rather than probing (and
+# filing issues about) a site the fork does not own.
 #
 # Probe targets:
 #   GET https://ryozan.app/health      → expect 200
@@ -33,6 +34,7 @@ concurrency:
 jobs:
   probe:
     name: Probe BTTCo production
+    if: github.repository_owner == 'GalaAI'
     runs-on: ubuntu-latest
     steps:
       - name: Probe /health

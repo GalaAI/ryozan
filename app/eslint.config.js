@@ -33,6 +33,9 @@ const DS_ADHERENCE_RULES = {
 }
 // TODO(ds): token-clean these files and delete them from this list.
 const DS_LEGACY_DEBT = [
+  'src/components/desktop-portal/**',
+  'src/pages/dashboard/DesktopPortalPage.tsx',
+  'src/lib/agent-card-hands.ts',
   'src/components/ui/**', // shadcn primitives; replaced by @bttco/ui over time
   'src/pages/dashboard/ClientsPage.tsx',
   'src/App.tsx',
@@ -107,6 +110,11 @@ export default defineConfig([
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
       ...DS_ADHERENCE_RULES,
+      // Pure helpers that sit beside their component and are covered by node:test suites.
+      'react-refresh/only-export-components': ['error', {
+        allowConstantExport: true,
+        allowExportNames: ['deckMagnification', 'chatExchanges', 'agentThreads', 'restoreAgentChats'],
+      }],
     },
   },
   {

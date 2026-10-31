@@ -19,9 +19,7 @@ class EmailRoute(Base):
     __tablename__ = "bttco_email_routes"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    handle: Mapped[str] = mapped_column(
-        String(100), unique=True, nullable=False
-    )  # e.g. "sarah" -> sarah@ryozan.app
+    handle: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)  # e.g. "sarah" -> sarah@ryozan.app
     forward_to: Mapped[str] = mapped_column(String(255), nullable=False)  # personal email to forward to
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

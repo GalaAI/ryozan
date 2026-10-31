@@ -78,7 +78,10 @@ export function NativeDesktopPortal(props: NativeDesktopPortalProps) {
   const [input, setInput] = useState('')
   const [plus, setPlus] = useState(false)
   const [files, setFiles] = useState<File[]>([])
-  useEffect(()=>{setInput('');setFiles([])},[props.agentId,props.conversationKey])
+  // Clear the composer when the agent or conversation changes (reset during render, not in an effect).
+  const composerKey = `${props.agentId}|${props.conversationKey}`
+  const [composerFor, setComposerFor] = useState(composerKey)
+  if (composerFor !== composerKey) { setComposerFor(composerKey); setInput(''); setFiles([]) }
   const [width, setWidth] = useState(340)
   const [rail, setRail] = useState<Values>({})
   const [workspaceAction, setWorkspaceAction] = useState<{tab:string;id:string} | null>(null)

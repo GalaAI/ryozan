@@ -11,7 +11,7 @@ import json
 import os
 import unittest
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -63,6 +63,7 @@ from app.api.v1.endpoints.stripe_webhooks import (
     stripe_webhook,
 )
 from app.constants.status import BookingStatus
+from app.constants.timezones import SHOP_TIMEZONE
 from app.core.security import create_booky_capability_token
 from app.models.booking import Booking
 from app.models.booking_draft import BookingDraft
@@ -324,6 +325,17 @@ def _next_weekday(target_weekday: int) -> date:
     if days == 0:
         days = 7
     return today + timedelta(days=days)
+
+
+def _shop_iso(day: date, hhmm: str) -> str:
+    """ISO timestamp for a shop wall-clock time on ``day``, with that day's real UTC offset.
+
+    A hardcoded ``-04:00`` is only right during EDT; from November to March the
+    shop is on EST (``-05:00``) and such a block lands an hour early, so tests
+    built on ``_next_weekday`` failed whenever the next Friday fell outside DST.
+    """
+    hour, minute = (int(part) for part in hhmm.split(":"))
+    return datetime.combine(day, time(hour, minute), tzinfo=SHOP_TIMEZONE).isoformat()
 
 
 def _deposit_booking(payment_intent_id: str | None = None) -> Booking:
@@ -1926,9 +1938,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             minimum_notice_hours=0,
             max_advance_days=180,
             allow_same_day=True,
-            busy_blocks=[
-                {"start": f"{slot_day.isoformat()}T11:00:00-04:00", "end": f"{slot_day.isoformat()}T12:00:00-04:00"}
-            ],
+            busy_blocks=[{"start": _shop_iso(slot_day, "11:00"), "end": _shop_iso(slot_day, "12:00")}],
             confirmed_bookings=[booking],
             calendar_connected=True,
             limit=40,
@@ -2047,8 +2057,8 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             allow_same_day=True,
             busy_blocks=[
                 {
-                    "start": f"{slot_day.isoformat()}T11:00:00-04:00",
-                    "end": f"{slot_day.isoformat()}T12:00:00-04:00",
+                    "start": _shop_iso(slot_day, "11:00"),
+                    "end": _shop_iso(slot_day, "12:00"),
                 }
             ],
             confirmed_bookings=[booking],
@@ -2194,8 +2204,8 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             allow_same_day=True,
             busy_blocks=[
                 {
-                    "start": f"{slot_day.isoformat()}T11:30:00-04:00",
-                    "end": f"{slot_day.isoformat()}T12:30:00-04:00",
+                    "start": _shop_iso(slot_day, "11:30"),
+                    "end": _shop_iso(slot_day, "12:30"),
                 }
             ],
         )

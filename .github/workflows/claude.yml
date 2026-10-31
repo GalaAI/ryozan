@@ -24,17 +24,28 @@ jobs:
       issues: read
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
+    # `secrets` cannot appear in a job-level `if`, so the token is lifted into the
+    # job env and each step checks it. Forks, the public mirror, and fork-PR
+    # review events (which never receive secrets) get a green no-op run.
+    env:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     steps:
+      - name: Skip when CLAUDE_CODE_OAUTH_TOKEN is not configured
+        if: env.CLAUDE_CODE_OAUTH_TOKEN == ''
+        run: echo "::notice::CLAUDE_CODE_OAUTH_TOKEN is not set for this repository; skipping Claude Code."
+
       - name: Checkout repository
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
         uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
       - name: Run Claude Code
+        if: env.CLAUDE_CODE_OAUTH_TOKEN != ''
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.CLAUDE_CODE_OAUTH_TOKEN }}
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
@@ -47,4 +58,3 @@ jobs:
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           # claude_args: '--allowed-tools Bash(gh pr *)'
-

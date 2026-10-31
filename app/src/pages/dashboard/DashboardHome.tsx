@@ -8,6 +8,8 @@ import MobilePortalHome from './MobilePortalHome'
  * native desktop portal, which extends the same system at larger layouts.
  */
 const DesktopPortalPage = lazy(() => import('./DesktopPortalPage'))
+// A media query breakpoint, not a spacing value.
+// eslint-disable-next-line no-restricted-syntax
 const desktopQuery = '(min-width: 768px)'
 function subscribeViewport(onChange: () => void) {
   const query = window.matchMedia(desktopQuery)

@@ -1,8 +1,9 @@
 name: Backend CI
 
 on:
-  # Hosted-runner contingency only. Navigate publishes these same required
-  # contexts from the Ark execution sandbox for every PR head SHA.
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch: {}
 
 permissions:
@@ -10,7 +11,8 @@ permissions:
 
 concurrency:
   group: backend-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  # Superseded PR pushes are cancelled; every commit on main gets a full run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
@@ -188,6 +190,16 @@ jobs:
         env:
           BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "pos_attempt_pg_tests.py"
+
+      - name: Booky courier integration
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "booky_courier_pg_tests.py"
+
+      - name: Gala schedule integration
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "gala_schedule_pg_tests.py"
 
       - name: Production boot schema path against an empty database
         run: |
@@ -406,8 +418,3 @@ jobs:
           pip install ruff==0.15.13
           ruff check --config ../../api/ruff.toml .
           ruff format --check --config ../../api/ruff.toml .
-
-  # API deployment is owned by Railway's native Git integration after an
-  # authorized PR reaches main. Navigate requires Backend Verify, Schema boot,
-  # and Frontend Verify on the exact PR SHA, then observes the exact Railway
-  # production SHA, Vercel frontend, and live health before the next merge.
