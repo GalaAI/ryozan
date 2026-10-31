@@ -3263,9 +3263,11 @@ async def _do_submit_public_booking(
     db: AsyncSession,
 ) -> PublicBookingResponse:
     # Resolve artist slug to user
-    slug = body.artist_slug
-    if slug == "any":
-        slug = "justin"  # Default to Justin for "any artist"
+    # "any" resolves to the studio's DEFAULT_ARTIST_SLUG; without one the
+    # client has to pick an artist.
+    slug = get_settings().resolve_artist_slug(body.artist_slug)
+    if slug is None:
+        raise HTTPException(status_code=400, detail="Choose an artist for this booking request")
 
     result = await db.execute(
         select(BTTCOUser).where(BTTCOUser.slug == slug).where(BTTCOUser.role.in_(["artist", "admin", "founder"]))
@@ -3623,8 +3625,9 @@ async def _do_submit_public_booking(
             assignee_id=artist_id,
         )
 
-    # Durable email intents. Skip auto emails for venue.ink artists because
-    # they manage booking communication externally.
+    # Durable email intents. Skip auto emails for artists whose booking_mode is
+    # listed in EXTERNAL_BOOKING_MODES: an external booking system owns that
+    # client conversation.
     settings = get_settings()
     booking_email_intents: list[BookingLifecycleEvent] = []
     if account_created:
@@ -3638,7 +3641,7 @@ async def _do_submit_public_booking(
             )
         )
 
-    if artist_booking_mode != "venue.ink":
+    if not settings.is_external_booking_mode(artist_booking_mode):
         # 1. Confirmation to the person who filled out the form (guest)
         if not consultation_confirmed:
             booking_email_intents.append(
@@ -3711,8 +3714,9 @@ async def _do_submit_public_booking(
             )
     else:
         logger.info(
-            "Skipping booking emails for venue.ink artist %s (booking %s)",
+            "Skipping booking emails for artist %s with external booking mode %s (booking %s)",
             artist_name,
+            artist_booking_mode,
             ref_code,
         )
 
@@ -4367,13 +4371,16 @@ async def staff_create_booking(
     db: AsyncSession = Depends(get_db),
     current_user: BTTCOUser = Depends(get_current_user),
 ):
-    """Admin/founder books on behalf of an artist (e.g. Kathryn booking Justin's clients).
+    """Admin/founder books on behalf of an artist (e.g. a front desk booking an artist's clients).
 
-    Accepts an existing client_id or guest contact details for a new/walk-in
-    client. When created as confirmed with a date, fans out calendar + email +
-    SMS via _on_booking_confirmed.
+    Off unless ADMIN_BOOK_ON_BEHALF_ENABLED is set. Accepts an existing
+    client_id or guest contact details for a new/walk-in client. When created
+    as confirmed with a date, fans out calendar + email + SMS via
+    _on_booking_confirmed.
     """
     _require_role(current_user, "admin")
+    if not get_settings().ADMIN_BOOK_ON_BEHALF_ENABLED:
+        raise HTTPException(status_code=403, detail="Booking on behalf of an artist is not enabled for this studio")
 
     artist = (await db.execute(select(BTTCOUser).where(BTTCOUser.id == body.artist_id))).scalar_one_or_none()
     if not artist:

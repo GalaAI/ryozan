@@ -139,6 +139,79 @@ class Settings(BaseSettings):
     SHOP_EMAIL: str = "hackathon-judge@arkomnitek.com"
     SHOP_OWNER_EMAIL: str = "founder@ryozan.app"
 
+    # ── Studio policy ─────────────────────────────────────────────────────
+    # Workflows some studios run and others do not. Every one is off for a new
+    # install; a studio turns on the ones it uses in its own environment.
+    #
+    # Owner's display name for AI prompts, assistant labels and the reply
+    # guard that stops AI promising actions on the owner's behalf. Blank
+    # means generic wording ("the shop owner").
+    STUDIO_OWNER_NAME: str = ""
+    # Slug of the artist who receives "any artist" requests. Blank means the
+    # client must choose an artist.
+    DEFAULT_ARTIST_SLUG: str = ""
+    # Admins and founders may create bookings on behalf of an artist
+    # (POST /bookings/staff), e.g. a front desk booking for an artist.
+    ADMIN_BOOK_ON_BEHALF_ENABLED: bool = False
+    # A staff account may be set to act as another user in Courier: it sees
+    # that user's threads and its messages are sent as that user
+    # (BTTCOUser.proxy_for, PATCH /users/{id}/proxy).
+    STAFF_PROXY_ENABLED: bool = False
+    # Staff may confirm a quote proposal on the client's behalf (e.g. after the
+    # client says yes in a DM). Off means only the booking client confirms.
+    STAFF_CONFIRM_FOR_CLIENT_ENABLED: bool = False
+    # Comma-separated artist booking_mode values that mean "this artist books
+    # through an external system". Booking emails are not sent for them, since
+    # that system handles the client conversation.
+    EXTERNAL_BOOKING_MODES: str = ""
+    # Comma-separated extra inbound email local parts (before the @) routed to
+    # the owner inbox, in addition to info/bookings/admin/noreply/support.
+    INBOUND_OWNER_ALIASES: str = ""
+    # User id that receives the cron daily debrief. Blank sends it to every
+    # founder account.
+    DEBRIEF_RECIPIENT_USER_ID: str = ""
+
+    @staticmethod
+    def _csv_set(raw: str) -> frozenset[str]:
+        return frozenset(part.strip().lower() for part in (raw or "").split(",") if part.strip())
+
+    @property
+    def external_booking_modes(self) -> frozenset[str]:
+        return self._csv_set(self.EXTERNAL_BOOKING_MODES)
+
+    def is_external_booking_mode(self, booking_mode: str | None) -> bool:
+        """True when this artist's booking emails are owned by an external system."""
+        return bool(booking_mode) and booking_mode.strip().lower() in self.external_booking_modes
+
+    @property
+    def inbound_owner_aliases(self) -> frozenset[str]:
+        return self._csv_set(self.INBOUND_OWNER_ALIASES)
+
+    def resolve_artist_slug(self, slug: str) -> str | None:
+        """Map the public "any" artist choice to the configured default artist.
+
+        Returns None when "any" is requested and no default artist is set.
+        """
+        if slug != "any":
+            return slug
+        return self.DEFAULT_ARTIST_SLUG.strip() or None
+
+    @property
+    def owner_label(self) -> str:
+        """Owner name for prompts and labels, or a neutral fallback."""
+        return self.STUDIO_OWNER_NAME.strip() or "the shop owner"
+
+    @field_validator("DEBRIEF_RECIPIENT_USER_ID")
+    @classmethod
+    def validate_debrief_recipient(cls, value: str) -> str:
+        value = (value or "").strip()
+        if value:
+            try:
+                UUID(value)
+            except ValueError as exc:
+                raise ValueError("DEBRIEF_RECIPIENT_USER_ID must be a UUID") from exc
+        return value
+
     # Google OAuth for the active BTTCO Cloud project (628400721124). The web
     # client handles server-side Calendar authorization and browser GSI for the
     # same BTTCO web application. The id and secret must stay a matched pair.
@@ -303,7 +376,7 @@ class Settings(BaseSettings):
     # fail-closed and never relaxes unrelated client AI.
     BOOKY_AUTOMATION_ENABLED: bool = False
     BOOKY_POLICY_VERSION: str = "2026-08-20.v1"
-    BOOKY_CANARY_ARTIST_SLUGS: str = "justin"
+    BOOKY_CANARY_ARTIST_SLUGS: str = ""
     BOOKY_CANARY_COLLECTOR_IDS: str = ""
 
     @model_validator(mode="after")

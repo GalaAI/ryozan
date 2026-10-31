@@ -322,8 +322,11 @@ async def set_user_proxy(
     """Founder only: delegate a user's inbox to another account.
 
     When proxy_for is set, that user sees the target's conversations
-    and sends messages attributed to the target.
+    and sends messages attributed to the target. Setting a proxy needs
+    STAFF_PROXY_ENABLED; clearing one is always allowed.
     """
+    if body.proxy_for is not None and not get_settings().STAFF_PROXY_ENABLED:
+        raise HTTPException(status_code=403, detail="Staff proxy is not enabled for this studio")
     result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == user_id))
     user = result.scalar_one_or_none()
     if not user:

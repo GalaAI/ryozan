@@ -92,13 +92,11 @@ FOUNDRY_EMAIL_ASSET_BASE = "https://app.ryozan.app/dependencies/@bttco/email-fou
 FROM_SHOP = "noreply"  # noreply@ryozan.app — booking confirms, waivers, welcome
 FROM_ADMIN = "admin"  # admin@ryozan.app — invites, broadcasts, shop announcements
 FROM_SERVICE = "service"  # service@ryozan.app — payments, receipts, Stripe notifications
-FROM_JUSTIN = "justin"  # justinwalker@ryozan.app — Justin's personal brand outreach
 
 _FROM_MAP = {
     "noreply": ("Ryozan Studio", "noreply@ryozan.app", "hackathon-judge@arkomnitek.com"),
     "admin": ("Ryozan Studio", "admin@ryozan.app", "hackathon-judge@arkomnitek.com"),
     "service": ("Ryozan Studio", "service@ryozan.app", "hackathon-judge@arkomnitek.com"),
-    "justin": ("Justin Walker", "justinwalker@ryozan.app", "founder@ryozan.app"),
 }
 # Tuple: (display_name, from_email, reply_to_fallback)
 
@@ -298,7 +296,7 @@ async def send_email(
         tags: Optional provider analytics tags (e.g. ["aftercare", "booking"])
         sender_id: User ID of the person triggering the email (for rate limiting)
         sender_role: Role of the sender (artist, admin, founder -- for cap bypass)
-        from_alias: Sender identity key (FROM_SHOP, FROM_ADMIN, FROM_SERVICE, FROM_JUSTIN).
+        from_alias: Sender identity key (FROM_SHOP, FROM_ADMIN, FROM_SERVICE).
                     Defaults to FROM_SHOP (noreply@ryozan.app).
         courier_message_id: Optional ID of the Courier Message generating this email.
         courier_attempt: Exact Booky Courier provider attempt for delivery reconciliation.

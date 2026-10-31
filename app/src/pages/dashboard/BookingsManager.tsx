@@ -334,7 +334,7 @@ function SlotPicker({
     [selectedDate, slots],
   )
   // Venue artists don't use Ryozan's calendar — their scheduling is
-  // handled entirely through venue.ink.
+  // handled entirely in their external booking system.
   if (isVenue) {
     return (
       <div className="bkm-slot-picker" style={{ textAlign: 'center', padding: '20px 12px' }}>
@@ -562,7 +562,7 @@ export default function BookingsManager() {
   const [artistSlugById, setArtistSlugById] = useState<Record<string, string>>({})
   const [artistSourceById, setArtistSourceById] = useState<Record<string, string>>({})
   // Full artist roster for the admin act-as selector, venue artists excluded
-  // (they schedule in venue.ink, not Ryozan's calendar).
+  // (they schedule in an external system, not Ryozan's calendar).
   const [actAsArtists, setActAsArtists] = useState<ArtistSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1538,7 +1538,7 @@ export default function BookingsManager() {
         <div className="bkm-proxy-form">
           {actAsArtists.length === 0 ? (
             <p className="bkm-proxy-empty">
-              No Ryozan-scheduling artists available; venue artists book in venue.ink.
+              No Ryozan-scheduling artists available; venue artists book in their external system.
             </p>
           ) : (
             <>

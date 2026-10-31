@@ -479,7 +479,7 @@ export interface ArtistSummary {
 export interface ArtistDetail extends ArtistSummary {
   title: string | null
   bio: string | null
-  booking_mode: 'mailto' | 'venue.ink' | 'api' | null
+  booking_mode: string | null
   booking_url: string | null
   availability_source: 'google_calendar' | 'venue' | 'manual' | 'none'
   instagram_url: string | null
@@ -1013,8 +1013,9 @@ export const bookings = {
   }),
 
   /**
-   * Admin/founder: create a booking on behalf of an artist (Kathryn booking
-   * Justin's clients). Mirrors backend StaffBookingCreate. When status is
+   * Admin/founder: create a booking on behalf of an artist (a front desk booking
+   * an artist's clients; needs ADMIN_BOOK_ON_BEHALF_ENABLED on the API). Mirrors
+   * backend StaffBookingCreate. When status is
    * 'confirmed' with a date and confirm_calendar is true, the API fans out to
    * the artist's Google Calendar + client email + SMS.
    */

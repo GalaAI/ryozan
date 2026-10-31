@@ -1,7 +1,7 @@
 """Shared collaboration workspaces.
 
 A workspace is a small, project-scoped shared surface (dev tracker, landing
-page prep, signup capture, countdown, etc.) that Justin and Kathryn collaborate
+page prep, signup capture, countdown, etc.) that the owner and staff collaborate
 on, surfaced in Discord and a Vercel micro-app, backed by this database.
 
 This is the reusable "BTTCO micro-app" core: the dev tracker is workspace #1.

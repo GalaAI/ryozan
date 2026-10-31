@@ -1359,8 +1359,8 @@ async def process_foundry_outbox(
                 state,
                 entry,
                 {
-                    "client_name": "Justin",
-                    "name": "Justin",
+                    "client_name": settings.STUDIO_OWNER_NAME.strip() or "Test Recipient",
+                    "name": settings.STUDIO_OWNER_NAME.strip() or "Test Recipient",
                     "unsubscribe_url": f"{settings.FRONTEND_URL.rstrip('/')}/dashboard",
                 },
             )

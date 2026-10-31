@@ -104,7 +104,7 @@ class BTTCOUser(Base):
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)  # e.g. "Founder / 2nd Gen Tattoo Artist"
     specialty: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
-    booking_mode: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 'mailto' | 'venue.ink' | 'api'
+    booking_mode: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 'mailto' | 'api' | an external mode
     booking_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     instagram_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     portfolio_images: Mapped[list | None] = mapped_column(ARRAY(String), nullable=True)

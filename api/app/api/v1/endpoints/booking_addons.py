@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
 from app.models.booking_addon import BookingAddOn
@@ -87,7 +88,9 @@ async def list_public_booking_addons(
     active_only: bool = Query(default=True),
     db: AsyncSession = Depends(get_db),
 ):
-    slug = "justin" if artist_slug == "any" else artist_slug
+    slug = get_settings().resolve_artist_slug(artist_slug)
+    if slug is None:
+        return []
     artist_result = await db.execute(
         select(BTTCOUser.id).where(
             BTTCOUser.slug == slug,

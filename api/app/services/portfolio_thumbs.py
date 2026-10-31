@@ -127,7 +127,7 @@ def build_portfolio_thumb(image_bytes: bytes, *, max_edge_px: int = PORTFOLIO_TH
 
 
 def thumb_filename_for(original_url_or_filename: str) -> str:
-    """`.../portfolios/justin/IMG_0212.JPG` -> `IMG_0212.webp` (the thumb keeps the stem)."""
+    """`.../portfolios/<artist-slug>/IMG_0212.JPG` -> `IMG_0212.webp` (the thumb keeps the stem)."""
     path = urlsplit(original_url_or_filename).path or original_url_or_filename
     stem = posixpath.splitext(posixpath.basename(path))[0] or "image"
     return f"{stem}.webp"

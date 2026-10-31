@@ -278,7 +278,7 @@ async def tool_draft_reply(token: str | None, args: dict) -> str:
         "  - No em dashes or en dashes anywhere in the copy.\n"
         "  - Do not promise a date or price that is not already confirmed in the thread.\n"
         "  - Check the last inbound message is actually unanswered before drafting.\n\n"
-        "This tool cannot send. Produce the draft, show it to Justin, and let him send it "
+        "This tool cannot send. Produce the draft, show it to the owner, and let them send it "
         "from Courier so consent and thread state are checked at delivery."
     )
 
@@ -678,7 +678,7 @@ async def tool_triage_booking_with_calendar(token: str | None, args: dict) -> st
     lines.extend(
         [
             "",
-            "This is review-only triage. Do not message or create an event until Justin approves.",
+            "This is review-only triage. Do not message or create an event until the owner approves.",
             "Booking creation and client invitations remain separate operator-approved actions.",
         ]
     )
@@ -813,7 +813,7 @@ TOOL_SPECS: list[dict[str, Any]] = [
         "description": (
             "Returns the Ryozan shop's current-day picture for the signed-in artist: today's booked "
             "sessions with client names, unread message count, Stripe balance and next payout. Use "
-            "this first when Justin asks what is happening today, what needs attention, or for a "
+            "this first when the owner asks what is happening today, what needs attention, or for a "
             "morning catch-up on the shop."
         ),
         "annotations": _READ_ONLY,
@@ -1025,7 +1025,7 @@ TOOL_SPECS += [
         "title": "Prepare a Ryozan client reply draft",
         "description": (
             "Pulls a thread's recent history plus Ryozan house copy rules so a reply can be drafted "
-            "for review. This tool never sends anything. Use when Justin asks for help answering a "
+            "for review. This tool never sends anything. Use when the owner asks for help answering a "
             "client. The finished draft must be shown to him and sent from Courier."
         ),
         "annotations": _READ_ONLY,

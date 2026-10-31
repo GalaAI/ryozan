@@ -103,6 +103,14 @@ class _FakeSession:
 
 
 class CourierProxyTests(unittest.IsolatedAsyncioTestCase):
+    # These tests document the proxy contract, which runs only when the studio
+    # turns STAFF_PROXY_ENABLED on (studio_settings_tests covers the off state).
+    def setUp(self):
+        enabled = conversations.get_settings().model_copy(update={"STAFF_PROXY_ENABLED": True})
+        patcher = patch.object(conversations, "get_settings", return_value=enabled)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     async def test_inquiry_context_preserves_requested_times_without_confirming_them(self):
         now = datetime.now(UTC)
         conv = Conversation(

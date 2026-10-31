@@ -68,7 +68,7 @@ class QuoteProposalPayload(BaseModel):
     """
     Immutable payload for a quote_proposal artifact.
 
-    Every field except booking_id is optional so Kaydee or the artist
+    Every field except booking_id is optional so staff or the artist
     can send a proposal with pricing alone, a slot alone, or any mix.
     The zero-deposit auto-confirm branch handles the "I just want to
     lock this in for $0 down" case.
@@ -312,15 +312,18 @@ async def _apply_action(
     state = dict(message.artifact_state or INITIAL_STATE)
 
     if action == "confirm":
-        # The client (booking owner) is the primary confirmer. Staff
-        # can also confirm on behalf of the client — useful for Kaydee
-        # taking a "yes" over DMs and needing to unlock the booking.
+        # The client (booking owner) is the primary confirmer. With
+        # STAFF_CONFIRM_FOR_CLIENT_ENABLED, staff can also confirm on the
+        # client's behalf, e.g. after the client says yes in a DM.
         if actor is not None:
             booking = await _load_booking(db, UUID(payload["booking_id"]))
             is_staff = ROLE_RANK.get(actor.role, 0) >= ROLE_RANK.get("assistant", 1)
             is_client = booking.client_id == actor.id
-            if not (is_client or is_staff):
-                raise ArtifactActionError("only the booking client or staff can confirm this quote")
+            if not is_client:
+                if not is_staff:
+                    raise ArtifactActionError("only the booking client or staff can confirm this quote")
+                if not get_settings().STAFF_CONFIRM_FOR_CLIENT_ENABLED:
+                    raise ArtifactActionError("only the booking client can confirm this quote")
         return await _apply_confirm(db, message, actor, payload, state)
 
     if action == "cancel":

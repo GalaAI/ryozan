@@ -77,11 +77,22 @@ _REFUND_STATE_CLAIM = re.compile(
     r"(?:approved|issued|processed|sent)\s+(?:a|the|your)?\s*refund\b",
     re.IGNORECASE,
 )
+_FUTURE_ACTION_VERBS = r"(?:will|['’]ll)\s+(?:review|reach out|contact|confirm|send|schedule|book|refund)\b"
 _UNVERIFIED_FUTURE_ACTION_CLAIM = re.compile(
-    r"\b(?:he|she|they|we|justin|booky|the shop|the team|staff|the manager)\s+"
-    r"(?:will|['’]ll)\s+(?:review|reach out|contact|confirm|send|schedule|book|refund)\b",
+    r"\b(?:he|she|they|we|the owner|the shop owner|booky|the shop|the team|staff|the manager)\s+"
+    + _FUTURE_ACTION_VERBS,
     re.IGNORECASE,
 )
+
+
+def _owner_future_action_claim() -> re.Pattern[str] | None:
+    """Same guard for the owner's own name (STUDIO_OWNER_NAME), when one is set."""
+    name = get_settings().STUDIO_OWNER_NAME.strip()
+    if not name:
+        return None
+    return re.compile(r"\b" + re.escape(name) + r"\s+" + _FUTURE_ACTION_VERBS, re.IGNORECASE)
+
+
 _COMMUNICATION_ACTIONS = {
     "routed",
     "sent",
@@ -96,7 +107,8 @@ _COMMUNICATION_ACTIONS = {
 
 def _unreceipted_action_claim(response: str, successful_tools: set[str]) -> str | None:
     """Return the unsupported action class, if the response claims one."""
-    if _UNVERIFIED_FUTURE_ACTION_CLAIM.search(response):
+    owner_claim = _owner_future_action_claim()
+    if _UNVERIFIED_FUTURE_ACTION_CLAIM.search(response) or (owner_claim and owner_claim.search(response)):
         return "future_action"
     if _REFUND_STATE_CLAIM.search(response):
         return "refund"

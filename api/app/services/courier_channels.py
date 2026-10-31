@@ -128,7 +128,7 @@ def build_channel_status(settings: Settings, context: CourierRouteContext) -> di
         },
         {
             "id": "justin_personal_assistant",
-            "label": "Justin Personal Assistant",
+            "label": f"{settings.STUDIO_OWNER_NAME.strip() or 'Owner'} Personal Assistant",
             "kind": "voice",
             "connected": personal_voice_configured,
             "configured": bool(
@@ -226,7 +226,7 @@ def build_tool_catalog(settings: Settings) -> list[dict[str, Any]]:
         },
         {
             "id": "justin_personal_open_voice",
-            "label": "Justin personal open-source voice",
+            "label": f"{settings.STUDIO_OWNER_NAME.strip() or 'Owner'} personal open-source voice",
             "provider": "jambonz_sip_elevenlabs",
             "lane": "justin_personal",
             "status": "ready" if settings.JAMBONZ_ACCOUNT_SID and settings.ELEVENLABS_JUSTIN_AGENT_ID else "planned",

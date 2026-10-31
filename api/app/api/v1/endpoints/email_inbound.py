@@ -30,9 +30,9 @@ logger = logging.getLogger("bttco.email_inbound")
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 
-# Static fallback routes for reserved addresses
+# Static fallback routes for reserved addresses. INBOUND_OWNER_ALIASES adds
+# more local parts routed to the owner inbox (see _fallback_destination).
 FALLBACK_ROUTES: dict[str, str] = {
-    "justinwalker": "founder@ryozan.app",
     "info": "founder@ryozan.app",
     "bookings": "founder@ryozan.app",
     "admin": "founder@ryozan.app",
@@ -41,6 +41,15 @@ FALLBACK_ROUTES: dict[str, str] = {
 }
 
 FOUNDER_EMAIL = "founder@ryozan.app"
+
+
+def _fallback_destination(local_part: str) -> str | None:
+    """Reserved address or configured owner alias -> owner inbox."""
+    if local_part in FALLBACK_ROUTES:
+        return FALLBACK_ROUTES[local_part]
+    if local_part in get_settings().inbound_owner_aliases:
+        return FOUNDER_EMAIL
+    return None
 
 
 async def _retrieve_received_body(data: dict, api_key: str) -> dict:
@@ -275,8 +284,8 @@ async def _resolve_destination(
             return InboundRoute(route.forward_to, route.user_id, local_part)
 
         # Check static fallbacks
-        if local_part in FALLBACK_ROUTES:
-            destination = FALLBACK_ROUTES[local_part]
+        destination = _fallback_destination(local_part)
+        if destination:
             user_result = await db.execute(select(BTTCOUser.id).where(BTTCOUser.email == destination))
             return InboundRoute(destination, user_result.scalar_one_or_none(), local_part)
 

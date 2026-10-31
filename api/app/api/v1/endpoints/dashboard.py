@@ -31,8 +31,19 @@ from app.models.user import BTTCOUser
 logger = logging.getLogger("bttco.dashboard")
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
-# Justin's founder user ID for cron-triggered notifications
-FOUNDER_USER_ID = UUID("68a8d9d0-940a-46ec-ae73-803d1a0aa093")
+
+async def debrief_recipient_ids(db: AsyncSession, settings) -> list[UUID]:
+    """Who receives the cron daily debrief.
+
+    DEBRIEF_RECIPIENT_USER_ID names one account; blank sends it to every
+    founder account, oldest first.
+    """
+    if settings.DEBRIEF_RECIPIENT_USER_ID:
+        return [UUID(settings.DEBRIEF_RECIPIENT_USER_ID)]
+    result = await db.execute(
+        select(BTTCOUser.id).where(BTTCOUser.role == "founder").order_by(BTTCOUser.created_at.asc())
+    )
+    return list(result.scalars().all())
 
 
 def _init_stripe():
@@ -659,6 +670,11 @@ async def gather_debrief_data(db: AsyncSession) -> dict:
     }
 
 
+def debrief_owner_phrase(settings) -> str:
+    name = settings.STUDIO_OWNER_NAME.strip()
+    return f"the shop owner, {name}" if name else "the shop owner"
+
+
 async def generate_ai_summary(data: dict, db=None, user=None) -> str:
     """
     Use the configured AI lane to generate a natural language debrief.
@@ -723,7 +739,7 @@ async def generate_ai_summary(data: dict, db=None, user=None) -> str:
             tools=[],
             system_prompt=(
                 "You are Gala, the AI assistant for Ryozan Studio. "
-                "Write a full daily operations debrief for the shop owner, Justin. "
+                f"Write a full daily operations debrief for {debrief_owner_phrase(settings)}. "
                 "Use the available calendar, booking, waiver, account, quest, lesson, and inbox signals. "
                 "If a signal is not present in the data, say what is missing instead of inventing it. "
                 "Structure the response like an outline but write it like a report. "
@@ -884,22 +900,29 @@ async def generate_and_store_debrief(
     data = await gather_debrief_data(db)
     summary = await generate_ai_summary(data, db=db)
 
-    # Store as a notification for the founder
-    notif = Notification(
-        user_id=FOUNDER_USER_ID,
-        title="Daily Debrief",
-        body=summary,
-        notification_type="system",
-        action_url="/dashboard",
-    )
-    db.add(notif)
+    recipient_ids = await debrief_recipient_ids(db, settings)
+    notifications = [
+        Notification(
+            user_id=recipient_id,
+            title="Daily Debrief",
+            body=summary,
+            notification_type="system",
+            action_url="/dashboard",
+        )
+        for recipient_id in recipient_ids
+    ]
+    db.add_all(notifications)
     await db.commit()
 
-    logger.info("Daily debrief generated and stored as notification for founder")
+    if notifications:
+        logger.info("Daily debrief generated and stored for %d recipient(s)", len(notifications))
+    else:
+        logger.warning("Daily debrief generated but no recipient: set DEBRIEF_RECIPIENT_USER_ID or add a founder")
 
     return {
-        "status": "ok",
-        "notification_id": str(notif.id),
+        "status": "ok" if notifications else "no_recipient",
+        "notification_id": str(notifications[0].id) if notifications else None,
+        "recipient_count": len(notifications),
         "summary_length": len(summary),
         "stats": data["stats"],
     }

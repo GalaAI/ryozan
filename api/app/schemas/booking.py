@@ -329,7 +329,7 @@ class PublicBookingSubmit(BaseModel):
     """Public booking request — no account needed."""
 
     inquiry_id: str | None = Field(None, max_length=100)
-    artist_slug: str  # 'justin', 'juan', etc. — resolved server-side
+    artist_slug: str  # an artist slug or 'any' — resolved server-side
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str = Field(min_length=1, max_length=100)
     email: str = Field(max_length=255)

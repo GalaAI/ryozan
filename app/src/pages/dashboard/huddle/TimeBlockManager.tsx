@@ -157,7 +157,7 @@ export default function TimeBlockManager({ artists, canTargetOthers, onClose }: 
 
       {canTargetOthers && artists.length === 0 ? (
         <p className="bkm-proxy-empty">
-          No Ryozan-scheduling artists available; venue artists manage time in venue.ink.
+          No Ryozan-scheduling artists available; venue artists manage time in their external system.
         </p>
       ) : (
         <div className="bkm-block-body">

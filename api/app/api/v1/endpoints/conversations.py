@@ -123,17 +123,30 @@ async def _verify_participant(
     return participant
 
 
+def _proxy_target(current_user: BTTCOUser) -> UUID | None:
+    """The user this account acts as in Courier, when STAFF_PROXY_ENABLED is on.
+
+    With the setting off a stored proxy_for is ignored and every account acts
+    only as itself.
+    """
+    if not get_settings().STAFF_PROXY_ENABLED:
+        return None
+    return current_user.proxy_for
+
+
 async def _resolve_effective_user(current_user: BTTCOUser, db: AsyncSession) -> BTTCOUser:
     """Return the user a proxy operator acts as in Courier."""
-    if not current_user.proxy_for:
+    proxy_for = _proxy_target(current_user)
+    if not proxy_for:
         return current_user
-    proxy_user_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == current_user.proxy_for))
+    proxy_user_result = await db.execute(select(BTTCOUser).where(BTTCOUser.id == proxy_for))
     return proxy_user_result.scalar_one_or_none() or current_user
 
 
 def _visible_user_ids(current_user: BTTCOUser) -> list[UUID]:
     """Return IDs the current session may act as or view in Courier."""
-    return [current_user.id] + ([current_user.proxy_for] if current_user.proxy_for else [])
+    proxy_for = _proxy_target(current_user)
+    return [current_user.id] + ([proxy_for] if proxy_for else [])
 
 
 async def _require_conversation_creation_access(
@@ -535,8 +548,8 @@ async def create_conversation(
     db.add(conv)
     await db.flush()
 
-    # Add effective creator as participant. Proxy operators should not create
-    # Kaydee-only threads when they are acting as Justin.
+    # Add effective creator as participant. A proxy operator acting as another
+    # user creates the thread as that user, not as a thread of their own.
     all_participant_ids = set(body.participant_ids) | {effective_user_id}
     for uid in all_participant_ids:
         role = "owner" if uid == effective_user_id else "member"
@@ -630,7 +643,7 @@ async def get_conversation(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """Get a single conversation's details."""
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
 
     result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
     conv = result.scalar_one_or_none()
@@ -653,7 +666,7 @@ async def list_participants(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """List all participants in a conversation."""
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
 
     result = await db.execute(
         select(ConversationParticipant, BTTCOUser.name)
@@ -1208,7 +1221,7 @@ async def send_message(
     If current_user has proxy_for set, the message is attributed to the
     proxy target (the message appears to come from that user).
     """
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
 
     # Resolve effective sender - proxy users send as their delegator
     effective_sender = await _resolve_effective_user(current_user, db)
@@ -1391,7 +1404,7 @@ async def send_channel_message(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """Send a Courier message through an explicit external channel."""
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     if ROLE_RANK.get(current_user.role, 0) < ROLE_RANK.get("artist", 2):
         raise HTTPException(status_code=403, detail="Staff role or higher required for external channel sends")
 
@@ -1508,7 +1521,7 @@ async def get_messages(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """Get message history for a conversation (newest first)."""
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
 
     # Count total
     count_result = await db.execute(select(func.count()).where(Message.conversation_id == conversation_id))
@@ -1556,7 +1569,7 @@ async def mark_conversation_read(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """Mark all messages in this conversation as read for the current user."""
-    participant = await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    participant = await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     participant.last_read_at = datetime.now(UTC)
 
 
@@ -1568,7 +1581,7 @@ async def delete_message(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """Redact a message while preserving an audit trail."""
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     result = await db.execute(
         select(Message).where(
             Message.id == message_id,
@@ -1619,7 +1632,7 @@ async def archive_conversation(
     their inbox. The conversation itself is not deleted - other
     participants still see it.
     """
-    participant = await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    participant = await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     db.add(_audit_message(conversation_id, current_user.id, "conversation_archived_for_user"))
     await db.delete(participant)
     await db.flush()
@@ -1656,7 +1669,9 @@ async def delete_conversation(
         for participant in result.scalars().all():
             await db.delete(participant)
     else:
-        participant = await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+        participant = await _verify_participant(
+            conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user)
+        )
         await db.delete(participant)
     conv.updated_at = datetime.now(UTC)
     await db.flush()
@@ -1674,7 +1689,7 @@ async def set_typing(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """Signal that the current user is typing in this conversation."""
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     effective_user = await _resolve_effective_user(current_user, db)
     conv_key = str(conversation_id)
     if conv_key not in _typing_state:
@@ -1689,7 +1704,7 @@ async def get_typing(
     current_user: BTTCOUser = Depends(get_current_user),
 ):
     """Get who is currently typing (within last 5 seconds)."""
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     conv_key = str(conversation_id)
     now = _time.time()
     typers = _typing_state.get(conv_key, {})
@@ -1733,7 +1748,7 @@ async def gala_courier_assist(
     Generate a context-aware reply draft for the current conversation.
     Uses conversation history + BTTCO brand voice + artist tone matching.
     """
-    await _verify_participant(conversation_id, current_user.id, db, proxy_for=current_user.proxy_for)
+    await _verify_participant(conversation_id, current_user.id, db, proxy_for=_proxy_target(current_user))
     effective_user = await _resolve_effective_user(current_user, db)
     visible_ids = _visible_user_ids(current_user)
 
