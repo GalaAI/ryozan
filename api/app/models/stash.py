@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,10 @@ class StashItem(Base):
     """Creator-scoped sellable inventory across flash, physical goods, and digital products."""
 
     __tablename__ = "bttco_stash_items"
+    __table_args__ = (
+        Index("ix_bttco_stash_items_artist_lane", "artist_id", "lane"),
+        Index("ix_bttco_stash_items_status", "status"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(
@@ -58,6 +62,10 @@ class StashCanvasSession(Base):
     """Canvas state for AI-assisted segmentation review and metadata enrichment."""
 
     __tablename__ = "bttco_stash_canvas_sessions"
+    __table_args__ = (
+        Index("ix_bttco_stash_canvas_artist_lane", "artist_id", "lane"),
+        Index("ix_bttco_stash_canvas_sheet_id", "sheet_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     artist_id: Mapped[uuid.UUID] = mapped_column(

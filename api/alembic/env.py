@@ -15,8 +15,8 @@ from alembic import context
 
 # Register exactly the models the running API registers, by importing the same
 # modules main.py imports. A hand-kept list here drifted from the app: it named
-# models the app never loads (guild) and missed ones it does (booking add-ons,
-# rewards), so autogenerate compared against a schema nobody runs.
+# models the app never loads (guild, since deleted) and missed ones it does
+# (booking add-ons, rewards), so autogenerate compared against a schema nobody runs.
 from app.api.v1 import router as _api_router  # noqa: F401
 from app.core.config import get_settings
 from app.core.database import Base

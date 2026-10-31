@@ -7,7 +7,7 @@ Table: bttco_api_usage
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, Integer, String
+from sqlalchemy import DateTime, Float, Index, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,6 +24,7 @@ class APIUsage(Base):
     """One row per Anthropic API call made by any BTTCO endpoint."""
 
     __tablename__ = "bttco_api_usage"
+    __table_args__ = (Index("idx_bttco_api_usage_created_at", "created_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)

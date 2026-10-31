@@ -8,7 +8,7 @@ XP and BTTcoin rewards. Users track progress and claim rewards when complete.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,6 +17,9 @@ from app.core.database import Base
 
 class Quest(Base):
     __tablename__ = "bttco_quests"
+    # Redundant with the slug unique constraint (bttco_quests_slug_key), but the
+    # schema has both; declared so autogenerate does not propose dropping it.
+    __table_args__ = (Index("idx_bttco_quests_slug_unique", "slug", unique=True),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)

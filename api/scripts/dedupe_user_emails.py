@@ -155,8 +155,6 @@ _KNOWN_UNIQUE_REFERENCE_TABLES = frozenset(
     {
         "bttco_notification_preferences",
         "bttco_user_quests",
-        "bttco_leaderboard_entries",
-        "bttco_class_enrollments",
         "bttco_push_subscriptions",
     }
 )
@@ -612,78 +610,6 @@ async def merge_known_unique_rows(
             WHERE loser.user_id = ANY($1::uuid[])
               AND survivor.user_id = $2
               AND survivor.quest_id = loser.quest_id
-            """,
-            loser_ids,
-            survivor_id,
-        )
-        return
-
-    if ref.table == "bttco_leaderboard_entries" and ref.column == "user_id":
-        await conn.execute(
-            """
-            WITH merged_rows AS (
-                SELECT period, board_type, min(rank) AS rank,
-                       max(score) AS score, max(computed_at) AS computed_at
-                FROM bttco_leaderboard_entries
-                WHERE user_id = $1 OR user_id = ANY($2::uuid[])
-                GROUP BY period, board_type
-                HAVING bool_or(user_id = $1) AND bool_or(user_id = ANY($2::uuid[]))
-            )
-            UPDATE bttco_leaderboard_entries target
-            SET rank = merged_rows.rank, score = merged_rows.score, computed_at = merged_rows.computed_at
-            FROM merged_rows
-            WHERE target.user_id = $1
-              AND target.period = merged_rows.period
-              AND target.board_type = merged_rows.board_type
-            """,
-            survivor_id,
-            loser_ids,
-        )
-        await conn.execute(
-            """
-            DELETE FROM bttco_leaderboard_entries loser
-            USING bttco_leaderboard_entries survivor
-            WHERE loser.user_id = ANY($1::uuid[])
-              AND survivor.user_id = $2
-              AND survivor.period = loser.period
-              AND survivor.board_type = loser.board_type
-            """,
-            loser_ids,
-            survivor_id,
-        )
-        return
-
-    if ref.table == "bttco_class_enrollments" and ref.column == "user_id":
-        await conn.execute(
-            """
-            WITH merged_rows AS (
-                SELECT class_id, max(progress_pct) AS progress_pct,
-                       bool_or(completed) AS completed,
-                       min(completed_at) FILTER (WHERE completed_at IS NOT NULL) AS completed_at,
-                       min(enrolled_at) AS enrolled_at
-                FROM bttco_class_enrollments
-                WHERE user_id = $1 OR user_id = ANY($2::uuid[])
-                GROUP BY class_id
-                HAVING bool_or(user_id = $1) AND bool_or(user_id = ANY($2::uuid[]))
-            )
-            UPDATE bttco_class_enrollments target
-            SET progress_pct = merged_rows.progress_pct,
-                completed = merged_rows.completed,
-                completed_at = merged_rows.completed_at,
-                enrolled_at = merged_rows.enrolled_at
-            FROM merged_rows
-            WHERE target.user_id = $1 AND target.class_id = merged_rows.class_id
-            """,
-            survivor_id,
-            loser_ids,
-        )
-        await conn.execute(
-            """
-            DELETE FROM bttco_class_enrollments loser
-            USING bttco_class_enrollments survivor
-            WHERE loser.user_id = ANY($1::uuid[])
-              AND survivor.user_id = $2
-              AND survivor.class_id = loser.class_id
             """,
             loser_ids,
             survivor_id,

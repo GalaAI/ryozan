@@ -8,7 +8,7 @@ Artists see inbound requests; clients track their bookings.
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Numeric, String, Text, text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +19,28 @@ class Booking(Base):
     """A tattoo appointment request / scheduled session."""
 
     __tablename__ = "bttco_bookings"
+    __table_args__ = (
+        Index("idx_bttco_bookings_artist_id", "artist_id"),
+        Index("idx_bttco_bookings_artist_status", "artist_id", "status"),
+        Index("idx_bttco_bookings_client_id", "client_id"),
+        Index(
+            "idx_bttco_bookings_conversation_id",
+            "conversation_id",
+            postgresql_where=text("conversation_id IS NOT NULL"),
+        ),
+        Index("idx_bttco_bookings_created_at", "created_at"),
+        Index(
+            "idx_bttco_bookings_reference_code",
+            "reference_code",
+            postgresql_where=text("reference_code IS NOT NULL"),
+        ),
+        Index(
+            "idx_bttco_bookings_scheduled_date",
+            "scheduled_date",
+            postgresql_where=text("scheduled_date IS NOT NULL"),
+        ),
+        Index("idx_bttco_bookings_status", "status"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     # Who's involved (client_id nullable for guest bookings)

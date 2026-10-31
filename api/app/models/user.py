@@ -10,7 +10,7 @@ since artists ARE users with role='artist'. No join table needed.
 import uuid
 from datetime import UTC, date, datetime
 
-from sqlalchemy import ARRAY, Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, text
+from sqlalchemy import ARRAY, Boolean, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, validates
 
@@ -52,6 +52,25 @@ class UserIdentityAlias(Base):
 
 class BTTCOUser(Base):
     __tablename__ = "bttco_users"
+    __table_args__ = (
+        Index("idx_bttco_users_role", "role"),
+        Index("ix_bttco_users_membership_tier", "membership_tier"),
+        # Alongside the plain google_id unique constraint (bttco_users_google_id_key).
+        Index(
+            "ix_bttco_users_google_id",
+            "google_id",
+            unique=True,
+            postgresql_where=text("google_id IS NOT NULL"),
+        ),
+        Index(
+            "ux_bttco_users_booth_rent_subscription_id",
+            "booth_rent_subscription_id",
+            unique=True,
+            postgresql_where=text("booth_rent_subscription_id IS NOT NULL"),
+        ),
+        # Case-insensitive email uniqueness; normalize_email() keeps writes lowercase.
+        Index("ux_bttco_users_email_lower", text("lower(email)"), unique=True),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)

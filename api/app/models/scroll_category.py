@@ -8,7 +8,7 @@ Custom tabs (e.g. financial, health) are created via POST /scrolls/categories.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -17,6 +17,9 @@ from app.core.database import Base
 
 class ScrollCategory(Base):
     __tablename__ = "bttco_scroll_categories"
+    # Redundant with the slug unique constraint (bttco_scroll_categories_slug_key),
+    # but the schema has both; declared so autogenerate does not propose dropping it.
+    __table_args__ = (Index("ux_bttco_scroll_categories_slug", "slug", unique=True),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)

@@ -195,6 +195,11 @@ jobs:
           BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
         run: python -m unittest discover -s tests -p "schema_baseline_pg_tests.py"
 
+      - name: Models match the schema (create_all == baseline, alembic check clean)
+        env:
+          BTTCO_TEST_DATABASE_URL: ${{ env.DATABASE_SYNC_URL }}
+        run: python -m unittest discover -s tests -p "model_schema_parity_pg_tests.py"
+
       - name: alembic upgrade head on an empty database (the container's path)
         run: |
           psql "$DATABASE_SYNC_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public"

@@ -7,7 +7,7 @@ Notification model — maps to existing bttco_notifications table.
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,6 +16,11 @@ from app.core.database import Base
 
 class Notification(Base):
     __tablename__ = "bttco_notifications"
+    __table_args__ = (
+        # "read" is the column name; the attribute is is_read.
+        Index("idx_bttco_notifications_read", "user_id", "read", postgresql_where=text("read = false")),
+        Index("idx_bttco_notifications_user_id", "user_id"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(

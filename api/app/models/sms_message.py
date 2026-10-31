@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,6 +12,12 @@ from app.core.database import Base
 
 class SmsMessage(Base):
     __tablename__ = "bttco_sms_messages"
+    __table_args__ = (
+        Index("ix_sms_messages_created_at", "created_at"),
+        Index("ix_sms_messages_direction", "direction"),
+        Index("ix_sms_messages_status", "status"),
+        Index("ix_sms_messages_to_phone", "to_phone"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     direction: Mapped[str] = mapped_column(String(10), nullable=False)  # outbound | inbound

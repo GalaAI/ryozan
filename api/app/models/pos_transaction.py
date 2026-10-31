@@ -177,6 +177,12 @@ class POSTransaction(Base):
                 f"attempt_version = 1 AND terminal_reader_id IS NOT NULL AND attempt_state IN ({_ACTIVE_SQL})"
             ),
         ),
+        Index(
+            "ux_bttco_pos_transactions_stripe_session_id",
+            "stripe_session_id",
+            unique=True,
+            postgresql_where=text("stripe_session_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
