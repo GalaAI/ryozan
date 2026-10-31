@@ -633,7 +633,8 @@ class AgentOrchestrationContractTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("You are Saishin · Little Whirlwind", prompt)
         self.assertNotIn("Booky", prompt)
         self.assertIn("durable client and artist record", prompt)
-        self.assertNotIn("artist roster", prompt)  # no roster unless STUDIO_ARTIST_ROSTER is set
+        self.assertIn("No artist roster is configured", prompt)
+        self.assertIn("AI assistants, not tattoo artists", prompt)
         self.assertNotIn("You are Gala", prompt)
         for legacy in ("BTTCO", "Blind Tiger", "Greenville", "Justin Walker"):
             with self.subTest(legacy=legacy):

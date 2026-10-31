@@ -500,9 +500,14 @@ STUDIO_COMPANY_CONTEXT = """Company context:
 
 
 def _studio_roster_context() -> str:
-    """The studio's artist roster for agent prompts, from STUDIO_ARTIST_ROSTER; empty when unset."""
+    """The studio's artist roster for agent prompts, from STUDIO_ARTIST_ROSTER."""
     roster = get_settings().STUDIO_ARTIST_ROSTER.strip()
-    return f"Current {get_settings().STUDIO_NAME} artist roster:\n{roster}" if roster else ""
+    if roster:
+        return f"Current {get_settings().STUDIO_NAME} artist roster:\n{roster}"
+    return (
+        "No artist roster is configured for this studio. The crew agents are AI assistants, not tattoo artists; "
+        "for artist names use approved tools or say you do not know."
+    )
 
 
 def _trusted_account_identity(user: User) -> tuple[str, str]:
