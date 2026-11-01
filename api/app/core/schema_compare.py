@@ -214,6 +214,30 @@ def index_shape(definition: str) -> str:
     return _INDEX_NAME_RE.sub(r"\1 ON ", definition)
 
 
+# Postgres prints the same IN-list check two ways depending on how it was created:
+# ``ANY ((ARRAY['a'::character varying])::text[])`` from a model's DDL, and
+# ``ANY (ARRAY[('a'::character varying)::text])`` after a dump and restore. Both
+# compare as text, so they are one definition; only equality uses this form.
+_CAST_ELEMENT_RE = re.compile(r"\('((?:[^']|'')*)'::character varying\)::text")
+_CAST_ARRAY_RE = re.compile(r"\(ARRAY\[((?:'(?:[^']|'')*'::character varying(?:, )?)+)\]\)::text\[\]")
+_VARCHAR_LITERAL_RE = re.compile(r"'((?:[^']|'')*)'::character varying")
+
+
+def canonical_definition(definition: str) -> str:
+    """A definition with equivalent varchar-to-text IN-list casts written one way."""
+    text = _CAST_ELEMENT_RE.sub(r"'\1'::text", definition)
+    return _CAST_ARRAY_RE.sub(lambda m: "ARRAY[" + _VARCHAR_LITERAL_RE.sub(r"'\1'::text", m.group(1)) + "]", text)
+
+
+def _same_definition(expected: Any, actual: Any) -> bool:
+    if isinstance(expected, dict) and isinstance(actual, dict) and "definition" in expected and "definition" in actual:
+        return {**expected, "definition": canonical_definition(expected["definition"])} == {
+            **actual,
+            "definition": canonical_definition(actual["definition"]),
+        }
+    return expected == actual
+
+
 def compare_schemas(expected: dict[str, Any], actual: dict[str, Any]) -> list[SchemaDifference]:
     """Every difference between two snapshots, in a deterministic order."""
     diffs: list[SchemaDifference] = []
@@ -284,11 +308,11 @@ def _compare_named(table: str, noun: str, exp: dict, act: dict) -> list[SchemaDi
         diffs.append(SchemaDifference(f"extra_{noun}", table, name, None, act[name]))
     for name in sorted(set(exp) & set(act)):
         if noun == "index":
-            if exp[name]["definition"] != act[name]["definition"]:
+            if canonical_definition(exp[name]["definition"]) != canonical_definition(act[name]["definition"]):
                 diffs.append(SchemaDifference("index_definition", table, name, exp[name], act[name]))
             elif exp[name]["valid"] and not act[name]["valid"]:
                 diffs.append(SchemaDifference("invalid_index", table, name, True, False))
-        elif exp[name] != act[name]:
+        elif not _same_definition(exp[name], act[name]):
             diffs.append(SchemaDifference(f"{noun}_definition", table, name, exp[name], act[name]))
     return diffs
 
