@@ -176,7 +176,7 @@ The API reads `api/.env`. Copy [`api/.env.example`](api/.env.example) to start. 
 | `DATABASE_URL` | Async Postgres URL. The example points at the compose database on 127.0.0.1:5433. |
 | `POSTGRES_PASSWORD` | Database password. Docker Compose reads it from the root `.env`; keep it equal to the password in `DATABASE_URL`. |
 | `APP_ENV` | `development` for local use. Any other value turns on the secret checks below. |
-| `FRONTEND_URL`, `API_PUBLIC_BASE_URL` | Public URLs of the web app and the API. Used in links, OAuth callbacks and the MCP issuer. |
+| `FRONTEND_URL`, `API_PUBLIC_BASE_URL` | Public URLs of the web app and the API. Used in links, OAuth callbacks and the MCP issuer. `FRONTEND_URL` is also the base for links in client email and SMS, the email brand images, the canonical URLs on `/privacy`, `/sms-terms` and `sitemap.xml`, and the `www.` redirect. |
 | `SECRET_KEY`, `CRON_SECRET`, `DOC_REMINDER_API_KEY`, `WORKSPACE_BOT_TOKEN` | Private random values. In development they are generated on first run and kept in `api/.dev-secrets.json` (gitignored). Elsewhere the API will not start without them. |
 
 ### AI
@@ -191,7 +191,8 @@ The API reads `api/.env`. Copy [`api/.env.example`](api/.env.example) to start. 
 
 | Variable | What it does |
 | --- | --- |
-| `STUDIO_NAME` | Name printed on client email, SMS, calendar invites and PDFs. Default `Ryozan Studio`. |
+| `STUDIO_NAME` | Name printed on client email, SMS, calendar invites, PDFs, payment line items, the AI assistants' introductions and the `/privacy` and `/sms-terms` pages. Default `Ryozan Studio`. |
+| `EMAIL_ASSET_BASE_URL` | Where client email loads its logo (`tiger-mark.png`) and background tile (`starseed-tile.png`). Blank serves the copies in `app/public/email` from `FRONTEND_URL`; point it at your own folder to use your own logo. |
 | `STUDIO_ADDRESS` | Postal address for email footers and PDFs. Nothing prints when blank. |
 
 ### Studio settings
@@ -244,6 +245,7 @@ Each group is off until its keys are set.
 | Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET`, `PINTEREST_REDIRECT_URI`; `PINTEREST_USE_SANDBOX` (default `true`). |
 | Plaid | `PLAID_CLIENT_ID`, `PLAID_SECRET`; `PLAID_ENVIRONMENT` (`sandbox` or `production`, default `sandbox`; any other value makes every Plaid call answer 503 naming the setting). Plaid Link opens from the Hustle page (`/dashboard/hustle`), not from Connections. |
 | SMS (Twilio) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`, plus the sender numbers listed under Twilio in `config.py`. SMS is an inbox channel, not a Connections card. |
+| File uploads (Cloudflare R2) | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`; `R2_PUBLIC_DOMAIN` is the host uploaded files are served from, and the only host the public flash image proxy fetches from. Uploads stay off until the bucket name and credentials are set. |
 | Public sign-up | For a public demo install only. `OPEN_SIGNUP_ENABLED`, `OPEN_SIGNUP_CODE` (invite code, 8 or more characters), `OPEN_SIGNUP_UNTIL`, `OPEN_SIGNUP_MAX_ACCOUNTS`. `DEMO_ACCOUNT_EMAIL` and `DEMO_ACCOUNT_PASSWORD` create one shared demo account with its own monthly caps. |
 
 ### Integrations appear only when configured
