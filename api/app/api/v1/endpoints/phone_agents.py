@@ -338,7 +338,7 @@ async def _process_bella_event(
 async def take_phone_message(
     body: TakeMessageRequest,
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Persist a live Bella or Gala message and return a receipt to the agent."""
     settings = get_settings()
@@ -418,7 +418,7 @@ async def take_phone_message(
 @router.post("/webhooks/elevenlabs")
 async def elevenlabs_post_call_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     settings = get_settings()
     if not settings.ELEVENLABS_WEBHOOK_SECRET:

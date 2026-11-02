@@ -54,7 +54,7 @@ const EmailFoundryFrame = lazy(() => import('../../components/EmailFoundryFrame'
 gsap.registerPlugin(useGSAP)
 
 type PortalRole = 'collector' | 'assistant' | 'artist' | 'admin' | 'founder'
-type HubWorkflowKind = 'flash' | 'merch' | 'gallery' | 'pos' | 'connections' | 'deposits' | 'options' | 'codex' | 'artist-scroll' | 'email-foundry'
+type HubWorkflowKind = 'flash' | 'merch' | 'gallery' | 'pos' | 'connections' | 'deposits' | 'options' | 'codex' | 'artist-scroll' | 'email-foundry' | 'studio-settings'
 type ClubWorkflowKind = 'loot' | 'campaign' | 'content'
 type PortalWorkflowKind = HubWorkflowKind | ClubWorkflowKind
 type AgentSessionKind = 'agent' | 'booky' | 'hub'
@@ -2591,7 +2591,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
     setAgentChatLaunch('direct')
     setSelectedBookyDate(null)
     setSelectedBookyBookingId(null)
-    setSelectedHubWorkflow('connections')
+    setSelectedHubWorkflow('studio-settings')
     setAgentChatMode('hub-workflow-full')
     setHubWorkflowLines([{
       id: 'studio-settings',
@@ -4952,7 +4952,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
               : bookyDebriefActive && selectedBookyDate
               ? new Date(`${selectedBookyDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', '')
               : hubWorkflowActive && selectedHubWorkflow
-                ? `${selectedHubWorkflow} workflow`
+                ? `${selectedHubWorkflow?.replace("-", " ")} workflow`
               : (agent.id === 'mercury' || agent.id === 'pulse') ? selectedMercuryConversation ? conversationTitle(selectedMercuryConversation) : undefined : agent.role}
             lines={renderedAgentLines}
             working={agentChatWorking}

@@ -188,7 +188,9 @@ async def void_refunded_gift_card(payment_intent_id: str | None) -> None:
 
 
 @router.post("/checkout", response_model=GiftCardCheckoutResponse)
-async def create_gift_card_checkout(body: GiftCardCheckoutRequest, db: AsyncSession = Depends(get_db)):
+async def create_gift_card_checkout(
+    body: GiftCardCheckoutRequest, db: AsyncSession = Depends(get_db, scope="function")
+):
     artist = await db.get(User, body.artist_id)
     if not artist or artist.role not in ARTIST_ROLES or not artist.slug:
         raise HTTPException(status_code=404, detail="Artist not found")
@@ -274,7 +276,7 @@ async def create_gift_card_checkout(body: GiftCardCheckoutRequest, db: AsyncSess
 
 
 @router.get("/status/{session_id}", response_model=GiftCardStatusResponse)
-async def get_gift_card_status(session_id: str, db: AsyncSession = Depends(get_db)):
+async def get_gift_card_status(session_id: str, db: AsyncSession = Depends(get_db, scope="function")):
     card = (await db.execute(select(GiftCard).where(GiftCard.stripe_session_id == session_id))).scalar_one_or_none()
     if not card:
         raise HTTPException(status_code=404, detail="Gift card not found")
@@ -290,7 +292,7 @@ async def get_gift_card_status(session_id: str, db: AsyncSession = Depends(get_d
 @router.post("/redeem", response_model=GiftCardRedeemResponse)
 async def redeem_gift_card(
     body: GiftCardRedeemRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("assistant")),
 ):
     code = body.code.strip().upper()

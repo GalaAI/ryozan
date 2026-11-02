@@ -38,7 +38,7 @@ async def _get_or_create_prefs(user_id, db: AsyncSession) -> NotificationPrefere
 
 @router.get("/", response_model=NotificationPreferencesResponse)
 async def get_notification_preferences(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get current user's notification preferences (creates defaults if none)."""
@@ -49,7 +49,7 @@ async def get_notification_preferences(
 @router.patch("/", response_model=NotificationPreferencesResponse)
 async def update_notification_preferences(
     body: NotificationPreferencesUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Update notification preferences (partial — only send fields you want to change)."""

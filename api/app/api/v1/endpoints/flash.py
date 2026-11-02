@@ -308,7 +308,7 @@ async def upload_flash_sheet(
     file: UploadFile = File(...),
     title: str | None = Form(default=None),
     artist_id: UUID | None = Form(default=None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Upload a flash sheet image to Cloudflare R2 and create a sheet record.
@@ -363,7 +363,7 @@ async def upload_flash_sheet(
 async def save_sheet_crop(
     sheet_id: UUID,
     body: FlashSheetCropRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Materialize a reversible overall sheet crop before design segmentation."""
@@ -448,7 +448,7 @@ async def save_sheet_crop(
 async def segment_sheet(
     sheet_id: UUID,
     body: FlashSegmentationRequest | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -674,7 +674,7 @@ async def list_sheets(
     skip: int = 0,
     limit: int = Query(default=20, le=50),
     artist_id: UUID | None = Query(default=None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """List flash sheets for the current artist or an admin-selected artist."""
@@ -702,7 +702,7 @@ async def list_sheets(
 @router.post("/sheets/{sheet_id}/identify", response_model=FlashSheetInventoryResponse)
 async def identify_sheet_inventory(
     sheet_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Use AI to draft a named inventory while preserving the whole sheet asset."""
@@ -813,7 +813,7 @@ async def identify_sheet_inventory(
 @router.post("/sheets/{sheet_id}/publish-catalog", response_model=FlashSheetInventoryResponse)
 async def publish_sheet_catalog(
     sheet_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Publish a completed whole-sheet catalog after the artist reviews every item."""
@@ -910,7 +910,7 @@ async def _delete_sheet_record(
 @router.delete("/sheets/{sheet_id}", status_code=204)
 async def delete_sheet(
     sheet_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Delete a flash sheet and its segmented designs."""
@@ -920,7 +920,7 @@ async def delete_sheet(
 @router.post("/sheets/{sheet_id}/delete", status_code=204)
 async def delete_sheet_post_alias(
     sheet_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Compatibility alias for clients or proxies that do not pass DELETE cleanly."""
@@ -930,7 +930,7 @@ async def delete_sheet_post_alias(
 @router.get("/{sheet_id}/designs", response_model=FlashDesignListResponse)
 async def list_sheet_designs(
     sheet_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List designs on a flash sheet."""
@@ -956,7 +956,7 @@ async def list_sheet_designs(
 async def create_design_crop(
     sheet_id: UUID,
     body: FlashDesignCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Materialize one artist-selected region as an independent WebP design asset."""
@@ -1036,7 +1036,7 @@ async def create_design_crop(
 async def update_design(
     design_id: UUID,
     body: FlashDesignUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Update a flash design (name, price, time estimate, status)."""
@@ -1120,7 +1120,7 @@ async def update_design(
 @router.delete("/designs/{design_id}", status_code=204)
 async def delete_design(
     design_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Delete an incorrect unclaimed design without deleting its source sheet."""
@@ -1165,7 +1165,7 @@ async def delete_design(
 async def correct_segment(
     design_id: UUID,
     body: FlashDesignUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -1274,7 +1274,7 @@ async def _build_training_manifest(db: AsyncSession) -> dict:
 
 @router.get("/feedback/training-manifest")
 async def get_training_manifest(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("admin")),
 ):
     """Return the latest reviewed event per design for an operator-triggered training run."""
@@ -1362,7 +1362,7 @@ async def process_apex_training_manifest_once() -> dict:
 
 @router.post("/feedback/push-to-apex")
 async def push_training_manifest_to_apex(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("admin")),
 ):
     """Snapshot reviewed masks in Ark Apex without starting a training job."""
@@ -1398,7 +1398,7 @@ async def browse_store(
     style: str | None = None,
     skip: int = 0,
     limit: int = Query(default=30, le=50),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Browse published flash designs (collector storefront)."""
@@ -1425,7 +1425,7 @@ async def browse_store(
 @router.post("/designs/{design_id}/claim")
 async def claim_design(
     design_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Retired: inventory may only be claimed by the atomic booking and payment flow."""
@@ -1448,7 +1448,7 @@ class FlashCheckoutRequest(BaseModel):
 @router.post("/checkout")
 async def flash_checkout(
     body: FlashCheckoutRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Retired: claiming inventory without a booking or payment artifact is unsafe."""
@@ -1465,7 +1465,7 @@ async def browse_store_public(
     style: str | None = None,
     skip: int = 0,
     limit: int = Query(default=30, le=50),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public storefront — browse published flash designs without auth.
@@ -1508,7 +1508,7 @@ def _public_flash_asset_allowed(url: str) -> bool:
 @router.get("/public/designs/{design_id}/image")
 async def get_public_design_image(
     design_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Return one published design asset through the existing same-origin API path."""
     result = await db.execute(
@@ -1550,7 +1550,7 @@ async def get_public_design_image(
 @router.get("/public/sheets/{artist_slug}", response_model=PublicSheetWallResponse)
 async def get_public_sheet_wall(
     artist_slug: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: get published flash sheets for an artist, each with their published designs.
@@ -1731,7 +1731,7 @@ async def _assert_flash_slot_available(
 async def book_flash_design(
     body: FlashBookRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: book a flash design.

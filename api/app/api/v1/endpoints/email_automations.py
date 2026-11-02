@@ -72,7 +72,7 @@ def _can_send_booking_sms_reminder(booking: Booking) -> bool:
 
 @router.post("/process")
 async def process_automated_emails(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     x_api_key: str = Header(alias="X-Api-Key"),
 ):
     """

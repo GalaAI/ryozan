@@ -86,7 +86,7 @@ def _require_staff(user: User):
 @router.get("/", response_model=QuestListResponse)
 async def list_quests(
     category: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List all active quests with the current user's progress."""
@@ -127,7 +127,7 @@ async def list_quests(
 
 @router.get("/summary", response_model=QuestSummary)
 async def quest_summary(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get quest completion stats for the current user."""
@@ -163,7 +163,7 @@ async def quest_summary(
 @router.post("/{quest_id}/claim", response_model=QuestClaimResponse)
 async def claim_quest(
     quest_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Claim the reward for a completed quest."""
@@ -217,7 +217,7 @@ async def claim_quest(
 async def update_quest_progress(
     quest_id: UUID,
     body: QuestProgressUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff-only manual override of quest progress.
@@ -278,7 +278,7 @@ async def update_quest_progress(
 
 @router.post("/check-mobile")
 async def check_mobile_quest(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -291,7 +291,7 @@ async def check_mobile_quest(
 
 @router.post("/push-subscription")
 async def save_push_subscription(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

@@ -86,7 +86,7 @@ async def _resolve_artist_id(
 async def list_public_booking_addons(
     artist_slug: str,
     active_only: bool = Query(default=True),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     slug = get_settings().resolve_artist_slug(artist_slug)
     if slug is None:
@@ -112,7 +112,7 @@ async def list_public_booking_addons(
 @router.get("/mine", response_model=list[BookingAddOnResponse])
 async def list_my_booking_addons(
     artist_id: UUID | None = Query(default=None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
@@ -128,7 +128,7 @@ async def list_my_booking_addons(
 @router.post("/", response_model=BookingAddOnResponse, status_code=201)
 async def create_booking_addon(
     body: BookingAddOnCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
@@ -150,7 +150,7 @@ async def create_booking_addon(
 async def update_booking_addon(
     add_on_id: UUID,
     body: BookingAddOnUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
@@ -173,7 +173,7 @@ async def update_booking_addon(
 @router.delete("/{add_on_id}", status_code=204)
 async def delete_booking_addon(
     add_on_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)

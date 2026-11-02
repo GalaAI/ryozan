@@ -162,7 +162,7 @@ def _smith_scaffold_proposal(intent: str, atlas: dict, connection: ViberConnecti
 async def create_account(
     payload: ViberAccountCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     _require_founder(current_user)
     existing = await db.execute(select(ViberAccount).where(ViberAccount.email == payload.email))
@@ -178,7 +178,7 @@ async def create_account(
 @router.get("/accounts", response_model=list[ViberAccountRecord])
 async def list_accounts(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     _require_founder(current_user)
     result = await db.execute(select(ViberAccount).order_by(ViberAccount.created_at))
@@ -201,7 +201,7 @@ async def create_connection(
     account_id: UUID,
     payload: ViberConnectionCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     _require_founder(current_user)
     acct = await _get_account(account_id, db)
@@ -227,7 +227,7 @@ async def create_connection(
 async def list_connections(
     account_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     _require_founder(current_user)
     await _get_account(account_id, db)
@@ -241,7 +241,7 @@ async def list_connections(
 async def test_connection(
     connection_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Probe a connected backend and cache an introspection map.
 
@@ -307,7 +307,7 @@ async def test_connection(
 async def connection_atlas(
     connection_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Build the Atlas mind-map graph for a connection.
 
@@ -360,7 +360,7 @@ async def gala_orchestrate(
     account_id: UUID,
     payload: ViberGalaIntentRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Route a natural-language intent through Gala.
 
@@ -451,7 +451,7 @@ async def approve_proposal(
     proposal_id: UUID,
     payload: ViberProposalApproveRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Approve a staged proposal without executing it.
 
@@ -488,7 +488,7 @@ async def create_ai_provider(
     account_id: UUID,
     payload: ViberAIProviderCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     _require_founder(current_user)
     acct = await _get_account(account_id, db)
@@ -521,7 +521,7 @@ async def create_ai_provider(
 async def list_ai_providers(
     account_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     _require_founder(current_user)
     await _get_account(account_id, db)

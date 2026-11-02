@@ -130,7 +130,7 @@ async def google_connect(
 async def google_callback(
     code: str = Query(...),
     state: str = Query(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Handle the OAuth redirect from Google.
@@ -197,7 +197,7 @@ async def google_callback(
 
 @router.delete("/disconnect", status_code=204)
 async def google_disconnect(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Remove the legacy Google refresh token from the current user's record."""
@@ -217,7 +217,7 @@ async def google_disconnect(
 @router.get("/status", response_model=GoogleStatusResponse)
 async def google_status(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Check the active Calendar authority for the current staff user."""
     if workspace_delegation_enabled():

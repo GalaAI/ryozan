@@ -53,7 +53,7 @@ async def _resolve_artist_owner(
 
 @router.get("/creators", response_model=list[UserResponse])
 async def list_hustle_creators(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _current_user: User = Depends(require_role("admin")),
 ):
     """Admin+: list creator accounts that Hustle can target."""
@@ -98,7 +98,7 @@ async def list_stash_items(
     artist_id: UUID | None = Query(default=None),
     skip: int = 0,
     limit: int = Query(default=50, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     owner = await _resolve_artist_owner(db, current_user, artist_id)
@@ -120,7 +120,7 @@ async def list_stash_items(
 @router.post("/items", response_model=StashItemResponse, status_code=201)
 async def create_stash_item(
     body: StashItemCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     owner = await _resolve_artist_owner(db, current_user, body.artist_id)
@@ -164,7 +164,7 @@ async def create_stash_item(
 async def update_stash_item(
     item_id: UUID,
     body: StashItemUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     result = await db.execute(select(StashItem).where(StashItem.id == item_id))
@@ -195,7 +195,7 @@ async def update_stash_item(
 @router.post("/items/from-flash/{design_id}", response_model=StashItemResponse, status_code=201)
 async def create_stash_item_from_flash(
     design_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     result = await db.execute(select(FlashDesign).where(FlashDesign.id == design_id))
@@ -235,7 +235,7 @@ async def create_stash_item_from_flash(
 @router.post("/canvas-sessions", response_model=CanvasSessionResponse, status_code=201)
 async def create_canvas_session(
     body: CanvasSessionCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     owner = await _resolve_artist_owner(db, current_user, body.artist_id)
@@ -267,7 +267,7 @@ async def create_canvas_session(
 async def update_canvas_session(
     session_id: UUID,
     body: CanvasSessionUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     result = await db.execute(select(StashCanvasSession).where(StashCanvasSession.id == session_id))

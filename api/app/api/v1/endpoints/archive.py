@@ -47,7 +47,7 @@ async def list_archive(
     sort_by: str = Query("date", pattern="^(date|type|client)$"),
     sort_dir: str = Query("desc", pattern="^(asc|desc)$"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Return paginated archive records across waivers, bookings, and receipts.
@@ -291,7 +291,7 @@ async def list_archive(
 async def get_archive_detail(
     record_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Return the full detail of an archived record, including data_json

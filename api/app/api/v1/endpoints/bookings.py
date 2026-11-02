@@ -1965,7 +1965,7 @@ async def upload_booking_image(
     request: Request,
     file: UploadFile = File(...),
     draft_json: str | None = Form(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: upload a reference or placement image before booking.
@@ -2013,7 +2013,7 @@ async def upload_booking_image(
 async def save_public_booking_draft(
     request: Request,
     body: PublicBookingDraft,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Public: persist a recoverable snapshot before final submit."""
     row = await _upsert_booking_draft(db, body, status="draft")
@@ -2026,7 +2026,7 @@ async def list_booking_drafts(
     status_filter: str | None = Query(None, alias="status"),
     skip: int = 0,
     limit: int = Query(default=50, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -2062,7 +2062,7 @@ async def list_booking_drafts(
 async def backfill_booking_conversations(
     limit: int = Query(default=100, le=500),
     repair_existing: bool = Query(default=False),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -2104,7 +2104,7 @@ async def backfill_booking_conversations(
 @router.post("/backfill-courier-intake-messages")
 async def backfill_booking_intake_messages(
     limit: int = Query(default=100, le=500),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -2218,7 +2218,7 @@ def _verify_existing_inquiry_capability(
 @router.get("/booky/settings/{artist_id}", response_model=BookySettingsResponse)
 async def get_booky_settings(
     artist_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     artist = await db.get(User, artist_id)
@@ -2234,7 +2234,7 @@ async def get_booky_settings(
 async def update_booky_settings(
     artist_id: UUID,
     body: BookySettingsUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     artist = await db.get(User, artist_id)
@@ -2301,7 +2301,7 @@ async def update_booky_settings(
 )
 async def get_booky_projection(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     booking = await db.get(Booking, booking_id)
@@ -2450,7 +2450,7 @@ async def _claim_booky_retry_lease(
 @router.post("/{booking_id}/booky/retry", response_model=BookyDecisionEnvelope)
 async def retry_booky_confirmation(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     booking_result = await db.execute(select(Booking).where(Booking.id == booking_id))
@@ -2677,7 +2677,7 @@ async def retry_booky_confirmation(
 async def submit_public_booking(
     request: Request,
     body: PublicBookingSubmit,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: submit a booking request without an account.
@@ -2708,7 +2708,7 @@ async def submit_public_booking(
 async def submit_public_inquiry(
     request: Request,
     body: PublicInquirySubmit,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: general (non tattoo) inquiry from the booking flow's Artist step.
@@ -3878,7 +3878,7 @@ async def _do_submit_public_booking(
 @router.post("/{reference_code}/link-account", response_model=BookingResponse)
 async def link_booking_to_account(
     reference_code: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -4279,7 +4279,7 @@ async def process_booking_email_outbox_once(limit: int = 20) -> int:
 @router.post("/", response_model=BookingResponse, status_code=201)
 async def create_booking(
     body: BookingCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -4370,7 +4370,7 @@ async def create_booking(
 @router.post("/staff", response_model=BookingResponse, status_code=201)
 async def staff_create_booking(
     body: StaffBookingCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin/founder books on behalf of an artist (e.g. a front desk booking an artist's clients).
@@ -4477,7 +4477,7 @@ async def list_bookings(
     for_artist: str | None = Query(None, alias="for_artist"),
     skip: int = 0,
     limit: int = Query(default=50, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -4533,7 +4533,7 @@ async def list_bookings(
 @router.get("/{booking_id}/history", response_model=list[BookingLifecycleEventResponse])
 async def get_booking_history(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff view: append-only lifecycle timeline for one booking."""
@@ -4556,7 +4556,7 @@ async def get_booking_schedule_suggestions(
     booking_id: UUID,
     days: int = Query(default=45, ge=1, le=180),
     limit: int = Query(default=5, ge=1, le=10),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff view: deterministic schedule suggestions from the shared scheduler."""
@@ -4657,7 +4657,7 @@ async def get_booking_schedule_suggestions(
 @router.get("/{booking_id}", response_model=BookingResponse)
 async def get_booking(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get a single booking. Must be client, artist, or admin."""
@@ -4676,7 +4676,7 @@ async def get_booking(
 async def update_booking(
     booking_id: UUID,
     body: BookingUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -4974,7 +4974,7 @@ async def _validate_staff_slot(
 async def reschedule_booking(
     booking_id: UUID,
     body: BookingReschedule,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -5205,7 +5205,7 @@ async def _close_checkout_session(
 @router.get("/{booking_id}/approval-defaults", response_model=BookingApprovalDefaults)
 async def get_booking_approval_defaults(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff: what the approval card prefills and whether a deposit link can go out."""
@@ -5239,7 +5239,7 @@ async def get_booking_approval_defaults(
 async def approve_booking_request(
     booking_id: UUID,
     body: BookingApprove,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff approves a request with one validated time and a deposit amount.
@@ -5495,7 +5495,7 @@ async def approve_booking_request(
 async def cancel_booking(
     booking_id: UUID,
     body: BookingCancel,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff action: cancel a booking and optionally remove its calendar event."""
@@ -5573,7 +5573,7 @@ async def cancel_booking(
 @router.post("/{booking_id}/gala-assist")
 async def gala_assist(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -5669,7 +5669,7 @@ Write only the message body."""
 @router.post("/{booking_id}/conversation")
 async def ensure_booking_conversation(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

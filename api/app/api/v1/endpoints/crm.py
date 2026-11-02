@@ -120,7 +120,7 @@ async def list_pipeline_tasks(
     status_filter: str | None = Query(None, alias="status"),
     skip: int = 0,
     limit: int = Query(default=50, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff: list CRM pipeline tasks (open shop follow-ups)."""
@@ -146,7 +146,7 @@ async def list_pipeline_tasks(
 @router.post("/pipeline-tasks", response_model=CrmPipelineTaskRecord)
 async def create_pipeline_task(
     body: CrmPipelineTaskCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff: create a pipeline task."""
@@ -170,7 +170,7 @@ async def create_pipeline_task(
 async def update_pipeline_task_status(
     task_id: UUID,
     status: str = Query(..., min_length=2, max_length=32),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff: update task status (e.g. open -> done)."""

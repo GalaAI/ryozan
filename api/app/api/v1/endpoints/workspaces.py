@@ -57,7 +57,7 @@ router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 async def authorize_actor(
     x_workspace_token: str | None = Header(default=None, alias="X-Workspace-Token"),
     authorization: str | None = Header(default=None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> str:
     """Return an actor label. Bot token OR founder/admin JWT. Raises 401/403."""
     # Bot path: shared-secret header.
@@ -91,7 +91,7 @@ async def _get_workspace(slug: str, db: AsyncSession) -> Workspace:
 async def resolve_channel(
     discord_channel_id: str,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Return which workspace a Discord channel is bound to. Herald uses this
     to route every command to the right workspace."""
@@ -111,7 +111,7 @@ async def bind_channel(
     slug: str,
     payload: ChannelBind,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Bind a Discord channel to this workspace (re-bind moves it)."""
     ws = await _get_workspace(slug, db)
@@ -144,7 +144,7 @@ async def bind_channel(
 @router.get("", response_model=list[WorkspaceRecord])
 async def list_workspaces(
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     result = await db.execute(select(Workspace).where(Workspace.archived.is_(False)).order_by(Workspace.created_at))
     return list(result.scalars().all())
@@ -154,7 +154,7 @@ async def list_workspaces(
 async def create_workspace(
     payload: WorkspaceCreate,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     existing = await db.execute(select(Workspace).where(Workspace.slug == payload.slug))
     if existing.scalar_one_or_none():
@@ -170,7 +170,7 @@ async def create_workspace(
 async def workspace_status(
     slug: str,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
 
@@ -219,7 +219,7 @@ async def list_notes(
     slug: str,
     limit: int = Query(default=50, ge=1, le=200),
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     result = await db.execute(
@@ -236,7 +236,7 @@ async def add_note(
     slug: str,
     payload: NoteCreate,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     author = payload.author if payload.author != "unknown" else actor
@@ -255,7 +255,7 @@ async def list_todos(
     slug: str,
     status: str | None = Query(default=None, pattern="^(open|done)$"),
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     stmt = select(WorkspaceTodo).where(WorkspaceTodo.workspace_id == ws.id)
@@ -271,7 +271,7 @@ async def add_todo(
     slug: str,
     payload: TodoCreate,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     author = payload.author if payload.author != "unknown" else actor
@@ -294,7 +294,7 @@ async def update_todo(
     todo_id: UUID,
     payload: TodoUpdate,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     result = await db.execute(
@@ -327,7 +327,7 @@ async def list_log(
     slug: str,
     limit: int = Query(default=50, ge=1, le=200),
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     result = await db.execute(
@@ -344,7 +344,7 @@ async def add_log(
     slug: str,
     payload: LogCreate,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     author = payload.author if payload.author != "unknown" else actor
@@ -362,7 +362,7 @@ async def add_log(
 async def list_features(
     slug: str,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     result = await db.execute(
@@ -378,7 +378,7 @@ async def upsert_feature(
     slug: str,
     payload: FeatureStatusUpsert,
     actor: str = Depends(authorize_actor),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     ws = await _get_workspace(slug, db)
     result = await db.execute(

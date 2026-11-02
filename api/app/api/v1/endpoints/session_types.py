@@ -88,7 +88,7 @@ def _require_staff(user: User) -> None:
 async def list_session_types_for_artist(
     artist_slug: str,
     active_only: bool = Query(default=True),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: list session types for an artist by slug.
@@ -116,7 +116,7 @@ async def list_session_types_for_artist(
 
 @router.get("/mine", response_model=list[SessionTypeResponse])
 async def list_my_session_types(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Artist+: list your own session types (including inactive)."""
@@ -132,7 +132,7 @@ async def list_my_session_types(
 @router.post("/", response_model=SessionTypeResponse, status_code=201)
 async def create_session_type(
     body: SessionTypeCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Artist+: create a new session type."""
@@ -159,7 +159,7 @@ async def create_session_type(
 async def update_session_type(
     session_type_id: UUID,
     body: SessionTypeUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Artist+: update one of your session types."""
@@ -183,7 +183,7 @@ async def update_session_type(
 @router.delete("/{session_type_id}", status_code=204)
 async def delete_session_type(
     session_type_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Artist+: delete one of your session types."""
@@ -206,7 +206,7 @@ async def lookup_session_type(
     artist_slug: str = Query(...),
     size: str = Query(...),
     placement: str | None = Query(default=None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: find the best-matching session type for an artist given

@@ -845,7 +845,7 @@ def _access_snapshot(user: User, agent_id: str) -> dict:
 
 @router.get("/agents/{agent_id}/access")
 async def get_agent_access(
-    agent_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+    agent_id: str, db: AsyncSession = Depends(get_db, scope="function"), current_user: User = Depends(get_current_user)
 ):
     _require_access_reader(current_user, agent_id)
     return _access_snapshot(current_user, agent_id)
@@ -855,7 +855,7 @@ async def get_agent_access(
 async def update_agent_access(
     agent_id: str,
     body: AgentAccessUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     _require_access_editor(current_user, agent_id)
@@ -1041,7 +1041,7 @@ class BenchPreviewRequest(BaseModel):
 async def preview_agent_response(
     agent_id: str,
     body: BenchPreviewRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Rehearse configuration changes without tools, profile writes or dispatch.
@@ -1997,7 +1997,7 @@ async def get_agent_evolution(
 
 @router.post("/evolution/recover-learning-captures")
 async def recover_learning_captures(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Replay only learning rows exhausted by Ark source registration drift."""
@@ -2199,7 +2199,7 @@ async def promote_agent_profile_for_portal(
 @router.post("/session/close", response_model=SessionCloseResponse)
 async def close_agent_session(
     body: SessionCloseRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Compact one ephemeral panel session into scoped memory, then discard raw turns."""
@@ -2318,7 +2318,7 @@ Session turns:
 )
 async def gala_chat(
     body: ChatRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Conversational AI endpoint with tool calling."""
@@ -2653,7 +2653,7 @@ async def gala_smart_upload(
     category: str = Form("other"),
     note: str = Form(""),
     memory_consent: bool = Form(False),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

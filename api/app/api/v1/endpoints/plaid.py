@@ -195,7 +195,7 @@ async def _upsert_plaid_ledger_entry(db: AsyncSession, conn: EconConnection, txn
 
 @router.get("/balance")
 async def get_balance(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -239,7 +239,7 @@ async def get_balance(
 @router.post("/transactions/sync")
 async def sync_transactions(
     body: PlaidTransactionsSyncRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -348,7 +348,7 @@ async def create_link_token(
 @router.post("/exchange-token")
 async def exchange_public_token(
     body: ExchangeTokenRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -392,7 +392,7 @@ async def get_plaid_status(
 
 @router.delete("/disconnect", status_code=204)
 async def disconnect_plaid(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Remove the stored Plaid access token for the current user."""

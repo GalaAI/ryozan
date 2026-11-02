@@ -26,7 +26,7 @@ async def list_notifications(
     unread_only: bool = False,
     skip: int = 0,
     limit: int = Query(default=50, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List notifications for the current user."""
@@ -76,7 +76,7 @@ async def list_notifications(
 @router.post("/{notification_id}/read", status_code=204)
 async def mark_notification_read(
     notification_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Mark a single notification as read."""
@@ -93,7 +93,7 @@ async def mark_notification_read(
 
 @router.post("/read-all", status_code=204)
 async def mark_all_read(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Mark all of the current user's notifications as read."""
@@ -108,7 +108,7 @@ async def mark_all_read(
 @router.delete("/{notification_id}", status_code=204)
 async def dismiss_notification(
     notification_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a single notification."""
@@ -124,7 +124,7 @@ async def dismiss_notification(
 
 @router.delete("/", status_code=204)
 async def clear_all_notifications(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Delete all notifications for the current user."""

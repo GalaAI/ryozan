@@ -60,7 +60,7 @@ async def get_vapid_key():
 @router.post("/subscribe", status_code=201)
 async def subscribe_push(
     body: PushSubscribeRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -101,7 +101,7 @@ async def subscribe_push(
 
 @router.delete("/subscribe", status_code=204)
 async def unsubscribe_push(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Remove all push subscriptions for the current user."""

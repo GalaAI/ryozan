@@ -96,7 +96,7 @@ def _require_gateway(s, current_user=None):
 async def generate_template(
     body: GenerateTemplateRequest,
     current_user: User = Depends(require_role("artist")),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Generate an AI-powered response template for an artist."""
     info = TEMPLATE_INFO.get(body.template_type)
@@ -157,7 +157,7 @@ Write only the template text, nothing else."""
 async def generate_message(
     body: GenerateMessageRequest,
     current_user: User = Depends(require_role("artist")),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Generate an AI-powered message for client communication (Courier, booking replies)."""
     from app.services.ai_routing import call_ark_gateway_text

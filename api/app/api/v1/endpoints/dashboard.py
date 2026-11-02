@@ -113,7 +113,7 @@ def _stripe_balance_projection(current_user: User) -> dict:
 
 @router.get("/artist-summary")
 async def get_artist_summary(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -294,7 +294,7 @@ def _generate_briefing(
 
 @router.get("/daily-digest")
 async def get_daily_digest(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -849,7 +849,7 @@ def _fallback_summary(stats: dict, data: dict) -> str:
 
 @router.get("/debrief", response_model=DebriefResponse)
 async def get_daily_debrief(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -878,7 +878,7 @@ async def get_daily_debrief(
 
 @router.post("/debrief/generate")
 async def generate_and_store_debrief(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     x_cron_secret: str = Header(alias="X-Cron-Secret"),
 ):
     """

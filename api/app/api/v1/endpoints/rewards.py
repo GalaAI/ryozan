@@ -65,7 +65,7 @@ async def _transactions_with_balances(db: AsyncSession, user: User) -> list[BTTC
 
 @router.post("/portal-activity", response_model=PortalActivityResponse)
 async def record_portal_activity(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Award one modest portal-use reward per collector per UTC day."""
@@ -83,7 +83,7 @@ async def record_portal_activity(
 
 @router.get("/inventory", response_model=RewardInventoryResponse)
 async def get_reward_inventory(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     grants = (
@@ -116,7 +116,7 @@ async def get_reward_inventory(
 @router.post("/offers/{offer_id}/complete", response_model=RewardOfferCompleteResponse)
 async def complete_offer(
     offer_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Redeem one server-issued minigame opportunity after the game reports completion."""
@@ -136,7 +136,7 @@ async def complete_offer(
 
 @wallet_router.get("/wallet", response_model=BTTCoinWalletResponse)
 async def get_wallet(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     transactions = await _transactions_with_balances(db, current_user)
@@ -155,7 +155,7 @@ async def list_transactions(
     transaction_type: str | None = Query(default=None, alias="type", pattern="^(earn|spend|bonus|refund)$"),
     skip: int = 0,
     limit: int = Query(default=50, le=200),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     transactions = await _transactions_with_balances(db, current_user)
@@ -168,7 +168,7 @@ async def list_transactions(
 @wallet_router.post("/award", response_model=BTTCoinTransactionResponse)
 async def award_bttcoin(
     body: BTTCoinAwardRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("admin")),
 ):
     user = await db.get(User, body.user_id)
@@ -190,7 +190,7 @@ async def award_bttcoin(
 @wallet_router.post("/spend", response_model=BTTCoinTransactionResponse)
 async def spend_bttcoin(
     body: BTTCoinSpendRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     locked_user = await db.scalar(select(User).where(User.id == current_user.id).with_for_update())

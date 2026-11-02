@@ -94,7 +94,7 @@ class BroadcastPublishResponse(BaseModel):
 async def create_broadcast(
     data: BroadcastCreate,
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     if user.role not in STAFF_ROLES:
         raise HTTPException(403, "Only admins and founders can create broadcasts")
@@ -128,7 +128,7 @@ async def create_broadcast(
 async def list_broadcasts(
     limit: int = 20,
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     role = user.role
     # Filter by audience: "all" or matching role group
@@ -173,7 +173,7 @@ async def publish_broadcast(
     broadcast_id: str,
     data: BroadcastPublishRequest,
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     if user.role not in STAFF_ROLES:
         raise HTTPException(403, "Only admins and founders can publish broadcasts")
@@ -282,7 +282,7 @@ def _meta_error(resp: httpx.Response) -> str:
 async def submit_feedback(
     data: FeedbackCreate,
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     feedback = GalaFeedback(
         user_id=user.id,
@@ -309,7 +309,7 @@ async def list_feedback(
     status: str | None = None,
     limit: int = 50,
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     if user.role not in STAFF_ROLES:
         raise HTTPException(403, "Only admins and founders can view feedback")
@@ -348,7 +348,7 @@ async def update_feedback(
     feedback_id: str,
     data: FeedbackUpdate,
     user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     if user.role not in STAFF_ROLES:
         raise HTTPException(403, "Only admins and founders can update feedback")

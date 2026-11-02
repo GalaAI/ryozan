@@ -118,7 +118,7 @@ async def get_foundry_state(
 async def put_foundry_state(
     key: str,
     value: Any = Body(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin+: persist one exact STORE_KEYS value from Email Foundry."""
@@ -160,7 +160,7 @@ async def get_foundry_connectors(
 async def update_foundry_connector(
     connector_id: str,
     action: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Founder: connect, reconnect, disconnect, or test one Ryozan-owned provider binding."""
@@ -180,7 +180,7 @@ async def update_foundry_connector(
 @router.post("/foundry/outbox/{entry_id}/approve")
 async def approve_foundry_outbox(
     entry_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Founder: approve one held list send, execute it, and return its receipt."""
@@ -208,7 +208,7 @@ async def approve_foundry_outbox(
 @router.post("/foundry/assist")
 async def assist_foundry(
     body: FoundryAssistRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin+: execute the locked Herald drafting control through Ark's model gateway."""
@@ -274,7 +274,7 @@ async def confirm_foundry_unsubscribe(token: str = Query(...)):
 @router.post("/foundry/unsubscribe", response_class=HTMLResponse)
 async def unsubscribe_foundry(
     token: str = Form(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Apply the signed marketing opt-out without accepting a login token."""
     try:
@@ -292,7 +292,7 @@ async def unsubscribe_foundry(
 
 @router.get("/", response_model=list[TemplateResponse])
 async def list_templates(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin+: list all email templates."""
@@ -304,7 +304,7 @@ async def list_templates(
 @router.get("/{slug}", response_model=TemplateResponse)
 async def get_template(
     slug: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin+: get a single template by slug."""
@@ -320,7 +320,7 @@ async def get_template(
 async def update_template(
     slug: str,
     body: TemplateUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin+: update a template's content, subject, or status."""
@@ -357,7 +357,7 @@ class TemplateSendRequest(BaseModel):
 async def send_template_manual(
     slug: str,
     body: TemplateSendRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin+: manually send the locked Foundry template when available."""
@@ -402,7 +402,7 @@ async def send_template_manual(
 
 @router.post("/seed", status_code=200)
 async def seed_templates(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

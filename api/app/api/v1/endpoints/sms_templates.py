@@ -157,7 +157,7 @@ def _segment_count(body: str) -> int:
 
 @router.get("/", response_model=list[TemplateResponse])
 async def list_templates(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff+: list every template the caller is allowed to see.
@@ -182,7 +182,7 @@ async def list_templates(
 @router.get("/{slug}", response_model=TemplateResponse)
 async def get_template(
     slug: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
@@ -196,7 +196,7 @@ async def get_template(
 @router.post("/", response_model=TemplateResponse, status_code=201)
 async def create_template(
     body: TemplateCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff+: create a new template.
@@ -248,7 +248,7 @@ async def create_template(
 async def update_template(
     slug: str,
     body: TemplateUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     _require_staff(current_user)
@@ -271,7 +271,7 @@ async def update_template(
 @router.delete("/{slug}", status_code=204)
 async def delete_template(
     slug: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a template. Same edit gate as PATCH."""
@@ -312,7 +312,7 @@ class TemplateSendRequest(BaseModel):
 async def send_template_manual(
     slug: str,
     body: TemplateSendRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff+: send a template. Staff can only send their own templates or
@@ -359,7 +359,7 @@ async def send_template_manual(
 
 @router.post("/seed", status_code=200)
 async def seed_templates(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Founder only: upsert all hardcoded shop-level SMS templates."""
