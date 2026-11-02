@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { calendar as calendarApi, sessionTypes as sessionTypesApi, type BookingKind, type SessionType } from '../../lib/api'
 import { formatCustomerPrice } from '../../lib/format'
-import { isClosedDay, isRequestOnlyDay, timezoneLabel, todayInStudioTimezone, weekdayLongName, weekdayOf } from '../../lib/studio-settings'
+import { isClosedDay, isRequestOnlyDay, openDaysLabel, timezoneLabel, todayInStudioTimezone, weekdayLongName, weekdayOf } from '../../lib/studio-settings'
 import { useStudioSettings } from '../../hooks/useStudioSettings'
 import '../../styles/dashboard.css'
 // The .day-pref-* layout/slot styles live in booking.css. Import them here so
@@ -362,7 +362,7 @@ export function DayPreference({
             <span className="day-pref-huddl-kicker"><i aria-hidden="true" /> LIVE CONSULTATION</span>
             <strong>Choose a verified time</strong>
           </div>
-          <span className="day-pref-huddl-meta">{['30 MIN', 'TUE-SAT', timezoneLabel(studioSettings)].filter(Boolean).join(' / ')}</span>
+          <span className="day-pref-huddl-meta">{['30 MIN', openDaysLabel(studioSettings.booking_hours.consultation), timezoneLabel(studioSettings)].filter(Boolean).join(' / ')}</span>
         </div>
       )}
       <div className="day-pref-layout">

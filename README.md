@@ -214,6 +214,8 @@ The web app reads these from `GET /api/v1/studio/settings` (public, no auth, cac
 | `BOOKING_CLOSED_WEEKDAYS` | `booking_days.closed_weekdays` | Weekdays (`sun`..`sat`, comma-separated) the public booking calendar shows as closed. |
 | `BOOKING_REQUEST_ONLY_WEEKDAYS` | `booking_days.request_only_weekdays` | Weekdays that take a request instead of a time slot. |
 | `BOOKING_REQUEST_ONLY_ARTIST_SLUGS` | `booking_days.request_only_artist_slugs` | Artists the request-only days apply to. Blank: every artist. |
+| `BOOKING_WORK_HOURS` | `booking_hours.work` | When tattoo appointments book, as `wed=11-18,thu=11-18` in whole hours. A day left out is closed. An artist's own working hours replace this for that artist. |
+| `BOOKING_CONSULTATION_HOURS` | `booking_hours.consultation` | When consultations book, in the same form. |
 | `DEFAULT_ARTIST_SLUG` | `default_artist_slug` | Artist for "any artist" requests; also the artist whose bookings and slot diagnostics the manager Huddle shows. |
 | `WAIVER_TEMPLATE_ID` | `waiver_template_id` | Template for the staff "Send Waiver" action. Blank: the active `Tattoo Consent Waiver` template. |
 | `SAMPLE_FLASH_URLS` | `sample_flash_urls` | Comma-separated stand-in flash previews, used only by a local dev build. |

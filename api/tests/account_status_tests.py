@@ -36,6 +36,10 @@ class AccountSession(FixtureSession):
     async def commit(self):
         self.commits += 1
 
+    async def scalar(self, stmt):
+        self.statements.append(stmt)
+        return None
+
 
 class AccountStatusTests(unittest.TestCase):
     def setUp(self):
@@ -230,6 +234,7 @@ class AccountStatusTests(unittest.TestCase):
         self.assertEqual(password_status(created), "user_set")
         self.assertEqual(created.password_change_method, "invite")
         self.assertEqual(created.last_login_method, "invite")
+        self.assertEqual(created.slug, "new-fixture-artist")
 
     def test_new_orm_accounts_default_to_setup_not_user_choice(self):
         for field in ("password_state", "password_changed_at", "password_change_method"):

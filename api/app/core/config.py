@@ -24,6 +24,8 @@ from app.core.legacy_env import warn_legacy_env
 # Weekday names for the booking-day settings, Sunday first like the browser's
 # Date.getDay(). Full names are accepted on input and stored as the short form.
 WEEKDAYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")
+# Python weekday order, which the slot engine and artist working_hours key on.
+ENGINE_WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 WEEKDAY_ALIASES = {
     **{day: day for day in WEEKDAYS},
     "sunday": "sun",
@@ -70,6 +72,34 @@ def _is_public_image_url(value: str) -> bool:
     if value.startswith("/") and not value.startswith("//"):
         return not _URL_FORBIDDEN.search(value)
     return _is_web_url(value)
+
+
+def _parse_booking_hours(value: str) -> dict[str, tuple[int, int]]:
+    """Read day=open-close pairs. Raises ValueError with a message the owner can act on."""
+    hours: dict[str, tuple[int, int]] = {}
+    for part in (value or "").split(","):
+        if not part.strip():
+            continue
+        name, _, span = part.partition("=")
+        day = WEEKDAY_ALIASES.get(name.strip().lower())
+        if day is None:
+            raise ValueError(f"unknown weekday {name.strip()!r}; use sun, mon, tue, wed, thu, fri or sat")
+        opens, _, closes = span.partition("-")
+        try:
+            open_hour, close_hour = int(opens), int(closes)
+        except ValueError:
+            raise ValueError(f"hours for {day} must look like {day}=11-18, in whole hours") from None
+        if not 0 <= open_hour < close_hour <= 23:
+            raise ValueError(
+                f"{day}: the opening time must be before the closing time, and closing no later than 11 PM"
+            )
+        hours[day] = (open_hour, close_hour)
+    return hours
+
+
+def _weekly_schedule(value: str) -> dict[int, tuple[int, int] | None]:
+    hours = _parse_booking_hours(value)
+    return {index: hours.get(day) for index, day in enumerate(ENGINE_WEEKDAYS)}
 
 
 class Settings(BaseSettings):
@@ -242,6 +272,11 @@ class Settings(BaseSettings):
     BOOKING_CLOSED_WEEKDAYS: str = ""
     BOOKING_REQUEST_ONLY_WEEKDAYS: str = ""
     BOOKING_REQUEST_ONLY_ARTIST_SLUGS: str = ""
+    # When the studio books, as comma-separated day=open-close in whole hours on
+    # the 24-hour clock (wed=11-18). A day left out is closed; blank closes every
+    # day. An artist's own working hours replace BOOKING_WORK_HOURS for that artist.
+    BOOKING_WORK_HOURS: str = "wed=11-18,thu=11-18,fri=11-20,sat=11-20"
+    BOOKING_CONSULTATION_HOURS: str = "tue=11-17,wed=11-17,thu=11-17,fri=11-17,sat=11-17"
     # Document template id the staff "Send Waiver" action uses. Blank falls back
     # to the active "Tattoo Consent Waiver" template, the same one /waiver uses.
     WAIVER_TEMPLATE_ID: str = ""
@@ -341,6 +376,14 @@ class Settings(BaseSettings):
         return sorted(self._csv_set(self.BOOKING_REQUEST_ONLY_ARTIST_SLUGS))
 
     @property
+    def booking_work_schedule(self) -> dict[int, tuple[int, int] | None]:
+        return _weekly_schedule(self.BOOKING_WORK_HOURS)
+
+    @property
+    def booking_consultation_schedule(self) -> dict[int, tuple[int, int] | None]:
+        return _weekly_schedule(self.BOOKING_CONSULTATION_HOURS)
+
+    @property
     def sample_flash_urls(self) -> list[str]:
         return self._csv_list(self.SAMPLE_FLASH_URLS)
 
@@ -432,6 +475,13 @@ class Settings(BaseSettings):
             except ValueError as exc:
                 raise ValueError(f"{info.field_name} must be a UUID") from exc
         return value
+
+    @field_validator("BOOKING_WORK_HOURS", "BOOKING_CONSULTATION_HOURS")
+    @classmethod
+    def normalize_booking_hours(cls, value: str) -> str:
+        """Canonical form: one day=open-close per open day, Sunday first."""
+        hours = _parse_booking_hours(value)
+        return ",".join(f"{day}={hours[day][0]}-{hours[day][1]}" for day in WEEKDAYS if day in hours)
 
     @field_validator("STUDIO_TIMEZONE")
     @classmethod

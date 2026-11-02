@@ -11,7 +11,7 @@ const studio = await import(`data:text/javascript;base64,${Buffer.from(outputTex
 const {
   NEUTRAL_STUDIO_SETTINGS, normalizeStudioSettings, createStudioSettingsLoader, isClosedDay, isRequestOnlyDay,
   todayInStudioTimezone, timezoneLabel, sampleFlashUrl, resolveWaiverTemplateId, weekdayOf,
-  NEUTRAL_STUDIO_SITE, resolvePublicSiteMode,
+  NEUTRAL_STUDIO_SITE, resolvePublicSiteMode, parseHoursSetting, formatHoursSetting, openDaysLabel, hourLabel,
 } = studio
 
 const configured = normalizeStudioSettings({
@@ -22,6 +22,7 @@ const configured = normalizeStudioSettings({
   address: '',
   timezone: 'America/Chicago',
   booking_days: { closed_weekdays: ['sun', 'mon'], request_only_weekdays: ['tue'], request_only_artist_slugs: ['sam'] },
+  booking_hours: { work: { 0: [9, 17], 1: null }, consultation: { 2: [11, 17] } },
   default_artist_slug: 'sam',
   waiver_template_id: '',
   sample_flash_urls: ['https://cdn.example.test/a.jpg', 'https://cdn.example.test/b.jpg'],
@@ -34,10 +35,11 @@ const WEDNESDAY = '2026-11-04'
 
 test('neutral settings hold no studio data', () => {
   for (const [key, value] of Object.entries(NEUTRAL_STUDIO_SETTINGS)) {
-    if (key === 'booking_days' || key === 'site') continue
+    if (key === 'booking_days' || key === 'booking_hours' || key === 'site') continue
     assert.ok(value === '' || (Array.isArray(value) && value.length === 0), key)
   }
   assert.deepEqual(NEUTRAL_STUDIO_SETTINGS.booking_days, { closed_weekdays: [], request_only_weekdays: [], request_only_artist_slugs: [] })
+  assert.deepEqual(NEUTRAL_STUDIO_SETTINGS.booking_hours, { work: {}, consultation: {} })
   // A new install shows the product landing and has no studio website content.
   assert.equal(NEUTRAL_STUDIO_SETTINGS.site, NEUTRAL_STUDIO_SITE)
   assert.equal(NEUTRAL_STUDIO_SITE.mode, 'product')
@@ -186,4 +188,28 @@ test('refresh replaces the cached read after an owner saves', async () => {
   assert.equal((await loader.load()).timezone, 'Asia/Tokyo')
   await assert.rejects(loader.refresh(async () => { throw new Error('offline') }))
   assert.equal(loader.cached().studio_name, 'New Name')
+})
+
+test('booking hours round-trip through the setting and drop what they cannot read', () => {
+  const hours = parseHoursSetting('wed=11-18, fri=11-20,noday=1-2,sat=late')
+  assert.deepEqual(hours, { wed: [11, 18], fri: [11, 20] })
+  assert.equal(formatHoursSetting({ ...hours, sun: [9, 12] }), 'sun=9-12,wed=11-18,fri=11-20')
+  assert.deepEqual(parseHoursSetting(undefined), {})
+  assert.equal(formatHoursSetting({}), '')
+})
+
+test('booking hours are normalized and malformed days read as closed', () => {
+  const settings = normalizeStudioSettings({ booking_hours: { work: { 0: [9, 17], 1: 'x', 9: [1, 2] } } })
+  assert.deepEqual(settings.booking_hours, { work: { 0: [9, 17], 1: null }, consultation: {} })
+})
+
+test('hours read the way people say them', () => {
+  assert.deepEqual([0, 9, 12, 13, 23].map(hourLabel), ['12 AM', '9 AM', '12 PM', '1 PM', '11 PM'])
+})
+
+test('open days read as short ranges', () => {
+  const span = [11, 17]
+  assert.equal(openDaysLabel({ 1: span, 2: span, 3: span, 4: span, 5: span, 0: null, 6: null }), 'TUE-SAT')
+  assert.equal(openDaysLabel({ 0: span, 2: span, 3: span, 4: span }), 'MON, WED-FRI')
+  assert.equal(openDaysLabel({}), '')
 })

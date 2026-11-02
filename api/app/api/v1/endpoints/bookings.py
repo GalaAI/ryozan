@@ -26,7 +26,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.calendar import (
-    _WORK_SCHEDULE,
     _active_holds_for_range,
     _artist_booking_rules,
     _booking_interval,
@@ -331,6 +330,7 @@ async def _schedule_blocking_reasons(
     max_advance_days: int,
     allow_same_day: bool,
     busy_blocks: list[dict],
+    work_schedule: dict[int, tuple[int, int] | None],
     exclude_booking_id: UUID | None = None,
 ) -> list[str]:
     slot_start = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=shop_timezone()).replace(
@@ -339,7 +339,7 @@ async def _schedule_blocking_reasons(
     )
     slot_end = slot_start + timedelta(minutes=duration_minutes)
     reasons: list[str] = []
-    hours = _WORK_SCHEDULE[slot_start.weekday()]
+    hours = work_schedule[slot_start.weekday()]
     earliest, latest = _rule_window(
         minimum_notice_hours=minimum_notice_hours,
         max_advance_days=max_advance_days,
@@ -411,6 +411,7 @@ async def _authorize_schedule_override(
     max_advance_days: int,
     allow_same_day: bool,
     busy_blocks: list[dict],
+    work_schedule: dict[int, tuple[int, int] | None],
     exclude_booking_id: UUID | None,
     allow_conflict: bool,
     allow_out_of_bounds: bool,
@@ -435,6 +436,7 @@ async def _authorize_schedule_override(
         max_advance_days=max_advance_days,
         allow_same_day=allow_same_day,
         busy_blocks=busy_blocks,
+        work_schedule=work_schedule,
         exclude_booking_id=exclude_booking_id,
     )
     conflict_reasons = {"google_busy", "booking_conflict", "active_hold"}
@@ -2364,6 +2366,7 @@ async def _booky_retry_blockers(
         max_advance_days=max_advance_days,
         allow_same_day=allow_same_day,
         busy_blocks=busy_blocks,
+        work_schedule=_resolve_artist_work_schedule(artist, booking.booking_kind == "consultation"),
         exclude_booking_id=booking.id,
     )
 
@@ -4757,6 +4760,7 @@ async def update_booking(
                     max_advance_days=max_advance_days,
                     allow_same_day=allow_same_day,
                     busy_blocks=busy_blocks,
+                    work_schedule=_resolve_artist_work_schedule(artist),
                     exclude_booking_id=booking.id,
                     allow_conflict=allow_conflict,
                     allow_out_of_bounds=allow_out_of_bounds,
@@ -4962,6 +4966,7 @@ async def _validate_staff_slot(
             max_advance_days=max_advance_days,
             allow_same_day=allow_same_day,
             busy_blocks=busy_blocks,
+            work_schedule=_resolve_artist_work_schedule(artist),
             exclude_booking_id=booking.id,
             allow_conflict=allow_conflict,
             allow_out_of_bounds=allow_out_of_bounds,

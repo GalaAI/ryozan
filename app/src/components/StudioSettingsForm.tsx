@@ -10,10 +10,11 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Button, Chip, ChipGroup, SectionLabel, TextField } from '@ryozan/ui'
 import { studio, type StudioSettingsEdit } from '../lib/api'
 import { refreshStudioSettings } from '../hooks/useStudioSettings'
-import { STUDIO_WEEKDAYS, studioTimezoneOptions, weekdayLongName } from '../lib/studio-settings'
+import { STUDIO_WEEKDAYS, formatHoursSetting, hourLabel, parseHoursSetting, studioTimezoneOptions, weekdayLongName } from '../lib/studio-settings'
 import type { StudioWeekday } from '../lib/api'
 
-type TextKey = Exclude<keyof StudioSettingsEdit, 'BOOKING_CLOSED_WEEKDAYS' | 'BOOKING_REQUEST_ONLY_WEEKDAYS' | 'PUBLIC_SITE_MODE'>
+type HoursKey = 'BOOKING_WORK_HOURS' | 'BOOKING_CONSULTATION_HOURS'
+type TextKey = Exclude<keyof StudioSettingsEdit, 'BOOKING_CLOSED_WEEKDAYS' | 'BOOKING_REQUEST_ONLY_WEEKDAYS' | 'PUBLIC_SITE_MODE' | HoursKey>
 
 const STUDIO_FIELDS: Array<{ key: TextKey; label: string; type?: string; hint?: string; rows?: number }> = [
   { key: 'STUDIO_NAME', label: 'Studio name', hint: 'On client email, texts, PDFs and your legal pages.' },
@@ -27,15 +28,16 @@ const STUDIO_FIELDS: Array<{ key: TextKey; label: string; type?: string; hint?: 
 const SITE_FIELDS: Array<{ key: TextKey; label: string; hint?: string; rows?: number }> = [
   { key: 'STUDIO_TAGLINE', label: 'Tagline' },
   { key: 'STUDIO_STORY', label: 'Our story', rows: 6, hint: 'Separate paragraphs with a blank line.' },
-  { key: 'STUDIO_HOURS', label: 'Opening hours', rows: 4, hint: 'One row per line.' },
+  { key: 'STUDIO_HOURS', label: 'Opening hours', rows: 4, hint: 'What the site shows, one row per line. Booking times follow Booking hours above.' },
   { key: 'STUDIO_HERO_IMAGE_URL', label: 'Hero image', hint: 'An https:// link or a site path.' },
   { key: 'STUDIO_GALLERY_IMAGE_URLS', label: 'Gallery images', hint: 'Comma-separated links.' },
   { key: 'STUDIO_SOCIAL_LINKS', label: 'Social links', hint: 'Comma-separated, like Instagram=https://instagram.com/your-studio' },
 ]
 
 const csvDays = (value: string | undefined) => (value ?? '').split(',').map((day) => day.trim()).filter(Boolean)
+const NEW_DAY_HOURS: [number, number] = [11, 18]
 const fieldStack = { display: 'grid', gap: 'var(--space-3)' }
-// @ryozan/ui has no multi-line field yet; this matches TextField token for token.
+// @ryozan/ui has no multi-line field or select yet; these match TextField token for token.
 const multilineStyle = {
   width: '100%',
   boxSizing: 'border-box',
@@ -48,6 +50,7 @@ const multilineStyle = {
   fontSize: 'var(--text-sm)',
   resize: 'vertical',
 } as const
+const selectStyle = { ...multilineStyle, width: 'auto', resize: undefined, colorScheme: 'dark' } as const
 
 export default function StudioSettingsForm() {
   const zones = useMemo(() => studioTimezoneOptions(), [])
@@ -115,6 +118,54 @@ export default function StudioSettingsForm() {
     </ChipGroup>
   )
 
+  const hoursEditor = (key: HoursKey, label: string) => {
+    const hours = parseHoursSetting(values[key])
+    const setDay = (day: StudioWeekday, span: [number, number] | null) => {
+      const next = { ...hours }
+      if (span) next[day] = span
+      else delete next[day]
+      set(key, formatHoursSetting(next))
+    }
+    const hourSelect = (day: StudioWeekday, span: [number, number], end: 0 | 1, name: string) => (
+      <select
+        style={selectStyle}
+        aria-label={`${weekdayLongName(day)} ${name}, ${label}`}
+        value={span[end]}
+        onChange={(e) => {
+          const hour = Number(e.target.value)
+          setDay(day, end === 0 ? [hour, span[1]] : [span[0], hour])
+        }}
+      >
+        {Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{hourLabel(hour)}</option>)}
+      </select>
+    )
+    return (
+      <ChipGroup label={label}>
+        <div style={fieldStack}>
+          {STUDIO_WEEKDAYS.map((day) => {
+            const span = hours[day]
+            return (
+              <div key={day} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 'var(--space-2)' }}>
+                <div style={{ minWidth: '6rem' }}>
+                  <Chip type="button" selected={Boolean(span)} onClick={() => setDay(day, span ? null : NEW_DAY_HOURS)}>
+                    {weekdayLongName(day)}
+                  </Chip>
+                </div>
+                {span ? (
+                  <>
+                    {hourSelect(day, span, 0, 'opens')}
+                    <SectionLabel>to</SectionLabel>
+                    {hourSelect(day, span, 1, 'closes')}
+                  </>
+                ) : <SectionLabel>Closed</SectionLabel>}
+              </div>
+            )
+          })}
+        </div>
+      </ChipGroup>
+    )
+  }
+
   return (
     <form aria-label="Studio settings" onSubmit={handleSubmit} style={{ display: 'grid', gap: 'var(--space-6)' }}>
       <section style={fieldStack}>
@@ -132,8 +183,15 @@ export default function StudioSettingsForm() {
       </section>
 
       <section style={fieldStack}>
+        <SectionLabel>Booking hours</SectionLabel>
+        {hoursEditor('BOOKING_WORK_HOURS', 'Tattoo appointments')}
+        {hoursEditor('BOOKING_CONSULTATION_HOURS', 'Consultations')}
+        <SectionLabel>Whole hours, closing by 11 PM. An artist who sets their own working hours replaces the tattoo hours for themselves.</SectionLabel>
+      </section>
+
+      <section style={fieldStack}>
         <SectionLabel>Booking days</SectionLabel>
-        {dayChips('BOOKING_CLOSED_WEEKDAYS', 'Closed')}
+        {dayChips('BOOKING_CLOSED_WEEKDAYS', 'Closed for everyone')}
         {dayChips('BOOKING_REQUEST_ONLY_WEEKDAYS', 'By request only')}
       </section>
 

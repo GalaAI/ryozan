@@ -75,7 +75,7 @@ does not recognize as local without `--allow-nonlocal-db`.
 
 1. After setup you land in the portal. Later, open http://localhost:15300,
    choose **Open the studio portal** and sign in.
-2. Under Account, open **Studio settings** and fill in your contact details.
+2. Under Account, open **Studio settings** and fill in your contact details and booking hours. New installs start on Wednesday to Saturday.
 3. On the Booking tab, use **New booking** to record a real inquiry through the
    booking API; it appears in the calendar, the Hub counts and Gala's tools.
 4. Ask Gala "What is on my schedule?" in the Hub. Gala answers through the
