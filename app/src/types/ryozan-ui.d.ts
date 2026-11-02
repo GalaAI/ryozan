@@ -299,3 +299,15 @@ export const token: {
   readonly size: Record<string, string>
   readonly space: Record<string, string>
 }
+
+export interface ChipProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'aria-pressed'> {
+  selected?: boolean
+  accent?: string
+  children?: React.ReactNode
+}
+export declare const Chip: React.ForwardRefExoticComponent<ChipProps & React.RefAttributes<HTMLButtonElement>>
+export interface ChipGroupProps extends React.HTMLAttributes<HTMLDivElement> {
+  label?: React.ReactNode
+  children?: React.ReactNode
+}
+export declare function ChipGroup(props: ChipGroupProps): React.JSX.Element

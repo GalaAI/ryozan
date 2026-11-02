@@ -140,11 +140,11 @@ Full steps, including Windows commands, are in [`docs/QUICKSTART.md`](docs/QUICK
 cp .env.example .env              # POSTGRES_PASSWORD for docker compose
 cp api/.env.example api/.env      # then set NEBIUS_API_KEY in api/.env
 docker compose up -d db api app
-# create the first account and print its password
-docker compose exec api python scripts/bootstrap_dev_login.py --allow-nonlocal-db
+# read the setup code for your new install
+docker compose logs api | grep "New install"
 ```
 
-Open http://localhost:15300, choose **Open the studio portal** and sign in with the printed founder account. Every port binds to 127.0.0.1.
+Open http://localhost:15300/setup, enter the setup code, and name your studio, its time zone and your owner account. You are signed in when it finishes. Every port binds to 127.0.0.1.
 
 ### Manual (Python 3.12, Node 20+)
 
@@ -155,9 +155,10 @@ cd api && python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/alembic upgrade head                # builds the schema; the API never creates tables itself
 .venv/bin/uvicorn main:app --host 127.0.0.1 --port 18788
 # in a second terminal
-cd api && .venv/bin/python scripts/bootstrap_dev_login.py
 cd app && npm ci && npm run dev
 ```
+
+Then open http://localhost:15300/setup and enter the setup code from the API's startup log (the line that starts `[Ryozan] New install`).
 
 Alembic builds and changes the schema ([`api/alembic/README.md`](api/alembic/README.md)). The Docker images run `alembic upgrade head` before the API starts. The web dev server proxies `/api` to `http://127.0.0.1:18788`.
 
@@ -189,9 +190,12 @@ The API reads `api/.env`. Copy [`api/.env.example`](api/.env.example) to start. 
 
 ### Studio identity
 
+The owner edits the name, time zone, contact details, booking days and public site in the app (Account, then Studio settings). A value saved there wins over the variable of the same name, and applies at once. Secrets, URLs and provider keys are variables only.
+
 | Variable | What it does |
 | --- | --- |
 | `STUDIO_NAME` | Name printed on client email, SMS, calendar invites, PDFs, payment line items, the AI assistants' introductions and the `/privacy` and `/sms-terms` pages. Default `Ryozan Studio`. |
+| `STUDIO_TIMEZONE` | IANA zone the studio trades in: booking times, reminders, client-facing times, Google Calendar entries and which day a payment lands on. Default `America/New_York`. |
 | `EMAIL_ASSET_BASE_URL` | Where client email loads its logo (`tiger-mark.png`) and background tile (`starseed-tile.png`). Blank serves the copies in `app/public/email` from `FRONTEND_URL`; point it at your own folder to use your own logo. |
 | `STUDIO_ADDRESS` | Postal address for email footers and PDFs. Nothing prints when blank. |
 
@@ -206,7 +210,7 @@ The web app reads these from `GET /api/v1/studio/settings` (public, no auth, cac
 | `SHOP_EMAIL` | `contact_email` | Shop inbox: public contact, Reply-To on outbound email, fallback From address, copy of booking alerts, fallback VAPID subject. |
 | `STUDIO_PHONE` | `contact_phone` | Studio phone in staff emergency contacts. |
 | `STUDIO_ADDRESS` | `address` | Postal address (see Studio identity). |
-| none | `timezone` | The booking engine's zone, `SHOP_TIMEZONE` in `api/app/constants/timezones.py`. |
+| `STUDIO_TIMEZONE` | `timezone` | The booking engine's zone (see Studio identity). |
 | `BOOKING_CLOSED_WEEKDAYS` | `booking_days.closed_weekdays` | Weekdays (`sun`..`sat`, comma-separated) the public booking calendar shows as closed. |
 | `BOOKING_REQUEST_ONLY_WEEKDAYS` | `booking_days.request_only_weekdays` | Weekdays that take a request instead of a time slot. |
 | `BOOKING_REQUEST_ONLY_ARTIST_SLUGS` | `booking_days.request_only_artist_slugs` | Artists the request-only days apply to. Blank: every artist. |

@@ -177,3 +177,13 @@ test('the public site mode: product by default, studio by setting or listed host
   assert.equal(resolvePublicSiteMode(byHost, 'example.test'), 'product')
   assert.equal(resolvePublicSiteMode(byHost, ''), 'product')
 })
+
+test('refresh replaces the cached read after an owner saves', async () => {
+  const loader = createStudioSettingsLoader(async () => ({ studio_name: 'Old Name', timezone: 'America/New_York' }))
+  await loader.load()
+  await loader.refresh(async () => ({ studio_name: 'New Name', timezone: 'Asia/Tokyo' }))
+  assert.equal(loader.cached().studio_name, 'New Name')
+  assert.equal((await loader.load()).timezone, 'Asia/Tokyo')
+  await assert.rejects(loader.refresh(async () => { throw new Error('offline') }))
+  assert.equal(loader.cached().studio_name, 'New Name')
+})

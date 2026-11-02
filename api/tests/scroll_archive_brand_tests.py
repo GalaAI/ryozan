@@ -3,7 +3,7 @@ Artist Scroll owner email and archive PDF in the Ryozan brand, plus the starseed
 
 Pins: every outgoing body points at this deployment's brand images, with a versioned starseed
 tile (mail clients cache it for a long time, so a replaced tile needs a new URL), the owner "scroll filed" email uses
-the Email Foundry shell with a working Codex link and ET timestamp, and the archive PDF carries
+the Email Foundry shell with a working Codex link and studio-time timestamp, and the archive PDF carries
 the branded header while keeping every missing/failed statement the archive exists to make.
 """
 
@@ -111,7 +111,7 @@ class OwnerArchiveEmailBrandTests(unittest.TestCase):
         self.assertIn("Stored", html)
         self.assertIn("Not provided", html)
         self.assertIn("UPLOAD FAILED: timeout", html)
-        self.assertIn("September 29, 2026 at 1:20 PM ET", html)
+        self.assertIn("September 29, 2026 at 1:20 PM EDT", html)
         self.assertIn("A complete PDF copy is attached", html)
 
     def test_no_dashes_and_missing_pdf_is_stated(self):
@@ -146,7 +146,7 @@ class ScrollPdfBrandTests(unittest.TestCase):
         self.assertIn("RYOZAN STUDIO", text)
         self.assertIn("ARTIST SCROLL // OWNER ARCHIVE COPY", text)
         self.assertIn("PAGE 1", text)
-        self.assertIn("September 29, 2026 at 1:20 PM ET", text)
+        self.assertIn("September 29, 2026 at 1:20 PM EDT", text)
         self.assertIn("Not provided", text)
         self.assertIn("UPLOAD FAILED", text)
         self.assertIn("DOCUMENT NOT STORED", text)

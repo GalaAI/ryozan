@@ -1,24 +1,50 @@
 """
-Public studio settings: the display and behaviour values a browser needs.
+Studio settings and first-run setup.
 
-  GET /studio/settings   no auth, cacheable
+  GET  /studio/settings        no auth, cacheable: the values a browser needs
+  GET  /studio/settings/edit   founder: the values the owner can change
+  PUT  /studio/settings/edit   founder: save some of them
+  GET  /studio/setup           no auth: does this install still need an owner?
+  POST /studio/setup           no auth, needs the setup code: claim a new install
 
-One install is one studio. Everything here is read from Settings, so a new
-install shows neutral copy until it sets its own values. Only non-secret
-values belong here: anything added to this response is world-readable.
+One install is one studio. Everything in GET /studio/settings is read from
+Settings, so a new install shows neutral copy until it sets its own values. Only
+non-secret values belong there: anything added to that response is world-readable.
 """
 
+from datetime import UTC, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Response
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.config import Settings, get_settings
+from app.core.database import get_db
+from app.core.rate_limit import limiter
+from app.core.security import create_user_access_token, hash_password, require_role
+from app.models.studio_setting import StudioSetting
+from app.models.user import User, normalize_email
+from app.schemas.user import Token
+from app.services.account_status import record_successful_login
+from app.services.studio_config import (
+    EDITABLE_SETTINGS,
+    SETUP_CLAIM_KEY,
+    StudioSettingsError,
+    apply_values,
+    saved_rows,
+    setup_code_matches,
+    setup_is_open,
+    stage_settings,
+    validated_changes,
+)
 
 router = APIRouter(prefix="/studio", tags=["studio"])
 
-# Settings change only on redeploy; five minutes keeps a stale tab honest.
+# An owner's save reaches a stale tab within five minutes.
 STUDIO_SETTINGS_CACHE_CONTROL = "public, max-age=300"
 
 
@@ -74,7 +100,7 @@ def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
         contact_email=settings.SHOP_EMAIL.strip(),
         contact_phone=settings.STUDIO_PHONE.strip(),
         address=settings.STUDIO_ADDRESS.strip(),
-        timezone=SHOP_TIMEZONE.key,
+        timezone=shop_timezone().key,
         booking_days=StudioBookingDays(
             closed_weekdays=settings.booking_closed_weekdays,
             request_only_weekdays=settings.booking_request_only_weekdays,
@@ -102,3 +128,127 @@ async def get_studio_settings(response: Response) -> StudioSettingsResponse:
     """Public, non-secret studio display and booking settings. No auth required."""
     response.headers["Cache-Control"] = STUDIO_SETTINGS_CACHE_CONTROL
     return build_studio_settings(get_settings())
+
+
+class StudioSettingsEdit(BaseModel):
+    """The values the owner can edit, by their Settings names. Omitted means unchanged."""
+
+    STUDIO_NAME: str | None = Field(default=None, max_length=120)
+    STUDIO_TIMEZONE: str | None = Field(default=None, max_length=64)
+    STUDIO_OWNER_NAME: str | None = Field(default=None, max_length=120)
+    SHOP_EMAIL: EmailStr | Literal[""] | None = None
+    STUDIO_PHONE: str | None = Field(default=None, max_length=40)
+    STUDIO_ADDRESS: str | None = Field(default=None, max_length=300)
+    STUDIO_ARTIST_ROSTER: str | None = Field(default=None, max_length=4000)
+    BOOKING_CLOSED_WEEKDAYS: str | None = Field(default=None, max_length=60)
+    BOOKING_REQUEST_ONLY_WEEKDAYS: str | None = Field(default=None, max_length=60)
+    PUBLIC_SITE_MODE: Literal["product", "studio"] | None = None
+    STUDIO_TAGLINE: str | None = Field(default=None, max_length=200)
+    STUDIO_STORY: str | None = Field(default=None, max_length=8000)
+    STUDIO_HOURS: str | None = Field(default=None, max_length=1000)
+    STUDIO_HERO_IMAGE_URL: str | None = Field(default=None, max_length=1000)
+    STUDIO_GALLERY_IMAGE_URLS: str | None = Field(default=None, max_length=8000)
+    STUDIO_SOCIAL_LINKS: str | None = Field(default=None, max_length=2000)
+
+
+def _editable_values(settings: Settings) -> dict[str, str]:
+    return {key: getattr(settings, key) for key in EDITABLE_SETTINGS}
+
+
+@router.get("/settings/edit", response_model=StudioSettingsEdit)
+async def get_editable_settings(_founder: User = Depends(require_role("founder"))) -> dict[str, str]:
+    """The current value of everything the owner can edit."""
+    return _editable_values(get_settings())
+
+
+@router.put("/settings/edit", response_model=StudioSettingsEdit)
+async def save_editable_settings(
+    body: StudioSettingsEdit,
+    _founder: User = Depends(require_role("founder")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Save the submitted values. They apply at once, with no redeploy."""
+    settings = get_settings()
+    changes = {key: value for key, value in body.model_dump(exclude_unset=True).items() if value is not None}
+    try:
+        clean = validated_changes(settings, changes)
+    except StudioSettingsError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    stage_settings(db, await saved_rows(db, list(clean)), clean)
+    await db.commit()
+    apply_values(settings, clean)
+    return _editable_values(settings)
+
+
+class StudioSetupStatus(BaseModel):
+    needs_setup: bool
+
+
+class StudioSetupRequest(BaseModel):
+    setup_code: str = Field(min_length=1, max_length=40)
+    studio_name: str = Field(min_length=1, max_length=120)
+    timezone: str = Field(min_length=1, max_length=64)
+    owner_name: str = Field(min_length=1, max_length=120)
+    email: EmailStr
+    password: str = Field(min_length=8)
+
+
+@router.get("/setup", response_model=StudioSetupStatus)
+async def get_setup_status(response: Response, db: AsyncSession = Depends(get_db)) -> StudioSetupStatus:
+    response.headers["Cache-Control"] = "no-store"
+    return StudioSetupStatus(needs_setup=await setup_is_open(db))
+
+
+@router.post("/setup", response_model=Token, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
+async def claim_install(request: Request, body: StudioSetupRequest, db: AsyncSession = Depends(get_db)) -> Token:
+    """Claim a new install: create its owner, save its identity, and sign the owner in."""
+    settings = get_settings()
+    if not await setup_is_open(db):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This studio is already set up.")
+    if not setup_code_matches(settings, body.setup_code):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="That setup code is not right.")
+
+    email = normalize_email(body.email)
+    owner_name = body.owner_name.strip()
+    taken = await db.scalar(select(func.count()).select_from(User).where(func.lower(User.email) == email))
+    if taken:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="That email already has an account here.")
+    try:
+        clean = validated_changes(
+            settings,
+            {
+                "STUDIO_NAME": body.studio_name.strip(),
+                "STUDIO_TIMEZONE": body.timezone,
+                "STUDIO_OWNER_NAME": owner_name,
+                "SHOP_EMAIL": settings.SHOP_EMAIL.strip() or email,
+            },
+        )
+    except StudioSettingsError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    now = datetime.now(UTC)
+    owner = User(
+        email=email,
+        password_hash=hash_password(body.password),
+        name=owner_name,
+        role="founder",
+        email_verified_at=now,
+        must_reset_password=False,
+        password_state="user_set",
+        password_changed_at=now,
+        password_change_method="setup",
+    )
+    db.add(owner)
+    db.add(StudioSetting(key=SETUP_CLAIM_KEY, value=email))
+    stage_settings(db, await saved_rows(db, list(clean)), clean)
+    try:
+        await db.flush()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This studio is already set up.") from exc
+    record_successful_login(owner, "password")
+    token = create_user_access_token(owner)
+    await db.commit()
+    apply_values(settings, clean)
+    return Token(access_token=token)

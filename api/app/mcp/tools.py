@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from app.constants.timezones import shop_timezone
 from app.mcp.upstream import UpstreamError, get_health, get_json, write_json
 
 MAX_ROWS = 25
@@ -711,7 +712,7 @@ async def tool_consultation_availability(token: str | None, args: dict) -> str:
     slots = data.get("slots") or []
     lines = [
         f"{len(slots)} live consultation slot(s) for {artist_slug}.",
-        "Hours: Tuesday through Saturday, 11:00 AM through 5:00 PM Eastern.",
+        f"Hours: Tuesday through Saturday, 11:00 AM through 5:00 PM, {shop_timezone().key} time.",
         f"Google Calendar connected: {'yes' if data.get('calendar_connected') else 'no'}",
         "",
     ]
@@ -1159,7 +1160,7 @@ TOOL_SPECS += [
         "title": "Find live Ryozan consultation times",
         "description": (
             "Returns conflict-free 30-minute consultation slots Tuesday through Saturday from "
-            "11 AM through 5 PM Eastern. Reads Google Calendar, native Ryozan bookings, active holds "
+            "11 AM through 5 PM studio time. Reads Google Calendar, native Ryozan bookings, active holds "
             "and personal blocks. Use immediately before offering times."
         ),
         "annotations": _READ_ONLY,

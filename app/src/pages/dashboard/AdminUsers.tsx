@@ -257,7 +257,7 @@ export default function AdminUsers() {
               <form onSubmit={handleInviteSubmit}>
                 <h3>Invite Team Member</h3>
                 <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.5rem 0 1rem' }}>
-                  They'll receive a branded email with a link to set up their account.
+                  You get a link to send them. If email is connected, they get it by email too.
                 </p>
 
                 {inviteError && <div className="pw-modal-error">{inviteError}</div>}

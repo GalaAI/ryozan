@@ -35,7 +35,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import and_, or_, select
 
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
@@ -247,8 +247,8 @@ def build_owner_archive_email_html(
         + "</table></td></tr></table></td></tr>"
     )
 
-    local = submitted_at.astimezone(SHOP_TIMEZONE)
-    ts = f"{local.strftime('%B')} {local.day}, {local.year} at {local.strftime('%I:%M %p').lstrip('0')} ET"
+    local = submitted_at.astimezone(shop_timezone())
+    ts = f"{local.strftime('%B')} {local.day}, {local.year} at {local.strftime('%I:%M %p').lstrip('0')} {local.strftime('%Z')}"
     archive_message = (
         "A complete PDF copy is attached and has been filed to your Artist Scrolls archive."
         if pdf_attached

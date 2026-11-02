@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { ROUTES } from '../../lib/routes'
 import { NativeDesktopPortal } from '../../components/desktop-portal/NativeDesktopPortal'
 import BookyWorkspace from '../../components/desktop-portal/BookyWorkspace'
 import HomeWorkspace from '../../components/desktop-portal/HomeWorkspace'
@@ -9,6 +10,7 @@ import QuickRepliesWorkspace from '../../components/desktop-portal/QuickRepliesW
 import ConfirmationWorkspace from '../../components/desktop-portal/ConfirmationWorkspace'
 import { CourierWorkspace } from '../../components/desktop-portal/CourierWorkspace'
 import ArtistConnections from '../../components/ArtistConnections'
+import StudioSettingsForm from '../../components/StudioSettingsForm'
 import ArtistDepositActivity from '../../components/ArtistDepositActivity'
 import FounderHubWorkspace from '../../components/desktop-portal/FounderHubWorkspace'
 import { GalaComponentRenderer } from '../../components/GalaPanel'
@@ -84,6 +86,7 @@ export default function DesktopPortalPage() {
   // Ark-served agent evolution stays hidden until the API reports it can serve it.
   const [evolution, setEvolution] = useState(false)
   useEffect(() => { let active = true; void gala.capabilities().then(value => { if (active) setEvolution(value.agent_evolution) }).catch(() => { if (active) setEvolution(false) }); return () => { active = false } }, [])
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const requested = params.get('portal') ?? 'home'
   const tab = tabAliases[requested] ?? (supported.includes(requested) ? requested : 'home')
@@ -354,6 +357,8 @@ export default function DesktopPortalPage() {
   const hubActions: DesktopDeckAction[] = [
     { id: 'connections', title: 'Connections', description: 'Connect the services this server offers your account and read their current status.', cta: 'Open connections', run: () => openHubWorkflow('connections') },
     ...(user.role === 'artist' ? [{ id: 'deposits', title: 'Deposits', description: 'Read paid and due deposits for your own bookings.', cta: 'View deposits', run: () => openHubWorkflow('deposits') }] : []),
+    ...(user.role === 'founder' || user.role === 'admin' ? [{ id: 'team', title: 'Team', description: 'Invite artists and staff, and manage who can do what.', cta: 'Open team', run: () => navigate(ROUTES.ADMIN_USERS) }] : []),
+    ...(user.role === 'founder' ? [{ id: 'studio-settings', title: 'Studio settings', description: 'Your studio name, time zone, contact details, booking days and public site.', cta: 'Open settings', run: () => openHubWorkflow('studio-settings') }] : []),
     { id: 'profile', title: 'Profile', description: 'Open your profile and gallery workspace.', cta: 'Open profile', run: () => selectTab('studio') },
     { id: 'signout', title: 'Sign out', description: 'End this session. The server revokes every token issued before now.', cta: 'Sign out', run: signOut },
   ]
@@ -394,6 +399,7 @@ export default function DesktopPortalPage() {
         <style>{`[data-personal-hub] .ryozan-artist-connections>header>span,[data-personal-hub] .ryozan-artist-connections>header>strong{display:block;margin-bottom:8px}[data-personal-hub] .ryozan-artist-connections>header>span{color:var(--ink-ghost)}`}</style>
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}><h2>Your Hub</h2>{hubWorkflow && <button type="button" style={button} aria-label="Close Hub workflow" onClick={() => selectTab('hub')}>Close</button>}</header>
         {hubWorkflow === 'connections' ? <ArtistConnections key={user.id} />
+          : hubWorkflow === 'studio-settings' && user.role === 'founder' ? <StudioSettingsForm key={user.id} />
           : hubWorkflow === 'deposits' && user.role !== 'collector' ? user.role === 'artist' ? <ArtistDepositActivity key={user.id} surface="workflow" /> : <p role="status">This deposit view is scoped to artist accounts. Shop-wide deposit tools are not connected here yet.</p>
           : <>{user.role === 'collector' ? <p>Your account tools are in You. <button type="button" style={button} onClick={() => selectTab('you')}>Open You</button></p> : <p>Your personal services and artist tools. This is separate from the founder agent Hub.</p>}<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 12 }}>{visibleHubActions.map(action => <button type="button" key={action.id} style={{ ...card, color: 'var(--ink)', textAlign: 'left', cursor: 'pointer' }} onClick={action.run}><h3>{action.title}</h3><p>{action.description}</p></button>)}</div></>}
         <style>{`[data-personal-hub] button{min-height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:8px 14px;cursor:pointer}[data-personal-hub] .ryozan-artist-connections__list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px}[data-personal-hub] .ryozan-artist-connection{padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--well);min-width:0}[data-personal-hub] .ryozan-artist-connection__copy header,[data-personal-hub] .ryozan-artist-connections__toolbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0}[data-personal-hub] .ryozan-artist-connection__mark{color:var(--ag-accent);font-weight:800}[data-personal-hub] .ryozan-artist-connection__checks{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}[data-personal-hub] .ryozan-artist-connections__notice{padding:12px;border:1px solid var(--ag-accent);border-radius:12px}[data-personal-hub] .artist-deposit-summary{display:flex;gap:24px;margin:16px 0}[data-personal-hub] .artist-deposit-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;padding:12px 0;border-bottom:1px solid var(--line)}[data-personal-hub] .artist-deposit-row small,[data-personal-hub] .artist-deposit-summary strong{display:block}[data-personal-hub] input{max-width:100%;box-sizing:border-box}`}</style>

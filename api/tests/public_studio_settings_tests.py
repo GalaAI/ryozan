@@ -19,7 +19,7 @@ from pydantic import ValidationError  # noqa: E402
 
 from app.api.v1.endpoints import push as push_endpoints  # noqa: E402
 from app.api.v1.router import api_router  # noqa: E402
-from app.constants.timezones import SHOP_TIMEZONE  # noqa: E402
+from app.constants.timezones import shop_timezone  # noqa: E402
 from app.core.config import Settings, get_settings  # noqa: E402
 from app.services import push as push_service  # noqa: E402
 
@@ -129,7 +129,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
             body["booking_days"],
             {"closed_weekdays": [], "request_only_weekdays": [], "request_only_artist_slugs": []},
         )
-        self.assertEqual(body["timezone"], SHOP_TIMEZONE.key)
+        self.assertEqual(body["timezone"], shop_timezone().key)
         self.assertEqual(body["site"], NEUTRAL_SITE)
 
     def test_values_reflect_settings(self):
@@ -142,7 +142,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
                 "contact_email": "shop@example.test",
                 "contact_phone": "+1 555 0100",
                 "address": "1 Example St",
-                "timezone": SHOP_TIMEZONE.key,
+                "timezone": shop_timezone().key,
                 "booking_days": {
                     "closed_weekdays": ["sun", "mon"],
                     "request_only_weekdays": ["tue"],

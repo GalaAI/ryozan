@@ -11,7 +11,7 @@ is escaped.
 from datetime import date
 from html import escape
 
-from app.services.email import _format_datetime_eastern, _format_time_12hr
+from app.services.email import _format_datetime_shop, _format_time_12hr
 from app.services.email_foundry import TIGER_MARK_URL, FoundryEmail, studio_identity_fields
 from app.services.email_foundry_waiver import (
     _BODY_FONT,
@@ -295,7 +295,7 @@ def render_artist_booking_alert(
             ("Size", size or ""),
             ("Budget", budget or ""),
             ("Timeline", timeline or ""),
-            ("Submitted", submitted_at or _format_datetime_eastern()),
+            ("Submitted", submitted_at or _format_datetime_shop()),
             ("Ref", reference_code),
         ]
     )

@@ -128,6 +128,10 @@ export function createStudioSettingsLoader(fetchSettings: () => Promise<unknown>
   let loaded: StudioSettings | null = null
   return {
     cached: () => loaded,
+    /** Replace the cached read after a save; a failed read keeps the old one. */
+    async refresh(fetchFresh: () => Promise<unknown>): Promise<void> {
+      loaded = normalizeStudioSettings(await fetchFresh())
+    },
     load(): Promise<StudioSettings> {
       if (loaded) return Promise.resolve(loaded)
       if (!pending) {
@@ -139,6 +143,16 @@ export function createStudioSettingsLoader(fetchSettings: () => Promise<unknown>
       return pending
     },
   }
+}
+
+/** The browser's own IANA zone: the starting value on first-run setup. */
+export function browserTimezone(): string {
+  return new Intl.DateTimeFormat().resolvedOptions().timeZone
+}
+
+/** Every IANA zone this browser knows, for the time zone field's suggestions. */
+export function studioTimezoneOptions(): string[] {
+  return Intl.supportedValuesOf('timeZone')
 }
 
 /** Date.getDay() of a YYYY-MM-DD calendar date. */

@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core import config
 from app.models.user import User
 
@@ -1463,7 +1463,7 @@ def campaign_occurrence_due(schedule: Mapping[str, Any], now: datetime) -> datet
         return None
     try:
         local_base = datetime.fromisoformat(f"{schedule['date']}T{schedule.get('time') or '12:00'}")
-        occurrence = local_base.replace(tzinfo=SHOP_TIMEZONE).astimezone(UTC)
+        occurrence = local_base.replace(tzinfo=shop_timezone()).astimezone(UTC)
     except (TypeError, ValueError):
         return None
     if now.tzinfo is None:

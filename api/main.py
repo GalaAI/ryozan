@@ -41,6 +41,7 @@ from app.services.gallery_storage import process_gallery_deletion_outbox_once
 from app.services.pack_bridge import process_pack_bridge_outbox_once, queue_recent_learning_captures_once
 from app.services.scroll_archive import process_owner_email_outbox_once
 from app.services.session_type_defaults import seed_default_session_types
+from app.services.studio_config import load_saved_settings, setup_code, setup_is_open
 
 settings = get_settings()
 
@@ -472,6 +473,23 @@ async def _ensure_demo_account() -> None:
         print(f"[Ryozan] Demo account failed: {type(exc).__name__}")
 
 
+async def _load_saved_studio_settings() -> None:
+    """Saved values first, so the seeds and every reader after them see the studio's own."""
+    async with async_session() as db:
+        loaded = await load_saved_settings(db)
+    print(f"[Ryozan] Saved studio settings: {loaded}")
+
+
+async def _announce_first_run_setup() -> None:
+    """The deployer reads the claim code here, and only while the install has no owner."""
+    async with async_session() as db:
+        if await setup_is_open(db):
+            print(
+                f"[Ryozan] New install: open {settings.public_site_url}/setup and enter setup code {setup_code(settings)}",
+                flush=True,
+            )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown events."""
@@ -479,8 +497,10 @@ async def lifespan(app: FastAPI):
     print(f"[Ryozan] Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     print(f"[Ryozan] Database: {settings.DATABASE_URL.split('@')[1]}")  # hide creds
     await _check_schema_revision()
+    await _load_saved_studio_settings()
     await _run_startup_seeds()
     await _ensure_demo_account()
+    await _announce_first_run_setup()
     outbox_task = asyncio.create_task(_run_owner_email_outbox())
     derivatives_task = (
         asyncio.create_task(_heal_portfolio_derivatives()) if settings.PORTFOLIO_DERIVATIVES_ON_STARTUP else None

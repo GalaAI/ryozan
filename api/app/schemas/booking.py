@@ -316,7 +316,7 @@ class BookingScheduleSuggestion(BaseModel):
 class BookingScheduleSuggestionResponse(BaseModel):
     booking_id: UUID
     artist_id: UUID
-    timezone: str = "America/New_York"
+    timezone: str
     duration_minutes: int
     calendar_connected: bool
     suggestions: list[BookingScheduleSuggestion]

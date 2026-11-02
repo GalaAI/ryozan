@@ -234,7 +234,7 @@ class WaiverPdfDateTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("July 05, 2026", text)
         self.assertNotIn("UTC", text)
         # Not the clock: nothing on the page may come from datetime.now().
-        today = datetime.now(waiver.SHOP_TIMEZONE)
+        today = datetime.now(waiver.shop_timezone())
         self.assertNotIn(today.strftime("%B %d, %Y"), text.replace(EXPECTED_DATE, ""))
 
     async def test_date_appears_in_the_document_body_not_only_the_signature_block(self):

@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from app.api.v1.endpoints.bookings import _sync_hustl_deposit_followup_task
 from app.api.v1.endpoints.gift_cards import activate_paid_gift_card, void_refunded_gift_card, void_unpaid_gift_card
 from app.constants.status import BookingStatus, QuoteStatus
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.config import get_settings
 from app.core.database import async_session
 from app.models.booking import Booking
@@ -831,7 +831,7 @@ async def _handle_booth_rent_checkout_event(event_type: str, session: dict) -> N
                 if period_end:
                     artist.booth_rent_current_period_end = datetime.fromtimestamp(int(period_end), tz=UTC)
                     artist.booth_rent_next_due_date = artist.booth_rent_current_period_end.astimezone(
-                        SHOP_TIMEZONE
+                        shop_timezone()
                     ).date()
                 external_id = session.get("payment_intent") or session_id
                 if external_id and int(session.get("amount_total") or 0) > 0:
@@ -865,7 +865,7 @@ async def _handle_booth_rent_checkout_event(event_type: str, session: dict) -> N
                     artist.booth_rent_next_due_date = due_date
                 if paid and payment_method == "autodraft":
                     artist.booth_rent_status = "active"
-                elif due_date and due_date > datetime.now(SHOP_TIMEZONE).date():
+                elif due_date and due_date > datetime.now(shop_timezone()).date():
                     artist.booth_rent_status = "scheduled"
                 else:
                     artist.booth_rent_status = "pending"
@@ -874,7 +874,7 @@ async def _handle_booth_rent_checkout_event(event_type: str, session: dict) -> N
             if artist.booth_rent_status not in {"active", "past_due"}:
                 due_date_value = metadata.get("booth_rent_due_date")
                 due_date = date.fromisoformat(due_date_value) if due_date_value else None
-                if due_date and due_date > datetime.now(SHOP_TIMEZONE).date():
+                if due_date and due_date > datetime.now(shop_timezone()).date():
                     artist.booth_rent_status = "scheduled"
                 else:
                     artist.booth_rent_status = "pending" if payment_method == "autodraft" else "due"
@@ -891,7 +891,7 @@ async def _handle_booth_rent_invoice(db, event_type, invoice, artist: User, subs
         artist.booth_rent_subscription_id = subscription_id
     artist.booth_rent_current_period_end = _invoice_period_end(invoice)
     if artist.booth_rent_current_period_end:
-        artist.booth_rent_next_due_date = artist.booth_rent_current_period_end.astimezone(SHOP_TIMEZONE).date()
+        artist.booth_rent_next_due_date = artist.booth_rent_current_period_end.astimezone(shop_timezone()).date()
     artist.updated_at = datetime.now(UTC)
 
     if event_type == "invoice.paid":
@@ -2242,7 +2242,7 @@ async def _handle_pos_completed(session):
     if client_email:
         amount_display = f"${amount / 100:,.2f}"
         receipt_number = str(session.get("id") or "Ryozan")[-12:].upper()
-        paid_at = datetime.now(SHOP_TIMEZONE)
+        paid_at = datetime.now(shop_timezone())
         rendered = await render_transactional_email(
             "transaction_receipt",
             {

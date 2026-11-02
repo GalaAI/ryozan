@@ -9,6 +9,16 @@ export function loadStudioSettings(): Promise<StudioSettings> {
   return loader.load()
 }
 
+/** Pick up a save the owner just made, past the browser's five-minute cache. */
+export function refreshStudioSettings(): Promise<void> {
+  return loader.refresh(() => studio.getSettings({ cache: 'reload' }))
+}
+
+/** The studio's IANA zone for showing times; the browser's own until settings load. */
+export function studioTimeZone(): string | undefined {
+  return loader.cached()?.timezone || undefined
+}
+
 /**
  * The studio's public settings. `loaded` is false until the read settles;
  * until then, and if it fails, `settings` is neutral.
