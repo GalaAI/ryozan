@@ -85,15 +85,20 @@ class _StudioSettingsTestCase(unittest.TestCase):
 class SetupClaimTests(_StudioSettingsTestCase):
     def test_new_install_says_it_needs_setup_without_caching(self):
         response = self.client.get(SETUP)
-        self.assertEqual(response.json(), {"needs_setup": True})
+        self.assertEqual(response.json(), {"needs_setup": True, "has_accounts": False})
         self.assertEqual(response.headers["cache-control"], "no-store")
 
     def test_install_with_a_founder_is_not_claimable(self):
         self.db.scalar = AsyncMock(return_value=1)
-        self.assertEqual(self.client.get(SETUP).json(), {"needs_setup": False})
+        self.assertEqual(self.client.get(SETUP).json(), {"needs_setup": False, "has_accounts": True})
         response = self.client.post(SETUP, json=_claim_body())
         self.assertEqual(response.status_code, 409)
         self.db.add.assert_not_called()
+
+    def test_accounts_without_a_founder_stay_claimable_but_are_reported(self):
+        # All accounts, then founders: /portal keeps its login page for these people.
+        self.db.scalar = AsyncMock(side_effect=[5, 0])
+        self.assertEqual(self.client.get(SETUP).json(), {"needs_setup": True, "has_accounts": True})
 
     def test_claimed_install_is_not_claimable(self):
         self.db.get = AsyncMock(return_value=MagicMock())

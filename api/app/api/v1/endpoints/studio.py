@@ -182,6 +182,8 @@ async def save_editable_settings(
 
 class StudioSetupStatus(BaseModel):
     needs_setup: bool
+    # An install with accounts but no founder is claimable, but its people still sign in.
+    has_accounts: bool
 
 
 class StudioSetupRequest(BaseModel):
@@ -198,7 +200,8 @@ async def get_setup_status(
     response: Response, db: AsyncSession = Depends(get_db, scope="function")
 ) -> StudioSetupStatus:
     response.headers["Cache-Control"] = "no-store"
-    return StudioSetupStatus(needs_setup=await setup_is_open(db))
+    accounts = await db.scalar(select(func.count()).select_from(User))
+    return StudioSetupStatus(needs_setup=await setup_is_open(db), has_accounts=bool(accounts))
 
 
 @router.post("/setup", response_model=Token, status_code=status.HTTP_201_CREATED)

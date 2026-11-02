@@ -108,10 +108,10 @@ export default function PortalPage() {
   const googleStartUrl = new URL(`${API_BASE}/auth/google/start`, window.location.origin).toString()
   const startGoogleSignIn = () => { window.location.assign(googleStartUrl) }
   const [signInOptions, setSignInOptions] = useState<{ google: boolean; registration: boolean; signup_code_required?: boolean }>({ google: false, registration: false })
-  // A new install has nobody to sign in yet: its first visitor sets it up.
+  // An empty install has nobody to sign in yet: its first visitor sets it up.
   useEffect(() => {
     let active = true
-    void apiStudio.getSetupStatus().then((status) => { if (active && status.needs_setup) navigate('/setup', { replace: true }) }).catch(() => undefined)
+    void apiStudio.getSetupStatus().then((status) => { if (active && status.needs_setup && !status.has_accounts) navigate('/setup', { replace: true }) }).catch(() => undefined)
     return () => { active = false }
   }, [navigate])
   useEffect(() => { let active = true; void apiAuth.options().then(value => { if (active) setSignInOptions(value) }).catch(() => undefined); return () => { active = false } }, [])
