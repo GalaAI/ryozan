@@ -32,7 +32,7 @@ from app.models.message import Message
 from app.models.notification import Notification
 from app.models.user import User  # noqa: TC001
 from app.services.pack_bridge import build_pack_capture, process_pack_bridge_outbox_once, queue_pack_capture
-from app.services.sms import normalise_phone
+from app.services.sms import normalise_phone, placeholder_contact_email
 
 router = APIRouter(prefix="/phone-agents", tags=["phone-agents"])
 
@@ -162,7 +162,7 @@ async def _resolve_voice_sender(
     if phone:
         return await _resolve_sms_sender(db, phone)
     opaque_id = hashlib.sha256(conversation_id.encode()).hexdigest()[:24]
-    email = f"voice-{opaque_id}@ryozan.app"
+    email = placeholder_contact_email(f"voice-{opaque_id}")
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         return existing

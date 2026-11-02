@@ -13,4 +13,4 @@ Disallow: /join/
 Disallow: /quote
 Disallow: /quote/
 
-Sitemap: https://ryozan.app/sitemap.xml
+Sitemap: {{site_url}}/sitemap.xml

@@ -11,10 +11,10 @@ import unittest
 os.environ["ENABLE_API_DOCS"] = "false"
 os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 
-from app.services.email_foundry import STARSEED_TILE_URL  # noqa: E402
+from app.services.email_foundry import STARSEED_TILE_URL, TIGER_MARK_URL  # noqa: E402
 from app.services.email_foundry_booking import render_artist_booking_alert  # noqa: E402
 
-TIGER = "https://assets.ryozan.app/email/tiger-mark.png"
+TIGER = TIGER_MARK_URL
 PILL = "background-color:#d38a68;border-radius:99px"
 
 

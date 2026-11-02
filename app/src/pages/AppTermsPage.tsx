@@ -7,7 +7,7 @@ export default function AppTermsPage() {
       <Helmet>
         <title>App Terms of Service | Ryozan Studio</title>
         <meta name="description" content="Terms of service for the Ryozan Studio booking and client portal app." />
-        <link rel="canonical" href="https://app.ryozan.app/terms" />
+        <link rel="canonical" href={`${window.location.origin}/terms`} />
       </Helmet>
       <article className="app-policy">
         <header>

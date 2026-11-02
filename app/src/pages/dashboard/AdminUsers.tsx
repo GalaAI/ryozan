@@ -309,7 +309,7 @@ export default function AdminUsers() {
                       placeholder="e.g. cailee"
                     />
                     <span style={{ fontSize: '0.72rem', color: 'var(--muted)', display: 'block', marginTop: '0.2rem' }}>
-                      ryozan.app/artist/{inviteSlug || '...'}
+                      {window.location.host}/artist/{inviteSlug || '...'}
                     </span>
                   </label>
                 )}

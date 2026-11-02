@@ -23,27 +23,37 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.constants.timezones import SHOP_TIMEZONE
+from app.core import config
 from app.models.user import User
 
 _CATALOG_PATH = Path(__file__).with_name("email_foundry_catalog.json")
 
-# The starseed ground tile. The R2 object is served with a one-year immutable cache, so a
-# replaced tile only reaches inboxes under a new URL. Bump STARSEED_TILE_VERSION whenever
-# email/starseed-tile.png is replaced (scripts/email/starseed_tile_generator.py).
+# Brand images for client email, served from this deployment (Settings.email_asset_url).
+# The tile is cached by mail clients for a long time, so a replaced tile only reaches
+# inboxes under a new URL: bump STARSEED_TILE_VERSION whenever
+# app/public/email/starseed-tile.png is replaced.
 STARSEED_TILE_VERSION = "4"
-STARSEED_TILE_URL = f"https://assets.ryozan.app/email/starseed-tile.png?v={STARSEED_TILE_VERSION}"
-# Any starseed reference an older body may carry: the unversioned R2 URL (locked catalog,
-# saved database templates) or the Foundry package's local copy.
-_STARSEED_ANY_RE = re.compile(
+STARSEED_TILE_URL = config.get_settings().email_asset_url(f"starseed-tile.png?v={STARSEED_TILE_VERSION}")
+TIGER_MARK_URL = config.get_settings().email_asset_url("tiger-mark.png")
+# Brand image references an older body may carry (the locked catalog, saved database
+# templates): the hosted R2 copies, the Foundry package's local copies, or this
+# deployment's own copies under any earlier base.
+_EMAIL_ASSET_ANY_RE = re.compile(
     r"https://(?:assets\.ryozan\.app/email"
-    r"|app\.ryozan\.app/dependencies/@bttco/email-foundry/[^\"'()\s]*?/assets)"
-    r"/starseed-tile\.png(?:\?v=[\w.-]+)?"
+    r"|app\.ryozan\.app/dependencies/@bttco/email-foundry/[^\"'()\s]*?/assets"
+    r"|[^\"'()\s]+?/email)"
+    r"/(?P<name>starseed-tile|tiger-mark(?:-trim-crop)?)\.png(?:\?v=[\w.-]+)?"
 )
 
 
-def with_current_starseed(html: str) -> str:
-    """Point every starseed ground reference at the current, cache-busted tile."""
-    return _STARSEED_ANY_RE.sub(STARSEED_TILE_URL, html) if html else html
+def with_current_email_assets(html: str) -> str:
+    """Point every brand image reference at this deployment's current copy."""
+    if not html:
+        return html
+    return _EMAIL_ASSET_ANY_RE.sub(
+        lambda match: STARSEED_TILE_URL if match.group("name") == "starseed-tile" else TIGER_MARK_URL,
+        html,
+    )
 
 
 FOUNDRY_FIELDS_KEY = "bttco-foundry-fields-v1"
@@ -347,7 +357,10 @@ def apply_foundry_element_overlays(source: str, overlays: object) -> str:
 @lru_cache(maxsize=1)
 def _catalog() -> dict:
     with _CATALOG_PATH.open(encoding="utf-8") as catalog_file:
-        return json.load(catalog_file)
+        catalog = json.load(catalog_file)
+    for template in catalog["templates"].values():
+        template["html"] = with_current_email_assets(str(template["html"]))
+    return catalog
 
 
 def foundry_source_sha256() -> str:
@@ -360,7 +373,7 @@ def foundry_catalog_summary() -> dict[str, dict[str, object]]:
     summary: dict[str, dict[str, object]] = {}
     for slug, template in _catalog()["templates"].items():
         html = str(template["html"])
-        asset_urls = sorted(set(re.findall(r"https://assets\.ryozan\.app/[^\"'()\s]+", html)))
+        asset_urls = sorted({url for url in (STARSEED_TILE_URL, TIGER_MARK_URL) if url in html})
         summary[str(slug)] = {
             "subject": str(template["subject"]),
             "variables": [str(value) for value in template.get("variables", [])],
@@ -408,7 +421,7 @@ def render_foundry_email(
     subject = fill_foundry_merge_tags(subject, merged)
     html_body = fill_foundry_merge_tags(html_body, merged)
     html_body = apply_foundry_element_overlays(html_body, element_overlays)
-    html_body = with_current_starseed(html_body)
+    html_body = with_current_email_assets(html_body)
 
     return FoundryEmail(slug=slug, subject=subject, html_body=html_body)
 
@@ -469,7 +482,7 @@ def render_gift_card_receipt(
 <span style="display:none;font-size:1px;color:#0b0c0b;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">{preheader}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#0b0c0b" background="{STARSEED_TILE_URL}" style="background-color:#0b0c0b;background-image:url('{STARSEED_TILE_URL}');background-repeat:repeat;"><tr><td align="center" style="padding:26px 14px;">
 <table class="bttco-email-panel" role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#191a19" style="max-width:600px;width:100%;background-color:#191a19;background-image:linear-gradient(#191a19,#191a19);border:1px solid rgba(226,218,194,.14);border-radius:24px;overflow:hidden;">
-<tr><td align="center" style="padding:34px 24px 22px;border-bottom:1px solid rgba(226,218,194,.12);"><img src="https://assets.ryozan.app/email/tiger-mark.png" alt="Ryozan Studio" width="72" style="display:block;margin:0 auto 14px;"><div style="font-family:'Poppins','Arial Black',Arial,sans-serif;font-weight:900;font-size:19px;letter-spacing:.18em;color:#e2dac2;text-transform:uppercase;">Ryozan Studio</div><div style="padding-top:8px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.22em;color:#d38a68;text-transform:uppercase;">Gift card // paid</div></td></tr>
+<tr><td align="center" style="padding:34px 24px 22px;border-bottom:1px solid rgba(226,218,194,.12);"><img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="72" style="display:block;margin:0 auto 14px;"><div style="font-family:'Poppins','Arial Black',Arial,sans-serif;font-weight:900;font-size:19px;letter-spacing:.18em;color:#e2dac2;text-transform:uppercase;">Ryozan Studio</div><div style="padding-top:8px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.22em;color:#d38a68;text-transform:uppercase;">Gift card // paid</div></td></tr>
 <tr><td style="padding:26px 26px 18px;font-family:'Space Grotesk',Arial,sans-serif;font-size:14px;line-height:1.65;color:#e2dac2;">Hey {safe_recipient},<br><br>{intro}</td></tr>
 {message_block}
 <tr><td style="padding:0 26px 24px;"><table class="bttco-email-well" role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#101110" style="background-color:#101110;background-image:linear-gradient(#101110,#101110);border:1px solid rgba(211,138,104,.55);border-radius:20px;"><tr><td align="center" style="padding:26px 18px 14px;"><div style="font-family:'Poppins','Arial Black',Arial,sans-serif;font-weight:800;font-size:40px;line-height:1;color:#d38a68;">{amount}</div><div style="padding-top:8px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.2em;color:#9d9686;text-transform:uppercase;">Tattoo credit with {safe_artist}</div></td></tr><tr><td align="center" style="padding:0 18px 26px;"><div style="display:inline-block;padding:11px 18px;border:1px solid rgba(226,218,194,.22);border-radius:16px;font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;letter-spacing:.12em;color:#e2dac2;">{safe_code}</div></td></tr></table></td></tr>

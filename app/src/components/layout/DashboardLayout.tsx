@@ -287,7 +287,7 @@ function getDevModeMeta(): DevModeMeta | null {
   const env = (import.meta.env.VITE_APP_ENV ?? import.meta.env.MODE ?? 'unknown').toLowerCase()
   const apiUrl = (import.meta.env.VITE_API_URL ?? '').toLowerCase()
 
-  if (env === 'prod-proxy' || apiUrl.includes('api.ryozan.app')) {
+  if (env === 'prod-proxy') {
     return {
       label: 'prod-proxy',
       detail: 'production api',

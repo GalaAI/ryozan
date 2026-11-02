@@ -41,7 +41,7 @@ from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
 from app.models.user import User
 from app.services.email import SCROLL_REQUEST_TEMPLATE_MARKER, build_scroll_request_html
-from app.services.email_foundry import STARSEED_TILE_URL
+from app.services.email_foundry import STARSEED_TILE_URL, TIGER_MARK_URL
 from app.services.email_template_seeder import get_seed_templates
 from app.services.scroll_archive import (
     OWNER_ARCHIVE_CATEGORY,
@@ -211,10 +211,7 @@ class ArtistScrollRequestEmailTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("family=Poppins", html)
         self.assertIn("Space+Grotesk", html)
         self.assertIn("JetBrains+Mono", html)
-        self.assertIn(
-            "https://app.ryozan.app/dependencies/@bttco/email-foundry/1.0.0/assets/tiger-mark-trim-crop.png",
-            html,
-        )
+        self.assertIn(TIGER_MARK_URL, html)
         self.assertIn(STARSEED_TILE_URL, html)
         self.assertNotIn("/assets/starseed-tile.png", html)
         self.assertNotIn('width="600"', html)

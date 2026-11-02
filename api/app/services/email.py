@@ -39,10 +39,11 @@ from app.core.config import get_settings
 from app.core.routes import ROUTES
 from app.services.email_foundry import (
     STARSEED_TILE_URL,
+    TIGER_MARK_URL,
     FoundryEmail,
     render_foundry_email,
     studio_address_html,
-    with_current_starseed,
+    with_current_email_assets,
 )
 
 # ── Eastern timezone for client-facing times ─────────────────────────────
@@ -81,11 +82,9 @@ UNCAPPED_ROLES = {"founder", "admin"}  # these roles bypass the cap
 
 logger = logging.getLogger("ryozan.email")
 
-# ── Brand assets (hosted on ryozan.app) ─────────────────────────
-LOGO_URL = "https://ryozan.app/assets/images/logo-round.png"
-FONT_URL = "https://ryozan.app/assets/fonts/KCTallboy.otf"
+# ── Brand assets (served by this deployment) ───────────────────
+FONT_URL = f"{get_settings().public_site_url}/assets/fonts/KCTallboy.otf"
 SCROLL_REQUEST_TEMPLATE_MARKER = "BTTCO-EMAIL-FOUNDRY-ARTIST-SCROLL-V1"
-FOUNDRY_EMAIL_ASSET_BASE = "https://app.ryozan.app/dependencies/@bttco/email-foundry/1.0.0/assets"
 
 # ── Email sender identities ───────────────────────────────────────────────
 # Use these constants as the `from_alias` param in send_email(). They name what
@@ -154,7 +153,7 @@ def _email_head() -> str:
 
 def _build_header(subtitle: str) -> str:
     """
-    Shared email header — logo served from ryozan.app (works in all clients),
+    Shared email header — logo served from this deployment (works in all clients),
     shop name in KC Tallboy with Oswald / Arial Narrow fallbacks.
     """
     return f"""
@@ -167,7 +166,7 @@ def _build_header(subtitle: str) -> str:
       <div style="display:inline-block;width:76px;height:76px;
                   border-radius:50%;border:2px solid #faae15;
                   overflow:hidden;background:#1a1810;margin-bottom:16px;">
-        <img src="{LOGO_URL}"
+        <img src="{TIGER_MARK_URL}"
              alt="Ryozan Studio"
              width="76" height="76"
              style="display:block;border-radius:50%;object-fit:cover;">
@@ -330,9 +329,9 @@ async def send_email(
         courier_attempt: Exact Booky Courier provider attempt for delivery reconciliation.
         attachments: Optional files to attach. Supported on all three provider paths.
     """
-    # Every outgoing body gets the current starseed ground, including saved database
-    # templates and older renderers that still point at the unversioned or package tile.
-    html_body = with_current_starseed(html_body)
+    # Every outgoing body gets this deployment's brand images, including saved database
+    # templates and older renderers that still point at a hosted or package copy.
+    html_body = with_current_email_assets(html_body)
 
     # Rate limit check for artist marketing emails
     allowed, remaining = check_email_rate(sender_id, sender_role)
@@ -2114,7 +2113,7 @@ def build_quote_email_html(
 
 <!-- Logo -->
 <tr><td style="padding:24px 32px;text-align:center;border-bottom:1px solid rgba(250,174,21,0.15);">
-    <img src="{LOGO_URL}" alt="Ryozan Studio" width="60" style="border-radius:50%;">
+    <img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="60" style="border-radius:50%;">
 </td></tr>
 
 <!-- Content -->
@@ -2920,7 +2919,7 @@ def build_scroll_request_html(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#191a19" style="max-width:600px;width:100%;table-layout:fixed;background-color:#191a19;border:1px solid #3a301e;border-radius:16px;">
 
   <tr><td align="center" style="padding:34px 24px 22px;border-bottom:1px solid #2a2316;">
-    <img src="{FOUNDRY_EMAIL_ASSET_BASE}/tiger-mark-trim-crop.png" alt="Ryozan Studio" width="72" style="display:block;margin:0 auto 14px;">
+    <img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="72" style="display:block;margin:0 auto 14px;">
     <div class="foundry-shop-name" style="font-family:'Poppins','Arial Black','Helvetica Neue',Arial,sans-serif;font-weight:900;font-size:19px;line-height:1.25;letter-spacing:.18em;color:#c8a15e;text-transform:uppercase;overflow-wrap:anywhere;">RYOZAN STUDIO</div>
     <div style="font-family:'JetBrains Mono','Courier New',Courier,monospace;font-size:9.5px;letter-spacing:.22em;color:rgba(232,223,207,.5);text-transform:uppercase;padding-top:8px;">{eyebrow}</div>
   </td></tr>

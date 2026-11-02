@@ -17,6 +17,7 @@ from app.api.v1.endpoints.email_log import (
     _source_email_definitions,
 )
 from app.mcp import tools
+from app.services.email_foundry import STARSEED_TILE_URL, TIGER_MARK_URL
 
 
 class EmailManifestTests(unittest.TestCase):
@@ -95,11 +96,11 @@ class EmailManifestTests(unittest.TestCase):
         self.assertEqual(by_id["database.re_engagement_v4"].runtime_status, "available")
         self.assertFalse(by_id["database.re_engagement_v4"].is_live)
 
-    def test_manifest_assets_are_stable_r2_urls(self):
+    def test_manifest_assets_are_this_deployments_email_images(self):
         assets = _asset_manifest()
 
         self.assertGreaterEqual(len(assets), 2)
-        self.assertTrue(all(asset.url.startswith("https://assets.ryozan.app/email/") for asset in assets))
+        self.assertEqual({asset.url for asset in assets}, {STARSEED_TILE_URL, TIGER_MARK_URL})
         self.assertEqual({asset.kind for asset in assets}, {"logo", "background"})
 
     def test_sms_and_whatsapp_rows_follow_courier_lane_readiness(self):

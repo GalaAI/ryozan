@@ -254,10 +254,7 @@ def build_owner_archive_email_html(
         if pdf_attached
         else "The archive entry was filed, but PDF generation or storage failed, so no PDF is attached."
     )
-    try:
-        frontend = get_settings().FRONTEND_URL.rstrip("/")
-    except Exception:
-        frontend = "https://app.ryozan.app"
+    frontend = get_settings().public_site_url
     archive_url = f"{frontend}/dashboard?portal=hub&panel=codex&category={OWNER_ARCHIVE_SLUG}"
 
     artist = escape(artist_name)

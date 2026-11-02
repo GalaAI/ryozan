@@ -15,7 +15,7 @@ import * as path from 'node:path'
 function resolveApiTarget(mode: string, fileEnv: Record<string, string>): string {
   if (process.env.VITE_API_TARGET) return process.env.VITE_API_TARGET
   if (fileEnv.VITE_API_TARGET) return fileEnv.VITE_API_TARGET
-  if (mode === 'prod-proxy') return 'https://api.ryozan.app'
+  if (mode === 'prod-proxy') return 'https://ryozan-production.up.railway.app'
   return 'http://127.0.0.1:18788'
 }
 

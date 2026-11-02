@@ -11,8 +11,11 @@ send costs one segment. The founder UI shows live segment count when editing.
 
 from typing import Any
 
+from app.services.sms import public_site_host, sms_help_reply
+
 
 def get_seed_templates() -> list[dict[str, Any]]:
+    site = public_site_host()
     return [
         {
             "slug": "double_opt_in_confirmation",
@@ -47,10 +50,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "name": "HELP Auto-Reply",
             "category": "compliance",
             "description": "Required HELP keyword response with support contact.",
-            "body": (
-                "Ryozan Studio: For help, email admin@ryozan.app or visit "
-                "ryozan.app. Msg freq varies. Msg & data rates may apply. Reply STOP to cancel."
-            ),
+            "body": sms_help_reply(),
             "variables": [],
         },
         {
@@ -89,7 +89,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "name": "Reminder · 1h Before",
             "category": "transactional",
             "description": "Sent 1 hour before — light touch, no STOP footer is fine for transactional.",
-            "body": ("Ryozan Studio: See you in 1 hour at {{time}}. Parking info: ryozan.app/parking"),
+            "body": (f"Ryozan Studio: See you in 1 hour at {{{{time}}}}. Parking info: {site}/parking"),
             "variables": [
                 {"key": "time", "label": "Appointment time", "sample": "2:00 PM"},
             ],
@@ -101,7 +101,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "description": "Sent 3 days post-session to check healing progress.",
             "body": (
                 "Ryozan Studio: Hey {{client_name}}, how's the tattoo healing? "
-                "Aftercare instructions: ryozan.app/aftercare. Questions? Just reply."
+                f"Aftercare instructions: {site}/aftercare. Questions? Just reply."
             ),
             "variables": [
                 {"key": "client_name", "label": "Client first name", "sample": "Alex"},
@@ -122,7 +122,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
                 {
                     "key": "courier_url",
                     "label": "Courier thread link",
-                    "sample": "https://ryozan.app/dashboard/courier",
+                    "sample": f"https://{site}/dashboard/courier",
                 },
             ],
         },
@@ -154,7 +154,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
                 {
                     "key": "quote_url",
                     "label": "Quote magic-link URL",
-                    "sample": "https://ryozan.app/quote/abc123",
+                    "sample": f"https://{site}/quote/abc123",
                 },
             ],
         },

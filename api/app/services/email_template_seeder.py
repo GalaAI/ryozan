@@ -7,6 +7,7 @@ These get inserted into ryozan_email_templates so the portal
 editor has working templates to start from.
 """
 
+from app.core.config import get_settings
 from app.services.email import (
     build_aftercare_html,
     build_appointment_reminder_html,
@@ -28,6 +29,7 @@ from app.services.email import (
 
 def get_seed_templates() -> list[dict]:
     """Return all seed templates as dicts ready for DB insert."""
+    site = get_settings().public_site_url
     return [
         {
             "slug": "booking_confirmation",
@@ -64,7 +66,7 @@ def get_seed_templates() -> list[dict]:
                 {"key": "client_name", "label": "Client Name", "sample": "Meredith"},
                 {"key": "artist_name", "label": "Artist Name", "sample": "Alex Rivera"},
                 {"key": "deposit_amount", "label": "Deposit Amount", "sample": "100"},
-                {"key": "quote_url", "label": "Quote URL", "sample": "https://ryozan.app/quote/abc123"},
+                {"key": "quote_url", "label": "Quote URL", "sample": f"{site}/quote/abc123"},
                 {"key": "reference_code", "label": "Reference Code", "sample": "BKG-ABC123"},
                 {
                     "key": "artist_message",
@@ -170,17 +172,17 @@ def get_seed_templates() -> list[dict]:
                 {
                     "key": "reference_image_urls",
                     "label": "Reference Image URLs",
-                    "sample": "https://assets.ryozan.app/bookings/uploads/ref.png",
+                    "sample": f"{site}/bookings/uploads/ref.png",
                 },
                 {
                     "key": "ref_image_1",
                     "label": "Reference Image 1",
-                    "sample": "https://assets.ryozan.app/bookings/uploads/ref-1.png",
+                    "sample": f"{site}/bookings/uploads/ref-1.png",
                 },
                 {
                     "key": "ref_image_2",
                     "label": "Reference Image 2",
-                    "sample": "https://assets.ryozan.app/bookings/uploads/ref-2.png",
+                    "sample": f"{site}/bookings/uploads/ref-2.png",
                 },
                 {
                     "key": "conversation_id",
@@ -190,17 +192,17 @@ def get_seed_templates() -> list[dict]:
                 {
                     "key": "accept_url",
                     "label": "Accept URL",
-                    "sample": "https://ryozan.app/dashboard/huddle?charm=bookings&ref=BKG-XYZ789&action=accept",
+                    "sample": f"{site}/dashboard/huddle?charm=bookings&ref=BKG-XYZ789&action=accept",
                 },
                 {
                     "key": "message_url",
                     "label": "Message URL",
-                    "sample": "https://ryozan.app/dashboard/courier?convo=00000000-0000-0000-0000-000000000000",
+                    "sample": f"{site}/dashboard/courier?convo=00000000-0000-0000-0000-000000000000",
                 },
                 {
                     "key": "decline_url",
                     "label": "Decline URL",
-                    "sample": "https://ryozan.app/dashboard/huddle?charm=bookings&ref=BKG-XYZ789&action=reject",
+                    "sample": f"{site}/dashboard/huddle?charm=bookings&ref=BKG-XYZ789&action=reject",
                 },
             ],
             "html_body": build_artist_notification_html(
@@ -243,7 +245,7 @@ def get_seed_templates() -> list[dict]:
             "variables": [
                 {"key": "name", "label": "Name", "sample": "Jade"},
                 {"key": "email", "label": "Email", "sample": "jade@example.com"},
-                {"key": "login_url", "label": "Login URL", "sample": "https://ryozan.app/portal"},
+                {"key": "login_url", "label": "Login URL", "sample": f"{site}/portal"},
                 {"key": "temp_password", "label": "Temp Password", "sample": "tattoo"},
             ],
             "html_body": build_login_welcome_html(
@@ -263,7 +265,7 @@ def get_seed_templates() -> list[dict]:
                 {"key": "name", "label": "Name", "sample": "Jade"},
                 {"key": "role", "label": "Role", "sample": "artist"},
                 {"key": "temp_password", "label": "Temp Password", "sample": "tattoo"},
-                {"key": "login_url", "label": "Login URL", "sample": "https://ryozan.app/portal"},
+                {"key": "login_url", "label": "Login URL", "sample": f"{site}/portal"},
             ],
             "html_body": build_invite_html(
                 artist_name="{{name}}",
@@ -280,7 +282,7 @@ def get_seed_templates() -> list[dict]:
             "variables": [
                 {"key": "client_name", "label": "Client Name", "sample": "Ben"},
                 {"key": "doc_title", "label": "Document Title", "sample": "Tattoo Consent Waiver"},
-                {"key": "form_url", "label": "Form URL", "sample": "https://ryozan.app/form/abc123"},
+                {"key": "form_url", "label": "Form URL", "sample": f"{site}/form/abc123"},
                 {"key": "artist_name", "label": "Artist Name", "sample": "Alex Rivera"},
             ],
             "html_body": build_document_send_html(
@@ -299,7 +301,7 @@ def get_seed_templates() -> list[dict]:
             "variables": [
                 {"key": "client_name", "label": "Client Name", "sample": "Ben"},
                 {"key": "doc_title", "label": "Document Title", "sample": "Tattoo Consent Waiver"},
-                {"key": "form_url", "label": "Form URL", "sample": "https://ryozan.app/form/abc123"},
+                {"key": "form_url", "label": "Form URL", "sample": f"{site}/form/abc123"},
                 {"key": "artist_name", "label": "Artist Name", "sample": "Alex Rivera"},
             ],
             "html_body": build_reminder_html(
@@ -390,7 +392,7 @@ def get_seed_templates() -> list[dict]:
                 {
                     "key": "action_url",
                     "label": "Artist Scroll URL",
-                    "sample": "https://app.ryozan.app/dashboard?portal=hub&workflow=artist-scroll",
+                    "sample": f"{site}/dashboard?portal=hub&workflow=artist-scroll",
                 },
             ],
             "html_body": build_scroll_request_html(
