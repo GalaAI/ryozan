@@ -83,7 +83,7 @@ async def _render_deposit_paid_email(
 ):
     """Render the client receipt from the locked Email Foundry dependency."""
 
-    fallback_subject = "You're Booked! — Ryozan Studio"
+    fallback_subject = f"You're Booked! — {get_settings().STUDIO_NAME}"
     fallback_html = build_deposit_confirmation_html(
         client_name=client_name,
         artist_name=artist_name,
@@ -2257,7 +2257,7 @@ async def _handle_pos_completed(session):
                 "item_2": "",
                 "item_2_amount": "",
             },
-            fallback_subject=f"Receipt {receipt_number} — Ryozan Studio",
+            fallback_subject=f"Receipt {receipt_number} — {get_settings().STUDIO_NAME}",
             fallback_html=f"<p>Payment received from {client_name}: {amount_display}</p>",
         )
         await send_email(

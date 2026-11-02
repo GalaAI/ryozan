@@ -1150,13 +1150,13 @@ async def send_document(
                 "client_name": body.recipient_name,
                 "doc_title": template.name,
                 "form_url": public_url,
-                "artist_name": current_user.name or "Ryozan Studio",
+                "artist_name": current_user.name or settings.STUDIO_NAME,
             },
         ) or build_document_send_html(
             recipient_name=body.recipient_name,
             document_title=template.name,
             public_url=public_url,
-            sender_name=current_user.name or "Ryozan Studio",
+            sender_name=current_user.name or settings.STUDIO_NAME,
         )
         await send_email(
             to=body.recipient_email,

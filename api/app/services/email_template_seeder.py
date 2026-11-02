@@ -30,11 +30,12 @@ from app.services.email import (
 def get_seed_templates() -> list[dict]:
     """Return all seed templates as dicts ready for DB insert."""
     site = get_settings().public_site_url
+    studio = get_settings().STUDIO_NAME
     return [
         {
             "slug": "booking_confirmation",
             "name": "Booking Confirmation",
-            "subject": "We Got Your Request! — Ryozan Studio",
+            "subject": f"We Got Your Request! — {studio}",
             "category": "transactional",
             "description": "Sent to the client after they submit a booking request through the public form.",
             "variables": [
@@ -59,7 +60,7 @@ def get_seed_templates() -> list[dict]:
         {
             "slug": "quote_sent",
             "name": "Quote Sent to Client",
-            "subject": "Your Tattoo Quote from {{artist_name}} — Ryozan Studio",
+            "subject": f"Your Tattoo Quote from {{{{artist_name}}}} — {studio}",
             "category": "transactional",
             "description": "Sent when an artist creates a quote with pricing and available time slots.",
             "variables": [
@@ -89,7 +90,7 @@ def get_seed_templates() -> list[dict]:
         {
             "slug": "deposit_confirmation",
             "name": "Deposit Paid — Client Confirmation",
-            "subject": "You're Booked! — Ryozan Studio",
+            "subject": f"You're Booked! — {studio}",
             "category": "transactional",
             "description": "Sent to the client after they pay their deposit via Stripe.",
             "variables": [
@@ -227,7 +228,7 @@ def get_seed_templates() -> list[dict]:
         {
             "slug": "welcome",
             "name": "Welcome Email",
-            "subject": "Welcome to Ryozan Studio",
+            "subject": f"Welcome to {studio}",
             "category": "onboarding",
             "description": "Sent when a new user account is created.",
             "variables": [
@@ -239,7 +240,7 @@ def get_seed_templates() -> list[dict]:
         {
             "slug": "login_welcome",
             "name": "Login Welcome",
-            "subject": "Welcome to Ryozan Studio",
+            "subject": f"Welcome to {studio}",
             "category": "onboarding",
             "description": "Sent to new staff with their login credentials.",
             "variables": [
@@ -258,7 +259,7 @@ def get_seed_templates() -> list[dict]:
         {
             "slug": "invite",
             "name": "Staff Invite",
-            "subject": "You're invited to join Ryozan Studio",
+            "subject": f"You're invited to join {studio}",
             "category": "onboarding",
             "description": "Sent when a founder invites a new staff member.",
             "variables": [
@@ -314,7 +315,7 @@ def get_seed_templates() -> list[dict]:
         {
             "slug": "aftercare",
             "name": "Aftercare Instructions",
-            "subject": "Your Tattoo Aftercare — Ryozan Studio",
+            "subject": f"Your Tattoo Aftercare — {studio}",
             "category": "post-session",
             "description": "Sent after a session is completed with aftercare instructions.",
             "variables": [
@@ -332,7 +333,7 @@ def get_seed_templates() -> list[dict]:
         {
             "slug": "healing_followup",
             "name": "Healing Follow-Up",
-            "subject": "How's your tattoo healing? — Ryozan Studio",
+            "subject": f"How's your tattoo healing? — {studio}",
             "category": "post-session",
             "description": "Automated follow-up at day 3 and day 7 after a session.",
             "variables": [

@@ -259,6 +259,7 @@ def _build_pos_invoice_email_html(
     safe_artist = escape(artist_name)
     safe_description = escape(description)
     safe_checkout_url = escape(checkout_url, quote=True)
+    safe_studio = escape(get_settings().STUDIO_NAME)
     amount = f"${amount_cents / 100:,.2f}"
     return f"""<!doctype html>
 <html>
@@ -267,7 +268,7 @@ def _build_pos_invoice_email_html(
       <tr><td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#121412;border:1px solid #514633;border-radius:18px;overflow:hidden;">
           <tr><td style="padding:26px 28px 18px;border-bottom:1px solid #302d27;">
-            <div style="color:#b48a4b;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Ryozan Studio</div>
+            <div style="color:#b48a4b;font-size:11px;letter-spacing:2px;text-transform:uppercase;">{safe_studio}</div>
             <h1 style="margin:8px 0 0;color:#e2dac2;font-size:28px;line-height:1.15;">Payment Request</h1>
           </td></tr>
           <tr><td style="padding:24px 28px;">
@@ -277,7 +278,7 @@ def _build_pos_invoice_email_html(
               <div style="margin-top:6px;color:#e2dac2;font-size:34px;font-weight:700;">{amount}</div>
             </div>
             <p style="margin:24px 0;text-align:center;"><a href="{safe_checkout_url}" style="display:inline-block;padding:14px 24px;border-radius:999px;background:#e2dac2;color:#111310;font-size:13px;font-weight:700;letter-spacing:1px;text-decoration:none;text-transform:uppercase;">Pay Securely</a></p>
-            <p style="margin:0;color:#777268;font-size:12px;line-height:1.5;">Stripe securely handles payment details. Ryozan Studio does not receive your full card number.</p>
+            <p style="margin:0;color:#777268;font-size:12px;line-height:1.5;">Stripe securely handles payment details. {safe_studio} does not receive your full card number.</p>
           </td></tr>
         </table>
       </td></tr>
@@ -298,7 +299,7 @@ async def send_pos_invoice(
     checkout = await _create_pos_checkout(body, db, current_user)
     recipient = str(body.client_email)
     client_name = body.client_name or "there"
-    fallback_subject = "Payment request from Ryozan Studio"
+    fallback_subject = f"Payment request from {get_settings().STUDIO_NAME}"
     fallback_html = _build_pos_invoice_email_html(
         client_name=client_name,
         artist_name=current_user.name,

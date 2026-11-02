@@ -24,6 +24,7 @@ import re
 import string
 import uuid as uuid_mod
 from datetime import UTC, datetime
+from html import escape
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -747,7 +748,7 @@ async def export_waiver_pdf(
     signed_date_text = _waiver_signed_date_text(inst)
 
     # Header
-    elements.append(Paragraph("Ryozan Studio", title_style))
+    elements.append(Paragraph(escape(get_settings().STUDIO_NAME), title_style))
     elements.append(Paragraph(f"Tattoo Consent Waiver &mdash; {ref_code}", small))
     elements.append(Paragraph(f"<b>Date Signed:</b> {signed_date_text}", date_style))
     elements.append(Spacer(1, 12))

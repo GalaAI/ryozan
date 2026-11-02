@@ -237,7 +237,7 @@ class BoothRentBillingTests(IsolatedAsyncioTestCase):
             booth_rent_payment_method="one_time",
             booth_rent_status="due",
         )
-        settings.return_value = SimpleNamespace(FRONTEND_URL="https://ryozan.app")
+        settings.return_value = SimpleNamespace(FRONTEND_URL="https://ryozan.app", STUDIO_NAME="Ryozan Studio")
         create = init.return_value.v1.checkout.sessions.create
         create.return_value = SimpleNamespace(id="cs_once", url="https://checkout.stripe.test/once")
 
@@ -416,7 +416,7 @@ class BoothRentBillingTests(IsolatedAsyncioTestCase):
             booth_rent_status="pending",
         )
         db = _Db(artist)
-        settings.return_value = SimpleNamespace(FRONTEND_URL="https://ryozan.app")
+        settings.return_value = SimpleNamespace(FRONTEND_URL="https://ryozan.app", STUDIO_NAME="Ryozan Studio")
         create = init.return_value.v1.checkout.sessions.create
         create.return_value = SimpleNamespace(id="cs_rent", url="https://checkout.stripe.test/rent")
 
@@ -443,7 +443,7 @@ class BoothRentBillingTests(IsolatedAsyncioTestCase):
             booth_rent_status="scheduled",
             booth_rent_next_due_date=FUTURE_DUE_DATE,
         )
-        settings.return_value = SimpleNamespace(FRONTEND_URL="https://ryozan.app")
+        settings.return_value = SimpleNamespace(FRONTEND_URL="https://ryozan.app", STUDIO_NAME="Ryozan Studio")
         create = init.return_value.v1.checkout.sessions.create
         create.return_value = SimpleNamespace(id="cs_biweekly", url="https://checkout.stripe.test/biweekly")
 

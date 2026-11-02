@@ -16,6 +16,7 @@ import secrets
 import string
 import uuid as uuid_mod
 from datetime import UTC, date, datetime, timedelta
+from html import escape
 from uuid import UUID
 
 import stripe
@@ -149,7 +150,7 @@ router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 BOOKING_SMS_CONSENT_TEXT = (
     "I agree to receive booking confirmations, appointment reminders, reschedule updates, "
-    "aftercare follow-ups, and replies to my questions from Ryozan Studio at the phone number provided. "
+    f"aftercare follow-ups, and replies to my questions from {get_settings().STUDIO_NAME} at the phone number provided. "
     "Message frequency varies. Message and data rates may apply. Reply HELP for help and STOP to opt out. "
     f"Consent is not required to book. SMS Terms: {get_settings().public_site_url}/legal#sms. "
     f"Privacy Policy: {get_settings().public_site_url}/legal#privacy."
@@ -489,7 +490,7 @@ async def _notify_booking_lifecycle(
     <p>Hi {client_name},</p>
     <p>{body}</p>
     <p>Reference: <strong>{booking.reference_code or booking.id}</strong></p>
-    <p>Ryozan Studio</p>
+    <p>{escape(get_settings().STUDIO_NAME)}</p>
     """
     return await send_email(
         to=client_email,
@@ -563,7 +564,7 @@ async def _send_booking_confirmed_sms(db: AsyncSession, booking: Booking) -> Non
     if not phone:
         return
     when = f"{booking.scheduled_date} at {booking.scheduled_time}" if booking.scheduled_date else "soon"
-    body = f"Ryozan Studio: your appointment is confirmed for {when}. Ref {booking.reference_code or booking.id}."
+    body = f"{get_settings().STUDIO_NAME}: your appointment is confirmed for {when}. Ref {booking.reference_code or booking.id}."
     try:
         await send_sms(
             db=db,
@@ -593,7 +594,7 @@ async def _send_booking_request_received_sms(
         return
     first_name = client_name.split(" ", 1)[0] or "there"
     body = (
-        f"Ryozan Studio: Hi {first_name}, we received your request with "
+        f"{get_settings().STUDIO_NAME}: Hi {first_name}, we received your request with "
         f"{artist_name}. Ref {reference_code}. We'll follow up within 24-48 hours."
     )
     try:
@@ -3005,7 +3006,7 @@ async def _create_public_booking_checkout(
                 "price_data": {
                     "currency": "usd",
                     "product_data": {
-                        "name": f"Tattoo Deposit - {artist.name or 'Ryozan Studio'}",
+                        "name": f"Tattoo Deposit - {artist.name or settings.STUDIO_NAME}",
                         "description": (
                             "Authorization held while your artist reviews your flash"
                             if staged_deposit
@@ -3044,7 +3045,7 @@ async def _create_public_booking_checkout(
         params,
         customer_email=client_email,
         description=(
-            f"Ryozan Studio deposit for booking {booking.reference_code or booking.id}, "
+            f"{settings.STUDIO_NAME} deposit for booking {booking.reference_code or booking.id}, "
             + (
                 f" pending review by {artist.name or 'your artist'}"
                 if staged_deposit
@@ -3956,11 +3957,11 @@ async def _send_booking_confirmation(
             conference_url=conference_url,
         )
         fallback_subject = (
-            "Consultation Booked - Ryozan Studio"
+            f"Consultation Booked - {get_settings().STUDIO_NAME}"
             if booking_kind == "consultation" and confirmed
-            else "Consultation Request Received - Ryozan Studio"
+            else f"Consultation Request Received - {get_settings().STUDIO_NAME}"
             if booking_kind == "consultation"
-            else "Booking Request Received - Ryozan Studio"
+            else f"Booking Request Received - {get_settings().STUDIO_NAME}"
         )
         settings = get_settings()
         references = [str(url).strip() for url in (reference_image_urls or []) if str(url).strip()][:2]
@@ -5602,7 +5603,7 @@ async def gala_assist(
     if not settings.ARK_MODEL_GATEWAY_KEY:
         raise HTTPException(status_code=503, detail="AI not configured. Set NEBIUS_API_KEY.")
 
-    prompt = f"""You are Gala, the AI assistant for {artist_name} at Ryozan Studio.
+    prompt = f"""You are Gala, the AI assistant for {artist_name} at {settings.STUDIO_NAME}.
 Draft a short, warm, professional response to a new booking request.
 
 Client name: {client_name}
@@ -5634,7 +5635,7 @@ Write only the message body."""
         max_tokens=300,
         tools=[],
         system_prompt=(
-            "You draft concise booking replies for Ryozan Studio "
+            f"You draft concise booking replies for {settings.STUDIO_NAME}. "
             "Sound like a real tattoo artist, never use emojis, and write only the message body."
         ),
         messages=[{"role": "user", "content": prompt}],

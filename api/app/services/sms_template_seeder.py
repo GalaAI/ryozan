@@ -11,11 +11,13 @@ send costs one segment. The founder UI shows live segment count when editing.
 
 from typing import Any
 
+from app.core.config import get_settings
 from app.services.sms import public_site_host, sms_help_reply
 
 
 def get_seed_templates() -> list[dict[str, Any]]:
     site = public_site_host()
+    studio = get_settings().STUDIO_NAME
     return [
         {
             "slug": "double_opt_in_confirmation",
@@ -27,7 +29,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
                 "program name, frequency, msg & data rates, HELP/STOP."
             ),
             "body": (
-                "Ryozan Studio: You're signed up for booking and appointment messages. "
+                f"{studio}: You're signed up for booking and appointment messages. "
                 "Msg freq varies (typ. 2-10/mo). Msg & data rates may apply. "
                 "Reply HELP for help, STOP to cancel."
             ),
@@ -42,7 +44,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
                 "Opt-Out can also handle this, but our handler sends it explicitly to keep "
                 "behaviour predictable and logged."
             ),
-            "body": ("Ryozan Studio: You're unsubscribed. No more messages will be sent. Reply START to resubscribe."),
+            "body": (f"{studio}: You're unsubscribed. No more messages will be sent. Reply START to resubscribe."),
             "variables": [],
         },
         {
@@ -59,7 +61,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "category": "transactional",
             "description": "Sent immediately after a booking is confirmed.",
             "body": (
-                "Ryozan Studio: Hi {{client_name}}, your appointment with "
+                f"{studio}: Hi {{{{client_name}}}}, your appointment with "
                 "{{artist_name}} on {{date}} at {{time}} is confirmed. Reply STOP to opt out."
             ),
             "variables": [
@@ -75,7 +77,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "category": "transactional",
             "description": "Sent 24 hours before a confirmed appointment.",
             "body": (
-                "Ryozan Studio: Reminder: your tattoo with {{artist_name}} is "
+                f"{studio}: Reminder: your tattoo with {{{{artist_name}}}} is "
                 "tomorrow at {{time}}. "
                 "Reply STOP to opt out."
             ),
@@ -89,7 +91,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "name": "Reminder · 1h Before",
             "category": "transactional",
             "description": "Sent 1 hour before — light touch, no STOP footer is fine for transactional.",
-            "body": (f"Ryozan Studio: See you in 1 hour at {{{{time}}}}. Parking info: {site}/parking"),
+            "body": (f"{studio}: See you in 1 hour at {{{{time}}}}. Parking info: {site}/parking"),
             "variables": [
                 {"key": "time", "label": "Appointment time", "sample": "2:00 PM"},
             ],
@@ -100,7 +102,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "category": "transactional",
             "description": "Sent 3 days post-session to check healing progress.",
             "body": (
-                "Ryozan Studio: Hey {{client_name}}, how's the tattoo healing? "
+                f"{studio}: Hey {{{{client_name}}}}, how's the tattoo healing? "
                 f"Aftercare instructions: {site}/aftercare. Questions? Just reply."
             ),
             "variables": [
@@ -115,7 +117,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
                 "Sent to opted-in staff when a collector writes in a thread they are on. "
                 "Points to Courier because a staff text to the shop line cannot reach the thread."
             ),
-            "body": ('Ryozan Studio: {{sender_name}} wrote: "{{preview}}" Reply in Courier: {{courier_url}}'),
+            "body": (f'{studio}: {{{{sender_name}}}} wrote: "{{{{preview}}}}" Reply in Courier: {{{{courier_url}}}}'),
             "variables": [
                 {"key": "sender_name", "label": "Sender display name", "sample": "Maria Miller"},
                 {"key": "preview", "label": "First 80 characters", "sample": "How much would it be?"},
@@ -134,7 +136,9 @@ def get_seed_templates() -> list[dict[str, Any]]:
                 "Sent when a client receives a new in-app message. Includes a snippet "
                 "so they don't have to log in to see context."
             ),
-            "body": ('Ryozan Studio: New message from {{sender_name}}: "{{preview}}" - reply here or open the app.'),
+            "body": (
+                f'{studio}: New message from {{{{sender_name}}}}: "{{{{preview}}}}" - reply here or open the app.'
+            ),
             "variables": [
                 {"key": "sender_name", "label": "Sender display name", "sample": "Alex Rivera"},
                 {
@@ -149,7 +153,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "name": "Quote Ready",
             "category": "transactional",
             "description": "Sent when a quote is published for a client to review.",
-            "body": ("Ryozan Studio: Your quote is ready! Review and book: {{quote_url}}"),
+            "body": (f"{studio}: Your quote is ready! Review and book: {{{{quote_url}}}}"),
             "variables": [
                 {
                     "key": "quote_url",
@@ -163,7 +167,7 @@ def get_seed_templates() -> list[dict[str, Any]]:
             "name": "Deposit Received",
             "category": "transactional",
             "description": "Sent when a deposit payment clears.",
-            "body": ("Ryozan Studio: Got your ${{amount}} deposit. See you {{date}}. Receipt: {{receipt_url}}"),
+            "body": (f"{studio}: Got your ${{{{amount}}}} deposit. See you {{{{date}}}}. Receipt: {{{{receipt_url}}}}"),
             "variables": [
                 {"key": "amount", "label": "Deposit amount (no $)", "sample": "100"},
                 {"key": "date", "label": "Appointment date", "sample": "Fri May 30"},

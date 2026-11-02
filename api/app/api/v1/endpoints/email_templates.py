@@ -266,7 +266,9 @@ async def confirm_foundry_unsubscribe(token: str = Query(...)):
         decode_foundry_unsubscribe_token(token)
     except ValueError:
         return _unsubscribe_page(body="This unsubscribe link is invalid.", status_code=400)
-    return _unsubscribe_page(body="Stop marketing emails from Ryozan Studio?", token=token)
+    from app.core.config import get_settings
+
+    return _unsubscribe_page(body=f"Stop marketing emails from {get_settings().STUDIO_NAME}?", token=token)
 
 
 @router.post("/foundry/unsubscribe", response_class=HTMLResponse)
@@ -283,7 +285,9 @@ async def unsubscribe_foundry(
     if user:
         user.marketing_opt_in = False
         await db.flush()
-    return _unsubscribe_page(body="You are unsubscribed from Ryozan Studio marketing emails.")
+    from app.core.config import get_settings
+
+    return _unsubscribe_page(body=f"You are unsubscribed from {get_settings().STUDIO_NAME} marketing emails.")
 
 
 @router.get("/", response_model=list[TemplateResponse])

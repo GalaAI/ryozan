@@ -25,6 +25,7 @@ def _settings():
         STRIPE_SECRET_KEY="sk_test_redacted",
         LOCAL_DEV_MODE=True,
         FRONTEND_URL="http://127.0.0.1:5174",
+        STUDIO_NAME="Ryozan Studio",
     )
 
 

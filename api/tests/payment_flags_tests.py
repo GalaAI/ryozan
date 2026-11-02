@@ -122,6 +122,7 @@ _FAKE_SETTINGS = type(
         "FRONTEND_URL": "https://ryozan.app",
         "SHOP_EMAIL": "shop@example.test",
         "LOCAL_DEV_MODE": False,
+        "STUDIO_NAME": "Ryozan Studio",
     },
 )()
 

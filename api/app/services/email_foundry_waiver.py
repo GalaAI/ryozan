@@ -9,7 +9,13 @@ coral pill CTA, footer) without touching package bytes. Every interpolated value
 from html import escape
 
 from app.services.email import placement_tips
-from app.services.email_foundry import STARSEED_TILE_URL, TIGER_MARK_URL, FoundryEmail, studio_address_html
+from app.services.email_foundry import (
+    STARSEED_TILE_URL,
+    TIGER_MARK_URL,
+    FoundryEmail,
+    studio_address_html,
+    studio_identity_fields,
+)
 
 _BODY_FONT = "'Space Grotesk','Helvetica Neue',Arial,sans-serif"
 _MONO_FONT = "'JetBrains Mono','Courier New',Courier,monospace"
@@ -63,12 +69,13 @@ def _shell(*, title: str, preheader: str, header: str, rows: str) -> str:
 
 
 def _tiger_header(eyebrow: str) -> str:
+    studio = studio_identity_fields()["studio_name"]
     return (
         '<tr><td align="center" style="padding:32px 24px 20px;border-bottom:1px solid rgba(226,218,194,.12);">'
-        f'<img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="72" '
+        f'<img src="{TIGER_MARK_URL}" alt="{escape(studio, quote=True)}" width="72" '
         'style="display:block;margin:0 auto 14px;">'
         f'<div style="font-family:{_DISPLAY_FONT};font-weight:900;font-size:19px;letter-spacing:.18em;color:#e2dac2;'
-        'text-transform:uppercase;">Ryozan Studio</div>'
+        f'text-transform:uppercase;">{escape(studio)}</div>'
         f'<div style="font-family:{_MONO_FONT};font-size:9.5px;letter-spacing:.22em;color:rgba(226,218,194,.5);'
         f'text-transform:uppercase;padding-top:8px;">{escape(eyebrow)}</div></td></tr>'
     )
@@ -176,6 +183,7 @@ def render_aftercare_instructions(
     member: bool = False,
 ) -> FoundryEmail:
     """Immediate aftercare, sent when the waiver is filed. Doc Bot voice, day 0."""
+    studio = studio_identity_fields()["studio_name"]
     first = escape(_first(client_name))
     artist = escape(artist_name or "your artist")
     placement = tattoo_placement.strip()
@@ -237,11 +245,11 @@ def render_aftercare_instructions(
     )
     return FoundryEmail(
         slug="aftercare_instructions",
-        subject="Your aftercare from Doc Bot | Ryozan Studio",
+        subject=f"Your aftercare from Doc Bot | {studio}",
         html_body=_shell(
             title="Tattoo Aftercare",
             preheader="Day 0. Keep it clean, keep it moisturized, keep your hands off.",
-            header=_doc_bot_header("Ryozan Studio // Aftercare // Day 0"),
+            header=_doc_bot_header(f"{studio} // Aftercare // Day 0"),
             rows=rows,
         ),
     )
@@ -310,7 +318,7 @@ def render_waiver_link(
     subject = (
         f"Reminder: your {document_title.lower()} still needs a signature"
         if reminder
-        else f"Your {document_title.lower()} from Ryozan Studio"
+        else f"Your {document_title.lower()} from {studio_identity_fields()['studio_name']}"
     )
     return FoundryEmail(
         slug="waiver_reminder" if reminder else "waiver_link",
