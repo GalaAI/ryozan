@@ -132,7 +132,9 @@ class SchemaBaselinePostgresTests(unittest.TestCase):
         self.assertIn("idx_ryozan_users_role", head["tables"]["ryozan_users"]["indexes"])
         self.assertIn("feedback_samples", head["tables"])
         self.assertIn("viber_accounts", head["tables"])
-        self.assertEqual(len(head["tables"]), len(self.baseline["tables"]))
+        # The baseline tables, plus each table a later revision adds.
+        self.assertIn("ryozan_studio_settings", head["tables"])
+        self.assertEqual(len(head["tables"]), len(self.baseline["tables"]) + 1)
 
         again = _run("-m", "alembic", "upgrade", "head")
         self.assertEqual(again.returncode, 0, again.stderr)

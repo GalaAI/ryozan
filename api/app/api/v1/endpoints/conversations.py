@@ -1722,6 +1722,7 @@ async def get_typing(
 
 # Gala AI Assist
 
+
 def gala_courier_system() -> str:
     return f"""You are Gala, the AI concierge for {get_settings().STUDIO_NAME}.
 You draft reply messages on behalf of the artist. Your voice is calm, direct, warm, and grounded in tattoo-shop operations.

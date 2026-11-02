@@ -149,7 +149,6 @@ logger = logging.getLogger("ryozan.bookings")
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 
-
 def booking_sms_consent_text() -> str:
     settings = get_settings()
     return (
@@ -351,7 +350,9 @@ async def _schedule_blocking_reasons(
     else:
         open_hour, close_hour = hours
         open_at = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=shop_timezone()).replace(hour=open_hour)
-        close_at = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=shop_timezone()).replace(hour=close_hour)
+        close_at = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=shop_timezone()).replace(
+            hour=close_hour
+        )
         if slot_start < open_at or slot_end > close_at:
             reasons.append("outside_work_hours")
     if slot_start < earliest:
