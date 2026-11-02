@@ -14,7 +14,7 @@ MOBILE_PORTAL = ROOT / "app" / "src" / "pages" / "dashboard" / "MobilePortalHome
 GALA_PANEL = ROOT / "app" / "src" / "components" / "GalaPanel.tsx"
 API_CLIENT = ROOT / "app" / "src" / "lib" / "api.ts"
 DASHBOARD_STYLES = ROOT / "app" / "src" / "styles" / "dashboard.css"
-UI_ARCHIVE = ROOT / "app" / "vendor" / "ryozan-ui-0.2.1.tgz"
+UI_ARCHIVE = ROOT / "app" / "vendor" / "ryozan-ui-0.2.2.tgz"
 DASHBOARD_HOME = ROOT / "app" / "src" / "pages" / "dashboard" / "DashboardHome.tsx"
 
 

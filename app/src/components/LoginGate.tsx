@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BRAND } from '../lib/brand'
-import type { CSSProperties, FormEvent, MouseEvent } from 'react'
+import type { CSSProperties, FormEvent } from 'react'
 import { useAuthStore } from '../stores/auth'
 import LogoLoader from './LogoLoader'
+import SignInWave from './SignInWave'
 import './LoginGate.css'
 
 /**
@@ -13,21 +14,21 @@ import './LoginGate.css'
  * sha256 f64073234d…3541fd). The composition, timings and easings are copied
  * verbatim from that file and are canon. Diff against it before editing.
  *
- * Two things intentionally differ from the frozen component, because the
- * frozen component is a design spec and not an auth flow:
+ * Three things intentionally differ from the frozen component. The first two
+ * because the frozen component is a design spec and not an auth flow:
  *
  *  1. It authenticates. The design component captured a password, dropped it,
  *     and signalled success on a blind 9.4s timer, so any password opened the
  *     portal. Here the sequence only advances after `login()` resolves.
  *  2. It has a failure state. On a rejected credential the gate stays on the
  *     login phase and surfaces the store error instead of playing the loader.
+ *  3. Its background. The operator replaced the dim mark and its pointer tilt
+ *     with <SignInWave /> on 2026-11-02. Design system card: SignInWave.
  *
  * The loader phase renders <LogoLoader />, the native port of the frozen
  * composition, on the app's own gsap. No iframe, no second React, no CDN, and
  * no authoring pause control.
  */
-
-const ART = BRAND.mark
 
 /**
  * Loader tweaks, from the operator's "Login Compare" design file. The shipping
@@ -178,7 +179,6 @@ export default function LoginGate({ onComplete, onGoogle, onCreateAccount, initi
     window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   )
 
-  const stageRef = useRef<HTMLDivElement>(null)
   const loaderRef = useRef<HTMLIFrameElement>(null)
   const timers = useRef<number[]>([])
 
@@ -271,46 +271,10 @@ export default function LoginGate({ onComplete, onGoogle, onCreateAccount, initi
     onComplete()
   }
 
-  /** Frozen: pointer tilt 7deg Y / 5deg X, 0.7s ease-out recovery. */
-  const tilt = (e: MouseEvent<HTMLDivElement>) => {
-    const el = stageRef.current
-    if (!el || reducedMotion) return
-    const r = e.currentTarget.getBoundingClientRect()
-    const x = (e.clientX - r.left) / r.width - 0.5
-    const y = (e.clientY - r.top) / r.height - 0.5
-    el.style.transform = `rotateY(${(x * 7).toFixed(2)}deg) rotateX(${(-y * 5).toFixed(2)}deg)`
-  }
-
-  const untilt = () => {
-    if (stageRef.current) stageRef.current.style.transform = 'rotateY(0) rotateX(0)'
-  }
-
-  const artLayer = (kind: 'glow' | 'plane'): CSSProperties => kind === 'glow'
-    ? {
-        position: 'absolute', left: '50%', top: 'var(--lh-art-top)',
-        width: 'var(--lh-glow-w)', aspectRatio: '1970/1095',
-        transform: 'translateZ(-220px) translate(-50%,-50%) scale(1.3)',
-        backgroundImage: `url('${ART}')`, backgroundSize: 'contain',
-        backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
-        filter: 'blur(26px) saturate(1.4) brightness(.4)', opacity: 0.4,
-        animation: 'lhAmbient 9s ease-in-out infinite',
-      }
-    : {
-        position: 'absolute', left: '50%', top: 'var(--lh-art-top)',
-        width: 'var(--lh-art-w)', aspectRatio: '1970/1095',
-        transform: 'translateZ(-120px) translate(-50%,-50%) scale(1.04)',
-        backgroundImage: `url('${ART}')`, backgroundSize: 'contain',
-        backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
-        filter: 'brightness(.48) saturate(.9) drop-shadow(0 30px 44px rgba(0,0,0,.65))',
-        animation: 'lhDrift 14s cubic-bezier(.45,0,.55,1) infinite',
-      }
-
   return (
     <div className="lg-root">
       {phase === 'login' && (
         <div
-          onMouseMove={tilt}
-          onMouseLeave={untilt}
           style={{
             minHeight: '100%',
             display: 'flex',
@@ -323,23 +287,7 @@ export default function LoginGate({ onComplete, onGoogle, onCreateAccount, initi
             overflow: 'hidden',
           }}
         >
-          <div data-art-in="1" style={{ position: 'absolute', inset: 0, perspective: 900, pointerEvents: 'none' }} aria-hidden="true">
-            <div
-              ref={stageRef}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                transformStyle: 'preserve-3d',
-                transition: 'transform .7s cubic-bezier(.16,1,.3,1)',
-                willChange: 'transform',
-              }}
-            >
-              <span className="lg-art-glow" style={artLayer('glow')} />
-              <span className="lg-art-plane" style={artLayer('plane')} />
-            </div>
-            <span style={{ position: 'absolute', inset: 0, background: 'radial-gradient(120% 78% at 50% 40%,transparent 28%,rgba(11,12,11,.78) 64%,#0b0c0b 94%)' }} />
-            <span style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,rgba(11,12,11,.55) 0%,transparent 26%,transparent 48%,rgba(11,12,11,.86) 78%,#0b0c0b 100%)' }} />
-          </div>
+          <SignInWave />
 
           <div data-rise="1" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, paddingTop: 'min(46px,4vh)', position: 'relative', zIndex: 1 }}>
             <span style={{

@@ -8,5 +8,6 @@ export const BRAND = {
   tagline: 'The studio operating system run by Gala and the eight Bandits',
   mark: '/assets/brand/ryozan-mark.svg',
   markAlt: 'Ryozan seal',
+  waveTile: '/assets/brand/ryozan-wave-tile.svg',
   models: 'NVIDIA Nemotron on Nebius Token Factory',
 } as const
