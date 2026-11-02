@@ -779,7 +779,7 @@ def _courier_notification_email_html(message: Message, delivery: dict[str, Any])
   <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;">
     <tr>
       <td style="padding:32px 24px;">
-        <p style="color:#b9ad96;font-size:13px;margin:0 0 8px;text-align:center;letter-spacing:1px;">RYOZAN STUDIO</p>
+        <p style="color:#b9ad96;font-size:13px;margin:0 0 8px;text-align:center;letter-spacing:1px;">{html_escape(get_settings().STUDIO_NAME.upper())}</p>
         <h2 style="color:#faae15;margin:0 0 24px;font-size:18px;text-align:center;">Message from {safe_sender_name}</h2>
         <div style="background:#1d1c19;border-left:4px solid #faae15;padding:18px 22px;border-radius:4px;margin-bottom:24px;">
           <p style="color:#e8e0d0;font-size:15px;line-height:1.55;margin:0;">
@@ -1124,7 +1124,7 @@ async def _gala_auto_reply(
             # Build system prompt based on mode
             if mode == "transparent":
                 system_prompt = (
-                    "You are responding AS Gala, the AI assistant for Ryozan Studio "
+                    f"You are responding AS Gala, the AI assistant for {settings.STUDIO_NAME}. "
                     "Make it clear you are an AI helping on behalf of the artist. "
                     f"Start with something like 'Hey! Gala here, {artist_name}'s assistant.' "
                     "Be warm, helpful, and concise. Keep replies 2-4 sentences max. "
@@ -1722,7 +1722,7 @@ async def get_typing(
 
 # Gala AI Assist
 
-GALA_COURIER_SYSTEM = """You are Gala, the AI concierge for Ryozan Studio.
+GALA_COURIER_SYSTEM = f"""You are Gala, the AI concierge for {get_settings().STUDIO_NAME}.
 You draft reply messages on behalf of the artist. Your voice is calm, direct, warm, and grounded in tattoo-shop operations.
 
 Rules:

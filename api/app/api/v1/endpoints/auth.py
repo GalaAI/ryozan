@@ -551,7 +551,7 @@ async def generate_invite(body: InviteRequest, background_tasks: BackgroundTasks
     background_tasks.add_task(
         send_email,
         to=email,
-        subject="You're Invited — Ryozan Studio Artist Portal",
+        subject=f"You're Invited — {get_settings().STUDIO_NAME} Artist Portal",
         html_body=html,
         from_alias=FROM_ADMIN,
     )

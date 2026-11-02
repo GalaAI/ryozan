@@ -32,7 +32,9 @@ class PlaceholderContactEmailTests(unittest.TestCase):
 
 class SmsHelpReplyTests(unittest.TestCase):
     def _settings(self, shop_email: str):
-        return SimpleNamespace(SHOP_EMAIL=shop_email, public_site_url="https://studio.example")
+        return SimpleNamespace(
+            SHOP_EMAIL=shop_email, public_site_url="https://studio.example", STUDIO_NAME="Ryozan Studio"
+        )
 
     def test_names_the_studio_contact_and_site(self):
         with patch.object(sms, "get_settings", return_value=self._settings("hello@studio.example")):

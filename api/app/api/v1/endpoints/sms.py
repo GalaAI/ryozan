@@ -816,12 +816,12 @@ async def _bella_channel_reply(
 
             disclosure = (
                 "This is your first reply in the thread. Start by saying you are Ensei, the AI assistant "
-                "for Ryozan Studio"
+                f"for {settings.STUDIO_NAME}. "
                 if not has_bella_reply
                 else "You have already disclosed that you are Ensei, the studio's AI assistant."
             )
             system_prompt = (
-                "You are Ensei, the AI assistant for Ryozan Studio. "
+                f"You are Ensei, the AI assistant for {settings.STUDIO_NAME}. "
                 f"{disclosure} Be warm, concise, and conversational. Ask only one question at a time. "
                 "Help with tattoo inquiries, booking intake, appointment support, and general shop questions. "
                 "Collect only what is needed: name, tattoo idea, placement, approximate size, style, preferred "
@@ -856,7 +856,7 @@ async def _bella_channel_reply(
                 logger.warning("Bella %s returned empty content for conversation %s", channel, conversation_id)
                 return
             if not has_bella_reply and ("ensei" not in reply_text.lower() or "ai" not in reply_text.lower()):
-                reply_text = "Hi, I'm Ensei, the AI assistant for Ryozan Studio. " + reply_text
+                reply_text = f"Hi, I'm Ensei, the AI assistant for {settings.STUDIO_NAME}. " + reply_text
 
             if channel == "whatsapp":
                 delivery_log = await send_twilio_whatsapp_text(
@@ -1037,7 +1037,7 @@ async def twilio_inbound_webhook(
         if e164:
             await set_opt_in(db, e164)
             reply = (
-                "Ryozan Studio: You're re-subscribed to booking and appointment "
+                f"{get_settings().STUDIO_NAME}: You're re-subscribed to booking and appointment "
                 "messages. Reply HELP for help, STOP to cancel."
             )
             log.template_slug = "start_confirmation"

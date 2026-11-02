@@ -201,7 +201,7 @@ class FakeSession:
 
 class ArtistScrollRequestEmailTests(unittest.IsolatedAsyncioTestCase):
     def _settings(self):
-        return SimpleNamespace(FRONTEND_URL="https://app.ryozan.app/")
+        return SimpleNamespace(FRONTEND_URL="https://app.ryozan.app/", STUDIO_NAME="Ryozan Studio")
 
     def test_builder_uses_foundry_type_assets_and_live_scroll_route(self):
         with patch("app.services.email.get_settings", return_value=self._settings()):

@@ -958,7 +958,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
             patch("app.api.v1.endpoints.bookings.dispatch_foundry_trigger", new=dispatch_mock),
             patch(
                 "app.api.v1.endpoints.bookings.get_settings",
-                return_value=SimpleNamespace(FRONTEND_URL="https://ryozan.app"),
+                return_value=SimpleNamespace(FRONTEND_URL="https://ryozan.app", STUDIO_NAME="Ryozan Studio"),
             ),
         ):
             result = await bookings_endpoint._send_booking_confirmation(
@@ -1151,6 +1151,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
                 "STRIPE_SECRET_KEY": "sk_test_redacted",
                 "FRONTEND_URL": "https://ryozan.app",
                 "LOCAL_DEV_MODE": False,
+                "STUDIO_NAME": "Ryozan Studio",
             },
         )()
 
@@ -1230,6 +1231,7 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
                 "STRIPE_SECRET_KEY": "sk_test_redacted",
                 "FRONTEND_URL": "https://ryozan.app",
                 "LOCAL_DEV_MODE": False,
+                "STUDIO_NAME": "Ryozan Studio",
             },
         )()
 

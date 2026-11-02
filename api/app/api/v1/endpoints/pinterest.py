@@ -429,13 +429,15 @@ async def pinterest_pin_flash(
     name = design.name or "Flash design"
     price = f" - ${int(design.price)}" if design.price else ""
     try:
-        board_id = await _find_or_create_board(access, "Flash", "Available flash designs at Ryozan Studio Tap to book.")
+        board_id = await _find_or_create_board(
+            access, "Flash", f"Available flash designs at {settings.STUDIO_NAME}. Tap to book."
+        )
         created = await pin.create_pin(
             access,
             board_id=board_id,
             image_url=design.image_url,
             title=f"{name}{price}",
-            description=f"{name} flash design{price}. Available to book at Ryozan Studio",
+            description=f"{name} flash design{price}. Available to book at {settings.STUDIO_NAME}",
             link=shop_url,
             alt_text=f"{name} tattoo flash design",
         )

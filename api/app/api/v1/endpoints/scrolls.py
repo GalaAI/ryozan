@@ -178,7 +178,7 @@ async def gala_interpret_category(
         raise HTTPException(503, "AI not configured. Set NEBIUS_API_KEY.")
 
     prompt = (
-        "You are configuring a document management system for a tattoo studio called Ryozan Studio\n"
+        f"You are configuring a document management system for a tattoo studio called {s.STUDIO_NAME}\n"
         f'A founder wants a new document tab with this intent:\n"{body.intent.strip()}"\n\n'
         "Return ONLY a JSON object with these exact fields:\n"
         "{\n"

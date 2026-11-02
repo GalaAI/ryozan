@@ -116,7 +116,7 @@ async def generate_template(
     if current_user.nexus_profile and current_user.nexus_profile.get("specialties"):
         specialties = f" who specializes in {', '.join(current_user.nexus_profile['specialties'])}"
 
-    prompt = f"""Write a short, {body.tone} response template for a tattoo artist named {artist_name}{specialties} at Ryozan Studio.
+    prompt = f"""Write a short, {body.tone} response template for a tattoo artist named {artist_name}{specialties} at {s.STUDIO_NAME}.
 
 Template type: {info["label"]}
 Purpose: {info["purpose"]}
@@ -169,7 +169,7 @@ async def generate_message(
 
     artist_name = current_user.name or "the artist"
 
-    prompt = f"""Write a short, {body.tone} message from tattoo artist {artist_name} at Ryozan Studio
+    prompt = f"""Write a short, {body.tone} message from tattoo artist {artist_name} at {s.STUDIO_NAME}
 
 Purpose: {body.purpose}
 {f"Client name: {body.client_name}" if body.client_name else ""}

@@ -80,7 +80,9 @@ def sms_help_reply() -> str:
     settings = get_settings()
     contact = (settings.SHOP_EMAIL or "").strip()
     reach = f"email {contact} or visit {public_site_host()}" if contact else f"visit {public_site_host()}"
-    return f"Ryozan Studio: For help, {reach}. Msg freq varies. Msg & data rates may apply. Reply STOP to cancel."
+    return (
+        f"{settings.STUDIO_NAME}: For help, {reach}. Msg freq varies. Msg & data rates may apply. Reply STOP to cancel."
+    )
 
 
 # ── Phone normalisation ──────────────────────────────────────────

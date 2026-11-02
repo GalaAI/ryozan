@@ -453,7 +453,7 @@ class MessagingBoundary(BaseModel):
 class MessagingManifestResponse(BaseModel):
     version: Literal["1.0"]
     tenant_id: Literal["bttco"]
-    tenant_name: Literal["Ryozan Studio"]
+    tenant_name: str
     observed_at: datetime
     receipt_window_days: int
     foundry_source_sha256: str
@@ -929,7 +929,7 @@ async def email_messaging_manifest(
     return MessagingManifestResponse(
         version="1.0",
         tenant_id="bttco",
-        tenant_name="Ryozan Studio",
+        tenant_name=get_settings().STUDIO_NAME,
         observed_at=observed_at,
         receipt_window_days=days,
         foundry_source_sha256=foundry_source_sha256(),

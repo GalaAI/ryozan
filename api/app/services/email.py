@@ -28,6 +28,7 @@ from datetime import UTC, date, datetime, timedelta
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from html import escape
 from uuid import UUID
 
 import aiosmtplib
@@ -128,6 +129,12 @@ def format_identity(name: str, email: str) -> str:
 _NO_SENDER = "set {provider}_FROM_EMAIL or SHOP_EMAIL"
 
 
+def _studio_name_html(*, upper: bool = False) -> str:
+    """The configured studio name, HTML-escaped for email markup."""
+    name = get_settings().STUDIO_NAME
+    return escape(name.upper() if upper else name)
+
+
 def _email_head() -> str:
     """
     Shared <head> block with @font-face for KC Tallboy.
@@ -167,7 +174,7 @@ def _build_header(subtitle: str) -> str:
                   border-radius:50%;border:2px solid #faae15;
                   overflow:hidden;background:#1a1810;margin-bottom:16px;">
         <img src="{TIGER_MARK_URL}"
-             alt="Ryozan Studio"
+             alt="{_studio_name_html()}"
              width="76" height="76"
              style="display:block;border-radius:50%;object-fit:cover;">
       </div>
@@ -175,7 +182,7 @@ def _build_header(subtitle: str) -> str:
       <h1 style="margin:0 0 6px;font-size:22px;letter-spacing:4px;
                  color:#faae15;font-family:'KC Tallboy','Oswald','Arial Narrow',sans-serif;
                  font-weight:bold;text-transform:uppercase;">
-        RYOZAN STUDIO
+        {_studio_name_html(upper=True)}
       </h1>
       <!-- Subtitle tag -->
       <p style="margin:0;font-size:11px;color:#b9ad96;
@@ -717,7 +724,7 @@ async def process_booky_courier_outbox_once(
                 )
                 sent = await send_email(
                     to=str(claimed_metadata["delivery_to"]),
-                    subject="Consultation Booked - Ryozan Studio",
+                    subject=f"Consultation Booked - {get_settings().STUDIO_NAME}",
                     html_body=html,
                     tags=["booking-confirmation"],
                     from_alias=FROM_SHOP,
@@ -910,7 +917,7 @@ async def _send_via_smtp(
         logger.warning("No email provider configured -- skipping email to %s", to)
         return False
 
-    plain = "Thank you for visiting Ryozan Studio Please view this email in an HTML-capable client."
+    plain = f"Thank you for visiting {settings.STUDIO_NAME}. Please view this email in an HTML-capable client."
 
     if attachments:
         # An attachment cannot live directly in a multipart/alternative -- clients would
@@ -994,7 +1001,7 @@ def build_aftercare_html(
   <tr><td style="padding:24px;color:#e8dfcf;font-size:15px;line-height:1.6;">
     <p style="margin:0 0 16px;">Hey {client_name},</p>
     <p style="margin:0 0 16px;">
-      Thanks for getting tattooed with <strong style="color:#faae15;">{artist_name}</strong> at Ryozan Studio
+      Thanks for getting tattooed with <strong style="color:#faae15;">{artist_name}</strong> at {_studio_name_html()}
       Here's everything you need to know to keep your new piece looking sharp.
     </p>
   </td></tr>
@@ -1091,7 +1098,7 @@ def build_aftercare_html(
   <!-- Footer -->
   <tr><td style="padding:16px 24px 32px;text-align:center;">
     <p style="margin:0 0 8px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#666;">
       Questions about healing? Reply to this email or DM your artist on Instagram.
@@ -1213,7 +1220,7 @@ def build_document_send_html(
   <tr><td style="padding:24px;color:#e8dfcf;font-size:15px;line-height:1.6;">
     <p style="margin:0 0 16px;">Hey {recipient_name},</p>
     <p style="margin:0 0 16px;">
-      <strong style="color:#faae15;">{sender_name}</strong> from Ryozan Studio
+      <strong style="color:#faae15;">{sender_name}</strong> from {_studio_name_html()}
       has sent you a document that needs your attention.
     </p>
   </td></tr>
@@ -1254,7 +1261,7 @@ def build_document_send_html(
   <!-- Footer -->
   <tr><td style="padding:16px 24px 32px;text-align:center;">
     <p style="margin:0 0 8px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#666;">
       Questions? Reply to this email or contact the shop directly.
@@ -1334,7 +1341,7 @@ def build_reminder_html(
   <!-- Footer -->
   <tr><td style="padding:16px 24px 32px;text-align:center;">
     <p style="margin:0 0 8px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#666;">
       If you've already completed this, you can ignore this email.
@@ -1430,7 +1437,7 @@ def build_booking_confirmation_html(
   <tr><td style="padding:24px;color:#e8dfcf;font-size:15px;line-height:1.6;">
     <p style="margin:0 0 16px;">Hey {client_name},</p>
     <p style="margin:0 0 16px;">
-      {f'Your consultation with <strong style="color:#df8a67;">{artist_name}</strong> is booked.' if confirmed else f'Thanks for reaching out to <strong style="color:#faae15;">{artist_name}</strong> at Ryozan Studio Your booking request has been received and your artist will review it within <strong>24-48 hours</strong>.'}
+      {f'Your consultation with <strong style="color:#df8a67;">{artist_name}</strong> is booked.' if confirmed else f'Thanks for reaching out to <strong style="color:#faae15;">{artist_name}</strong> at {_studio_name_html()}. Your booking request has been received and your artist will review it within <strong>24-48 hours</strong>.'}
     </p>
   </td></tr>
 
@@ -1509,7 +1516,7 @@ def build_booking_confirmation_html(
   <!-- Footer -->
   <tr><td style="padding:16px 24px 32px;text-align:center;">
     <p style="margin:0 0 8px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#666;">
       Questions? Reply to this email or DM your artist on Instagram.
@@ -1656,7 +1663,7 @@ def build_deposit_confirmation_html(
   <!-- Footer -->
   <tr><td style="padding:16px 24px 32px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0 0 8px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#666;">
       Questions? Reply to this email or DM your artist on Instagram.
@@ -1774,7 +1781,7 @@ def build_deposit_artist_notification_html(
     <td style="padding:12px 24px 20px;text-align:center;
                border-top:1px solid rgba(250,174,21,0.1);">
       <p style="margin:0;font-size:11px;color:#555;">
-        Ryozan Studio
+        {_studio_name_html()}
       </p>
     </td>
   </tr>
@@ -2042,7 +2049,7 @@ def build_artist_notification_html(
     <td style="padding:12px 24px 20px;text-align:center;
                border-top:1px solid rgba(250,174,21,0.1);">
       <p style="margin:0;font-size:11px;color:#555;">
-        Ryozan Studio &bull; Automated booking notification
+        {_studio_name_html()} &bull; Automated booking notification
       </p>
     </td>
   </tr>
@@ -2113,7 +2120,7 @@ def build_quote_email_html(
 
 <!-- Logo -->
 <tr><td style="padding:24px 32px;text-align:center;border-bottom:1px solid rgba(250,174,21,0.15);">
-    <img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="60" style="border-radius:50%;">
+    <img src="{TIGER_MARK_URL}" alt="{_studio_name_html()}" width="60" style="border-radius:50%;">
 </td></tr>
 
 <!-- Content -->
@@ -2159,7 +2166,7 @@ def build_quote_email_html(
 <!-- Footer -->
 <tr><td style="padding:20px 32px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
     <p style="font-family:Arial,sans-serif;font-size:11px;color:#b9ad96;margin:0;">
-        Ryozan Studio
+        {_studio_name_html()}
     </p>
 </td></tr>
 
@@ -2206,7 +2213,7 @@ def build_invite_html(
   <tr><td style="padding:28px 24px 20px;color:#e8dfcf;font-size:15px;line-height:1.7;">
     <p style="margin:0 0 16px;">Hey {artist_name},</p>
     <p style="margin:0 0 16px;">
-      You've been invited to join the <strong style="color:#faae15;">Ryozan Studio</strong>
+      You've been invited to join the <strong style="color:#faae15;">{_studio_name_html()}</strong>
       artist portal — your personal dashboard for managing bookings, client documents,
       and your public profile.
     </p>
@@ -2279,7 +2286,7 @@ def build_invite_html(
   <tr><td style="padding:16px 24px 32px;text-align:center;
                  border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0 0 6px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#555;">
       Didn't expect this? You can safely ignore this email.
@@ -2322,7 +2329,7 @@ def build_login_welcome_html(
   <tr><td style="padding:28px 24px 20px;color:#e8dfcf;font-size:15px;line-height:1.7;">
     <p style="margin:0 0 16px;">Hey {artist_name},</p>
     <p style="margin:0 0 16px;">
-      Your <strong style="color:#faae15;">Ryozan Studio</strong> artist portal
+      Your <strong style="color:#faae15;">{_studio_name_html()}</strong> artist portal
       is live and ready for you. Log in to manage your bookings, documents, portfolio,
       and connect with clients &mdash; all in one place.
     </p>
@@ -2391,7 +2398,7 @@ def build_login_welcome_html(
   <tr><td style="padding:16px 24px 32px;text-align:center;
                  border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0 0 6px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#555;">
       Questions? Reply to this email or reach out to your shop admin.
@@ -2421,9 +2428,9 @@ def build_welcome_html(name: str, role: str) -> str:
 
     if role == "collector":
         subtitle = "WELCOME TO THE CLUB"
-        body_copy = """
+        body_copy = f"""
     <p style="margin:0 0 16px;">
-      You're officially part of the <strong style="color:#faae15;">Ryozan Studio</strong>
+      You're officially part of the <strong style="color:#faae15;">{_studio_name_html()}</strong>
       family. Your collector account is set up and ready to go.
     </p>
     <p style="margin:0 0 16px;">Here's what you can do now:</p>"""
@@ -2436,7 +2443,7 @@ def build_welcome_html(name: str, role: str) -> str:
         subtitle = "WELCOME TO THE TEAM"
         body_copy = f"""
     <p style="margin:0 0 16px;">
-      Welcome to <strong style="color:#faae15;">Ryozan Studio</strong>.
+      Welcome to <strong style="color:#faae15;">{_studio_name_html()}</strong>.
       Your <strong style="color:#faae15;">{role.capitalize()}</strong> account is live
       and your portal is ready.
     </p>
@@ -2494,7 +2501,7 @@ def build_welcome_html(name: str, role: str) -> str:
   <tr><td style="padding:16px 24px 32px;text-align:center;
                  border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0 0 6px;font-size:12px;color:#b9ad96;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
     <p style="margin:0;font-size:11px;color:#555;">
       Questions? Reply to this email or reach out on Instagram.
@@ -2524,7 +2531,7 @@ async def send_welcome_email(to_email: str, name: str, role: str) -> bool:
         ) or build_welcome_html(name=name, role=role)
         return await send_email(
             to=to_email,
-            subject="Welcome to Ryozan Studio",
+            subject=f"Welcome to {get_settings().STUDIO_NAME}",
             html_body=html,
             from_alias=FROM_SHOP,
         )
@@ -2644,7 +2651,7 @@ def build_appointment_reminder_html(
   <tr>
     <td style="padding:12px 24px 20px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
       <p style="margin:0;font-size:11px;color:#555;">
-        Ryozan Studio
+        {_studio_name_html()}
       </p>
     </td>
   </tr>
@@ -2726,7 +2733,7 @@ def build_healing_followup_html(
   <tr>
     <td style="padding:12px 24px 20px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
       <p style="margin:0;font-size:11px;color:#555;">
-        Ryozan Studio
+        {_studio_name_html()}
       </p>
     </td>
   </tr>
@@ -2810,7 +2817,7 @@ def build_install_reminder_html(client_name: str, is_final: bool = False) -> str
   <tr>
     <td style="padding:12px 24px 20px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
       <p style="margin:0;font-size:11px;color:#555;">
-        Ryozan Studio
+        {_studio_name_html()}
       </p>
     </td>
   </tr>
@@ -2838,7 +2845,7 @@ def build_booking_resume_reminder_html(client_name: str, book_url: str, join_url
   <tr><td style="padding:32px 24px 24px;">
     <p style="margin:0 0 16px;font-size:16px;color:#e8dfcf;">Hey {client_name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:#b9ad96;line-height:1.6;">
-      You started a booking request at Ryozan Studio but did not finish it.
+      You started a booking request at {_studio_name_html()} but did not finish it.
       If you still want to lock your session, finish your booking below.
     </p>
     <p style="margin:0 0 18px;font-size:14px;color:#a7a7a7;line-height:1.6;">
@@ -2859,7 +2866,7 @@ def build_booking_resume_reminder_html(client_name: str, book_url: str, join_url
 
   <tr><td style="padding:12px 24px 20px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0;font-size:11px;color:#555;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
   </td></tr>
 
@@ -2919,8 +2926,8 @@ def build_scroll_request_html(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#191a19" style="max-width:600px;width:100%;table-layout:fixed;background-color:#191a19;border:1px solid #3a301e;border-radius:16px;">
 
   <tr><td align="center" style="padding:34px 24px 22px;border-bottom:1px solid #2a2316;">
-    <img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="72" style="display:block;margin:0 auto 14px;">
-    <div class="foundry-shop-name" style="font-family:'Poppins','Arial Black','Helvetica Neue',Arial,sans-serif;font-weight:900;font-size:19px;line-height:1.25;letter-spacing:.18em;color:#c8a15e;text-transform:uppercase;overflow-wrap:anywhere;">RYOZAN STUDIO</div>
+    <img src="{TIGER_MARK_URL}" alt="{_studio_name_html()}" width="72" style="display:block;margin:0 auto 14px;">
+    <div class="foundry-shop-name" style="font-family:'Poppins','Arial Black','Helvetica Neue',Arial,sans-serif;font-weight:900;font-size:19px;line-height:1.25;letter-spacing:.18em;color:#c8a15e;text-transform:uppercase;overflow-wrap:anywhere;">{_studio_name_html(upper=True)}</div>
     <div style="font-family:'JetBrains Mono','Courier New',Courier,monospace;font-size:9.5px;letter-spacing:.22em;color:rgba(232,223,207,.5);text-transform:uppercase;padding-top:8px;">{eyebrow}</div>
   </td></tr>
 
@@ -3013,7 +3020,7 @@ def build_password_reset_html(name: str, reset_url: str, expires_in_minutes: int
   <tr><td style="padding:32px 24px 24px;">
     <p style="margin:0 0 16px;font-size:16px;color:#e8dfcf;">Hey {name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:#b9ad96;line-height:1.6;">
-      Here is your link to set a new password for your Ryozan Studio
+      Here is your link to set a new password for your {_studio_name_html()}
       account.
     </p>
     <div style="text-align:center;margin:28px 0;">
@@ -3035,7 +3042,7 @@ def build_password_reset_html(name: str, reset_url: str, expires_in_minutes: int
 
   <tr><td style="padding:12px 24px 20px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0;font-size:11px;color:#555;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
   </td></tr>
 
@@ -3073,7 +3080,7 @@ async def send_password_reset_email(to_email: str, name: str, reset_url: str, ex
         )
         return await send_email(
             to=to_email,
-            subject="Reset your Ryozan Studio password",
+            subject=f"Reset your {get_settings().STUDIO_NAME} password",
             html_body=html,
             from_alias=FROM_ADMIN,
         )
@@ -3106,7 +3113,7 @@ def build_password_changed_html(name: str, recover_url: str) -> str:
   <tr><td style="padding:32px 24px 24px;">
     <p style="margin:0 0 16px;font-size:16px;color:#e8dfcf;">Hey {name},</p>
     <p style="margin:0 0 16px;font-size:15px;color:#b9ad96;line-height:1.6;">
-      Your Ryozan Studio password has been updated. You are all set, and
+      Your {_studio_name_html()} password has been updated. You are all set, and
       you can sign in with it now.
     </p>
     <p style="margin:0;font-size:13px;color:#8f8f8f;line-height:1.6;">
@@ -3117,7 +3124,7 @@ def build_password_changed_html(name: str, recover_url: str) -> str:
 
   <tr><td style="padding:12px 24px 20px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0;font-size:11px;color:#555;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
   </td></tr>
 
@@ -3138,7 +3145,7 @@ async def send_password_changed_email(to_email: str, name: str, recover_url: str
         ) or build_password_changed_html(name=name, recover_url=url)
         return await send_email(
             to=to_email,
-            subject="Your Ryozan Studio password was changed",
+            subject=f"Your {get_settings().STUDIO_NAME} password was changed",
             html_body=html,
             from_alias=FROM_ADMIN,
         )
@@ -3198,7 +3205,7 @@ def build_portal_migration_html(name: str, google_url: str, claim_url: str) -> s
 
   <tr><td style="padding:12px 24px 20px;text-align:center;border-top:1px solid rgba(250,174,21,0.1);">
     <p style="margin:0;font-size:11px;color:#555;">
-      Ryozan Studio
+      {_studio_name_html()}
     </p>
   </td></tr>
 
@@ -3221,7 +3228,7 @@ async def send_portal_migration_email(to_email: str, name: str) -> bool:
         ) or build_portal_migration_html(name=name, google_url=google_url, claim_url=claim_url)
         return await send_email(
             to=to_email,
-            subject="Your Ryozan Studio portal is ready",
+            subject=f"Your {get_settings().STUDIO_NAME} portal is ready",
             html_body=html,
             from_alias=FROM_ADMIN,
         )

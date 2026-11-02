@@ -809,7 +809,7 @@ async def create_booth_rent_checkout(
         "currency": "usd",
         "unit_amount": installment_amount_cents,
         "product_data": {
-            "name": "Ryozan Studio booth rent",
+            "name": f"{get_settings().STUDIO_NAME} booth rent",
             "metadata": {"bttco_billing_kind": "booth_rent"},
         },
     }

@@ -734,7 +734,7 @@ async def generate_ai_summary(data: dict, db=None, user=None) -> str:
             max_tokens=1200,
             tools=[],
             system_prompt=(
-                "You are Gala, the AI assistant for Ryozan Studio. "
+                f"You are Gala, the AI assistant for {settings.STUDIO_NAME}. "
                 f"Write a full daily operations debrief for {debrief_owner_phrase(settings)}. "
                 "Use the available calendar, booking, waiver, account, quest, lesson, and inbox signals. "
                 "If a signal is not present in the data, say what is missing instead of inventing it. "

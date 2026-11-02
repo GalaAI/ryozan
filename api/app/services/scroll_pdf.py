@@ -97,6 +97,12 @@ _MONO = "Courier-Bold"
 _STUDIO_MARK = Path(__file__).resolve().parent.parent / "assets" / "brand" / "ryozan-mark.png"
 
 
+def _studio_name() -> str:
+    from app.core.config import get_settings
+
+    return get_settings().STUDIO_NAME
+
+
 def _studio_footer() -> str:
     from app.core.config import get_settings
 
@@ -221,7 +227,7 @@ def _draw_page_chrome(canvas, doc) -> None:
 
     canvas.setFillColor(_CREAM)
     canvas.setFont(_DISPLAY, 15)
-    canvas.drawString(text_x, top - 0.47 * inch, "RYOZAN STUDIO", charSpace=2.2)
+    canvas.drawString(text_x, top - 0.47 * inch, _studio_name().upper(), charSpace=2.2)
     canvas.setFillColor(_GOLD)
     canvas.setFont(_MONO, 7.5)
     canvas.drawString(text_x, top - 0.66 * inch, "ARTIST SCROLL // OWNER ARCHIVE COPY", charSpace=1.4)
@@ -533,7 +539,7 @@ def build_scroll_pdf(data: ScrollPdfInput) -> bytes:
         leftMargin=_SIDE_MARGIN,
         rightMargin=_SIDE_MARGIN,
         title=f"Artist Scroll: {data.artist_name}",
-        author="Ryozan Studio",
+        author=_studio_name(),
     )
     doc.build(elements, onFirstPage=_draw_page_chrome, onLaterPages=_draw_page_chrome)
     return buf.getvalue()

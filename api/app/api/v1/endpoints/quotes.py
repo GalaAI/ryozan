@@ -184,7 +184,7 @@ async def create_quote(
             customer_price_cents(int(float(body.estimated_total_max) * 100)) / 100 if body.estimated_total_max else None
         )
         try:
-            fallback_subject = f"Your Tattoo Quote from {artist_name} — Ryozan Studio"
+            fallback_subject = f"Your Tattoo Quote from {artist_name} — {settings.STUDIO_NAME}"
             fallback_html = build_quote_email_html(
                 client_name=client_name,
                 artist_name=artist_name,
