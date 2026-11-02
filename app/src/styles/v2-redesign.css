@@ -259,7 +259,8 @@ body::before {
     justify-content: center;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(to bottom, rgba(5, 5, 5, 0.7) 0%, rgba(5, 5, 5, 0.9) 100%), url('/assets/images/shop-interior.jpg');
+    /* The studio's own photo (STUDIO_HERO_IMAGE_URL) arrives as --studio-hero-image. */
+    background: linear-gradient(to bottom, rgba(5, 5, 5, 0.7) 0%, rgba(5, 5, 5, 0.9) 100%), var(--studio-hero-image, none);
     background-size: cover;
     background-position: center;
     padding-bottom: 3rem;

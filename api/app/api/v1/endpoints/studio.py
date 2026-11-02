@@ -8,6 +8,8 @@ install shows neutral copy until it sets its own values. Only non-secret
 values belong here: anything added to this response is world-readable.
 """
 
+from typing import Literal
+
 from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
@@ -28,6 +30,26 @@ class StudioBookingDays(BaseModel):
     request_only_artist_slugs: list[str]
 
 
+class StudioSocialLink(BaseModel):
+    label: str
+    url: str
+
+
+class StudioSiteSettings(BaseModel):
+    """The studio's public website. Blank values hide their section."""
+
+    # PUBLIC_SITE_MODE: "product" shows the Ryozan landing at /, "studio" this studio's site.
+    mode: Literal["product", "studio"]
+    # STUDIO_SITE_HOSTS: hostnames that get the studio site even in product mode.
+    studio_hosts: list[str]
+    tagline: str
+    story_paragraphs: list[str]
+    hours: list[str]
+    hero_image_url: str
+    gallery_image_urls: list[str]
+    social_links: list[StudioSocialLink]
+
+
 class StudioSettingsResponse(BaseModel):
     studio_name: str
     owner_name: str
@@ -42,6 +64,7 @@ class StudioSettingsResponse(BaseModel):
     sample_flash_urls: list[str]
     # COURIER_REPLY_DOMAIN: where studio email handles live. Empty: handles are off.
     email_domain: str
+    site: StudioSiteSettings
 
 
 def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
@@ -61,6 +84,16 @@ def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
         waiver_template_id=settings.WAIVER_TEMPLATE_ID,
         sample_flash_urls=settings.sample_flash_urls,
         email_domain=settings.COURIER_REPLY_DOMAIN,
+        site=StudioSiteSettings(
+            mode=settings.public_site_mode,
+            studio_hosts=settings.studio_site_hosts,
+            tagline=settings.STUDIO_TAGLINE.strip(),
+            story_paragraphs=settings.studio_story_paragraphs,
+            hours=settings.studio_hours_lines,
+            hero_image_url=settings.studio_hero_image_url,
+            gallery_image_urls=settings.studio_gallery_image_urls,
+            social_links=[StudioSocialLink(**link) for link in settings.studio_social_links],
+        ),
     )
 
 

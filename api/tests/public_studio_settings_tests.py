@@ -37,6 +37,25 @@ NEUTRAL = {
     "WAIVER_TEMPLATE_ID": "",
     "SAMPLE_FLASH_URLS": "",
     "VAPID_SUBJECT": "",
+    "PUBLIC_SITE_MODE": "product",
+    "STUDIO_SITE_HOSTS": "",
+    "STUDIO_TAGLINE": "",
+    "STUDIO_STORY": "",
+    "STUDIO_HOURS": "",
+    "STUDIO_HERO_IMAGE_URL": "",
+    "STUDIO_GALLERY_IMAGE_URLS": "",
+    "STUDIO_SOCIAL_LINKS": "",
+}
+
+NEUTRAL_SITE = {
+    "mode": "product",
+    "studio_hosts": [],
+    "tagline": "",
+    "story_paragraphs": [],
+    "hours": [],
+    "hero_image_url": "",
+    "gallery_image_urls": [],
+    "social_links": [],
 }
 
 # Values that only a configured settings object could produce.
@@ -53,6 +72,14 @@ CONFIGURED = {
     "WAIVER_TEMPLATE_ID": "00000000-0000-4000-8000-000000000001",
     "SAMPLE_FLASH_URLS": "https://cdn.example.test/flash-1.jpg, https://cdn.example.test/flash-2.jpg",
     "COURIER_REPLY_DOMAIN": "in.example.test",
+    "PUBLIC_SITE_MODE": "studio",
+    "STUDIO_SITE_HOSTS": "example.test",
+    "STUDIO_TAGLINE": "Custom work by appointment.",
+    "STUDIO_STORY": "We opened in a small room.\n\nNow there are three chairs.",
+    "STUDIO_HOURS": "Tue-Sat 11am-7pm\nSun-Mon closed",
+    "STUDIO_HERO_IMAGE_URL": "https://cdn.example.test/front.jpg",
+    "STUDIO_GALLERY_IMAGE_URLS": "https://cdn.example.test/a.jpg, /media/b.jpg",
+    "STUDIO_SOCIAL_LINKS": "Instagram=https://instagram.example.test/ink",
 }
 
 SECRET_VALUES = {
@@ -88,7 +115,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
     def test_neutral_defaults_for_a_new_install(self):
         defaults = Settings(_env_file=None)
         for name in NEUTRAL:
-            self.assertEqual(getattr(defaults, name), "", name)
+            self.assertEqual(getattr(defaults, name), NEUTRAL[name], name)
         body = _get(_settings()).json()
         self.assertEqual(body["owner_name"], "")
         self.assertEqual(body["contact_email"], "")
@@ -103,6 +130,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
             {"closed_weekdays": [], "request_only_weekdays": [], "request_only_artist_slugs": []},
         )
         self.assertEqual(body["timezone"], SHOP_TIMEZONE.key)
+        self.assertEqual(body["site"], NEUTRAL_SITE)
 
     def test_values_reflect_settings(self):
         body = _get(_settings(**CONFIGURED)).json()
@@ -127,6 +155,16 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
                     "https://cdn.example.test/flash-2.jpg",
                 ],
                 "email_domain": "in.example.test",
+                "site": {
+                    "mode": "studio",
+                    "studio_hosts": ["example.test"],
+                    "tagline": "Custom work by appointment.",
+                    "story_paragraphs": ["We opened in a small room.", "Now there are three chairs."],
+                    "hours": ["Tue-Sat 11am-7pm", "Sun-Mon closed"],
+                    "hero_image_url": "https://cdn.example.test/front.jpg",
+                    "gallery_image_urls": ["https://cdn.example.test/a.jpg", "/media/b.jpg"],
+                    "social_links": [{"label": "Instagram", "url": "https://instagram.example.test/ink"}],
+                },
             },
         )
 
@@ -149,6 +187,85 @@ class StudioSettingValidationTests(unittest.TestCase):
     def test_waiver_template_id_must_be_a_uuid(self):
         with self.assertRaises(ValidationError):
             Settings(_env_file=None, WAIVER_TEMPLATE_ID="waiver")
+
+
+class PublicSiteModeTests(unittest.TestCase):
+    """PUBLIC_SITE_MODE and the studio website values behind it."""
+
+    def test_new_install_shows_the_product_landing_with_no_studio_content(self):
+        defaults = Settings(_env_file=None)
+        self.assertEqual(defaults.PUBLIC_SITE_MODE, "product")
+        for name in (
+            "STUDIO_SITE_HOSTS",
+            "STUDIO_TAGLINE",
+            "STUDIO_STORY",
+            "STUDIO_HOURS",
+            "STUDIO_HERO_IMAGE_URL",
+            "STUDIO_GALLERY_IMAGE_URLS",
+            "STUDIO_SOCIAL_LINKS",
+        ):
+            self.assertEqual(getattr(defaults, name), NEUTRAL[name], name)
+        site = _get(defaults.model_copy(update={"STUDIO_NAME": "Ryozan Studio"})).json()["site"]
+        self.assertEqual(site, NEUTRAL_SITE)
+
+    def test_mode_is_case_insensitive_and_blank_means_product(self):
+        self.assertEqual(Settings(_env_file=None, PUBLIC_SITE_MODE=" Studio ").PUBLIC_SITE_MODE, "studio")
+        self.assertEqual(Settings(_env_file=None, PUBLIC_SITE_MODE="").PUBLIC_SITE_MODE, "product")
+
+    def test_unknown_mode_fails_at_startup(self):
+        with self.assertRaises(ValidationError):
+            Settings(_env_file=None, PUBLIC_SITE_MODE="shop")
+
+    def test_site_hosts_are_bare_lowercase_hostnames(self):
+        settings = Settings(_env_file=None, STUDIO_SITE_HOSTS=" Ink.Example.test, www.ink.example.test ")
+        self.assertEqual(settings.studio_site_hosts, ["ink.example.test", "www.ink.example.test"])
+        for bad in ("https://ink.example.test", "ink.example.test:443", "ink example"):
+            with self.assertRaises(ValidationError, msg=bad):
+                Settings(_env_file=None, STUDIO_SITE_HOSTS=bad)
+
+    def test_image_urls_must_be_https_or_a_site_path(self):
+        settings = Settings(_env_file=None, STUDIO_GALLERY_IMAGE_URLS="https://cdn.example.test/a.jpg,/media/b.jpg")
+        self.assertEqual(settings.studio_gallery_image_urls, ["https://cdn.example.test/a.jpg", "/media/b.jpg"])
+        for bad in (
+            "http://cdn.example.test/a.jpg",
+            "//cdn.example.test/a.jpg",
+            "javascript:alert(1)",
+            "/a.jpg'),url(x",
+        ):
+            with self.assertRaises(ValidationError, msg=bad):
+                Settings(_env_file=None, STUDIO_HERO_IMAGE_URL=bad)
+        with self.assertRaises(ValidationError):
+            Settings(_env_file=None, STUDIO_HERO_IMAGE_URL="/a.jpg,/b.jpg")
+
+    def test_social_links_need_a_label_and_an_https_url(self):
+        settings = Settings(_env_file=None, STUDIO_SOCIAL_LINKS="Instagram=https://ig.example.test/x?a=b")
+        self.assertEqual(settings.studio_social_links, [{"label": "Instagram", "url": "https://ig.example.test/x?a=b"}])
+        for bad in ("https://ig.example.test", "Instagram=", "=https://ig.example.test", "Mail=mailto:a@example.test"):
+            with self.assertRaises(ValidationError, msg=bad):
+                Settings(_env_file=None, STUDIO_SOCIAL_LINKS=bad)
+
+    def test_unvalidated_values_never_reach_the_response(self):
+        # model_copy skips validators; the response properties filter again.
+        site = _get(
+            _settings(
+                PUBLIC_SITE_MODE="shop",
+                STUDIO_SITE_HOSTS="https://x.example.test",
+                STUDIO_HERO_IMAGE_URL="javascript:alert(1)",
+                STUDIO_GALLERY_IMAGE_URLS="//evil.example.test/a.jpg",
+                STUDIO_SOCIAL_LINKS="X=javascript:alert(1)",
+            )
+        ).json()["site"]
+        self.assertEqual(site, NEUTRAL_SITE)
+
+    def test_story_splits_on_blank_lines_and_escaped_newlines(self):
+        settings = _settings(STUDIO_STORY="First line\nstill first.\n\n\nSecond.\\n\\nThird.")
+        self.assertEqual(settings.studio_story_paragraphs, ["First line still first.", "Second.", "Third."])
+
+    def test_site_settings_carry_no_secret(self):
+        response = _get(_settings(**CONFIGURED, **SECRET_VALUES))
+        site = response.json()["site"]
+        for name, value in SECRET_VALUES.items():
+            self.assertNotIn(value, str(site), name)
 
 
 class VapidSubjectTests(unittest.TestCase):

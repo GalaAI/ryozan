@@ -9,13 +9,25 @@
  * This module is pure (type-only imports) so node tests can load it alone;
  * the React hook lives in hooks/useStudioSettings.ts.
  */
-import type { DocumentTemplate, StudioSettings, StudioWeekday } from './api'
+import type { DocumentTemplate, PublicSiteMode, StudioSettings, StudioSiteSettings, StudioWeekday } from './api'
 
 export const STUDIO_WEEKDAYS: readonly StudioWeekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
 const WEEKDAY_LONG: Record<StudioWeekday, string> = {
   sun: 'Sunday', mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday',
 }
+
+/** A new install: the product landing at /, and no studio website content. */
+export const NEUTRAL_STUDIO_SITE: StudioSiteSettings = Object.freeze({
+  mode: 'product',
+  studio_hosts: [],
+  tagline: '',
+  story_paragraphs: [],
+  hours: [],
+  hero_image_url: '',
+  gallery_image_urls: [],
+  social_links: [],
+}) as StudioSiteSettings
 
 export const NEUTRAL_STUDIO_SETTINGS: StudioSettings = Object.freeze({
   studio_name: '',
@@ -29,6 +41,7 @@ export const NEUTRAL_STUDIO_SETTINGS: StudioSettings = Object.freeze({
   waiver_template_id: '',
   sample_flash_urls: [],
   email_domain: '',
+  site: NEUTRAL_STUDIO_SITE,
 }) as StudioSettings
 
 const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '')
@@ -58,7 +71,52 @@ export function normalizeStudioSettings(raw: unknown): StudioSettings {
     waiver_template_id: text(body.waiver_template_id),
     sample_flash_urls: textList(body.sample_flash_urls),
     email_domain: text(body.email_domain).toLowerCase(),
+    site: normalizeStudioSite(body.site),
   }
+}
+
+// Characters that would let a URL break out of an attribute or a CSS url().
+const URL_FORBIDDEN = /[\s"'()<>\\`]/
+const HOSTNAME = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/
+
+/** An absolute https:// URL with a host. The API validates too; this keeps a bad body inert. */
+export function isWebUrl(value: string): boolean {
+  return /^https:\/\/[^/?#]+/.test(value) && !URL_FORBIDDEN.test(value)
+}
+
+/** https:// URL or a same-site path (/media/a.jpg), never protocol-relative. */
+export function isPublicImageUrl(value: string): boolean {
+  if (value.startsWith('/') && !value.startsWith('//')) return !URL_FORBIDDEN.test(value)
+  return isWebUrl(value)
+}
+
+function normalizeStudioSite(raw: unknown): StudioSiteSettings {
+  if (!raw || typeof raw !== 'object') return NEUTRAL_STUDIO_SITE
+  const site = raw as Record<string, unknown>
+  const hero = text(site.hero_image_url)
+  return {
+    mode: text(site.mode).toLowerCase() === 'studio' ? 'studio' : 'product',
+    studio_hosts: textList(site.studio_hosts).map((host) => host.toLowerCase()).filter((host) => HOSTNAME.test(host)),
+    tagline: text(site.tagline),
+    story_paragraphs: textList(site.story_paragraphs),
+    hours: textList(site.hours),
+    hero_image_url: isPublicImageUrl(hero) ? hero : '',
+    gallery_image_urls: textList(site.gallery_image_urls).filter(isPublicImageUrl),
+    social_links: (Array.isArray(site.social_links) ? site.social_links : [])
+      .map((link) => (link && typeof link === 'object' ? link as Record<string, unknown> : {}))
+      .map((link) => ({ label: text(link.label), url: text(link.url) }))
+      .filter((link) => link.label && isWebUrl(link.url)),
+  }
+}
+
+/**
+ * What `/` shows: the studio website when PUBLIC_SITE_MODE is "studio" or the
+ * browser's hostname is one of STUDIO_SITE_HOSTS, otherwise the product landing.
+ */
+export function resolvePublicSiteMode(settings: StudioSettings, hostname: string): PublicSiteMode {
+  if (settings.site.mode === 'studio') return 'studio'
+  const host = hostname.trim().toLowerCase().replace(/\.$/, '')
+  return host && settings.site.studio_hosts.includes(host) ? 'studio' : 'product'
 }
 
 /**

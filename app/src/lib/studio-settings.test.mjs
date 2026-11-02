@@ -11,6 +11,7 @@ const studio = await import(`data:text/javascript;base64,${Buffer.from(outputTex
 const {
   NEUTRAL_STUDIO_SETTINGS, normalizeStudioSettings, createStudioSettingsLoader, isClosedDay, isRequestOnlyDay,
   todayInStudioTimezone, timezoneLabel, sampleFlashUrl, resolveWaiverTemplateId, weekdayOf,
+  NEUTRAL_STUDIO_SITE, resolvePublicSiteMode,
 } = studio
 
 const configured = normalizeStudioSettings({
@@ -33,10 +34,17 @@ const WEDNESDAY = '2026-11-04'
 
 test('neutral settings hold no studio data', () => {
   for (const [key, value] of Object.entries(NEUTRAL_STUDIO_SETTINGS)) {
-    if (key === 'booking_days') continue
+    if (key === 'booking_days' || key === 'site') continue
     assert.ok(value === '' || (Array.isArray(value) && value.length === 0), key)
   }
   assert.deepEqual(NEUTRAL_STUDIO_SETTINGS.booking_days, { closed_weekdays: [], request_only_weekdays: [], request_only_artist_slugs: [] })
+  // A new install shows the product landing and has no studio website content.
+  assert.equal(NEUTRAL_STUDIO_SETTINGS.site, NEUTRAL_STUDIO_SITE)
+  assert.equal(NEUTRAL_STUDIO_SITE.mode, 'product')
+  for (const [key, value] of Object.entries(NEUTRAL_STUDIO_SITE)) {
+    if (key === 'mode') continue
+    assert.ok(value === '' || (Array.isArray(value) && value.length === 0), key)
+  }
 })
 
 test('malformed bodies normalize to neutral values', () => {
@@ -124,4 +132,48 @@ test('loader reads once, and a failed read is neutral and retried', async () => 
   assert.equal(await flaky.load(), NEUTRAL_STUDIO_SETTINGS)
   assert.equal(flaky.cached(), null)
   assert.equal((await flaky.load()).owner_name, 'Back')
+})
+
+test('site settings normalize; unsafe or malformed values become neutral', () => {
+  assert.deepEqual(normalizeStudioSettings({}).site, NEUTRAL_STUDIO_SITE)
+  const site = normalizeStudioSettings({
+    site: {
+      mode: ' STUDIO ',
+      studio_hosts: ['Ink.Example.test', 'https://bad.example.test', 3],
+      tagline: '  Custom work. ',
+      story_paragraphs: ['One.', '', 'Two.'],
+      hours: ['Tue-Sat 11-7'],
+      hero_image_url: 'javascript:alert(1)',
+      gallery_image_urls: ['https://cdn.example.test/a.jpg', '//cdn.example.test/b.jpg', '/media/c.jpg', 'http://cdn.example.test/d.jpg', '/e.jpg")'],
+      social_links: [{ label: 'Instagram', url: 'https://ig.example.test/ink' }, { label: '', url: 'https://x.example.test' }, { label: 'X', url: 'mailto:a@b' }, 'nope'],
+    },
+  }).site
+  assert.deepEqual(site, {
+    mode: 'studio',
+    studio_hosts: ['ink.example.test'],
+    tagline: 'Custom work.',
+    story_paragraphs: ['One.', 'Two.'],
+    hours: ['Tue-Sat 11-7'],
+    hero_image_url: '',
+    gallery_image_urls: ['https://cdn.example.test/a.jpg', '/media/c.jpg'],
+    social_links: [{ label: 'Instagram', url: 'https://ig.example.test/ink' }],
+  })
+  assert.equal(normalizeStudioSettings({ site: { mode: 'shop' } }).site.mode, 'product')
+})
+
+test('the public site mode: product by default, studio by setting or listed host', () => {
+  const product = normalizeStudioSettings({})
+  assert.equal(resolvePublicSiteMode(NEUTRAL_STUDIO_SETTINGS, 'ryozan.app'), 'product')
+  assert.equal(resolvePublicSiteMode(product, 'localhost'), 'product')
+
+  const studioMode = normalizeStudioSettings({ site: { mode: 'studio' } })
+  assert.equal(resolvePublicSiteMode(studioMode, 'anything.example.test'), 'studio')
+  assert.equal(resolvePublicSiteMode(studioMode, ''), 'studio')
+
+  const byHost = normalizeStudioSettings({ site: { mode: 'product', studio_hosts: ['ink.example.test'] } })
+  assert.equal(resolvePublicSiteMode(byHost, 'ink.example.test'), 'studio')
+  assert.equal(resolvePublicSiteMode(byHost, 'INK.example.test.'), 'studio')
+  assert.equal(resolvePublicSiteMode(byHost, 'www.ink.example.test'), 'product')
+  assert.equal(resolvePublicSiteMode(byHost, 'example.test'), 'product')
+  assert.equal(resolvePublicSiteMode(byHost, ''), 'product')
 })

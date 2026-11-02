@@ -214,6 +214,21 @@ The web app reads these from `GET /api/v1/studio/settings` (public, no auth, cac
 | `SAMPLE_FLASH_URLS` | `sample_flash_urls` | Comma-separated stand-in flash previews, used only by a local dev build. |
 | `COURIER_REPLY_DOMAIN` | `email_domain` | The receiving domain studio email handles live on (see Inbound mail below). Blank: the handle UI shows no domain and claiming is off. |
 
+### Public website
+
+What a visitor sees at `/`. The default is the Ryozan product landing; `PUBLIC_SITE_MODE=studio` turns on the studio's own site (home, `/our-story`, `/artist/<slug>` from the artists in the database, and the existing booking entry). Every value below is public and comes back under `site` in `GET /api/v1/studio/settings`; a blank value hides its section. The site also uses `STUDIO_NAME`, `STUDIO_ADDRESS`, `STUDIO_PHONE` and `SHOP_EMAIL` from above. Setup: [docs/STUDIO_WEBSITE.md](docs/STUDIO_WEBSITE.md).
+
+| Variable | Field | What it does |
+| --- | --- | --- |
+| `PUBLIC_SITE_MODE` | `site.mode` | `product` (default) or `studio`. Anything else fails at startup. |
+| `STUDIO_SITE_HOSTS` | `site.studio_hosts` | Optional comma-separated hostnames that get the studio site while the mode is `product`, for one install serving a product domain and a studio domain. Bare hostnames only. |
+| `STUDIO_TAGLINE` | `site.tagline` | One line under the studio name on the home page. |
+| `STUDIO_STORY` | `site.story_paragraphs` | The Our story text; paragraphs separated by a blank line or `\n\n`. The home page shows the first paragraph. |
+| `STUDIO_HOURS` | `site.hours` | Opening hours, one row per line (`\n` between rows), shown in the footer. |
+| `STUDIO_HERO_IMAGE_URL` | `site.hero_image_url` | Home page hero photo: an `https://` URL or a site path such as `/media/front.jpg`. |
+| `STUDIO_GALLERY_IMAGE_URLS` | `site.gallery_image_urls` | Comma-separated studio photos for the home page gallery, same URL rules. |
+| `STUDIO_SOCIAL_LINKS` | `site.social_links` | Comma-separated `Label=https://url` pairs shown in the footer. |
+
 ### Optional features
 
 Each group is off until its keys are set.
