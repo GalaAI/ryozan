@@ -36,6 +36,7 @@ import { useAuthStore, type ViewAsMode } from '../../stores/auth'
 import { Skeleton } from '../../components/ui/skeleton'
 import { GalaComponentRenderer } from '../../components/GalaPanel'
 import ArtistConnections from '../../components/ArtistConnections'
+import StudioSettingsForm from '../../components/StudioSettingsForm'
 import ArtistDepositActivity from '../../components/ArtistDepositActivity'
 import FlashManager, { type FlashStage } from './FlashManager'
 import { CourierBookingInquiryCard } from './CourierLayout'
@@ -2579,6 +2580,28 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
     setAgentChatOpen(true)
   }, [isCollector, user?.id])
 
+  const showStudioSettings = useCallback(() => {
+    setAccountOpen(false)
+    setPendingTab(null)
+    setActiveTab('hub')
+    setHubSurface('home')
+    setAgentOverrideId(null)
+    setAgentChatClosing(false)
+    setAgentToolsOpen(false)
+    setAgentChatLaunch('direct')
+    setSelectedBookyDate(null)
+    setSelectedBookyBookingId(null)
+    setSelectedHubWorkflow('connections')
+    setAgentChatMode('hub-workflow-full')
+    setHubWorkflowLines([{
+      id: 'studio-settings',
+      from: 'agent',
+      presentation: 'card',
+      body: <StudioSettingsForm />,
+    }])
+    setAgentChatOpen(true)
+  }, [])
+
   const openArtistConnections = useCallback((anchor?: HTMLElement | null) => {
     if (!canUseArtistConnections) return
     const search = `?portal=${isCollector ? 'you' : 'hub'}&workflow=connections`
@@ -4834,6 +4857,8 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
           rows={[
             { id: 'account-settings', label: 'Account settings', value: 'Open', onSelect: openAccountSettings },
             ...(canUseArtistConnections ? [{ id: 'connections', label: 'Connections', value: 'Open', onSelect: () => { setAccountOpen(false); openArtistConnections() } }] : []),
+            ...(realRole === 'founder' ? [{ id: 'team', label: 'Team', value: 'Open', onSelect: () => { setAccountOpen(false); navigate(ROUTES.ADMIN_USERS) } }] : []),
+            ...(realRole === 'founder' ? [{ id: 'studio-settings', label: 'Studio settings', value: 'Open', onSelect: showStudioSettings }] : []),
             ...(role === 'artist' ? [{ id: 'artist-tour', label: 'Replay portal walkthrough', value: 'Start', onSelect: () => { setAccountOpen(false); setActiveTab('hub'); setArtistTourVisible(true) } }] : []),
             { id: 'main-site', label: 'Return to main site', onSelect: requestMainSiteExit },
             { id: 'sign-out', label: 'Sign out', onSelect: signOut },

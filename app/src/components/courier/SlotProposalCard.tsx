@@ -9,6 +9,7 @@
  */
 import { useState } from 'react'
 import { messages as messagesApi, type ConversationMessage } from '../../lib/api'
+import { studioTimeZone } from '../../hooks/useStudioSettings'
 import '../../styles/courier.css'
 
 interface ProposedSlot {
@@ -35,8 +36,8 @@ function formatSlotLabel(slot: ProposedSlot): string {
   if (slot.label) return slot.label
   try {
     const d = new Date(`${slot.date}T${slot.time}`)
-    const day = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'America/New_York' })
-    const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+    const day = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: studioTimeZone() })
+    const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: studioTimeZone() })
     return `${day} · ${timeStr}`
   } catch {
     return `${slot.date} ${slot.time}`
@@ -131,7 +132,7 @@ export function SlotProposalCard({ message, viewerIsClient, onStateChange }: Slo
       {!viewerIsClient && state.status === 'confirmed' && state.confirmed_at && (
         <div className="qp-card-note">
           Slot confirmed: {slots[state.selected_index ?? 0] && formatSlotLabel(slots[state.selected_index ?? 0])}
-          {' · '}{new Date(state.confirmed_at).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+          {' · '}{new Date(state.confirmed_at).toLocaleString('en-US', { timeZone: studioTimeZone(), month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
         </div>
       )}
     </div>

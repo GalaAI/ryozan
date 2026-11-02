@@ -4,6 +4,7 @@ import type { DesktopConversationData, DesktopPortalIntent, DesktopResource, Des
 import { formatCustomerPrice } from '../../lib/format'
 import Lightbox from '../Lightbox'
 import { useLightbox } from '../../hooks/useLightbox'
+import { studioTimeZone } from '../../hooks/useStudioSettings'
 import '../../styles/lightbox.css'
 
 // The existing Courier cards own mobile/global styles and their own fetches.
@@ -38,7 +39,7 @@ function safeLink(value: unknown): string | undefined {
   try { const url = new URL(value, window.location.origin); return ['https:', 'http:'].includes(url.protocol) ? url.href : undefined } catch { return undefined }
 }
 const name = (conversation: Conversation) => conversation.name ?? conversation.booking_context?.client_name ?? 'Conversation'
-const time = (date: string) => new Date(date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+const time = (date: string) => new Date(date).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: studioTimeZone() })
 
 function BookingStub({ conversation, booking }: { conversation: Conversation; booking?: Booking }) {
   const [expanded, setExpanded] = useState(true)

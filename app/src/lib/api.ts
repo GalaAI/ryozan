@@ -1876,8 +1876,52 @@ export interface StudioSiteSettings {
 }
 
 export const studio = {
-  getSettings: () =>
-    request<StudioSettings>('/studio/settings'),
+  getSettings: (init?: RequestInit) =>
+    request<StudioSettings>('/studio/settings', init),
+
+  getEditableSettings: () =>
+    request<StudioSettingsEdit>('/studio/settings/edit'),
+
+  saveEditableSettings: (values: StudioSettingsEdit) =>
+    request<StudioSettingsEdit>('/studio/settings/edit', {
+      method: 'PUT',
+      body: JSON.stringify(values),
+    }),
+
+  getSetupStatus: () =>
+    request<{ needs_setup: boolean }>('/studio/setup'),
+
+  claimInstall: (data: {
+    setup_code: string
+    studio_name: string
+    timezone: string
+    owner_name: string
+    email: string
+    password: string
+  }) => request<TokenResponse>('/studio/setup', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+}
+
+/** What the owner can change in the app, by the server's setting names. */
+export interface StudioSettingsEdit {
+  STUDIO_NAME?: string
+  STUDIO_TIMEZONE?: string
+  STUDIO_OWNER_NAME?: string
+  SHOP_EMAIL?: string
+  STUDIO_PHONE?: string
+  STUDIO_ADDRESS?: string
+  STUDIO_ARTIST_ROSTER?: string
+  BOOKING_CLOSED_WEEKDAYS?: string
+  BOOKING_REQUEST_ONLY_WEEKDAYS?: string
+  PUBLIC_SITE_MODE?: string
+  STUDIO_TAGLINE?: string
+  STUDIO_STORY?: string
+  STUDIO_HOURS?: string
+  STUDIO_HERO_IMAGE_URL?: string
+  STUDIO_GALLERY_IMAGE_URLS?: string
+  STUDIO_SOCIAL_LINKS?: string
 }
 
 // ── Push Notifications ───────────────────────────────

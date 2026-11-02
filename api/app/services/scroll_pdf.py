@@ -49,7 +49,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 
 logger = logging.getLogger("ryozan.scroll_pdf")
 
@@ -455,9 +455,9 @@ def build_scroll_pdf(data: ScrollPdfInput) -> bytes:
     )
     elements.append(Spacer(1, 10))
 
-    local = submitted_at.astimezone(SHOP_TIMEZONE)
+    local = submitted_at.astimezone(shop_timezone())
     submitted_label = (
-        f"{local.strftime('%B')} {local.day}, {local.year} at {local.strftime('%I:%M %p').lstrip('0')} ET"
+        f"{local.strftime('%B')} {local.day}, {local.year} at {local.strftime('%I:%M %p').lstrip('0')} {local.strftime('%Z')}"
         f" ({submitted_at.astimezone(UTC).strftime('%H:%M UTC')})"
     )
     submission_rows = [

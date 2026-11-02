@@ -209,6 +209,6 @@ class ShopDayBoundsTests(IsolatedAsyncioTestCase):
         from datetime import datetime as _dt
 
         from app.constants.timezones import shop_today
-        from app.constants.timezones import SHOP_TIMEZONE
+        from app.constants.timezones import shop_timezone
 
-        self.assertEqual(shop_today(), _dt.now(SHOP_TIMEZONE).date())
+        self.assertEqual(shop_today(), _dt.now(shop_timezone()).date())

@@ -50,29 +50,32 @@ Before the API starts, `alembic upgrade head` builds or updates the schema. Ever
 web dev server proxies `/api` to `http://127.0.0.1:18788` by default; set
 `VITE_API_TARGET` only to point it somewhere else.
 
-## 3. Create the first account
+## 3. Set up your studio
+
+The API prints a setup code at startup while the install has no owner:
 
 ```bash
-cd api && .venv/bin/python scripts/bootstrap_dev_login.py
+docker compose logs api | grep "New install"   # or read the terminal running uvicorn
 ```
 
-On Windows use `.venv\Scripts\python scripts\bootstrap_dev_login.py`. With
-Docker only, run `docker compose exec api python scripts/bootstrap_dev_login.py --allow-nonlocal-db`
-(inside compose the database host is `db`, which the script does not treat as
-local without that flag).
+Open http://localhost:15300/setup, enter the code, and name your studio, its
+time zone and your owner account. That account can change all the studio
+details later, under Account, then Studio settings.
 
-This creates `founder@ryozan.app` (display name "Studio Founder") and prints a
-generated password. A native run also saves it to
-`.dev/state/dev-login-password.txt` (gitignored); under Docker that file stays
-inside the container, so copy the printed password. Use `--email` and `--name`
-to pick your own founder login, and `--with-admin` to add a studio admin
-account. Without `--allow-nonlocal-db` the script refuses any database it does
-not recognize as local.
+The code comes from `SECRET_KEY` and stops working once the install has an
+owner, so a stranger who finds the page first cannot claim your install.
+
+For a throwaway development login instead,
+`cd api && .venv/bin/python scripts/bootstrap_dev_login.py` creates
+`founder@ryozan.app` and prints a generated password (`--email` and `--name` pick
+your own, and `--with-admin` adds a studio admin). It refuses any database it
+does not recognize as local without `--allow-nonlocal-db`.
 
 ## 4. Use it
 
-1. Open http://localhost:15300 and choose **Open the studio portal**.
-2. Sign in with the founder account.
+1. After setup you land in the portal. Later, open http://localhost:15300,
+   choose **Open the studio portal** and sign in.
+2. Under Account, open **Studio settings** and fill in your contact details.
 3. On the Booking tab, use **New booking** to record a real inquiry through the
    booking API; it appears in the calendar, the Hub counts and Gala's tools.
 4. Ask Gala "What is on my schedule?" in the Hub. Gala answers through the

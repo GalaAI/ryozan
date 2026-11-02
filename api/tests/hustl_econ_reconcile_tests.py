@@ -29,7 +29,7 @@ from app.api.v1.endpoints.econ import (
     get_ledger_summary,
     get_payroll_tax_summary,
 )
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 
 UTC = timezone.utc
 
@@ -72,8 +72,8 @@ class LedgerPeriodBoundsTests(unittest.TestCase):
 
     def test_bounds_are_shop_time_aware(self):
         start, end = _ledger_period_bounds(date(2026, 9, 27), date(2026, 9, 27))
-        self.assertEqual(start.tzinfo, SHOP_TIMEZONE)
-        self.assertEqual(end.tzinfo, SHOP_TIMEZONE)
+        self.assertEqual(start.tzinfo, shop_timezone())
+        self.assertEqual(end.tzinfo, shop_timezone())
 
     def test_an_8pm_eastern_entry_belongs_to_that_eastern_day(self):
         """00:30 UTC on the 28th is still the 27th in the shop."""

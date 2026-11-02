@@ -1134,7 +1134,7 @@ async def _gala_auto_reply(
                 )
             else:
                 # "voice" mode: use the standard courier system prompt (mimics artist tone)
-                system_prompt = GALA_COURIER_SYSTEM
+                system_prompt = gala_courier_system()
 
             prompt = (
                 f"You are replying on behalf of {artist_name} to {client_name}.\n\n"
@@ -1722,7 +1722,8 @@ async def get_typing(
 
 # Gala AI Assist
 
-GALA_COURIER_SYSTEM = f"""You are Gala, the AI concierge for {get_settings().STUDIO_NAME}.
+def gala_courier_system() -> str:
+    return f"""You are Gala, the AI concierge for {get_settings().STUDIO_NAME}.
 You draft reply messages on behalf of the artist. Your voice is calm, direct, warm, and grounded in tattoo-shop operations.
 
 Rules:
@@ -1810,7 +1811,7 @@ Write {artist_name}'s next message. Match their tone from their previous message
         fallback_models=lane.fallback_models,
         max_tokens=300,
         tools=[],
-        system_prompt=GALA_COURIER_SYSTEM,
+        system_prompt=gala_courier_system(),
         messages=[{"role": "user", "content": prompt}],
     )
 

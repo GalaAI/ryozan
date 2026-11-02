@@ -47,7 +47,7 @@ from app.api.v1.endpoints.conversations import (
     process_courier_notification_outbox_once,
 )
 from app.constants.status import BookingStatus, QuoteStatus
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.config import get_settings
 from app.core.database import async_session, get_db
 from app.core.rate_limit import limiter
@@ -148,13 +148,19 @@ logger = logging.getLogger("ryozan.bookings")
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
-BOOKING_SMS_CONSENT_TEXT = (
-    "I agree to receive booking confirmations, appointment reminders, reschedule updates, "
-    f"aftercare follow-ups, and replies to my questions from {get_settings().STUDIO_NAME} at the phone number provided. "
-    "Message frequency varies. Message and data rates may apply. Reply HELP for help and STOP to opt out. "
-    f"Consent is not required to book. SMS Terms: {get_settings().public_site_url}/legal#sms. "
-    f"Privacy Policy: {get_settings().public_site_url}/legal#privacy."
-)
+
+
+def booking_sms_consent_text() -> str:
+    settings = get_settings()
+    return (
+        "I agree to receive booking confirmations, appointment reminders, reschedule updates, "
+        f"aftercare follow-ups, and replies to my questions from {settings.STUDIO_NAME} at the phone number provided. "
+        "Message frequency varies. Message and data rates may apply. Reply HELP for help and STOP to opt out. "
+        f"Consent is not required to book. SMS Terms: {settings.public_site_url}/legal#sms. "
+        f"Privacy Policy: {settings.public_site_url}/legal#privacy."
+    )
+
+
 BOOKING_EMAIL_MAX_ATTEMPTS = 5
 BOOKING_EMAIL_STALE_MINUTES = 10
 # General inquiries are Courier threads, not bookings. The public inquiry id is
@@ -328,7 +334,7 @@ async def _schedule_blocking_reasons(
     busy_blocks: list[dict],
     exclude_booking_id: UUID | None = None,
 ) -> list[str]:
-    slot_start = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=SHOP_TIMEZONE).replace(
+    slot_start = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=shop_timezone()).replace(
         hour=int(scheduled_time[:2]),
         minute=int(scheduled_time[3:5]),
     )
@@ -344,8 +350,8 @@ async def _schedule_blocking_reasons(
         reasons.append("closed_day")
     else:
         open_hour, close_hour = hours
-        open_at = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=open_hour)
-        close_at = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=close_hour)
+        open_at = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=shop_timezone()).replace(hour=open_hour)
+        close_at = datetime.combine(scheduled_date, datetime.min.time(), tzinfo=shop_timezone()).replace(hour=close_hour)
         if slot_start < open_at or slot_end > close_at:
             reasons.append("outside_work_hours")
     if slot_start < earliest:
@@ -3438,7 +3444,7 @@ async def _do_submit_public_booking(
         guest_phone=body.phone,
         sms_opt_in=bool(sms_opted_in_at),
         sms_opt_in_at=sms_opted_in_at,
-        sms_consent_text=BOOKING_SMS_CONSENT_TEXT if sms_opted_in_at else None,
+        sms_consent_text=booking_sms_consent_text() if sms_opted_in_at else None,
         reference_code=ref_code,
         status=BookingStatus.PENDING,
         description=body.description,
@@ -3663,7 +3669,7 @@ async def _do_submit_public_booking(
             )
 
         # 2. Notification to artist + shop + owner (all 3 always get it)
-        submitted_at = datetime.now(UTC).astimezone(SHOP_TIMEZONE).strftime("%B %d, %Y at %I:%M %p EST")
+        submitted_at = datetime.now(UTC).astimezone(shop_timezone()).strftime("%B %d, %Y at %I:%M %p %Z")
         notification_recipients = sorted(
             recipient
             for recipient in {
@@ -4563,7 +4569,7 @@ async def get_booking_schedule_suggestions(
     if not artist:
         raise HTTPException(status_code=404, detail="Artist not found")
 
-    now_date = datetime.now(SHOP_TIMEZONE).date()
+    now_date = datetime.now(shop_timezone()).date()
     start_date = booking.preferred_date if booking.preferred_date and booking.preferred_date >= now_date else now_date
     end_date = start_date + timedelta(days=days)
     (
@@ -4635,6 +4641,7 @@ async def get_booking_schedule_suggestions(
     return BookingScheduleSuggestionResponse(
         booking_id=booking.id,
         artist_id=artist.id,
+        timezone=shop_timezone().key,
         duration_minutes=duration,
         calendar_connected=calendar_connected,
         suggestions=_rank_schedule_suggestions(

@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.endpoints.integrations import STRIPE_CONNECT_ROLES
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
@@ -292,7 +292,7 @@ def _normalize_booth_interval(interval: str | None) -> str | None:
 
 
 def _next_month_first(current: date | None = None) -> date:
-    value = current or datetime.now(SHOP_TIMEZONE).date()
+    value = current or datetime.now(shop_timezone()).date()
     if value.month == 12:
         return date(value.year + 1, 1, 1)
     return date(value.year, value.month + 1, 1)
@@ -313,7 +313,7 @@ def _booth_installment_amount(amount_cents: int, interval: str) -> int:
 
 
 def _due_datetime(due_date: date) -> datetime:
-    return datetime.combine(due_date, time.min, tzinfo=SHOP_TIMEZONE).astimezone(UTC)
+    return datetime.combine(due_date, time.min, tzinfo=shop_timezone()).astimezone(UTC)
 
 
 def _booth_rent_period(interval: str, next_due_date: date | None = None) -> tuple[str, datetime]:
@@ -331,7 +331,7 @@ def _sync_booth_rent_subscription(user: User, subscription) -> None:
     user.booth_rent_cancel_at_period_end = bool(data.get("cancel_at_period_end"))
     user.booth_rent_current_period_end = _subscription_period_end(data)
     if user.booth_rent_current_period_end:
-        user.booth_rent_next_due_date = user.booth_rent_current_period_end.astimezone(SHOP_TIMEZONE).date()
+        user.booth_rent_next_due_date = user.booth_rent_current_period_end.astimezone(shop_timezone()).date()
     if data.get("id"):
         user.booth_rent_subscription_id = str(data["id"])
     user.updated_at = datetime.now(UTC)
@@ -345,7 +345,7 @@ def _booth_rent_projection(user: User) -> dict:
     configured = bool(amount_cents and amount_cents > 0 and commission_rate == 100)
     payment_method = _booth_payment_method(user)
     status = getattr(user, "booth_rent_status", "not_configured")
-    today = datetime.now(SHOP_TIMEZONE).date()
+    today = datetime.now(shop_timezone()).date()
     if payment_method in {"cash", "one_time"} and next_due_date:
         if next_due_date > today and status in {"due", "pending", "scheduled"}:
             status = "scheduled"
@@ -595,7 +595,7 @@ async def configure_artist_booth_rent(
         artist.booth_rent_payment_method = payment_method
         artist.booth_rent_next_due_date = next_due_date
         if not active_subscription:
-            if next_due_date > datetime.now(SHOP_TIMEZONE).date():
+            if next_due_date > datetime.now(shop_timezone()).date():
                 artist.booth_rent_status = "scheduled"
             else:
                 artist.booth_rent_status = "pending" if payment_method == "autodraft" else "due"
@@ -832,7 +832,7 @@ async def create_booth_rent_checkout(
     }
     if payment_method == "autodraft":
         params["subscription_data"] = {"metadata": metadata}
-        if next_due_date > datetime.now(SHOP_TIMEZONE).date():
+        if next_due_date > datetime.now(shop_timezone()).date():
             params["subscription_data"].update(
                 {
                     "billing_cycle_anchor": int(_due_datetime(next_due_date).timestamp()),

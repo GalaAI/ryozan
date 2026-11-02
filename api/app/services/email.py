@@ -35,7 +35,7 @@ import aiosmtplib
 import httpx
 from sqlalchemy import or_, select
 
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.config import get_settings
 from app.core.routes import ROUTES
 from app.services.email_foundry import (
@@ -47,7 +47,7 @@ from app.services.email_foundry import (
     with_current_email_assets,
 )
 
-# ── Eastern timezone for client-facing times ─────────────────────────────
+# ── Studio timezone for client-facing times ─────────────────────────────
 
 
 def _format_time_12hr(time_str: str | None) -> str | None:
@@ -67,12 +67,11 @@ def _format_time_12hr(time_str: str | None) -> str | None:
     return time_str
 
 
-def _format_datetime_eastern(dt: datetime | None = None) -> str:
-    """Format a datetime to 'Month DD, YYYY at H:MM AM/PM EST'."""
+def _format_datetime_shop(dt: datetime | None = None) -> str:
+    """Format a datetime to 'Month DD, YYYY at H:MM AM/PM ZONE' in studio time."""
     if dt is None:
         dt = datetime.now(UTC)
-    eastern = dt.astimezone(SHOP_TIMEZONE)
-    return eastern.strftime("%B %d, %Y at %I:%M %p EST")
+    return dt.astimezone(shop_timezone()).strftime("%B %d, %Y at %I:%M %p %Z")
 
 
 # ── Per-artist daily email rate limiter (in-memory, resets daily) ──────────
@@ -1894,8 +1893,8 @@ def build_artist_notification_html(
     description = description or ""
     placement = placement or ""
 
-    # Timestamp in Eastern
-    ts = submitted_at or _format_datetime_eastern()
+    # Timestamp in studio time
+    ts = submitted_at or _format_datetime_shop()
 
     # Helper to render a label/value row — skips if value is None/empty
     def row(label: str, value: str | None, href: str | None = None) -> str:

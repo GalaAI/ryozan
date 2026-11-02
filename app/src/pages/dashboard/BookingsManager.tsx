@@ -10,6 +10,7 @@
  * empty states, responsive layout.
  */
 
+import { studioTimeZone } from '../../hooks/useStudioSettings'
 import { useEffect, useState, useMemo, useCallback, lazy, Suspense } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { bookings as bookingsApi, quotes as quotesApi, calendar as calendarApi, artists as artistsApi, conversations as conversationsApi, crm as crmApi, type Booking, type BookingDraftRecord, type BookingLifecycleEvent, type BookingScheduleSuggestion, type QuoteCreate, type QuoteResponse, type CrmPipelineTaskRecord, type ArtistSummary } from '../../lib/api'
@@ -2338,7 +2339,7 @@ export default function BookingsManager() {
                                         const d = new Date(`${dateEl.value}T${timeEl.value}`)
                                         const dur = slotDuration[b.id] ?? 120
                                         const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-                                          + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+                                          + ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: studioTimeZone() })
                                         setProposedSlots(p => ({
                                           ...p,
                                           [b.id]: [...(p[b.id] || []), { date: dateEl.value, time: timeEl.value, duration_minutes: dur, label }],

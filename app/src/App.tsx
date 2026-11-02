@@ -15,6 +15,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { useAuthStore } from './stores/auth'
 import { getToken, hydrateToken } from './lib/api'
 import { lazyRetry } from './lib/lazyRetry'
+import { loadStudioSettings } from './hooks/useStudioSettings'
 import { beforePublicAnalytics, isProductionAnalytics, publicAnalyticsUrl } from './lib/analyticsPrivacy'
 
 // Layouts
@@ -34,6 +35,7 @@ const AppTermsPage = lazyRetry(() => import('./pages/AppTermsPage'))
 const PortalPage = lazyRetry(() => import('./pages/PortalPage'))
 const JoinPage = lazyRetry(() => import('./pages/JoinPage'))
 const ResetPasswordPage = lazyRetry(() => import('./pages/ResetPasswordPage'))
+const SetupPage = lazyRetry(() => import('./pages/SetupPage'))
 const QuotePage = lazyRetry(() => import('./pages/QuotePage'))
 const QuoteConfirmedPage = lazyRetry(() => import('./pages/QuoteConfirmedPage'))
 const NotFoundPage = lazyRetry(() => import('./pages/NotFoundPage'))
@@ -163,6 +165,7 @@ export default function App() {
 
   // Restore session from localStorage on app startup
   useEffect(() => {
+    void loadStudioSettings()
     const hydrated = hydrateToken()
     if (hydrated || getToken()) {
       fetchMe()
@@ -208,6 +211,9 @@ export default function App() {
 
       {/* ── Invite acceptance (no nav chrome) ── */}
       <Route path="join" element={<Suspended><JoinPage /></Suspended>} />
+
+      {/* ── First-run setup of a new install (no nav chrome, no auth) ── */}
+      <Route path="setup" element={<Suspended><SetupPage /></Suspended>} />
 
       {/* ── Password reset link target (no nav chrome, no auth) ── */}
       <Route path="reset-password" element={<Suspended><ResetPasswordPage /></Suspended>} />

@@ -1,5 +1,3 @@
-const EST = 'America/New_York'
-
 /** Submitted choices are preferences, never confirmed appointment times. */
 export function requestedBookingSlots(booking: {
   preferred_slots?: Array<{ date: string; time: string }> | null
@@ -42,23 +40,6 @@ export function formatCustomerPrice(amount: number): string {
     currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-}
-
-/** Format a Date (or ISO string) as "Mon DD, YYYY h:MM AM/PM" in Eastern time. */
-export function formatDateTimeEST(d: Date | string): string {
-  return new Date(d).toLocaleString('en-US', {
-    timeZone: EST,
-    month: 'short', day: 'numeric', year: 'numeric',
-    hour: 'numeric', minute: '2-digit',
-  })
-}
-
-/** Format a Date (or ISO string) as "h:MM AM/PM" in Eastern time. */
-export function formatTimeEST(d: Date | string): string {
-  return new Date(d).toLocaleTimeString('en-US', {
-    timeZone: EST,
-    hour: 'numeric', minute: '2-digit',
   })
 }
 

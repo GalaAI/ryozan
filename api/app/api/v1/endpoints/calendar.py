@@ -23,7 +23,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.status import BookingStatus
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import ROLE_RANK, get_current_user
@@ -440,8 +440,8 @@ def _parse_busy_datetime(value: str) -> dt | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=SHOP_TIMEZONE)
-    return parsed.astimezone(SHOP_TIMEZONE)
+        return parsed.replace(tzinfo=shop_timezone())
+    return parsed.astimezone(shop_timezone())
 
 
 def _slot_conflicts(slot_start: dt, slot_end: dt, intervals: list[tuple[dt, dt]], buffer_minutes: int = 0) -> bool:
@@ -454,7 +454,7 @@ def _booking_interval(booking: Booking) -> tuple[dt, dt] | None:
         return None
     try:
         start = dt.fromisoformat(f"{booking.scheduled_date.isoformat()}T{booking.scheduled_time[:5]}:00").replace(
-            tzinfo=SHOP_TIMEZONE
+            tzinfo=shop_timezone()
         )
     except ValueError:
         return None
@@ -464,7 +464,7 @@ def _booking_interval(booking: Booking) -> tuple[dt, dt] | None:
 def _hold_interval(hold: BookingSlotHold) -> tuple[dt, dt] | None:
     try:
         start = dt.fromisoformat(f"{hold.scheduled_date.isoformat()}T{hold.scheduled_time[:5]}:00").replace(
-            tzinfo=SHOP_TIMEZONE
+            tzinfo=shop_timezone()
         )
     except ValueError:
         return None
@@ -481,12 +481,12 @@ def _block_interval(block: TimeBlock) -> tuple[dt, dt] | None:
             open_hour, close_hour = hours
         else:
             open_hour, close_hour = 0, 23
-        start = dt.combine(day, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=open_hour)
-        end = dt.combine(day, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=close_hour, minute=59)
+        start = dt.combine(day, dt.min.time(), tzinfo=shop_timezone()).replace(hour=open_hour)
+        end = dt.combine(day, dt.min.time(), tzinfo=shop_timezone()).replace(hour=close_hour, minute=59)
         return (start, end)
     try:
-        start = dt.fromisoformat(f"{day.isoformat()}T{block.start_time[:5]}:00").replace(tzinfo=SHOP_TIMEZONE)
-        end = dt.fromisoformat(f"{day.isoformat()}T{block.end_time[:5]}:00").replace(tzinfo=SHOP_TIMEZONE)
+        start = dt.fromisoformat(f"{day.isoformat()}T{block.start_time[:5]}:00").replace(tzinfo=shop_timezone())
+        end = dt.fromisoformat(f"{day.isoformat()}T{block.end_time[:5]}:00").replace(tzinfo=shop_timezone())
     except ValueError:
         return None
     if end <= start:
@@ -506,10 +506,10 @@ def _rule_window(
     max_advance_days: int,
     allow_same_day: bool,
 ) -> tuple[dt, dt]:
-    now = dt.now(SHOP_TIMEZONE)
+    now = dt.now(shop_timezone())
     earliest = now + timedelta(hours=minimum_notice_hours)
     if not allow_same_day:
-        tomorrow_start = dt.combine(now.date() + timedelta(days=1), dt.min.time(), tzinfo=SHOP_TIMEZONE)
+        tomorrow_start = dt.combine(now.date() + timedelta(days=1), dt.min.time(), tzinfo=shop_timezone())
         earliest = max(earliest, tomorrow_start)
     latest = now + timedelta(days=max_advance_days)
     return earliest, latest
@@ -604,8 +604,8 @@ def _generate_available_slots(
             continue
 
         open_hour, close_hour = hours
-        close_at = dt.combine(day, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=close_hour)
-        cursor = dt.combine(day, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=open_hour)
+        close_at = dt.combine(day, dt.min.time(), tzinfo=shop_timezone()).replace(hour=close_hour)
+        cursor = dt.combine(day, dt.min.time(), tzinfo=shop_timezone()).replace(hour=open_hour)
         while cursor + timedelta(minutes=duration_minutes) <= close_at and len(slots) < limit:
             slot_end = cursor + timedelta(minutes=duration_minutes)
             if earliest <= cursor <= latest and not _slot_conflicts(cursor, slot_end, intervals, buffer_minutes):
@@ -681,7 +681,7 @@ def _generate_blocked_slots(
     while day <= end_date and len(blocked) < limit:
         hours = schedule[dt.combine(day, dt.min.time()).weekday()]
         if not hours:
-            closed_start = dt.combine(day, dt.min.time(), tzinfo=SHOP_TIMEZONE)
+            closed_start = dt.combine(day, dt.min.time(), tzinfo=shop_timezone())
             blocked.append(
                 BlockedSlot(
                     date=day.isoformat(),
@@ -697,8 +697,8 @@ def _generate_blocked_slots(
             continue
 
         open_hour, close_hour = hours
-        close_at = dt.combine(day, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=close_hour)
-        cursor = dt.combine(day, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=open_hour)
+        close_at = dt.combine(day, dt.min.time(), tzinfo=shop_timezone()).replace(hour=close_hour)
+        cursor = dt.combine(day, dt.min.time(), tzinfo=shop_timezone()).replace(hour=open_hour)
         while cursor + timedelta(minutes=duration_minutes) <= close_at and len(blocked) < limit:
             slot_end = cursor + timedelta(minutes=duration_minutes)
             reasons: list[str] = []
@@ -922,7 +922,7 @@ async def _slot_is_available(
     exclude_hold_token: str | None = None,
     work_schedule: dict[int, tuple[int, int] | None] | None = None,
 ) -> bool:
-    slot_start = dt.fromisoformat(f"{scheduled_date.isoformat()}T{scheduled_time}:00").replace(tzinfo=SHOP_TIMEZONE)
+    slot_start = dt.fromisoformat(f"{scheduled_date.isoformat()}T{scheduled_time}:00").replace(tzinfo=shop_timezone())
     slot_end = slot_start + timedelta(minutes=duration_minutes)
     earliest, latest = _rule_window(
         minimum_notice_hours=minimum_notice_hours,
@@ -933,8 +933,8 @@ async def _slot_is_available(
     if not hours:
         return False
     open_hour, close_hour = hours
-    open_at = dt.combine(scheduled_date, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=open_hour)
-    close_at = dt.combine(scheduled_date, dt.min.time(), tzinfo=SHOP_TIMEZONE).replace(hour=close_hour)
+    open_at = dt.combine(scheduled_date, dt.min.time(), tzinfo=shop_timezone()).replace(hour=open_hour)
+    close_at = dt.combine(scheduled_date, dt.min.time(), tzinfo=shop_timezone()).replace(hour=close_hour)
     if slot_start < earliest or slot_start > latest or slot_start < open_at or slot_end > close_at:
         return False
 
@@ -1214,7 +1214,7 @@ async def public_artist_slots(
 
     return SlotListResponse(
         artist_slug=artist_slug,
-        timezone="America/New_York",
+        timezone=shop_timezone().key,
         calendar_connected=calendar_connected,
         duration_minutes=resolved_duration,
         slot_interval_minutes=resolved_slot_interval,
@@ -1261,7 +1261,7 @@ async def public_scheduler_contract(
     return SchedulerContractResponse(
         version="2026-08-20",
         artist_slug=artist_slug,
-        timezone="America/New_York",
+        timezone=shop_timezone().key,
         rules={
             "slot_interval_minutes": resolved_slot_interval,
             "buffer_minutes": resolved_buffer,
@@ -1731,8 +1731,8 @@ async def create_event(
             start = {"date": body.start[:10]}
             end = {"date": body.end[:10]}
         else:
-            start = {"dateTime": body.start, "timeZone": "America/New_York"}
-            end = {"dateTime": body.end, "timeZone": "America/New_York"}
+            start = {"dateTime": body.start, "timeZone": shop_timezone().key}
+            end = {"dateTime": body.end, "timeZone": shop_timezone().key}
 
         event_body = {
             "summary": body.summary,
@@ -1783,9 +1783,9 @@ async def update_event(
     if body.location is not None:
         patch["location"] = body.location
     if body.start is not None:
-        patch["start"] = {"dateTime": body.start, "timeZone": "America/New_York"}
+        patch["start"] = {"dateTime": body.start, "timeZone": shop_timezone().key}
     if body.end is not None:
-        patch["end"] = {"dateTime": body.end, "timeZone": "America/New_York"}
+        patch["end"] = {"dateTime": body.end, "timeZone": shop_timezone().key}
 
     refresh_token, resolved_calendar_id = await _resolve_calendar_access(current_user, db)
     if not calendar_connection_configured(refresh_token):
@@ -1811,7 +1811,7 @@ async def get_schedule(
 ):
     """Return the shop working schedule for use by the booking slot picker."""
     return {
-        "timezone": "America/New_York",
+        "timezone": shop_timezone().key,
         "working_days": {
             "wednesday": {"open": "11:00", "close": "18:00"},
             "thursday": {"open": "11:00", "close": "18:00"},

@@ -32,7 +32,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.status import DocStatus
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.config import get_settings
 from app.core.database import async_session, get_db
 from app.core.routes import ROUTES
@@ -104,7 +104,7 @@ def _format_signed_datetime(value: datetime | None) -> str | None:
         return None
     if value.tzinfo is None:
         value = value.replace(tzinfo=UTC)
-    return value.astimezone(SHOP_TIMEZONE).strftime("%B %d, %Y at %I:%M %p %Z")
+    return value.astimezone(shop_timezone()).strftime("%B %d, %Y at %I:%M %p %Z")
 
 
 def _waiver_signed_date_text(instance: DocumentInstance) -> str:

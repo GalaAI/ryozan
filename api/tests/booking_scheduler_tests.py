@@ -63,7 +63,7 @@ from app.api.v1.endpoints.stripe_webhooks import (
     stripe_webhook,
 )
 from app.constants.status import BookingStatus
-from app.constants.timezones import SHOP_TIMEZONE
+from app.constants.timezones import shop_timezone
 from app.core.security import create_booky_capability_token
 from app.models.booking import Booking
 from app.models.booking_draft import BookingDraft
@@ -315,7 +315,7 @@ class _HoldSession:
 class _FrozenDateTime(datetime):
     @classmethod
     def now(cls, tz=None):
-        frozen = datetime(2026, 7, 17, 10, 0, tzinfo=calendar_endpoint.SHOP_TIMEZONE)
+        frozen = datetime(2026, 7, 17, 10, 0, tzinfo=calendar_endpoint.shop_timezone())
         return frozen if tz is None else frozen.astimezone(tz)
 
 
@@ -335,7 +335,7 @@ def _shop_iso(day: date, hhmm: str) -> str:
     built on ``_next_weekday`` failed whenever the next Friday fell outside DST.
     """
     hour, minute = (int(part) for part in hhmm.split(":"))
-    return datetime.combine(day, time(hour, minute), tzinfo=SHOP_TIMEZONE).isoformat()
+    return datetime.combine(day, time(hour, minute), tzinfo=shop_timezone()).isoformat()
 
 
 def _deposit_booking(payment_intent_id: str | None = None) -> Booking:

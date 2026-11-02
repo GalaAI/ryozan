@@ -23,6 +23,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+from app.constants.timezones import shop_timezone
 from app.core.config import get_settings
 
 logger = logging.getLogger("ryozan.calendar_sync")
@@ -233,8 +234,8 @@ def _build_event_body(booking_data: dict) -> dict:
         start_dt = datetime.fromisoformat(f"{date_str}T{time_str}:00")
         end_dt = start_dt + timedelta(minutes=duration)
 
-        start = {"dateTime": start_dt.isoformat(), "timeZone": "America/New_York"}
-        end = {"dateTime": end_dt.isoformat(), "timeZone": "America/New_York"}
+        start = {"dateTime": start_dt.isoformat(), "timeZone": shop_timezone().key}
+        end = {"dateTime": end_dt.isoformat(), "timeZone": shop_timezone().key}
     else:
         # No date yet, use an all-day placeholder for today
         today = datetime.now(UTC).strftime("%Y-%m-%d")
@@ -509,7 +510,7 @@ async def get_availability(
         body = {
             "timeMin": f"{start_date}T00:00:00-05:00",
             "timeMax": f"{end_date}T23:59:59-05:00",
-            "timeZone": "America/New_York",
+            "timeZone": shop_timezone().key,
             "items": [{"id": resolved_calendar_id}],
         }
 

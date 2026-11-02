@@ -13,6 +13,7 @@ import secrets
 from functools import lru_cache
 from pathlib import Path
 from uuid import UUID
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import dotenv_values
 from pydantic import AliasChoices, Field, ValidationInfo, field_validator, model_validator
@@ -180,6 +181,9 @@ class Settings(BaseSettings):
     # Studio identity printed on client email, SMS and PDF output. The postal
     # address is env-only: a deployment sets its own, and nothing prints when blank.
     STUDIO_NAME: str = "Ryozan Studio"
+    # IANA zone the studio trades in: every "which day" question, client-facing
+    # time and calendar entry. The owner sets it during first-run setup.
+    STUDIO_TIMEZONE: str = "America/New_York"
     # Free text the agents read as the studio's artist roster (one artist per line). Empty: no roster in prompts.
     STUDIO_ARTIST_ROSTER: str = ""
     STUDIO_ADDRESS: str = ""
@@ -428,6 +432,16 @@ class Settings(BaseSettings):
             except ValueError as exc:
                 raise ValueError(f"{info.field_name} must be a UUID") from exc
         return value
+
+    @field_validator("STUDIO_TIMEZONE")
+    @classmethod
+    def _valid_studio_timezone(cls, value: str) -> str:
+        zone = (value or "").strip()
+        try:
+            ZoneInfo(zone)
+        except (ZoneInfoNotFoundError, ValueError, OSError) as exc:
+            raise ValueError(f"STUDIO_TIMEZONE {zone!r} is not an IANA time zone") from exc
+        return zone
 
     @field_validator("PUBLIC_SITE_MODE")
     @classmethod
