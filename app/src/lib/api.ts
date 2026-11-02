@@ -1889,7 +1889,7 @@ export const studio = {
     }),
 
   getSetupStatus: () =>
-    request<{ needs_setup: boolean }>('/studio/setup'),
+    request<{ needs_setup: boolean; has_accounts: boolean }>('/studio/setup'),
 
   claimInstall: (data: {
     setup_code: string
