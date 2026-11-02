@@ -17,6 +17,7 @@ from app.core.database import get_db
 from app.core.security import require_role
 from app.models.user import User
 from app.schemas.artist import ArtistDetail, ArtistProfileUpdate, ArtistSummary
+from app.services.artist_slugs import unique_artist_slug
 from app.services.gallery_storage import process_gallery_deletion_outbox_once, queue_gallery_deletion
 from app.services.image_processing import MAX_UPLOAD_BYTES, ImageValidationError, validate_and_normalize_image
 from app.services.portfolio_thumbs import upload_portfolio_focus, upload_portfolio_thumb
@@ -72,6 +73,8 @@ async def update_artist_profile(
 ):
     """Artist+: update your own artist-specific profile fields."""
     update_data = body.model_dump(exclude_unset=True)
+    if not current_user.slug:
+        current_user.slug = await unique_artist_slug(db, current_user.name or "artist")
     if "working_hours" in update_data:
         wh = update_data.pop("working_hours")
         profile = dict(current_user.nexus_profile or {})

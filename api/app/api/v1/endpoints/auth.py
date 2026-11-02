@@ -61,6 +61,7 @@ from app.schemas.user import (
 )
 from app.services.account_setup import send_account_setup_email
 from app.services.account_status import record_password_setup, record_successful_login, set_user_password
+from app.services.artist_slugs import ARTIST_ACCOUNT_ROLES, unique_artist_slug
 from app.services.demo_account import is_demo_account, refuse_if_demo_account
 from app.services.email import (
     FROM_ADMIN,
@@ -499,7 +500,7 @@ class InviteRequest(BaseModel):
     email: EmailStr
     name: str = Field(min_length=1, max_length=255)
     role: str = Field(pattern="^(collector|assistant|artist|admin)$")
-    slug: str | None = None  # for artist accounts
+    slug: str | None = None  # for artist accounts; blank comes from their name
 
 
 class InviteResponse(BaseModel):
@@ -604,6 +605,8 @@ async def register_via_invite(
         user.email_verified_at = datetime.now(UTC)
     else:
         # Brand new account
+        if not slug and role in ARTIST_ACCOUNT_ROLES:
+            slug = await unique_artist_slug(db, name)
         user = User(
             email=email,
             name=name,

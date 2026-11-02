@@ -30,6 +30,7 @@ from app.models.studio_setting import StudioSetting
 from app.models.user import User, normalize_email
 from app.schemas.user import Token
 from app.services.account_status import record_successful_login
+from app.services.artist_slugs import unique_artist_slug
 from app.services.studio_config import (
     EDITABLE_SETTINGS,
     SETUP_CLAIM_KEY,
@@ -54,6 +55,13 @@ class StudioBookingDays(BaseModel):
     request_only_weekdays: list[str]
     # Artists the request-only days apply to; empty means every artist.
     request_only_artist_slugs: list[str]
+
+
+class StudioBookingHours(BaseModel):
+    # Keyed "0" (Monday) to "6" (Sunday), the shape of an artist's working_hours.
+    # A closed day is null.
+    work: dict[str, list[int] | None]
+    consultation: dict[str, list[int] | None]
 
 
 class StudioSocialLink(BaseModel):
@@ -85,12 +93,17 @@ class StudioSettingsResponse(BaseModel):
     # IANA zone the booking engine trades in (app.constants.timezones).
     timezone: str
     booking_days: StudioBookingDays
+    booking_hours: StudioBookingHours
     default_artist_slug: str
     waiver_template_id: str
     sample_flash_urls: list[str]
     # COURIER_REPLY_DOMAIN: where studio email handles live. Empty: handles are off.
     email_domain: str
     site: StudioSiteSettings
+
+
+def _public_hours(schedule: dict[int, tuple[int, int] | None]) -> dict[str, list[int] | None]:
+    return {str(day): list(hours) if hours else None for day, hours in schedule.items()}
 
 
 def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
@@ -105,6 +118,10 @@ def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
             closed_weekdays=settings.booking_closed_weekdays,
             request_only_weekdays=settings.booking_request_only_weekdays,
             request_only_artist_slugs=settings.booking_request_only_artist_slugs,
+        ),
+        booking_hours=StudioBookingHours(
+            work=_public_hours(settings.booking_work_schedule),
+            consultation=_public_hours(settings.booking_consultation_schedule),
         ),
         default_artist_slug=settings.DEFAULT_ARTIST_SLUG.strip(),
         waiver_template_id=settings.WAIVER_TEMPLATE_ID,
@@ -142,6 +159,8 @@ class StudioSettingsEdit(BaseModel):
     STUDIO_ARTIST_ROSTER: str | None = Field(default=None, max_length=4000)
     BOOKING_CLOSED_WEEKDAYS: str | None = Field(default=None, max_length=60)
     BOOKING_REQUEST_ONLY_WEEKDAYS: str | None = Field(default=None, max_length=60)
+    BOOKING_WORK_HOURS: str | None = Field(default=None, max_length=120)
+    BOOKING_CONSULTATION_HOURS: str | None = Field(default=None, max_length=120)
     PUBLIC_SITE_MODE: Literal["product", "studio"] | None = None
     STUDIO_TAGLINE: str | None = Field(default=None, max_length=200)
     STUDIO_STORY: str | None = Field(default=None, max_length=8000)
@@ -239,6 +258,7 @@ async def claim_install(
         email=email,
         password_hash=hash_password(body.password),
         name=owner_name,
+        slug=await unique_artist_slug(db, owner_name),
         role="founder",
         email_verified_at=now,
         must_reset_password=False,

@@ -11,7 +11,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import ReactDOM from 'react-dom'
 import { useAuthStore } from '../../stores/auth'
-import { auth as authApi, artists as artistsApi, flash as flashApi, users as usersApi, stripeConnect, emailConnect, googleAuth, pinterestAuth, sessionTypes as sessionTypesApi, bookingAddOns as bookingAddOnsApi, type ArtistDetail, type FlashDesign, type FlashStatus, type StripeConnectStatus, type EmailStatus, type SessionType, type BookingAddOn } from '../../lib/api'
+import { auth as authApi, artists as artistsApi, flash as flashApi, users as usersApi, stripeConnect, emailConnect, googleAuth, pinterestAuth, sessionTypes as sessionTypesApi, bookingAddOns as bookingAddOnsApi, type ArtistDetail, type FlashDesign, type FlashStatus, type StripeConnectStatus, type EmailStatus, type SessionType, type BookingAddOn, type WeeklyHours } from '../../lib/api'
+import { useStudioSettings } from '../../hooks/useStudioSettings'
+import { hourLabel } from '../../lib/studio-settings'
 import { useToast } from '../../components/Toast'
 
 // ── Constants ──────────────────────────────────────
@@ -253,15 +255,11 @@ export default function ArtistProfileEditor() {
   const [bookingAllowSameDay, setBookingAllowSameDay] = useState(false)
   const [flashDepositAmount, setFlashDepositAmount] = useState<number | ''>('')
   const [allowPrepayFull, setAllowPrepayFull] = useState(false)
-  const [workingHours, setWorkingHours] = useState<Record<string, [number, number] | null>>({
-    '0': null,
-    '1': null,
-    '2': [11, 18],
-    '3': [11, 18],
-    '4': [11, 20],
-    '5': [11, 20],
-    '6': null,
-  })
+  // Null means this artist follows the studio's hours, so a later change there reaches them.
+  const [ownWorkingHours, setOwnWorkingHours] = useState<WeeklyHours | null>(null)
+  const studioHours = useStudioSettings().settings.booking_hours.work
+  const workingHours = ownWorkingHours ?? studioHours
+  const setWorkingHours = (update: (prev: WeeklyHours) => WeeklyHours) => setOwnWorkingHours(update(workingHours))
   const [sessionTypeRows, setSessionTypeRows] = useState<SessionType[]>([])
   const [sessionTypesLoading, setSessionTypesLoading] = useState(false)
   const [sessionTypesSaving, setSessionTypesSaving] = useState(false)
@@ -318,9 +316,7 @@ export default function ArtistProfileEditor() {
           setBookingAllowSameDay(data.booking_allow_same_day ?? false)
           setFlashDepositAmount(data.flash_deposit_amount ?? '')
           setAllowPrepayFull(data.allow_prepay_full ?? false)
-          if (data.working_hours) {
-            setWorkingHours((prev) => ({ ...prev, ...data.working_hours }))
-          }
+          setOwnWorkingHours(data.working_hours ?? null)
           setInstagramUrl(data.instagram_url ?? '')
           setPhone(data.phone ?? '')
           setFacebookUrl(data.facebook_url ?? '')
@@ -591,7 +587,7 @@ export default function ArtistProfileEditor() {
         booking_allow_same_day: bookingAllowSameDay,
         flash_deposit_amount: flashDepositAmount === '' ? null : Number(flashDepositAmount),
         allow_prepay_full: allowPrepayFull,
-        working_hours: workingHours,
+        working_hours: ownWorkingHours,
         instagram_url: instagramUrl || undefined,
         phone: phone || undefined,
         facebook_url: facebookUrl || undefined,
@@ -1088,8 +1084,17 @@ export default function ArtistProfileEditor() {
                   <div className="settings-session-types-head">
                     <div>
                       <p className="settings-section-title">Weekly Working Hours</p>
-                      <p className="settings-section-note">Configure which days and hours clients can book on your calendar.</p>
+                      <p className="settings-section-note">
+                        {ownWorkingHours
+                          ? 'Your own days and hours. Clients book you within these.'
+                          : "You follow the studio's hours. Change a day to set your own."}
+                      </p>
                     </div>
+                    {ownWorkingHours && (
+                      <button type="button" className="action-btn" onClick={() => setOwnWorkingHours(null)}>
+                        Use studio hours
+                      </button>
+                    )}
                   </div>
                   <div className="settings-working-hours">
                     {[
@@ -1135,7 +1140,7 @@ export default function ArtistProfileEditor() {
                               >
                                 {Array.from({ length: 24 }, (_, i) => (
                                   <option key={i} value={i}>
-                                    {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
+                                    {hourLabel(i)}
                                   </option>
                                 ))}
                               </select>
@@ -1153,7 +1158,7 @@ export default function ArtistProfileEditor() {
                               >
                                 {Array.from({ length: 24 }, (_, i) => (
                                   <option key={i} value={i}>
-                                    {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
+                                    {hourLabel(i)}
                                   </option>
                                 ))}
                               </select>

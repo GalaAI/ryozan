@@ -15,7 +15,9 @@ import json
 from typing import Any
 
 from app.constants.timezones import shop_timezone
+from app.core.config import get_settings
 from app.mcp.upstream import UpstreamError, get_health, get_json, write_json
+from app.services.studio_config import describe_hours
 
 MAX_ROWS = 25
 DEFAULT_DEV_WORKSPACE_SLUG = "dev-tracker"
@@ -712,7 +714,7 @@ async def tool_consultation_availability(token: str | None, args: dict) -> str:
     slots = data.get("slots") or []
     lines = [
         f"{len(slots)} live consultation slot(s) for {artist_slug}.",
-        f"Hours: Tuesday through Saturday, 11:00 AM through 5:00 PM, {shop_timezone().key} time.",
+        f"Hours: {describe_hours(get_settings().booking_consultation_schedule)}, {shop_timezone().key} time.",
         f"Google Calendar connected: {'yes' if data.get('calendar_connected') else 'no'}",
         "",
     ]
@@ -1159,8 +1161,8 @@ TOOL_SPECS += [
         "name": "ryozan_consultation_availability",
         "title": "Find live Ryozan consultation times",
         "description": (
-            "Returns conflict-free 30-minute consultation slots Tuesday through Saturday from "
-            "11 AM through 5 PM studio time. Reads Google Calendar, native Ryozan bookings, active holds "
+            "Returns conflict-free 30-minute consultation slots within the studio's consultation hours. "
+            "Reads Google Calendar, native Ryozan bookings, active holds "
             "and personal blocks. Use immediately before offering times."
         ),
         "annotations": _READ_ONLY,

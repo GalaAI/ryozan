@@ -210,34 +210,15 @@ logger = logging.getLogger("ryozan.calendar")
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
-_WORK_SCHEDULE: dict[int, tuple[int, int] | None] = {
-    0: None,
-    1: None,
-    2: (11, 18),
-    3: (11, 18),
-    4: (11, 20),
-    5: (11, 20),
-    6: None,
-}
-_CONSULTATION_SCHEDULE: dict[int, tuple[int, int] | None] = {
-    0: None,
-    1: (11, 17),
-    2: (11, 17),
-    3: (11, 17),
-    4: (11, 17),
-    5: (11, 17),
-    6: None,
-}
-
 
 def _resolve_artist_work_schedule(
     artist: User | None,
     is_consultation: bool = False,
 ) -> dict[int, tuple[int, int] | None]:
     if is_consultation:
-        return _CONSULTATION_SCHEDULE
+        return get_settings().booking_consultation_schedule
     if not artist:
-        return _WORK_SCHEDULE
+        return get_settings().booking_work_schedule
     nexus = getattr(artist, "nexus_profile", None)
     if isinstance(nexus, dict) and "working_hours" in nexus and isinstance(nexus["working_hours"], dict):
         day_map = {
@@ -282,7 +263,7 @@ def _resolve_artist_work_schedule(
                     custom[day_idx] = (int(v[0]), int(v[1]))
         if custom:
             return {day: custom.get(day) for day in range(7)}
-    return _WORK_SCHEDULE
+    return get_settings().booking_work_schedule
 
 
 _HOLD_TTL_MINUTES = 15
@@ -476,7 +457,7 @@ def _block_interval(block: TimeBlock) -> tuple[dt, dt] | None:
     work day (falling back to 00:00-23:59 when the shop is closed that day)."""
     day = block.block_date
     if block.all_day or not block.start_time or not block.end_time:
-        hours = _WORK_SCHEDULE[dt.combine(day, dt.min.time()).weekday()]
+        hours = get_settings().booking_work_schedule[dt.combine(day, dt.min.time()).weekday()]
         if hours:
             open_hour, close_hour = hours
         else:
@@ -595,7 +576,7 @@ def _generate_available_slots(
             intervals.append(interval)
 
     slots: list[AvailableSlot] = []
-    schedule = work_schedule or _WORK_SCHEDULE
+    schedule = work_schedule or get_settings().booking_work_schedule
     day = start_date
     while day <= end_date and len(slots) < limit:
         hours = schedule[dt.combine(day, dt.min.time()).weekday()]
@@ -676,7 +657,7 @@ def _generate_blocked_slots(
             personal_intervals.append(interval)
 
     blocked: list[BlockedSlot] = []
-    schedule = work_schedule or _WORK_SCHEDULE
+    schedule = work_schedule or get_settings().booking_work_schedule
     day = start_date
     while day <= end_date and len(blocked) < limit:
         hours = schedule[dt.combine(day, dt.min.time()).weekday()]
@@ -929,7 +910,7 @@ async def _slot_is_available(
         max_advance_days=max_advance_days,
         allow_same_day=allow_same_day,
     )
-    hours = (work_schedule or _WORK_SCHEDULE)[slot_start.weekday()]
+    hours = (work_schedule or get_settings().booking_work_schedule)[slot_start.weekday()]
     if not hours:
         return False
     open_hour, close_hour = hours
@@ -1810,15 +1791,16 @@ async def get_schedule(
     current_user: User = Depends(get_current_user),
 ):
     """Return the shop working schedule for use by the booking slot picker."""
+    names = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+    schedule = get_settings().booking_work_schedule
     return {
         "timezone": shop_timezone().key,
         "working_days": {
-            "wednesday": {"open": "11:00", "close": "18:00"},
-            "thursday": {"open": "11:00", "close": "18:00"},
-            "friday": {"open": "11:00", "close": "20:00"},
-            "saturday": {"open": "11:00", "close": "20:00"},
+            names[day]: {"open": f"{hours[0]:02d}:00", "close": f"{hours[1]:02d}:00"}
+            for day, hours in schedule.items()
+            if hours
         },
-        "off_days": ["sunday", "monday", "tuesday"],
+        "off_days": [names[day] for day, hours in schedule.items() if not hours],
     }
 
 

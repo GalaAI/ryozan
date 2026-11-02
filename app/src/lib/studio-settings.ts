@@ -9,7 +9,7 @@
  * This module is pure (type-only imports) so node tests can load it alone;
  * the React hook lives in hooks/useStudioSettings.ts.
  */
-import type { DocumentTemplate, PublicSiteMode, StudioSettings, StudioSiteSettings, StudioWeekday } from './api'
+import type { DocumentTemplate, PublicSiteMode, StudioSettings, StudioSiteSettings, StudioWeekday, WeeklyHours } from './api'
 
 export const STUDIO_WEEKDAYS: readonly StudioWeekday[] = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
@@ -37,6 +37,7 @@ export const NEUTRAL_STUDIO_SETTINGS: StudioSettings = Object.freeze({
   address: '',
   timezone: '',
   booking_days: Object.freeze({ closed_weekdays: [], request_only_weekdays: [], request_only_artist_slugs: [] }),
+  booking_hours: Object.freeze({ work: Object.freeze({}), consultation: Object.freeze({}) }),
   default_artist_slug: '',
   waiver_template_id: '',
   sample_flash_urls: [],
@@ -50,11 +51,24 @@ const weekdays = (value: unknown) => textList(value)
   .map((day) => day.toLowerCase())
   .filter((day): day is StudioWeekday => (STUDIO_WEEKDAYS as readonly string[]).includes(day))
 
+const isHourSpan = (value: unknown): value is [number, number] =>
+  Array.isArray(value) && value.length === 2 && value.every((hour) => Number.isInteger(hour))
+
+function weeklyHours(value: unknown): WeeklyHours {
+  if (!value || typeof value !== 'object') return {}
+  const hours: WeeklyHours = {}
+  for (const [day, span] of Object.entries(value)) {
+    if (/^[0-6]$/.test(day)) hours[day] = isHourSpan(span) ? span : null
+  }
+  return hours
+}
+
 /** Coerce an API body into StudioSettings; anything missing or malformed is neutral. */
 export function normalizeStudioSettings(raw: unknown): StudioSettings {
   if (!raw || typeof raw !== 'object') return NEUTRAL_STUDIO_SETTINGS
   const body = raw as Record<string, unknown>
   const days = (body.booking_days && typeof body.booking_days === 'object' ? body.booking_days : {}) as Record<string, unknown>
+  const hours = (body.booking_hours && typeof body.booking_hours === 'object' ? body.booking_hours : {}) as Record<string, unknown>
   return {
     studio_name: text(body.studio_name),
     owner_name: text(body.owner_name),
@@ -67,6 +81,7 @@ export function normalizeStudioSettings(raw: unknown): StudioSettings {
       request_only_weekdays: weekdays(days.request_only_weekdays),
       request_only_artist_slugs: textList(days.request_only_artist_slugs).map((slug) => slug.toLowerCase()),
     },
+    booking_hours: { work: weeklyHours(hours.work), consultation: weeklyHours(hours.consultation) },
     default_artist_slug: text(body.default_artist_slug),
     waiver_template_id: text(body.waiver_template_id),
     sample_flash_urls: textList(body.sample_flash_urls),
@@ -162,6 +177,41 @@ export function weekdayOf(isoDate: string): StudioWeekday {
 
 export function weekdayLongName(day: StudioWeekday): string {
   return WEEKDAY_LONG[day]
+}
+
+/** An hour on the 24-hour clock as people say it: 0 is 12 AM, 13 is 1 PM. */
+export function hourLabel(hour: number): string {
+  return `${hour % 12 || 12} ${hour < 12 ? 'AM' : 'PM'}`
+}
+
+/** Read a BOOKING_*_HOURS value (wed=11-18,thu=11-18) for the settings form. */
+export function parseHoursSetting(value: string | undefined): Partial<Record<StudioWeekday, [number, number]>> {
+  const hours: Partial<Record<StudioWeekday, [number, number]>> = {}
+  for (const part of (value ?? '').split(',')) {
+    const match = /^(sun|mon|tue|wed|thu|fri|sat)=(\d+)-(\d+)$/.exec(part.trim())
+    if (match) hours[match[1] as StudioWeekday] = [Number(match[2]), Number(match[3])]
+  }
+  return hours
+}
+
+export function formatHoursSetting(hours: Partial<Record<StudioWeekday, [number, number]>>): string {
+  return STUDIO_WEEKDAYS.flatMap((day) => {
+    const span = hours[day]
+    return span ? [`${day}=${span[0]}-${span[1]}`] : []
+  }).join(',')
+}
+
+/** The open days in short form, like TUE-SAT or MON, WED-FRI. Empty when none are known. */
+export function openDaysLabel(hours: WeeklyHours): string {
+  const names = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
+  const runs: Array<[number, number]> = []
+  names.forEach((_, day) => {
+    if (!hours[String(day)]) return
+    const last = runs[runs.length - 1]
+    if (last && last[1] === day - 1) last[1] = day
+    else runs.push([day, day])
+  })
+  return runs.map(([first, last]) => (first === last ? names[first] : `${names[first]}-${names[last]}`)).join(', ')
 }
 
 export function isClosedDay(settings: StudioSettings, isoDate: string): boolean {

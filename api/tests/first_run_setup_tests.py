@@ -182,7 +182,12 @@ class SettingsEditTests(_StudioSettingsTestCase):
         self._as_role("founder")
         response = self.client.put(
             EDIT,
-            json={"STUDIO_NAME": "Rose Hall", "STUDIO_TIMEZONE": "Europe/London", "BOOKING_CLOSED_WEEKDAYS": "Sunday,mon"},
+            json={
+                "STUDIO_NAME": "Rose Hall",
+                "STUDIO_TIMEZONE": "Europe/London",
+                "BOOKING_CLOSED_WEEKDAYS": "Sunday,mon",
+                "BOOKING_WORK_HOURS": "mon=9-17,sun=10-14",
+            },
         )
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.json()["STUDIO_NAME"], "Rose Hall")
@@ -191,12 +196,15 @@ class SettingsEditTests(_StudioSettingsTestCase):
         self.assertEqual(public["studio_name"], "Rose Hall")
         self.assertEqual(public["timezone"], "Europe/London")
         self.assertEqual(public["booking_days"]["closed_weekdays"], ["sun", "mon"])
+        self.assertEqual(response.json()["BOOKING_WORK_HOURS"], "sun=10-14,mon=9-17")
+        self.assertEqual(public["booking_hours"]["work"]["0"], [9, 17])
 
     def test_invalid_values_are_refused_and_change_nothing(self):
         self._as_role("founder")
         for body in (
             {"STUDIO_TIMEZONE": "Mars/Olympus"},
             {"BOOKING_CLOSED_WEEKDAYS": "someday"},
+            {"BOOKING_WORK_HOURS": "mon=18-11"},
             {"STUDIO_SOCIAL_LINKS": "not a link"},
             {"STUDIO_NAME": "   "},
             {"SHOP_EMAIL": "not-an-email"},
@@ -272,7 +280,9 @@ class StudioZoneTests(_StudioSettingsTestCase):
         self.settings.STUDIO_TIMEZONE = "America/Chicago"
         self.assertEqual(_format_datetime_shop(moment), "July 04, 2026 at 03:00 PM CDT")
         self.settings.STUDIO_TIMEZONE = "America/New_York"
-        self.assertEqual(_format_datetime_shop(datetime(2026, 1, 15, 20, 0, tzinfo=UTC)), "January 15, 2026 at 03:00 PM EST")
+        self.assertEqual(
+            _format_datetime_shop(datetime(2026, 1, 15, 20, 0, tzinfo=UTC)), "January 15, 2026 at 03:00 PM EST"
+        )
 
     def test_a_bad_zone_in_the_environment_fails_at_startup(self):
         with self.assertRaises(ValueError):

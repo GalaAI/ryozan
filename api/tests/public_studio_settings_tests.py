@@ -47,6 +47,11 @@ NEUTRAL = {
     "STUDIO_SOCIAL_LINKS": "",
 }
 
+DEFAULT_HOURS = {
+    "work": {"0": None, "1": None, "2": [11, 18], "3": [11, 18], "4": [11, 20], "5": [11, 20], "6": None},
+    "consultation": {"0": None, "1": [11, 17], "2": [11, 17], "3": [11, 17], "4": [11, 17], "5": [11, 17], "6": None},
+}
+
 NEUTRAL_SITE = {
     "mode": "product",
     "studio_hosts": [],
@@ -129,6 +134,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
             body["booking_days"],
             {"closed_weekdays": [], "request_only_weekdays": [], "request_only_artist_slugs": []},
         )
+        self.assertEqual(body["booking_hours"], DEFAULT_HOURS)
         self.assertEqual(body["timezone"], shop_timezone().key)
         self.assertEqual(body["site"], NEUTRAL_SITE)
 
@@ -148,6 +154,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
                     "request_only_weekdays": ["tue"],
                     "request_only_artist_slugs": ["sam"],
                 },
+                "booking_hours": DEFAULT_HOURS,
                 "default_artist_slug": "sam",
                 "waiver_template_id": "00000000-0000-4000-8000-000000000001",
                 "sample_flash_urls": [

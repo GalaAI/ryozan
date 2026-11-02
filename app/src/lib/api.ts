@@ -1837,6 +1837,9 @@ export const notificationPreferences = {
 export type StudioWeekday = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'
 
 /** GET /studio/settings: one install's non-secret display and booking settings. */
+/** Weekly hours keyed "0" (Monday) to "6" (Sunday). A closed day is null. */
+export type WeeklyHours = Record<string, [number, number] | null>
+
 export interface StudioSettings {
   studio_name: string
   owner_name: string
@@ -1850,6 +1853,11 @@ export interface StudioSettings {
     request_only_weekdays: StudioWeekday[]
     /** Artists the request-only days apply to; empty means every artist. */
     request_only_artist_slugs: string[]
+  }
+  /** When the studio books. An artist's own working hours replace `work` for that artist. */
+  booking_hours: {
+    work: WeeklyHours
+    consultation: WeeklyHours
   }
   default_artist_slug: string
   waiver_template_id: string
@@ -1915,6 +1923,8 @@ export interface StudioSettingsEdit {
   STUDIO_ARTIST_ROSTER?: string
   BOOKING_CLOSED_WEEKDAYS?: string
   BOOKING_REQUEST_ONLY_WEEKDAYS?: string
+  BOOKING_WORK_HOURS?: string
+  BOOKING_CONSULTATION_HOURS?: string
   PUBLIC_SITE_MODE?: string
   STUDIO_TAGLINE?: string
   STUDIO_STORY?: string

@@ -33,6 +33,8 @@ EDITABLE_SETTINGS: tuple[str, ...] = (
     "STUDIO_ARTIST_ROSTER",
     "BOOKING_CLOSED_WEEKDAYS",
     "BOOKING_REQUEST_ONLY_WEEKDAYS",
+    "BOOKING_WORK_HOURS",
+    "BOOKING_CONSULTATION_HOURS",
     "PUBLIC_SITE_MODE",
     "STUDIO_TAGLINE",
     "STUDIO_STORY",
@@ -44,6 +46,32 @@ EDITABLE_SETTINGS: tuple[str, ...] = (
 
 # Inserted with the first owner. Its primary key lets only one claim commit.
 SETUP_CLAIM_KEY = "_setup_claimed"
+
+_DAY_NAMES = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+def _clock(hour: int) -> str:
+    return f"{hour % 12 or 12} {'AM' if hour < 12 else 'PM'}"
+
+
+def describe_hours(schedule: dict[int, tuple[int, int] | None]) -> str:
+    """Weekly hours in plain words: Tuesday through Saturday, 11 AM to 5 PM."""
+    runs: list[tuple[int, int, tuple[int, int]]] = []
+    for day in range(7):
+        hours = schedule.get(day)
+        if not hours:
+            continue
+        if runs and runs[-1][1] == day - 1 and runs[-1][2] == hours:
+            runs[-1] = (runs[-1][0], day, hours)
+        else:
+            runs.append((day, day, hours))
+    if not runs:
+        return "closed every day"
+    return "; ".join(
+        f"{_DAY_NAMES[first] if first == last else f'{_DAY_NAMES[first]} through {_DAY_NAMES[last]}'}, "
+        f"{_clock(hours[0])} to {_clock(hours[1])}"
+        for first, last, hours in runs
+    )
 
 
 class StudioSettingsError(ValueError):
