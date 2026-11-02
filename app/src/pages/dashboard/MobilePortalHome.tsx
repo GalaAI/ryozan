@@ -2753,7 +2753,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
 
   const requestMainSiteExit = useCallback(() => {
     setAccountOpen(false)
-    setMainSiteExitTarget('https://ryozan.app/')
+    setMainSiteExitTarget('/')
   }, [])
 
   const openAccountSettings = useCallback(() => {

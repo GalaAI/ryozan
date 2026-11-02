@@ -10,7 +10,8 @@ name: Deploy Watchdog
 # filing issues about) a site the fork does not own.
 #
 # Probe targets:
-#   GET https://ryozan.app/health      → expect 200
+#   GET <RYOZAN_LIVE_URL>/health      → expect 200 (repository variable; defaults to
+#                                       the GalaAI Railway deployment)
 #   POST /api/v1/auth/login (no creds)          → expect 422 (validation),
 #                                                 NOT 500 (means startup migration trap re-broke)
 #   GET /api/v1/auth/me (no token)              → expect 401 (auth working)
@@ -36,12 +37,14 @@ jobs:
     name: Probe Ryozan production
     if: github.repository_owner == 'GalaAI'
     runs-on: ubuntu-latest
+    env:
+      LIVE_URL: ${{ vars.RYOZAN_LIVE_URL || 'https://ryozan-production.up.railway.app' }}
     steps:
       - name: Probe /health
         id: health
         run: |
           set +e
-          code=$(curl -sS -o /tmp/health.txt -w "%{http_code}" https://ryozan.app/health)
+          code=$(curl -sS -o /tmp/health.txt -w "%{http_code}" ${LIVE_URL}/health)
           echo "health_code=$code" >> "$GITHUB_OUTPUT"
           echo "health_body=$(cat /tmp/health.txt | tr -d '\n' | head -c 500)" >> "$GITHUB_OUTPUT"
           echo "::notice::health=$code"
@@ -51,7 +54,7 @@ jobs:
         run: |
           set +e
           code=$(curl -sS -o /tmp/login.txt -w "%{http_code}" \
-            -X POST https://ryozan.app/api/v1/auth/login \
+            -X POST ${LIVE_URL}/api/v1/auth/login \
             -H "Content-Type: application/json" \
             -d '{"email":"watchdog@example.com","password":"watchdog"}')
           echo "login_code=$code" >> "$GITHUB_OUTPUT"
@@ -62,7 +65,7 @@ jobs:
         id: me
         run: |
           set +e
-          code=$(curl -sS -o /tmp/me.txt -w "%{http_code}" https://ryozan.app/api/v1/auth/me)
+          code=$(curl -sS -o /tmp/me.txt -w "%{http_code}" ${LIVE_URL}/api/v1/auth/me)
           echo "me_code=$code" >> "$GITHUB_OUTPUT"
           echo "me_body=$(cat /tmp/me.txt | tr -d '\n' | head -c 500)" >> "$GITHUB_OUTPUT"
           echo "::notice::me=$code"

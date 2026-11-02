@@ -12,7 +12,7 @@ from datetime import date
 from html import escape
 
 from app.services.email import _format_datetime_eastern, _format_time_12hr
-from app.services.email_foundry import FoundryEmail
+from app.services.email_foundry import TIGER_MARK_URL, FoundryEmail
 from app.services.email_foundry_waiver import (
     _BODY_FONT,
     _DISPLAY_FONT,
@@ -37,7 +37,7 @@ def _header(eyebrow: str) -> str:
     """Tiger mark header exactly as the catalog templates draw it."""
     return (
         '<tr><td align="center" style="padding:34px 24px 22px;border-bottom:1px solid #2a2316;">'
-        '<img src="https://assets.ryozan.app/email/tiger-mark.png" alt="Ryozan Studio" width="72" '
+        f'<img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="72" '
         'style="display:block;margin:0 auto 14px;">'
         f'<div style="font-family:{_DISPLAY_FONT};font-weight:900;font-size:19px;letter-spacing:.18em;'
         f'color:{_WORDMARK};text-transform:uppercase;">RYOZAN STUDIO</div>'

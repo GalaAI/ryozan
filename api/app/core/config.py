@@ -291,6 +291,16 @@ class Settings(BaseSettings):
         """Where owner mail goes: SHOP_OWNER_EMAIL, else SHOP_EMAIL, else blank."""
         return (self.SHOP_OWNER_EMAIL or "").strip() or (self.SHOP_EMAIL or "").strip()
 
+    @property
+    def public_site_url(self) -> str:
+        """FRONTEND_URL without a trailing slash, the base for links in client messages."""
+        return (self.FRONTEND_URL or "").strip().rstrip("/")
+
+    def email_asset_url(self, name: str) -> str:
+        """URL of a brand image for client email, under EMAIL_ASSET_BASE_URL or <site>/email."""
+        base = (self.EMAIL_ASSET_BASE_URL or "").strip().rstrip("/") or f"{self.public_site_url}/email"
+        return f"{base}/{name}"
+
     def inbound_address(self, local_part: str) -> str | None:
         """<local_part>@COURIER_REPLY_DOMAIN, or None when no receiving domain is set."""
         domain = (self.COURIER_REPLY_DOMAIN or "").strip()
@@ -524,6 +534,10 @@ class Settings(BaseSettings):
     # API public base URL (for verification links, webhooks, etc.). Local default.
     API_PUBLIC_BASE_URL: str = "http://localhost:18788"
 
+    # Where client email loads its brand images (tiger-mark.png, starseed-tile.png).
+    # Blank serves the copies shipped in app/public/email from FRONTEND_URL.
+    EMAIL_ASSET_BASE_URL: str = ""
+
     # Document lifecycle
     DOC_REMINDER_API_KEY: str = ""  # n8n uses this to call /reminders/process
 
@@ -707,7 +721,7 @@ class Settings(BaseSettings):
     R2_ACCOUNT_ID: str = "00000000000000000000000000000000"
     R2_ACCESS_KEY_ID: str = ""
     R2_SECRET_ACCESS_KEY: str = ""
-    R2_BUCKET_NAME: str = "bttco-assets"
+    R2_BUCKET_NAME: str = ""  # blank: uploads stay off until the deployment names its bucket
     R2_PUBLIC_DOMAIN: str = ""  # custom domain for R2 public access; env-only
 
     # Hugging Face (SAM 2 image segmentation for flash sheets)

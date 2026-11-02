@@ -20,7 +20,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.message import Conversation, ConversationParticipant, Message
 from app.models.user import User
-from app.services.sms import normalise_phone
+from app.services.sms import normalise_phone, placeholder_contact_email
 
 logger = logging.getLogger("ryozan.whatsapp")
 
@@ -166,7 +166,7 @@ async def _resolve_sender(db: AsyncSession, phone_e164: str, contact_name: str) 
         if normalise_phone(user.phone) == phone_e164:
             return user
 
-    email = f"whatsapp-{phone_e164.lstrip('+')}@ryozan.app"
+    email = placeholder_contact_email(f"whatsapp-{phone_e164.lstrip('+')}")
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         return existing

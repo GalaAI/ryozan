@@ -538,11 +538,15 @@ class FlashPublicStorefrontTests(unittest.IsolatedAsyncioTestCase):
         artist_id = uuid.uuid4()
         sheet_id = uuid.uuid4()
         design = self._design(artist_id=artist_id, sheet_id=sheet_id)
-        design.image_url = "https://assets.ryozan.app/flash/test.png"
+        design.image_url = "https://assets.studio.example/flash/test.png"
         image_bytes = _image_bytes("PNG")
         db = _FakeSession(results=[_RowsResult(rows=[(design, design.image_url)])])
+        settings = SimpleNamespace(R2_PUBLIC_DOMAIN="assets.studio.example")
 
-        with patch.object(flash.httpx, "AsyncClient", return_value=_ImageClient(image_bytes)):
+        with (
+            patch.object(flash, "get_settings", return_value=settings),
+            patch.object(flash.httpx, "AsyncClient", return_value=_ImageClient(image_bytes)),
+        ):
             response = await flash.get_public_design_image(design.id, db=db)
 
         self.assertEqual(response.media_type, "image/png")

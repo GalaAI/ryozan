@@ -1502,9 +1502,7 @@ def _public_flash_asset_allowed(url: str) -> bool:
     if parsed.scheme != "https" or not parsed.hostname:
         return False
     configured_host = (get_settings().R2_PUBLIC_DOMAIN or "").strip().lower()
-    return parsed.hostname == "assets.ryozan.app" or bool(
-        configured_host and parsed.hostname.lower() == configured_host
-    )
+    return bool(configured_host and parsed.hostname.lower() == configured_host)
 
 
 @router.get("/public/designs/{design_id}/image")

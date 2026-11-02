@@ -59,6 +59,30 @@ SEGMENT_LIMIT_UCS2 = 70
 STOP_FOOTER = "\nReply STOP to opt out."
 
 
+# ── Studio contact lines ─────────────────────────────────────────
+
+# Address for a contact known only by phone. example.com is reserved (RFC 2606) and
+# accepts no mail, so nothing sent to a placeholder reaches a real inbox.
+PLACEHOLDER_EMAIL_DOMAIN = "contacts.example.com"
+
+
+def placeholder_contact_email(local_part: str) -> str:
+    return f"{local_part}@{PLACEHOLDER_EMAIL_DOMAIN}"
+
+
+def public_site_host() -> str:
+    """This deployment's site host for SMS text (no scheme, to save characters)."""
+    return get_settings().public_site_url.split("://", 1)[-1]
+
+
+def sms_help_reply() -> str:
+    """The HELP keyword reply, naming the studio's own contact address and site."""
+    settings = get_settings()
+    contact = (settings.SHOP_EMAIL or "").strip()
+    reach = f"email {contact} or visit {public_site_host()}" if contact else f"visit {public_site_host()}"
+    return f"Ryozan Studio: For help, {reach}. Msg freq varies. Msg & data rates may apply. Reply STOP to cancel."
+
+
 # ── Phone normalisation ──────────────────────────────────────────
 
 

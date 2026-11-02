@@ -139,7 +139,7 @@ function PublisherTab() {
           </div>
           <label>
             <span>Image URL for Instagram</span>
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://assets.ryozan.app/..." />
+            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
           </label>
           <p className="herald-publisher-note">Facebook can publish text only. Instagram requires a public image URL.</p>
           {status && <div className="herald-publish-status">{status}</div>}

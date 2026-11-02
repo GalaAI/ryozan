@@ -9,7 +9,7 @@ coral pill CTA, footer) without touching package bytes. Every interpolated value
 from html import escape
 
 from app.services.email import placement_tips
-from app.services.email_foundry import STARSEED_TILE_URL, FoundryEmail, studio_address_html
+from app.services.email_foundry import STARSEED_TILE_URL, TIGER_MARK_URL, FoundryEmail, studio_address_html
 
 _BODY_FONT = "'Space Grotesk','Helvetica Neue',Arial,sans-serif"
 _MONO_FONT = "'JetBrains Mono','Courier New',Courier,monospace"
@@ -65,7 +65,7 @@ def _shell(*, title: str, preheader: str, header: str, rows: str) -> str:
 def _tiger_header(eyebrow: str) -> str:
     return (
         '<tr><td align="center" style="padding:32px 24px 20px;border-bottom:1px solid rgba(226,218,194,.12);">'
-        '<img src="https://assets.ryozan.app/email/tiger-mark.png" alt="Ryozan Studio" width="72" '
+        f'<img src="{TIGER_MARK_URL}" alt="Ryozan Studio" width="72" '
         'style="display:block;margin:0 auto 14px;">'
         f'<div style="font-family:{_DISPLAY_FONT};font-weight:900;font-size:19px;letter-spacing:.18em;color:#e2dac2;'
         'text-transform:uppercase;">Ryozan Studio</div>'

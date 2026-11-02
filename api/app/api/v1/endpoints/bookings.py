@@ -151,8 +151,8 @@ BOOKING_SMS_CONSENT_TEXT = (
     "I agree to receive booking confirmations, appointment reminders, reschedule updates, "
     "aftercare follow-ups, and replies to my questions from Ryozan Studio at the phone number provided. "
     "Message frequency varies. Message and data rates may apply. Reply HELP for help and STOP to opt out. "
-    "Consent is not required to book. SMS Terms: https://ryozan.app/legal#sms. "
-    "Privacy Policy: https://ryozan.app/legal#privacy."
+    f"Consent is not required to book. SMS Terms: {get_settings().public_site_url}/legal#sms. "
+    f"Privacy Policy: {get_settings().public_site_url}/legal#privacy."
 )
 BOOKING_EMAIL_MAX_ATTEMPTS = 5
 BOOKING_EMAIL_STALE_MINUTES = 10

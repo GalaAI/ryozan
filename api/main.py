@@ -11,7 +11,9 @@ alembic_version) is adopted once with `python scripts/adopt_schema.py --apply`.
 
 import asyncio
 from contextlib import asynccontextmanager, suppress
+from html import escape
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import asyncpg
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -439,7 +441,7 @@ async def _run_startup_seeds() -> None:
                     (gen_random_uuid(), 'first-booking',   'First Session',     'Every master was once a disaster. Book your first session and let the ritual begin. The needle remembers what the mind forgets.',                'onboarding', 50,  10, 'Submit a booking request',    1, 1, TRUE, now()),
                     (gen_random_uuid(), 'profile-pic',     'Face Card',         'An artist without a face is just a rumor. Upload your portrait so the mortals know who wields the machine.',                      'onboarding', 25,   5, 'Set a profile avatar',        1, 2, TRUE, now()),
                     (gen_random_uuid(), 'waiver-signed',   'Consent King',      'The ancient pact between artist and canvas. Sign the waiver — it protects you both from the chaos of regret and litigation.',                     'onboarding', 30,   5, 'Sign a waiver',               1, 3, TRUE, now()),
-                    (gen_random_uuid(), 'connect-email',   'Digital Address',   'Claim your @ryozan.app handle. One domain. One identity. The ravens will know where to find you.',                  'onboarding', 35,  10, 'Connect your studio email',    1, 4, TRUE, now()),
+                    (gen_random_uuid(), 'connect-email',   'Digital Address',   'Claim your studio email handle. One domain. One identity. The ravens will know where to find you.',                  'onboarding', 35,  10, 'Connect your studio email',    1, 4, TRUE, now()),
                     (gen_random_uuid(), 'add-to-homescreen','Go Mobile',        'Bind the portal to your device. Home screen access means you are one tap from the tower at all times. No excuses.', 'onboarding',100,  20, 'Add app to home screen',      1, 5, TRUE, now()),
                     (gen_random_uuid(), 'enable-notifications','Signal Flare',  'Light the beacon. Enable push notifications so the tower can reach you when bookings drop, messages land, or quests appear. Silence is not an option.', 'onboarding', 75, 15, 'Enable push notifications', 1, 6, TRUE, now()),
                     (gen_random_uuid(), 'three-sessions',  'Repeat Offender',   'Three sessions deep and you are no longer a tourist. You are a regular. The shop knows your coffee order. Probably.',                     'loyalty',   150,  50, 'Complete 3 sessions',          3, 7, TRUE, now()),
@@ -526,8 +528,9 @@ app.add_middleware(SlowAPIMiddleware)
 @app.middleware("http")
 async def security_headers_middleware(request: Request, call_next):
     host = request.headers.get("host", "").split(":", 1)[0].lower()
-    if host == "www.ryozan.app":
-        redirect_url = request.url.replace(scheme="https", netloc="ryozan.app")
+    site_host = (urlsplit(settings.public_site_url).hostname or "").lower()
+    if site_host and host == f"www.{site_host}":
+        redirect_url = request.url.replace(scheme="https", netloc=site_host)
         response = RedirectResponse(str(redirect_url), status_code=308)
         if settings.SECURITY_HEADERS_ENABLED:
             _apply_security_headers(response)
@@ -705,6 +708,30 @@ if _static_dir.is_dir():
     # then fall back to index.html so client-side routing (React Router) works.
     # The catch-all also matches /assets/* for the rate limiter, so exempting it keeps
     # static files and SPA routes out of the per-IP API budget.
+    # Public pages that name the studio: their {{studio_name}}, {{contact_link}} and
+    # {{site_url}} placeholders are filled from Settings, so each deployment shows its
+    # own name, contact address and canonical URLs.
+    _STUDIO_PAGE_TYPES = {
+        "privacy.html": "text/html; charset=utf-8",
+        "sms-terms.html": "text/html; charset=utf-8",
+        "sitemap.xml": "application/xml",
+        "robots.txt": "text/plain; charset=utf-8",
+    }
+
+    def _studio_page(path: Path) -> Response | FileResponse:
+        media_type = _STUDIO_PAGE_TYPES.get(path.name)
+        if media_type is None or path.parent != _static_dir:
+            return FileResponse(str(path))
+        contact = (settings.SHOP_EMAIL or "").strip()
+        contact_link = f'<a href="mailto:{escape(contact)}">{escape(contact)}</a>' if contact else "the studio directly"
+        body = (
+            path.read_text(encoding="utf-8")
+            .replace("{{studio_name}}", escape(settings.STUDIO_NAME))
+            .replace("{{contact_link}}", contact_link)
+            .replace("{{site_url}}", escape(settings.public_site_url))
+        )
+        return Response(content=body, media_type=media_type)
+
     @app.get("/{full_path:path}", include_in_schema=False)
     @limiter.exempt
     async def spa_fallback(full_path: str):
@@ -714,9 +741,9 @@ if _static_dir.is_dir():
         if clean_path:
             html_candidate = _static_dir / f"{clean_path}.html"
             if html_candidate.is_file():
-                return FileResponse(str(html_candidate))
+                return _studio_page(html_candidate)
             direct_candidate = _static_dir / clean_path
             if direct_candidate.is_file():
-                return FileResponse(str(direct_candidate))
+                return _studio_page(direct_candidate)
         index = _static_dir / "index.html"
         return FileResponse(str(index))

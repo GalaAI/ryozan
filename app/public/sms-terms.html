@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="index,follow" />
-    <meta name="description" content="SMS Terms and Conditions for the Ryozan Studio messaging program." />
-    <link rel="canonical" href="https://ryozan.app/sms-terms" />
-    <title>SMS Terms and Conditions | Ryozan Studio</title>
+    <meta name="description" content="SMS Terms and Conditions for the {{studio_name}} messaging program." />
+    <link rel="canonical" href="{{site_url}}/sms-terms" />
+    <title>SMS Terms and Conditions | {{studio_name}}</title>
     <style>
       :root { color-scheme: dark; --gold: #d5a24b; --ink: #12100d; --paper: #f4efe6; --muted: #b9b0a3; }
       * { box-sizing: border-box; }
@@ -29,7 +29,7 @@
   <body>
     <!-- This static document extends the approved React SMS terms into a crawler-readable delivery format for carriers and customers. It does not create a separate program contract; the wording remains aligned with the existing Ryozan Studio legal hub and booking consent. -->
     <header>
-      <div class="eyebrow">Ryozan Studio</div>
+      <div class="eyebrow">{{studio_name}}</div>
       <h1>SMS Terms and Conditions</h1>
       <p class="updated">Last updated: August 15, 2026</p>
       <nav aria-label="Legal navigation">
@@ -42,12 +42,12 @@
     <main>
       <section>
         <h2>1. Program Description</h2>
-        <p>Ryozan Studio operates an SMS messaging program for people who voluntarily opt in through our <a href="/book">booking form</a>. Messages may include inquiry follow-up, consultation and booking confirmations, appointment reminders, scheduling changes, preparation or aftercare information, and replies to customer support questions.</p>
+        <p>{{studio_name}} operates an SMS messaging program for people who voluntarily opt in through our <a href="/book">booking form</a>. Messages may include inquiry follow-up, consultation and booking confirmations, appointment reminders, scheduling changes, preparation or aftercare information, and replies to customer support questions.</p>
       </section>
       <section>
         <h2>2. Opt-In Consent</h2>
         <div class="notice">
-          <p>By entering your phone number and checking the separate SMS consent box on our booking form, you agree to receive SMS or MMS messages from Ryozan Studio at the number provided.</p>
+          <p>By entering your phone number and checking the separate SMS consent box on our booking form, you agree to receive SMS or MMS messages from {{studio_name}} at the number provided.</p>
           <p><strong>Consent is optional, is not a condition of purchase or service, and the consent box is unchecked by default.</strong> You may complete your inquiry or book a tattoo without opting in to text messages.</p>
         </div>
       </section>
@@ -57,7 +57,7 @@
       </section>
       <section>
         <h2>4. Message and Data Rates</h2>
-        <p><strong>Message and data rates may apply.</strong> Ryozan Studio does not charge for these messages, but your carrier may charge according to your mobile plan.</p>
+        <p><strong>Message and data rates may apply.</strong> {{studio_name}} does not charge for these messages, but your carrier may charge according to your mobile plan.</p>
       </section>
       <section>
         <h2>5. Opt Out and Help</h2>
@@ -74,7 +74,7 @@
       <section>
         <h2>7. Privacy</h2>
         <p><strong>We do not share, sell, rent, or provide mobile phone numbers or messaging consent data to third parties or affiliates for marketing or promotional purposes.</strong> Mobile information may be shared only with service providers needed to deliver requested messaging, including Twilio, or when required by law.</p>
-        <p>Read the complete <a href="/privacy">Ryozan Studio Privacy Policy</a>.</p>
+        <p>Read the complete <a href="/privacy">{{studio_name}} Privacy Policy</a>.</p>
       </section>
       <section>
         <h2>8. Eligibility</h2>
@@ -86,10 +86,10 @@
       </section>
       <section>
         <h2>10. Contact</h2>
-        <p>Ryozan Studio</p>
-        <p>For help, reply HELP or email <a href="mailto:admin@ryozan.app">admin@ryozan.app</a>.</p>
+        <p>{{studio_name}}</p>
+        <p>For help, reply HELP or email {{contact_link}}.</p>
       </section>
     </main>
-    <footer>Copyright Ryozan Studio <a href="/">Return to the website</a>.</footer>
+    <footer>Copyright {{studio_name}} <a href="/">Return to the website</a>.</footer>
   </body>
 </html>

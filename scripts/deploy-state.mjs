@@ -18,7 +18,7 @@ const legacyLiveUrl = process.env.BTTCO_LIVE_DEPLOY_URL
 if (process.env.RYOZAN_LIVE_DEPLOY_URL === undefined && legacyLiveUrl !== undefined) {
   console.warn('BTTCO_LIVE_DEPLOY_URL is deprecated; set RYOZAN_LIVE_DEPLOY_URL instead.')
 }
-const liveUrl = process.env.RYOZAN_LIVE_DEPLOY_URL ?? legacyLiveUrl ?? 'https://ryozan.app/health/deploy'
+const liveUrl = process.env.RYOZAN_LIVE_DEPLOY_URL ?? legacyLiveUrl ?? 'https://ryozan-production.up.railway.app/health/deploy'
 const wantJson = process.argv.includes('--json')
 
 function git(args, allowFailure = false) {

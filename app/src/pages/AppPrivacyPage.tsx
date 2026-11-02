@@ -7,7 +7,7 @@ export default function AppPrivacyPage() {
       <Helmet>
         <title>App Privacy Policy | Ryozan Studio</title>
         <meta name="description" content="Privacy policy for the Ryozan Studio booking app, including its use of Google Calendar data." />
-        <link rel="canonical" href="https://app.ryozan.app/privacy" />
+        <link rel="canonical" href={`${window.location.origin}/privacy`} />
       </Helmet>
       <article className="app-policy">
         <header>

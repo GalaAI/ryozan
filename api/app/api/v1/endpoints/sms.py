@@ -37,12 +37,14 @@ from app.services.push import send_push_notification
 from app.services.sms import (
     SmsLaneConfigurationError,
     normalise_phone,
+    placeholder_contact_email,
     project_sms_delivery_status,
     resolve_sms_lane_by_number,
     send_sms,
     send_twilio_whatsapp_text,
     set_opt_in,
     set_opt_out,
+    sms_help_reply,
 )
 
 logger = logging.getLogger("ryozan.sms")
@@ -376,7 +378,7 @@ async def _resolve_sms_sender(db: AsyncSession, phone_e164: str) -> User:
         if normalise_phone(user.phone) == phone_e164:
             return user
 
-    email = f"sms-{phone_e164.lstrip('+')}@ryozan.app"
+    email = placeholder_contact_email(f"sms-{phone_e164.lstrip('+')}")
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
         return existing
@@ -1043,10 +1045,7 @@ async def twilio_inbound_webhook(
         else:
             logger.warning("twilio.inbound.start.invalid_phone raw_from=%r", from_phone)
     elif keyword in HELP_KEYWORDS:
-        reply = (
-            "Ryozan Studio: For help, email admin@ryozan.app or visit "
-            "ryozan.app. Msg & data rates may apply. Reply STOP to cancel."
-        )
+        reply = sms_help_reply()
         log.template_slug = "help_response"
         logger.info("twilio.inbound.help from=%s", e164)
     else:

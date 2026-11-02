@@ -16,14 +16,15 @@ os.environ["ENABLE_API_DOCS"] = "false"
 os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 
 from app.api.v1.endpoints import documents, waiver  # noqa: E402
+from app.services.email_foundry import STARSEED_TILE_URL, TIGER_MARK_URL  # noqa: E402
 from app.services.email_foundry_waiver import (  # noqa: E402
     render_aftercare_instructions,
     render_checkin_code,
     render_waiver_link,
 )
 
-STARSEED = "https://assets.ryozan.app/email/starseed-tile.png"
-TIGER = "https://assets.ryozan.app/email/tiger-mark.png"
+STARSEED = STARSEED_TILE_URL
+TIGER = TIGER_MARK_URL
 PILL = "background-color:#d38a68;border-radius:99px"
 
 

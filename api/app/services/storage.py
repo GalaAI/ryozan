@@ -2,7 +2,7 @@
 File storage service — Cloudflare R2 (S3-compatible).
 
 All media (avatars, portfolios, flash sheets, references, waivers)
-is stored in the bttco-assets R2 bucket.
+is stored in the R2 bucket named by R2_BUCKET_NAME.
 
 All functions follow the never-raise pattern — returns None on failure,
 logs the error. This keeps callers simple (check for None, handle gracefully).
@@ -157,11 +157,11 @@ async def _upload_r2(
 ) -> str | None:
     settings = get_settings()
 
-    if not settings.R2_ACCESS_KEY_ID or not settings.R2_SECRET_ACCESS_KEY:
-        logger.warning("Cloudflare R2 not configured (missing R2_ACCESS_KEY_ID)")
+    bucket = (settings.R2_BUCKET_NAME or "").strip()
+    if not settings.R2_ACCESS_KEY_ID or not settings.R2_SECRET_ACCESS_KEY or not bucket:
+        logger.warning("Cloudflare R2 not configured (missing R2_ACCESS_KEY_ID or R2_BUCKET_NAME)")
         return None
 
-    bucket = settings.R2_BUCKET_NAME or "bttco-assets"
     account_id = settings.R2_ACCOUNT_ID
     pathname = f"{folder_path.strip('/')}/{filename}"
     endpoint = f"https://{account_id}.r2.cloudflarestorage.com"
@@ -208,12 +208,12 @@ async def _upload_r2(
 
 async def _delete_r2(url: str) -> bool:
     settings = get_settings()
-    if not (settings.R2_ACCOUNT_ID and settings.R2_ACCESS_KEY_ID and settings.R2_SECRET_ACCESS_KEY):
+    bucket = (settings.R2_BUCKET_NAME or "").strip()
+    if not (settings.R2_ACCOUNT_ID and settings.R2_ACCESS_KEY_ID and settings.R2_SECRET_ACCESS_KEY and bucket):
         logger.warning("Cloudflare R2 delete unavailable because credentials are incomplete")
         return False
 
     account_id = settings.R2_ACCOUNT_ID
-    bucket = settings.R2_BUCKET_NAME or "bttco-assets"
     object_key = _r2_object_key(url)
     if not object_key:
         return False
@@ -239,7 +239,7 @@ async def _delete_r2(url: str) -> bool:
 def _r2_object_key(url: str) -> str | None:
     """Resolve a configured R2 URL to its literal object key."""
     settings = get_settings()
-    bucket = settings.R2_BUCKET_NAME or "bttco-assets"
+    bucket = (settings.R2_BUCKET_NAME or "").strip()
     account_id = settings.R2_ACCOUNT_ID
     parsed = urlsplit(url)
     hostname = (parsed.hostname or "").lower()
