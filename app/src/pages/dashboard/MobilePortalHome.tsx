@@ -4952,7 +4952,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
               : bookyDebriefActive && selectedBookyDate
               ? new Date(`${selectedBookyDate}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).replace(',', '')
               : hubWorkflowActive && selectedHubWorkflow
-                ? `${selectedHubWorkflow?.replace("-", " ")} workflow`
+                ? `${selectedHubWorkflow?.replace('-', ' ')} workflow`
               : (agent.id === 'mercury' || agent.id === 'pulse') ? selectedMercuryConversation ? conversationTitle(selectedMercuryConversation) : undefined : agent.role}
             lines={renderedAgentLines}
             working={agentChatWorking}
