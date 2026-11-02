@@ -8,6 +8,7 @@ The .env file at the project root is loaded automatically by pydantic-settings.
 import contextlib
 import json
 import os
+import re
 import secrets
 from functools import lru_cache
 from pathlib import Path
@@ -45,6 +46,29 @@ LEGACY_PUBLIC_SECRETS = frozenset(
         "replace_with_32_byte_hex_secret_key",
     }
 )
+
+_HOSTNAME = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*")
+# Characters that would let a URL break out of an HTML attribute or a CSS url().
+_URL_FORBIDDEN = re.compile(r"[\s\"'()<>\\`]")
+
+
+def _is_hostname(value: str) -> bool:
+    return len(value) <= 253 and bool(_HOSTNAME.fullmatch(value))
+
+
+def _is_web_url(value: str) -> bool:
+    """An absolute https:// URL with a host, safe to place in an href or src."""
+    if not value.startswith("https://") or _URL_FORBIDDEN.search(value):
+        return False
+    host = value[len("https://") :].split("/", 1)[0].split("?", 1)[0].split("#", 1)[0]
+    return bool(host)
+
+
+def _is_public_image_url(value: str) -> bool:
+    """https:// URL or a same-site path (/media/a.jpg), never protocol-relative."""
+    if value.startswith("/") and not value.startswith("//"):
+        return not _URL_FORBIDDEN.search(value)
+    return _is_web_url(value)
 
 
 class Settings(BaseSettings):
@@ -222,6 +246,30 @@ class Settings(BaseSettings):
     # neutral "Preview unavailable" placeholder instead.
     SAMPLE_FLASH_URLS: str = ""
 
+    # ── Public website ────────────────────────────────────────────────────
+    # What the browser shows at `/`. "product" (the default) is the Ryozan
+    # product landing, which the hosted demo serves. "studio" is this studio's
+    # own website: home, our story, artist pages and the booking entry, built
+    # only from the values below and the artists in the database. Every value
+    # here is public (GET /studio/settings); blank values hide their section.
+    PUBLIC_SITE_MODE: str = "product"
+    # Optional, comma-separated hostnames that get the studio site even when
+    # PUBLIC_SITE_MODE is "product". Only for one install that answers on a
+    # product domain and a studio domain at once; a studio-only install leaves
+    # it blank and sets PUBLIC_SITE_MODE=studio.
+    STUDIO_SITE_HOSTS: str = ""
+    # One line under the studio name on the home page.
+    STUDIO_TAGLINE: str = ""
+    # The "Our story" text. Separate paragraphs with a blank line.
+    STUDIO_STORY: str = ""
+    # Opening hours as free text, one line per row (e.g. "Tue-Sat 11am-7pm").
+    STUDIO_HOURS: str = ""
+    # Image URLs (https:// or a site path such as /media/front.jpg).
+    STUDIO_HERO_IMAGE_URL: str = ""
+    STUDIO_GALLERY_IMAGE_URLS: str = ""  # comma-separated
+    # Comma-separated Label=https://url pairs, e.g. Instagram=https://instagram.com/studio
+    STUDIO_SOCIAL_LINKS: str = ""
+
     @staticmethod
     def _csv_set(raw: str) -> frozenset[str]:
         return frozenset(part.strip().lower() for part in (raw or "").split(",") if part.strip())
@@ -283,6 +331,45 @@ class Settings(BaseSettings):
         return self._csv_list(self.SAMPLE_FLASH_URLS)
 
     @property
+    def public_site_mode(self) -> str:
+        """Return "studio" or "product"; anything else is the product default."""
+        return "studio" if (self.PUBLIC_SITE_MODE or "").strip().lower() == "studio" else "product"
+
+    @property
+    def studio_site_hosts(self) -> list[str]:
+        return sorted(host for host in self._csv_set(self.STUDIO_SITE_HOSTS) if _is_hostname(host))
+
+    @property
+    def studio_story_paragraphs(self) -> list[str]:
+        text = (self.STUDIO_STORY or "").replace("\r\n", "\n").replace("\\n", "\n")
+        return [" ".join(block.split()) for block in re.split(r"\n\s*\n", text) if block.strip()]
+
+    @property
+    def studio_hours_lines(self) -> list[str]:
+        text = (self.STUDIO_HOURS or "").replace("\r\n", "\n").replace("\\n", "\n")
+        return [line.strip() for line in text.split("\n") if line.strip()]
+
+    @property
+    def studio_hero_image_url(self) -> str:
+        value = (self.STUDIO_HERO_IMAGE_URL or "").strip()
+        return value if _is_public_image_url(value) else ""
+
+    @property
+    def studio_gallery_image_urls(self) -> list[str]:
+        return [url for url in self._csv_list(self.STUDIO_GALLERY_IMAGE_URLS) if _is_public_image_url(url)]
+
+    @property
+    def studio_social_links(self) -> list[dict[str, str]]:
+        """[{label, url}] from Label=https://url pairs; malformed pairs are left out."""
+        links = []
+        for part in self._csv_list(self.STUDIO_SOCIAL_LINKS):
+            label, sep, url = part.partition("=")
+            label, url = label.strip(), url.strip()
+            if sep and label and _is_web_url(url):
+                links.append({"label": label, "url": url})
+        return links
+
+    @property
     def vapid_subject(self) -> str:
         """VAPID `sub` claim: VAPID_SUBJECT, else mailto:SHOP_EMAIL, else blank.
 
@@ -331,6 +418,46 @@ class Settings(BaseSettings):
             except ValueError as exc:
                 raise ValueError(f"{info.field_name} must be a UUID") from exc
         return value
+
+    @field_validator("PUBLIC_SITE_MODE")
+    @classmethod
+    def validate_public_site_mode(cls, value: str) -> str:
+        value = (value or "").strip().lower() or "product"
+        if value not in ("product", "studio"):
+            raise ValueError('PUBLIC_SITE_MODE must be "product" or "studio"')
+        return value
+
+    @field_validator("STUDIO_SITE_HOSTS")
+    @classmethod
+    def validate_studio_site_hosts(cls, value: str) -> str:
+        hosts = [part.strip().lower() for part in (value or "").split(",") if part.strip()]
+        for host in hosts:
+            if not _is_hostname(host):
+                raise ValueError(f"STUDIO_SITE_HOSTS entry {host!r} must be a bare hostname, without scheme or port")
+        return ",".join(hosts)
+
+    @field_validator("STUDIO_HERO_IMAGE_URL", "STUDIO_GALLERY_IMAGE_URLS")
+    @classmethod
+    def validate_studio_image_urls(cls, value: str, info: ValidationInfo) -> str:
+        urls = [part.strip() for part in (value or "").split(",") if part.strip()]
+        if info.field_name == "STUDIO_HERO_IMAGE_URL" and len(urls) > 1:
+            raise ValueError("STUDIO_HERO_IMAGE_URL takes one URL")
+        for url in urls:
+            if not _is_public_image_url(url):
+                raise ValueError(
+                    f"{info.field_name} entry {url!r} must be an https:// URL or a site path starting with /"
+                )
+        return ",".join(urls)
+
+    @field_validator("STUDIO_SOCIAL_LINKS")
+    @classmethod
+    def validate_studio_social_links(cls, value: str) -> str:
+        pairs = [part.strip() for part in (value or "").split(",") if part.strip()]
+        for pair in pairs:
+            label, sep, url = pair.partition("=")
+            if not (sep and label.strip() and _is_web_url(url.strip())):
+                raise ValueError(f"STUDIO_SOCIAL_LINKS entry {pair!r} must be Label=https://url")
+        return ",".join(pairs)
 
     # Google OAuth for the active Ryozan Cloud project (628400721124). The web
     # client handles server-side Calendar authorization and browser GSI for the

@@ -24,6 +24,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import ApiStatusBanner from './components/ApiStatusBanner'
 import PortalIntermission from './components/PortalIntermission'
 import PortalReveal from './components/PortalReveal'
+import PublicSiteSwitch from './components/studio-site/PublicSiteSwitch'
 
 // Public pages: lazy loaded so portal/dashboard entry does not pay for every public surface.
 const PublicFormPage = lazyRetry(() => import('./pages/PublicFormPage'))
@@ -36,6 +37,10 @@ const ResetPasswordPage = lazyRetry(() => import('./pages/ResetPasswordPage'))
 const QuotePage = lazyRetry(() => import('./pages/QuotePage'))
 const QuoteConfirmedPage = lazyRetry(() => import('./pages/QuoteConfirmedPage'))
 const NotFoundPage = lazyRetry(() => import('./pages/NotFoundPage'))
+// Studio website (PUBLIC_SITE_MODE=studio): only the chosen site's chunk loads.
+const StudioHomePage = lazyRetry(() => import('./pages/studio/StudioHomePage'))
+const StudioStoryPage = lazyRetry(() => import('./pages/studio/StudioStoryPage'))
+const StudioArtistPage = lazyRetry(() => import('./pages/studio/StudioArtistPage'))
 
 // Dashboard pages: lazy loaded with retry (behind auth, not needed on initial load)
 const DashboardLayout = lazyRetry(() => import('./components/layout/DashboardLayout'))
@@ -107,8 +112,14 @@ function PortalSuspended({ children }: { children: ReactNode }) {
   )
 }
 
+/** /: the Ryozan product landing, or the studio's own site in studio mode. */
 function PublicHome() {
-  return <AppLandingPage />
+  return <PublicSiteSwitch product={<AppLandingPage />} studio={<StudioHomePage />} />
+}
+
+/** A studio website page; the product surface has no such page. */
+function StudioOnly({ children }: { children: ReactNode }) {
+  return <PublicSiteSwitch product={<NotFoundPage />} studio={children} />
 }
 
 function PublicPrivacy() {
@@ -166,6 +177,8 @@ export default function App() {
       {/* ── Public site ── */}
       <Route element={<PublicLayout />}>
         <Route index element={<Suspended><PublicHome /></Suspended>} />
+        <Route path="our-story" element={<Suspended><StudioOnly><StudioStoryPage /></StudioOnly></Suspended>} />
+        <Route path="artist/:slug" element={<Suspended><StudioOnly><StudioArtistPage /></StudioOnly></Suspended>} />
         {/* Booking requests use the signed-in booking page. The inherited standalone
             booking canon belonged to the legacy studio app and is not part of Ryozan. */}
         {['book/*', 'ask', 'booking', 'bookings', 'appointment', 'appointments', 'consultation', 'inquiry'].map(path => (

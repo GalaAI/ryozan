@@ -11,10 +11,10 @@ test('the dev proxy defaults to the local API on 18788 with no committed overrid
   assert.match(read('./vite.config.ts'), /return 'http:\/\/127\.0\.0\.1:18788'/)
 })
 
-test('the inherited shop site is gone: one product surface, no shop pages or location data', () => {
+test('the inherited shop site is gone: no shop pages or location data, the studio site reads settings', () => {
   const app = read('./src/App.tsx')
   for (const page of ['HomePage', 'OurStoryPage', 'CrewPage', 'ArtistPage', 'LegalPage', 'ContactPage', 'ParkingPage', 'GiftCardsPage']) {
-    assert.doesNotMatch(app, new RegExp(`\b${page}\b`), page)
+    assert.doesNotMatch(app, new RegExp(`\\b${page}\\b`), page)
     assert.equal(existsSync(new URL(`./src/pages/${page}.tsx`, import.meta.url)), false, page)
   }
   assert.doesNotMatch(app, /isAppProductSurface|productSurface/)
@@ -91,4 +91,40 @@ test('mobile Connections opens for every signed-in role, collectors over You', (
 
 test('push opt-in is mounted from Connections, not only the unreachable Settings page', () => {
   assert.match(read('./src/components/ArtistConnections.tsx'), /import PushOptIn from '\.\/PushOptIn'/)
+})
+
+// Every page a visitor can reach without signing in, in either public site mode
+// (PUBLIC_SITE_MODE=product or studio), plus the shells and helpers they render
+// through. None may carry the original studio's names, place or domain.
+const PUBLIC_PAGE_SOURCES = [
+  './index.html',
+  './src/components/layout/PublicLayout.tsx',
+  './src/components/app-product/AppProductShell.tsx',
+  './src/pages/AppLandingPage.tsx',
+  './src/pages/AppPrivacyPage.tsx',
+  './src/pages/AppTermsPage.tsx',
+  './src/pages/NotFoundPage.tsx',
+  './src/components/studio-site/PublicSiteSwitch.tsx',
+  './src/components/studio-site/StudioSiteShell.tsx',
+  './src/pages/studio/StudioHomePage.tsx',
+  './src/pages/studio/StudioStoryPage.tsx',
+  './src/pages/studio/StudioArtistPage.tsx',
+  './src/lib/studio-site.ts',
+  './src/lib/studio-settings.ts',
+  './src/lib/brand.ts',
+  './src/styles/v2-redesign.css',
+  './src/styles/app-product.css',
+]
+const ORIGINAL_STUDIO = /BTTCO|Blind Tiger|\bJustin\b|\bKathryn\b|Greenville|ryozan-studio\.co/i
+
+test('public pages in both site modes carry none of the original studio identity', () => {
+  for (const file of PUBLIC_PAGE_SOURCES) {
+    const source = collapseSpacedLetters(read(file))
+    assert.doesNotMatch(source, ORIGINAL_STUDIO, file)
+  }
+  // Studio pages draw images only from settings or the artists API.
+  for (const file of PUBLIC_PAGE_SOURCES.filter(file => /\/(pages\/studio|components\/studio-site)\//.test(file))) {
+    assert.doesNotMatch(read(file), /assets\.ryozan|\/assets\/images\/|https?:\/\/(?!schema)/, file)
+  }
+  assert.doesNotMatch(read('./src/styles/v2-redesign.css'), /shop-interior/)
 })

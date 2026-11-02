@@ -1856,6 +1856,23 @@ export interface StudioSettings {
   sample_flash_urls: string[]
   /** Domain studio email handles live on; empty means handles are off. */
   email_domain: string
+  /** The studio's public website; blank values hide their section. */
+  site: StudioSiteSettings
+}
+
+/** "product": the Ryozan landing at /. "studio": this studio's own website. */
+export type PublicSiteMode = 'product' | 'studio'
+
+export interface StudioSiteSettings {
+  mode: PublicSiteMode
+  /** Hostnames that get the studio site even when mode is "product". */
+  studio_hosts: string[]
+  tagline: string
+  story_paragraphs: string[]
+  hours: string[]
+  hero_image_url: string
+  gallery_image_urls: string[]
+  social_links: { label: string; url: string }[]
 }
 
 export const studio = {
