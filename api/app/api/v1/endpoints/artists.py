@@ -46,7 +46,7 @@ async def _read_artist_image(file: UploadFile):
 
 
 @router.get("/", response_model=list[ArtistSummary])
-async def list_artists(db: AsyncSession = Depends(get_db)):
+async def list_artists(db: AsyncSession = Depends(get_db, scope="function")):
     """Public: get all artists for the crew page (includes founders)."""
     result = await db.execute(
         select(User).where(User.role.in_(ARTIST_ROLES), User.slug.isnot(None)).order_by(User.name)
@@ -55,7 +55,7 @@ async def list_artists(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{slug}", response_model=ArtistDetail)
-async def get_artist(slug: str, db: AsyncSession = Depends(get_db)):
+async def get_artist(slug: str, db: AsyncSession = Depends(get_db, scope="function")):
     """Public: get a single artist's full profile by slug."""
     result = await db.execute(select(User).where(User.slug == slug, User.role.in_(ARTIST_ROLES)))
     artist = result.scalar_one_or_none()
@@ -67,7 +67,7 @@ async def get_artist(slug: str, db: AsyncSession = Depends(get_db)):
 @router.patch("/me", response_model=ArtistDetail)
 async def update_artist_profile(
     body: ArtistProfileUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: update your own artist-specific profile fields."""
@@ -87,7 +87,7 @@ async def update_artist_profile(
 @router.post("/me/avatar", response_model=ArtistDetail)
 async def upload_avatar(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: upload a profile picture."""
@@ -206,7 +206,7 @@ async def _artist_by_slug(db: AsyncSession, slug: str) -> User:
 @router.post("/me/gallery/upload", response_model=ArtistDetail)
 async def upload_gallery_image(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: upload an image to your portfolio gallery."""
@@ -220,7 +220,7 @@ class GalleryRemoveRequest(BaseModel):
 @router.delete("/me/gallery", response_model=ArtistDetail)
 async def remove_gallery_image(
     body: GalleryRemoveRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: remove an image from your portfolio gallery."""
@@ -236,7 +236,7 @@ async def remove_gallery_image(
 async def upload_gallery_image_for_artist(
     slug: str,
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: upload an image to the named artist's portfolio gallery."""
@@ -247,7 +247,7 @@ async def upload_gallery_image_for_artist(
 async def remove_gallery_image_for_artist(
     slug: str,
     body: GalleryRemoveRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: remove an image from the named artist's portfolio gallery."""

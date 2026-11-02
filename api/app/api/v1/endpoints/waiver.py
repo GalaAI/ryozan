@@ -221,7 +221,7 @@ async def upload_photo_id(
 @router.post("/submit", response_model=WaiverResponse)
 async def submit_waiver(
     body: WaiverSubmit,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: submit a signed tattoo consent waiver.
@@ -372,7 +372,7 @@ async def list_waivers(
     limit: int = Query(20, ge=1, le=100),
     status: str | None = Query(None),
     search: str | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -437,7 +437,7 @@ async def list_waivers(
 async def list_my_waivers(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -487,7 +487,7 @@ async def list_my_waivers(
 @router.get("/{waiver_id}", response_model=WaiverDetailResponse)
 async def get_waiver(
     waiver_id: uuid_mod.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: get full waiver details with parsed form data."""
@@ -550,7 +550,7 @@ async def get_waiver(
 async def update_waiver_status(
     waiver_id: uuid_mod.UUID,
     body: WaiverStatusUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: approve, flag, or reject a waiver."""
@@ -593,7 +593,7 @@ async def update_waiver_status(
 async def countersign_waiver(
     waiver_id: uuid_mod.UUID,
     body: CountersignRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -674,7 +674,7 @@ async def countersign_waiver(
 @router.post("/{waiver_id}/export-pdf")
 async def export_waiver_pdf(
     waiver_id: uuid_mod.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """

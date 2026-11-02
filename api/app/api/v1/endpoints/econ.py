@@ -863,7 +863,7 @@ async def _diagnose_mercury(*, live: bool) -> dict[str, Any]:
 @router.get("/integrations/status")
 async def get_econ_integrations_status(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Return E-con rail readiness without exposing secrets."""
     _require_role(current_user, "assistant")
@@ -994,7 +994,7 @@ async def get_econ_integrations_diagnostics(
 async def sync_econ_integrations(
     body: EconSyncRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Sync configured read-only E-con rails into the normalized ledger."""
     _require_role(current_user, "assistant")
@@ -1028,7 +1028,7 @@ async def list_econ_sync_runs(
     provider: str | None = None,
     limit: int = 25,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Return recent Plaid, Clover, and Mercury sync attempts for audit."""
     _require_role(current_user, "assistant")
@@ -1073,7 +1073,7 @@ async def clover_oauth_callback(
     merchant_id: str | None = None,
     client_id: str | None = None,
     state: UUID | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Receive Clover OAuth redirects.
@@ -1127,7 +1127,7 @@ async def list_clover_orders(
     limit: int = 25,
     persist: bool = True,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Read recent Clover orders for E-con reconciliation."""
     _require_role(current_user, "assistant")
@@ -1189,7 +1189,7 @@ async def list_clover_orders(
 @router.post("/clover/webhook", status_code=200)
 async def clover_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Acknowledge Clover webhook delivery.
@@ -1206,7 +1206,7 @@ async def clover_webhook(
 @router.get("/mercury/accounts")
 async def list_mercury_accounts(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Read Mercury accounts for E-con cash position."""
     _require_role(current_user, "admin")
@@ -1267,7 +1267,7 @@ async def list_mercury_transactions(
     order: str = "desc",
     persist: bool = True,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Read recent Mercury transactions for E-con reconciliation."""
     _require_role(current_user, "admin")
@@ -1345,7 +1345,7 @@ async def list_ledger_entries(
     provider: str | None = None,
     limit: int = 50,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Return normalized E-con ledger entries for finance review."""
     _require_role(current_user, "assistant")
@@ -1379,7 +1379,7 @@ async def get_ledger_summary(
     period_start: date | None = Query(None, description="Shop-time start date; omit for all time"),
     period_end: date | None = Query(None, description="Shop-time end date; omit for all time"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Summarize normalized E-con entries for gamified finance and tax prep.
 
@@ -1399,7 +1399,7 @@ async def get_payroll_tax_summary(
     period_start: date | None = Query(None, description="Shop-time start date; omit for all time"),
     period_end: date | None = Query(None, description="Shop-time end date; omit for all time"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Project payroll and tax prep totals from normalized E-con entries.
 

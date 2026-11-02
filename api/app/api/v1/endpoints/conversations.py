@@ -496,7 +496,7 @@ async def _build_conversation_response(
 @router.post("/", response_model=ConversationResponse, status_code=201)
 async def create_conversation(
     body: ConversationCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Start a new conversation. Creator is auto-added as participant."""
@@ -568,7 +568,7 @@ async def create_conversation(
 async def list_my_conversations(
     skip: int = 0,
     limit: int = Query(default=50, le=100),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List all conversations the current user belongs to.
@@ -615,7 +615,7 @@ async def list_my_conversations(
 
 @router.get("/channels/status")
 async def courier_channel_status(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Return Ryozan Nexus Courier connector status for the current user."""
@@ -639,7 +639,7 @@ async def courier_channel_status(
 @router.get("/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get a single conversation's details."""
@@ -662,7 +662,7 @@ async def get_conversation(
 @router.get("/{conversation_id}/participants", response_model=list[ParticipantResponse])
 async def list_participants(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List all participants in a conversation."""
@@ -1207,7 +1207,7 @@ async def _gala_auto_reply(
 async def send_message(
     conversation_id: UUID,
     body: MessageCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -1400,7 +1400,7 @@ async def _resolve_channel_recipient(
 async def send_channel_message(
     conversation_id: UUID,
     body: ChannelSendRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Send a Courier message through an explicit external channel."""
@@ -1517,7 +1517,7 @@ async def get_messages(
     conversation_id: UUID,
     skip: int = 0,
     limit: int = Query(default=50, le=200),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get message history for a conversation (newest first)."""
@@ -1565,7 +1565,7 @@ async def get_messages(
 @router.post("/{conversation_id}/mark-read", status_code=204)
 async def mark_conversation_read(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Mark all messages in this conversation as read for the current user."""
@@ -1577,7 +1577,7 @@ async def mark_conversation_read(
 async def delete_message(
     conversation_id: UUID,
     message_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Redact a message while preserving an audit trail."""
@@ -1623,7 +1623,7 @@ async def delete_message(
 @router.post("/{conversation_id}/archive", status_code=204)
 async def archive_conversation(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -1641,7 +1641,7 @@ async def archive_conversation(
 @router.delete("/{conversation_id}", status_code=204)
 async def delete_conversation(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -1685,7 +1685,7 @@ _typing_state: dict[str, dict[str, float]] = {}  # conv_id -> {user_id: timestam
 @router.post("/{conversation_id}/typing", status_code=204)
 async def set_typing(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Signal that the current user is typing in this conversation."""
@@ -1700,7 +1700,7 @@ async def set_typing(
 @router.get("/{conversation_id}/typing")
 async def get_typing(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get who is currently typing (within last 5 seconds)."""
@@ -1743,7 +1743,7 @@ Rules:
 @router.post("/{conversation_id}/gala-assist")
 async def gala_courier_assist(
     conversation_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

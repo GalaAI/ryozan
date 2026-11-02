@@ -55,7 +55,7 @@ async def _verify_can_act(db: AsyncSession, message: Message, user: User) -> Non
 async def apply_artifact_action(
     message_id: UUID,
     body: ArtifactActionRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

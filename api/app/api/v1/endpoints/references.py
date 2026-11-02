@@ -71,7 +71,7 @@ def _require_artist(user: User) -> None:
 
 @router.get("/", response_model=ReferenceListResponse)
 async def list_references(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List all references: pinned first (by pin_order), then unpinned alphabetically."""
@@ -103,7 +103,7 @@ async def list_references(
 @router.post("/upload", response_model=ReferenceResponse, status_code=201)
 async def upload_reference(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Upload a reference file (image or PDF, max 25 MB)."""
@@ -145,7 +145,7 @@ async def upload_reference(
 @router.post("/{reference_id}/view", status_code=204)
 async def record_view(
     reference_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Record a view on a reference (upsert per-user, increment view_count)."""
@@ -187,7 +187,7 @@ async def record_view(
 async def toggle_pin(
     reference_id: uuid.UUID,
     body: PinBody,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Pin or unpin a reference."""
@@ -216,7 +216,7 @@ async def toggle_pin(
 @router.delete("/{reference_id}", status_code=204)
 async def delete_reference(
     reference_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a reference. Only the uploader or founder/admin can delete."""

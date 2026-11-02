@@ -42,7 +42,7 @@ async def verify_whatsapp_webhook(
 @router.post("/webhook")
 async def handle_whatsapp_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     settings = get_settings()
     body = await request.body()

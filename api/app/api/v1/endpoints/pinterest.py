@@ -157,7 +157,7 @@ async def pinterest_connect(
 async def pinterest_callback(
     code: str = Query(...),
     state: str = Query(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Handle the redirect from Pinterest. Exchange code, store refresh token."""
     settings = get_settings()
@@ -222,7 +222,7 @@ async def pinterest_status(
 @router.delete("/disconnect", status_code=204)
 async def pinterest_disconnect(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     # Any user can disconnect their own account.
     current_user.pinterest_refresh_token = None
@@ -305,7 +305,7 @@ async def pinterest_booking_references(
     booking_id: str,
     board_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Collector reference board: pull pins from the collector's own Pinterest
     board into their booking's reference_urls, so the artist sees the visual
@@ -402,7 +402,7 @@ async def _find_or_create_board(access: str, name: str, description: str = "") -
 async def pinterest_pin_flash(
     design_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Create a Pin for a published flash design, linking to the shop.
 
@@ -460,7 +460,7 @@ async def pinterest_pin_flash(
 async def pinterest_ingest_board(
     board_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Ingest pins from a board into the References library.
 

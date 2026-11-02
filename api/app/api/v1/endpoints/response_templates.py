@@ -49,7 +49,7 @@ def _serialize(t: ResponseTemplate) -> dict:
 
 @router.get("/")
 async def list_templates(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("assistant")),
 ):
     result = await db.execute(
@@ -61,7 +61,7 @@ async def list_templates(
 @router.post("/", status_code=201)
 async def create_template(
     body: TemplateIn,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("assistant")),
 ):
     t = ResponseTemplate(
@@ -80,7 +80,7 @@ async def create_template(
 async def update_template(
     template_id: uuid.UUID,
     body: TemplateUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("assistant")),
 ):
     result = await db.execute(select(ResponseTemplate).where(ResponseTemplate.id == template_id))
@@ -109,7 +109,7 @@ async def update_template(
 @router.delete("/{template_id}", status_code=204)
 async def delete_template(
     template_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("assistant")),
 ):
     result = await db.execute(select(ResponseTemplate).where(ResponseTemplate.id == template_id))

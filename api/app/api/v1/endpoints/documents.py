@@ -310,7 +310,7 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
 @router.get("/templates", response_model=DocumentTemplateListResponse)
 async def list_templates(
     category: str | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List all active document templates, optionally filtered by category."""
@@ -328,7 +328,7 @@ async def list_templates(
 @router.get("/templates/{template_id}", response_model=DocumentTemplateResponse)
 async def get_template(
     template_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get a single document template by ID."""
@@ -342,7 +342,7 @@ async def get_template(
 @router.post("/templates", response_model=DocumentTemplateResponse)
 async def create_template(
     body: DocumentTemplateCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("admin")),
 ):
     """Admin/founder: create a new global document template."""
@@ -360,7 +360,7 @@ async def create_template(
 async def update_template(
     template_id: uuid.UUID,
     body: DocumentTemplateUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("admin")),
 ):
     """Admin/founder: update a global document template."""
@@ -387,7 +387,7 @@ async def list_documents(
     category: str | None = Query(None),
     user_id: uuid.UUID | None = Query(None),
     status: str | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -453,7 +453,7 @@ async def list_documents(
 @router.post("/", response_model=DocumentInstanceResponse)
 async def submit_document(
     body: DocumentInstanceCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Submit a filled form or create a document instance."""
@@ -484,7 +484,7 @@ async def submit_document(
 @router.post("/{document_id}/sign", response_model=DocumentInstanceResponse)
 async def sign_document(
     document_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Sign a document (marks it as signed with current timestamp)."""
@@ -518,7 +518,7 @@ async def sign_document(
 async def update_document_status(
     document_id: uuid.UUID,
     body: DocumentStatusUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: update a document's status (approve, reject, etc.)."""
@@ -554,7 +554,7 @@ async def upload_document(
     file: UploadFile = File(...),
     category: str = Form(...),
     title: str = Form(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Upload a file and create a document instance for it."""
@@ -598,7 +598,7 @@ async def upload_document(
 @router.delete("/{instance_id}")
 async def delete_document(
     instance_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: Delete a document instance."""
@@ -633,7 +633,7 @@ async def submit_scroll(
     first_aid_cert: UploadFile | None = File(None),
     cpr_cert: UploadFile | None = File(None),
     govt_id: UploadFile | None = File(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -991,7 +991,7 @@ async def submit_scroll(
 
 @router.get("/scroll/my")
 async def get_my_scroll(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get the calling user's own completed scroll (if any)."""
@@ -1034,7 +1034,7 @@ async def get_my_scroll(
 @router.get("/scroll/user/{user_id}")
 async def get_user_scroll(
     user_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     caller: User = Depends(require_role("artist")),
 ):
     """Fetch the caller's scroll, or any scroll for founder/admin review."""
@@ -1086,7 +1086,7 @@ async def get_user_scroll(
 @router.post("/send", response_model=DocumentSendResponse)
 async def send_document(
     body: DocumentSendRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -1182,7 +1182,7 @@ async def send_document(
 @router.post("/checkin")
 async def public_checkin(
     body: dict,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     [NO AUTH] Walk-in check-in: creates a waiver instance and returns
@@ -1417,7 +1417,7 @@ def _first_name(*names: str | None) -> str:
 
 @router.post("/checkin/lookup")
 @limiter.limit("6/minute")
-async def checkin_lookup(request: Request, body: dict, db: AsyncSession = Depends(get_db)):
+async def checkin_lookup(request: Request, body: dict, db: AsyncSession = Depends(get_db, scope="function")):
     """
     [NO AUTH] Step one of check-in. Says only whether the contact is on file. When it is, a six digit code
     goes to that email or phone and nothing on file is returned until the code comes back to /checkin/verify.
@@ -1510,7 +1510,7 @@ async def _send_document_reminder(settings, instance: DocumentInstance, hours_re
 
 @router.post("/checkin/verify")
 @limiter.limit("10/minute")
-async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = Depends(get_db)):
+async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = Depends(get_db, scope="function")):
     """
     [NO AUTH] Step two of check-in. A correct code opens a waiver linked to the booking on file and returns
     the facts that prefill the form: first name, the booking, visit count, and portal membership.
@@ -1630,7 +1630,7 @@ async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = D
 @router.get("/public/{token}", response_model=DocumentPublicFormResponse)
 async def get_public_form(
     token: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     [NO AUTH] Get the form data for a magic link token.
@@ -1740,7 +1740,7 @@ async def get_public_form(
 async def complete_public_form(
     token: str,
     body: DocumentPublicSubmit,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     [NO AUTH] Submit a completed form from a magic link.
@@ -1921,7 +1921,7 @@ async def complete_public_form(
 
 @router.post("/reminders/process")
 async def process_reminders(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     x_api_key: str = Header(alias="X-Api-Key"),
 ):
     """
@@ -1986,7 +1986,7 @@ async def process_reminders(
 @router.post("/{document_id}/remind", response_model=DocumentInstanceResponse)
 async def manual_remind(
     document_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist+: Manually resend a reminder email for a sent document."""

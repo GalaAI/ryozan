@@ -212,7 +212,9 @@ async def authorization_server_metadata() -> dict[str, Any]:
 
 
 @oauth_router.post("/oauth/register", include_in_schema=False, status_code=201)
-async def register_client(body: ClientRegistration, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+async def register_client(
+    body: ClientRegistration, db: AsyncSession = Depends(get_db, scope="function")
+) -> dict[str, Any]:
     if body.token_endpoint_auth_method != "none":
         raise HTTPException(status_code=400, detail="Only public PKCE clients are supported")
     if set(body.grant_types) - {"authorization_code", "refresh_token"}:
@@ -255,7 +257,7 @@ async def begin_authorization(
     resource: str = MCP_RESOURCE,
     scope: str = SHOP_READ_SCOPE,
     state: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     client = await _load_client(db, client_id)
     if not client or redirect_uri not in client.redirect_uris:
@@ -316,7 +318,7 @@ async def authorization_preview(
 async def complete_authorization(
     body: AuthorizationDecision,
     user=Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> dict[str, str]:
     payload = _decode_auth_request(body.request_token)
     client = await _load_client(db, str(payload["sub"]))
@@ -403,7 +405,7 @@ async def _issue_tokens(
 
 
 @oauth_router.post("/oauth/token", include_in_schema=False)
-async def token_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
+async def token_endpoint(request: Request, db: AsyncSession = Depends(get_db, scope="function")):
     form = await request.form()
     grant_type = str(form.get("grant_type") or "")
     client_id = str(form.get("client_id") or "")
@@ -473,7 +475,7 @@ async def token_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @oauth_router.post("/oauth/revoke", include_in_schema=False)
-async def revoke_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
+async def revoke_endpoint(request: Request, db: AsyncSession = Depends(get_db, scope="function")):
     """RFC 7009 revocation for refresh tokens, so a disconnect ends the grant.
 
     Access tokens are short-lived signed tokens and expire on their own. Per the

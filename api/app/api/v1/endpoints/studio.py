@@ -165,7 +165,7 @@ async def get_editable_settings(_founder: User = Depends(require_role("founder")
 async def save_editable_settings(
     body: StudioSettingsEdit,
     _founder: User = Depends(require_role("founder")),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ) -> dict[str, str]:
     """Save the submitted values. They apply at once, with no redeploy."""
     settings = get_settings()
@@ -194,14 +194,18 @@ class StudioSetupRequest(BaseModel):
 
 
 @router.get("/setup", response_model=StudioSetupStatus)
-async def get_setup_status(response: Response, db: AsyncSession = Depends(get_db)) -> StudioSetupStatus:
+async def get_setup_status(
+    response: Response, db: AsyncSession = Depends(get_db, scope="function")
+) -> StudioSetupStatus:
     response.headers["Cache-Control"] = "no-store"
     return StudioSetupStatus(needs_setup=await setup_is_open(db))
 
 
 @router.post("/setup", response_model=Token, status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
-async def claim_install(request: Request, body: StudioSetupRequest, db: AsyncSession = Depends(get_db)) -> Token:
+async def claim_install(
+    request: Request, body: StudioSetupRequest, db: AsyncSession = Depends(get_db, scope="function")
+) -> Token:
     """Claim a new install: create its owner, save its identity, and sign the owner in."""
     settings = get_settings()
     if not await setup_is_open(db):

@@ -79,7 +79,7 @@ async def list_memories(
     category: str | None = None,
     skip: int = 0,
     limit: int = Query(default=100, le=500),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List memories for the current user, filterable by agent and category."""
@@ -114,7 +114,7 @@ async def list_memories(
 async def get_memory_context(
     user_id: UUID,
     agent: str = "gala",
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -187,7 +187,7 @@ async def get_memory_context(
 @router.post("/", response_model=MemoryResponse, status_code=201)
 async def create_or_upsert_memory(
     body: MemoryCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -249,7 +249,7 @@ class ExtractResponse(BaseModel):
 @router.post("/extract", response_model=ExtractResponse)
 async def extract_memories(
     body: ExtractRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -364,7 +364,7 @@ Return ONLY valid JSON, no markdown fencing, no explanation."""
 async def update_memory(
     memory_id: UUID,
     body: MemoryUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Update a specific memory belonging to the current user."""
@@ -398,7 +398,7 @@ async def update_memory(
 @router.delete("/{memory_id}", status_code=204)
 async def delete_memory(
     memory_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a single memory belonging to the current user."""
@@ -421,7 +421,7 @@ async def delete_memory(
 async def clear_user_memories(
     user_id: UUID,
     agent: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("admin")),
 ):
     """Clear all memories for a specific user. Admin only."""

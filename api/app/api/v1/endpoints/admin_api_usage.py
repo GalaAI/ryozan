@@ -21,7 +21,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 @router.get("/api-usage")
 async def get_api_usage(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _: User = Depends(require_role("admin")),
 ):
     """Return this month's API usage summary and the last 100 log entries."""

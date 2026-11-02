@@ -60,7 +60,7 @@ async def list_users(
     skip: int = 0,
     limit: int = 50,
     role: str | None = Query(default=None, pattern="^(collector|assistant|artist|admin|founder)$"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("admin")),
 ):
     """List all users. Admin/founder only."""
@@ -74,7 +74,7 @@ async def list_users(
 @router.get("/artist-account-status", response_model=list[UserAccountStatus])
 async def list_artist_account_status(
     response: Response,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """Owner-only artist credential evidence; never select passwords or tokens."""
@@ -107,7 +107,7 @@ async def list_artist_account_status(
 
 @router.get("/my-clients", response_model=list[UserResponse])
 async def list_my_clients(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """Artist: list distinct clients from your bookings."""
@@ -121,7 +121,7 @@ async def list_my_clients(
 
 @router.get("/me/membership", response_model=UserMembershipResponse)
 async def get_my_membership(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Return the current user's effective AI and portal membership state."""
@@ -144,7 +144,7 @@ async def get_my_membership(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get a full profile for self, admin, or an assigned artist relationship."""
@@ -164,7 +164,7 @@ async def get_user(
 @router.patch("/me", response_model=UserResponse)
 async def update_my_profile(
     body: UserProfileUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Update the calling user's own profile fields."""
@@ -186,7 +186,7 @@ async def update_my_profile(
 @router.post("/me/avatar", response_model=UserResponse)
 async def upload_user_avatar(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Any authenticated user: upload a profile picture."""
@@ -229,7 +229,7 @@ async def upload_user_avatar(
 async def upload_user_avatar_admin(
     user_id: UUID,
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: upload / replace any user's avatar."""
@@ -265,7 +265,7 @@ async def upload_user_avatar_admin(
 async def change_user_role(
     user_id: UUID,
     body: UserRoleUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("admin")),
 ):
     """Change another user's role without crossing the founder boundary."""
@@ -290,7 +290,7 @@ async def change_user_role(
 async def update_user_membership(
     user_id: UUID,
     body: UserMembershipUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: assign plan tier, cap, and connected product entitlements."""
@@ -316,7 +316,7 @@ class UserProxyUpdate(BaseModel):
 async def set_user_proxy(
     user_id: UUID,
     body: UserProxyUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: delegate a user's inbox to another account.
@@ -350,7 +350,7 @@ async def set_user_proxy(
 @router.delete("/{user_id}", status_code=204)
 async def delete_user(
     user_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """Founder only: permanently remove a user account."""
@@ -376,7 +376,7 @@ class GalaAutoReplyUpdate(BaseModel):
 @router.patch("/me/gala-auto-reply", tags=["gala"])
 async def toggle_gala_auto_reply(
     body: GalaAutoReplyUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """
@@ -416,7 +416,7 @@ async def get_saved_signature(
 @router.put("/me/signature")
 async def save_signature(
     body: dict,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """

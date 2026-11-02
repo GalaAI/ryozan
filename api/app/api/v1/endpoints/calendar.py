@@ -1003,7 +1003,7 @@ async def calendar_availability(
 async def calendar_upcoming(
     days: int = Query(default=7, ge=1, le=90),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Return upcoming calendar events for the dashboard.
@@ -1033,7 +1033,7 @@ async def public_artist_availability(
     artist_slug: str,
     start: str = Query(..., description="Start date YYYY-MM-DD"),
     end: str = Query(..., description="End date YYYY-MM-DD"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: get busy blocks for an artist by slug.
@@ -1084,7 +1084,7 @@ async def public_artist_slots(
     include_blocked: bool = Query(default=False),
     blocked_limit: int = Query(default=120, ge=1, le=480),
     consultation: bool = Query(default=False),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: calculate bookable slots for an artist.
@@ -1229,7 +1229,7 @@ async def public_artist_slots(
 @router.get("/scheduler-contract/{artist_slug}", response_model=SchedulerContractResponse)
 async def public_scheduler_contract(
     artist_slug: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: expose the narrow scheduler tool contract for GalaXEv3.
@@ -1370,7 +1370,7 @@ async def public_scheduler_contract(
 @router.post("/slot-holds", response_model=SlotHoldResponse)
 async def hold_public_slot(
     body: SlotHoldRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: hold one bookable slot while the client finishes intake.
@@ -1504,7 +1504,7 @@ async def hold_public_slot(
 @router.delete("/slot-holds/{hold_token}", response_model=SlotHoldReleaseResponse)
 async def release_public_slot_hold(
     hold_token: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: release a slot hold the client no longer wants.
@@ -1560,7 +1560,7 @@ async def list_time_blocks(
     start: str = Query(..., description="Start date YYYY-MM-DD"),
     end: str = Query(..., description="End date YYYY-MM-DD"),
     artist_id: UUID | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List personal time blocks for an artist within a date range."""
@@ -1577,7 +1577,7 @@ async def list_time_blocks(
 @router.post("/time-blocks", response_model=TimeBlockResponse, status_code=201)
 async def create_time_block(
     body: TimeBlockCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Block personal time on an artist's calendar so it cannot be booked."""
@@ -1606,7 +1606,7 @@ async def create_time_block(
 @router.delete("/time-blocks/{block_id}", status_code=200)
 async def delete_time_block(
     block_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Remove a personal time block (owner or admin+)."""
@@ -1624,7 +1624,7 @@ async def delete_time_block(
 @router.post("/sync/{booking_id}")
 async def sync_booking_to_calendar(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -1709,7 +1709,7 @@ async def sync_booking_to_calendar(
 async def create_event(
     body: EventCreateBody,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Create a standalone Google Calendar event (not tied to a booking).
@@ -1766,7 +1766,7 @@ async def update_event(
     event_id: str,
     body: EventUpdateBody,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Update an existing Google Calendar event by its Google event ID.
@@ -1826,7 +1826,7 @@ async def get_schedule(
 async def import_calendar_events(
     days: int = Query(default=30, ge=1, le=90),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Import upcoming Google Calendar events as Ryozan bookings.
@@ -1992,7 +1992,7 @@ async def delete_event(
     event_id: str,
     calendar_id: str = Query(default="primary"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Delete a Google Calendar event by its Google event ID.

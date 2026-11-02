@@ -126,7 +126,7 @@ class OptInToggleRequest(BaseModel):
 
 @router.get("/log", response_model=list[SmsLogRow])
 async def list_messages(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
     direction: str | None = None,
     status: str | None = None,
@@ -170,7 +170,7 @@ async def list_messages(
 
 @router.get("/stats")
 async def sms_stats(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff+: counts for the SMS dashboard tile.
@@ -250,7 +250,7 @@ async def _staff_can_text(db: AsyncSession, sender: User, phone_e164: str) -> bo
 @router.post("/send")
 async def send_manual(
     body: ManualSendRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Staff+: send a raw SMS to one number.
@@ -293,7 +293,7 @@ async def send_manual(
 @router.post("/opt-in-toggle")
 async def opt_in_toggle(
     body: OptInToggleRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin+: manually flip a phone's opt-in state. Used to honour written
@@ -949,7 +949,7 @@ async def _bella_whatsapp_reply(
 async def twilio_inbound_webhook(
     request: Request,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Receive inbound SMS or WhatsApp from Twilio and archive it in Courier."""
     form = await request.form()
@@ -1128,7 +1128,7 @@ async def twilio_inbound_webhook(
 @router.post("/webhook/status")
 async def twilio_status_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Receive delivery callbacks and project them to the owning Courier Message."""
     form = await request.form()

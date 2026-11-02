@@ -178,7 +178,10 @@ async def _instant_signup(db: AsyncSession, body: UserCreate, email: str, existi
 )
 @limiter.limit("5/minute")
 async def register(
-    request: Request, body: UserCreate, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+    request: Request,
+    body: UserCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Start collector setup; only the mailbox gets a password-setting link."""
     email = _normalize_email(body.email)
@@ -216,7 +219,7 @@ async def register(
 
 @router.post("/login", response_model=Token)
 @limiter.limit("10/minute")
-async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(get_db, scope="function")):
     """Authenticate and return a JWT.
 
     Duplicate-safe: the lookup tries the password against every row matching
@@ -250,7 +253,7 @@ class DevImpersonateRequest(BaseModel):
 @router.post("/dev-impersonate", response_model=Token)
 async def dev_impersonate(
     body: DevImpersonateRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _caller: User = Depends(require_role("founder")),
 ):
     """LOCAL DEV ONLY: founder mints a token for another local account.
@@ -297,7 +300,7 @@ async def auth_options():
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Sign out everywhere: retire every access token issued to this account."""
     current_user.token_version = int(current_user.token_version or 0) + 1
@@ -313,7 +316,7 @@ async def get_me(current_user: User = Depends(get_current_user)):
 @router.patch("/change-password", status_code=status.HTTP_204_NO_CONTENT)
 async def change_password(
     body: ChangePassword,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Change a password, allowing an authenticated first-login reset."""
@@ -375,7 +378,7 @@ async def forgot_password(
     request: Request,
     body: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Start a password reset.
@@ -411,7 +414,7 @@ class ResetTokenStatus(BaseModel):
 
 @router.get("/reset-password/validate", response_model=ResetTokenStatus)
 @limiter.limit("20/minute")
-async def validate_reset_token(request: Request, token: str = "", db: AsyncSession = Depends(get_db)):
+async def validate_reset_token(request: Request, token: str = "", db: AsyncSession = Depends(get_db, scope="function")):
     """Report whether a reset link is still redeemable, without spending it.
 
     Exists so the reset page can tell someone their link is dead *before* they
@@ -447,7 +450,7 @@ async def reset_password(
     request: Request,
     body: ResetPasswordRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Redeem a reset token and set a new password. Clears must_reset_password."""
     try:
@@ -561,7 +564,7 @@ async def generate_invite(body: InviteRequest, background_tasks: BackgroundTasks
 
 @router.post("/register-invite", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register_via_invite(
-    body: InviteRegisterRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+    body: InviteRegisterRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db, scope="function")
 ):
     """
     Public: accept an invite link and set up an account.
@@ -641,7 +644,9 @@ class RegisterFromBookingRequest(BaseModel):
     status_code=status.HTTP_201_CREATED,
 )
 async def register_from_booking(
-    body: RegisterFromBookingRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+    body: RegisterFromBookingRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: create a collector account using a quote token.
@@ -847,7 +852,10 @@ async def _resolve_google_user(
 @router.post("/google", response_model=Token)
 @limiter.limit("10/minute")
 async def google_auth(
-    request: Request, body: GoogleAuthRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+    request: Request,
+    body: GoogleAuthRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Authenticate (or register) via Google, returning a JWT to the caller.
 
@@ -1053,7 +1061,7 @@ async def google_signin_callback(
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Google returns here. Exchange the code, then hand back a session.
 

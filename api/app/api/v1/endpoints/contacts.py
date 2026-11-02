@@ -241,7 +241,7 @@ async def list_contacts(
     search: str | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=250, ge=1, le=1000),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     export = await _load_contact_export(db, current_user)
@@ -260,7 +260,7 @@ async def list_contacts(
 
 @router.get("/intake-export", response_model=ContactExportResponse)
 async def export_contacts_for_nexus(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     return await _load_contact_export(db, current_user)

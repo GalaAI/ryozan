@@ -101,7 +101,7 @@ def _sanitize_handle(handle: str) -> str:
 @router.get("/check/{handle}", response_model=HandleCheckResponse)
 async def check_handle_availability(
     handle: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Check if a handle is available on the studio's receiving domain."""
     handle = _sanitize_handle(handle)
@@ -127,7 +127,7 @@ async def check_handle_availability(
 @router.post("/connect", response_model=EmailStatusResponse)
 async def connect_email(
     body: EmailConnectRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -214,7 +214,7 @@ async def connect_email(
 @router.get("/verify")
 async def verify_email(
     token: str = Query(...),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Verify email route via token from confirmation email.
@@ -248,7 +248,7 @@ async def verify_email(
 
 @router.get("/status", response_model=EmailStatusResponse)
 async def email_status(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get the current user's email route status."""
@@ -268,7 +268,7 @@ async def email_status(
 
 @router.delete("/release", status_code=204)
 async def release_email(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

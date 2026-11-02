@@ -386,7 +386,7 @@ def _require_connect_artist(user: User) -> None:
 
 @router.post("/connect/onboard")
 async def create_connect_account(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -443,7 +443,7 @@ async def create_connect_account(
 
 @router.get("/connect/status")
 async def get_connect_status(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Check current artist's Stripe Connect onboarding status."""
@@ -478,7 +478,7 @@ async def get_connect_status(
 @router.post("/connect/onboard/{user_id}")
 async def admin_create_connect_account(
     user_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin: create a Connect account for a specific artist and return onboarding link."""
@@ -537,7 +537,7 @@ async def admin_create_connect_account(
 
 @router.get("/connect/artists")
 async def list_artist_stripe_status(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Admin: list all artists with their Stripe Connect status."""
@@ -555,7 +555,7 @@ async def list_artist_stripe_status(
 async def configure_artist_booth_rent(
     user_id: UUID,
     payload: BoothRentConfigRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Founder/admin: configure booth rent or return an artist to commission."""
@@ -632,7 +632,7 @@ async def configure_artist_booth_rent(
 async def record_artist_booth_rent_cash_payment(
     user_id: UUID,
     payload: BoothRentCashPaymentRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Founder/admin: record one cash booth-rent contractor contribution."""
@@ -724,7 +724,7 @@ async def record_artist_booth_rent_cash_payment(
 
 @router.get("/booth-rent/status")
 async def get_booth_rent_status(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Artist: inspect configured rent and synchronize the Stripe subscription."""
@@ -746,7 +746,7 @@ async def get_booth_rent_status(
 
 @router.post("/booth-rent/checkout")
 async def create_booth_rent_checkout(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Artist: start one-time or automatic Stripe booth-rent payment."""

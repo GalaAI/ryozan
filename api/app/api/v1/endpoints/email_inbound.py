@@ -420,7 +420,7 @@ async def _archive_email_to_courier(
 @router.post("/email-inbound")
 async def handle_inbound_email(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Resend webhook handler for email.received events.

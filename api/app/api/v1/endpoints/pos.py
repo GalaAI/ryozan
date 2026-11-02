@@ -236,7 +236,7 @@ async def _create_pos_checkout(
 @router.post("/charge", response_model=POSChargeResponse)
 async def create_pos_charge(
     body: POSChargeRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -290,7 +290,7 @@ def _build_pos_invoice_email_html(
 @router.post("/invoice", response_model=POSInvoiceResponse)
 async def send_pos_invoice(
     body: POSInvoiceRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     # A POS invoice deliberately reuses the existing Checkout contract so pricing,
@@ -374,7 +374,7 @@ async def get_pos_status(
 async def get_pos_summary(
     period_start: date | None = Query(None, description="Start date, defaults to first day of current year"),
     period_end: date | None = Query(None, description="End date, defaults to today"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -473,7 +473,7 @@ async def get_pos_summary(
 @router.post("/record", response_model=POSTransactionResponse)
 async def record_pos_transaction(
     body: POSTransactionCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -521,7 +521,7 @@ async def record_pos_transaction(
 @router.get("/transactions", response_model=list[POSTransactionResponse])
 async def list_pos_transactions(
     date_filter: date | None = Query(None, alias="date", description="Filter by date (YYYY-MM-DD)"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """

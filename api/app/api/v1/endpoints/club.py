@@ -79,7 +79,7 @@ async def _enrich_post(post: ClubPost, db: AsyncSession, current_user_id: UUID) 
 @router.post("/posts", response_model=ClubPostResponse, status_code=201)
 async def create_post(
     data: ClubPostCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Create a new club post. Any authenticated user."""
@@ -102,7 +102,7 @@ async def list_posts(
     skip: int = 0,
     limit: int = Query(default=20, le=50),
     post_type: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """List club posts, newest first."""
@@ -137,7 +137,7 @@ async def list_posts(
 @router.post("/posts/{post_id}/like", status_code=200)
 async def toggle_like(
     post_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Toggle like on a post. Returns new like count."""
@@ -164,7 +164,7 @@ async def toggle_like(
 @router.delete("/posts/{post_id}", status_code=204)
 async def delete_post(
     post_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Soft-delete a post. Author or admin+."""

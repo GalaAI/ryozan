@@ -68,7 +68,7 @@ def _slugify(label: str) -> str:
 
 @router.get("/categories")
 async def list_categories(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("artist")),
 ):
     """List all scroll categories ordered by sort_order."""
@@ -99,7 +99,7 @@ async def create_category(
     icon: str = Form("📄"),
     ai_digest_enabled: bool = Form(False),
     ai_digest_prompt: str = Form(""),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("founder")),
 ):
     """
@@ -161,7 +161,7 @@ _VALID_ICON_SLUGS = ["file", "dollar", "health", "legal", "chart", "lock", "clip
 @router.post("/categories/interpret", status_code=201)
 async def gala_interpret_category(
     body: InterpretCategoryRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("founder")),
 ):
     """
@@ -263,7 +263,7 @@ async def gala_interpret_category(
 @router.delete("/categories/{slug}", status_code=204)
 async def delete_category(
     slug: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _: User = Depends(require_role("founder")),
 ):
     """Founder only — delete a custom (non-builtin) category."""
@@ -284,7 +284,7 @@ async def delete_category(
 async def list_category_docs(
     category_slug: str,
     user_id: str | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -369,7 +369,7 @@ async def upload_scroll_doc(
     title: str = Form(""),
     notes: str = Form(""),
     ai_digest_enabled: bool = Form(False),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -464,7 +464,7 @@ async def upload_scroll_doc(
 @router.delete("/docs/{doc_id}", status_code=204)
 async def delete_scroll_doc(
     doc_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Delete a scroll document. Founders can delete any; others delete only their own."""
@@ -713,7 +713,7 @@ async def _send_scroll_reminder_if_due(db: AsyncSession, artist: User) -> bool:
 @router.post("/request/{artist_id}", status_code=204)
 async def request_artist_scroll(
     artist_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("founder")),
 ):
     """
@@ -736,7 +736,7 @@ async def request_artist_scroll(
 @router.post("/remind/{artist_id}", status_code=204)
 async def remind_artist_scroll(
     artist_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(require_role("founder")),
 ):
     """
@@ -764,7 +764,7 @@ async def remind_artist_scroll(
 @router.get("/status/{artist_id}")
 async def get_artist_scroll_request_status(
     artist_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     _: User = Depends(require_role("founder")),
 ):
     """Founder: review whether an artist has been requested or reminded to complete their scroll."""
@@ -796,7 +796,7 @@ async def get_artist_scroll_request_status(
 
 @router.post("/reminders/daily")
 async def send_daily_scroll_reminders(
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     x_cron_secret: str = Header(alias="X-Cron-Secret"),
 ):
     """

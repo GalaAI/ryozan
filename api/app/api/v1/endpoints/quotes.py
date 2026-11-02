@@ -106,7 +106,7 @@ async def _assert_quote_slot_available(
 @router.post("/", response_model=QuoteResponse, status_code=201)
 async def create_quote(
     body: QuoteCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
@@ -326,7 +326,7 @@ async def create_quote(
 @router.get("/booking/{booking_id}", response_model=list[QuoteResponse])
 async def get_quotes_for_booking(
     booking_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """Get all quotes for a booking (staff view — assistant+)."""
@@ -367,7 +367,7 @@ async def get_quotes_for_booking(
 @router.get("/public/{token}", response_model=QuotePublicView)
 async def get_public_quote(
     token: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Public: client views their quote via token link from email."""
     result = await db.execute(select(Quote).where(Quote.token == token))
@@ -424,7 +424,7 @@ async def get_public_quote(
 async def accept_quote(
     token: str,
     body: QuoteAccept,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public: client accepts a quote.
@@ -704,7 +704,7 @@ async def _ensure_conversation_for_booking(
 async def public_quote_reply(
     token: str,
     body: GuestQuoteReply,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Public (no auth): the client replies to a quote from the public

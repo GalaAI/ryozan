@@ -206,7 +206,7 @@ def require_verified_collector(user) -> None:
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Decode JWT and return the authenticated user row."""
     from app.models.user import User  # deferred to avoid circular import
@@ -248,7 +248,7 @@ async def get_current_user(
 
 async def get_optional_current_user(
     token: str | None = Depends(oauth2_scheme_optional),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Return the signed-in user, or None for anonymous or unusable sessions.
 

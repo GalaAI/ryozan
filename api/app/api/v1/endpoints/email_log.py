@@ -815,7 +815,7 @@ async def list_email_log(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Paginated email log. Filterable by status, template, or recipient search.
@@ -855,7 +855,7 @@ async def list_email_log(
 async def email_log_stats(
     days: int = Query(30, ge=1, le=90),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Aggregate send counts grouped by template + status for the last N days."""
     _require_founder(current_user)
@@ -887,7 +887,7 @@ async def email_log_stats(
 async def email_messaging_manifest(
     days: int = Query(90, ge=1, le=365),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """Founder-only tenant projection for Ark Courier and Email Foundry."""
     _require_founder(current_user)
@@ -963,7 +963,7 @@ async def email_messaging_manifest(
 async def retry_email(
     log_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Re-send a failed email via Resend using the stored resend_id subject/to.
@@ -1033,7 +1033,7 @@ async def retry_email(
 @router.post("/webhooks/resend", status_code=200)
 async def resend_webhook(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db, scope="function"),
 ):
     """
     Resend delivery webhook. Updates EmailLog status on:
