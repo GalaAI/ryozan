@@ -80,8 +80,8 @@ export const RYOZAN_BANDIT_ORCHESTRA: readonly BanditOrchestraMember[] = [
     role: 'Front Desk · Skilful Star',
     nemotronModel: 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B',
     manaPip: '⚡ Nano',
-    accent: 'var(--accent-coral, #d38a68)',
-    rgb: '211,138,104',
+    accent: 'var(--accent-coral)',
+    rgb: '217,87,60',
     npcGreeting: 'Walk-ins, DMs, and first-timers greeted at the curtain before the ink dries. Who are we triaging next?',
   },
   {

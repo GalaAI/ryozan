@@ -133,9 +133,9 @@ const primaryButtonStyle: CSSProperties = {
   padding: '9px 18px',
   borderRadius: 99,
   border: 'none',
-  background: '#D38A68',
+  background: 'var(--accent-coral)',
   color: '#29140E',
-  boxShadow: '0 0 22px 2px #D38A6875',
+  boxShadow: '0 0 22px 2px rgba(217,87,60,.46)',
   fontFamily: "'JetBrains Mono',monospace",
   fontSize: 10.5,
   fontWeight: 700,
@@ -299,7 +299,7 @@ export default function LoginGate({ onComplete, onGoogle, onCreateAccount, initi
             }}>{BRAND.product}</span>
             <span style={{
               fontFamily: "'JetBrains Mono',monospace", fontSize: 14, fontWeight: 700,
-              letterSpacing: '.26em', textTransform: 'uppercase', color: '#D38A68',
+              letterSpacing: '.26em', textTransform: 'uppercase', color: 'var(--accent-coral)',
               background: 'rgba(11,12,11,.72)', padding: '7px 16px', borderRadius: 99,
               textShadow: '0 1px 4px rgba(0,0,0,.9)', marginTop: -15,
             }}>Studio sign-in</span>

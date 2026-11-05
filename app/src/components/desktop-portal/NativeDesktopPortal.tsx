@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import { ChatBubble } from '@ryozan/ui'
 import { compileTemplate, type Values } from './template'
 import { RailMotion } from './rail-motion.js'
-import { start as startField } from './relic-field.js'
 import shell from './shell.html?raw'
 import sourceCSS from './source.css?raw'
 import { sourceIcons, sourceAgentMarks } from './source-icons'
@@ -35,13 +34,13 @@ const agents = {
   gala: { name:'Gala', accent:'var(--gold)', rgb:'232,223,207' },
   soko: { name:'Sōkō · Timely Rain', accent:'#D9BF95', rgb:'217,191,149' },
   shishin: { name:'Shishin · Nine-Tattooed Dragon', accent:'#D94E34', rgb:'217,78,52' },
-  ensei: { name:'Ensei · The Prodigy', accent:'var(--accent-coral)', rgb:'211,138,104' },
+  ensei: { name:'Ensei · The Prodigy', accent:'var(--accent-coral)', rgb:'217,87,60' },
   saishin: { name:'Saishin · Little Whirlwind', accent:'#DD664E', rgb:'221,102,78' },
   taiso: { name:'Taisō · Magic Traveller', accent:'#B795E8', rgb:'183,149,232' },
   rochishin: { name:'Rochishin · Tattooed Monk', accent:'var(--gold)', rgb:'166,125,67' },
   andozen: { name:'Andōzen · Divine Physician', accent:'#7FC3B1', rgb:'127,195,177' },
   riki: { name:'Riki · Black Whirlwind', accent:'#8FB89A', rgb:'143,184,154' },
-  bella: { name:'Ensei · The Prodigy', accent:'var(--accent-coral)', rgb:'211,138,104' },
+  bella: { name:'Ensei · The Prodigy', accent:'var(--accent-coral)', rgb:'217,87,60' },
   booky: { name:'Saishin · Little Whirlwind', accent:'#DD664E', rgb:'221,102,78' },
   xar: { name:'Shishin · Nine-Tattooed Dragon', accent:'var(--alt-sky)', rgb:'99,186,223' },
   mercury: { name:'Taisō · Magic Traveller', accent:'#B795E8', rgb:'183,149,232' },
@@ -96,7 +95,6 @@ export function NativeDesktopPortal(props: NativeDesktopPortalProps) {
   const compositionHeight = '100%'
   const motion = useRef<RailMotion | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
-  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null)
   const pageRef = useRef<HTMLDivElement>(null)
   const dividerRef = useRef<HTMLDivElement>(null)
   const resizeCleanup = useRef<(() => void) | null>(null)
@@ -152,11 +150,6 @@ export function NativeDesktopPortal(props: NativeDesktopPortalProps) {
     const frame = requestAnimationFrame(() => controller.railIntro())
     return () => { cancelAnimationFrame(frame); controller.dispose(); motion.current = null }
   }, [root, props.reducedMotion])
-  useEffect(() => {
-    // Template edits can replace the canvas without replacing the shadow root.
-    // Start and stop the field with its real DOM owner, including live preview.
-    if (canvas && pageRef.current) return startField(canvas, pageRef.current, props.reducedMotion)
-  }, [canvas, props.reducedMotion])
   const select = (tab: string) => { setWorkspaceAction(null);setInput('');setPlus(false);props.onSelectTab(tab) }
   const collector = props.role === 'collector'
   const staffTabs = ['home','books','studio','courier','arkstation','pit']
@@ -199,7 +192,7 @@ export function NativeDesktopPortal(props: NativeDesktopPortalProps) {
         </ChatBubble>
       </div>
     </section>,
-    pageRef,fieldRef:setCanvas,dividerRef,compositionHeight,
+    pageRef,dividerRef,compositionHeight,
     // Keep annotated dimensions in visible pixels at the tablet scale.
     mainHeaderHeight: `${100 / zoom}px`,
     mainHeaderContentOffset: `translateY(${10 / zoom}px)`,
@@ -229,7 +222,7 @@ export function NativeDesktopPortal(props: NativeDesktopPortalProps) {
   // #root alone owns viewport units. Scaling belongs to the inner composition,
   // never the page boundary; safe-area padding is inside the painted host.
   return <div ref={attach} data-native-desktop-portal="true" style={{position:'relative',height:'100%',minHeight:0,width:'100%',overflow:'hidden'}}>{root && createPortal(<>
-    <style>{sourceCSS}{template.css}{`:host{display:block;--gala-clear:18px;--ag-accent:${agent.accent};--ag-panel-line:${rgba(.34)};--ag-panel-mute:${rgba(.25)}}button:focus-visible,[role=button]:focus-visible{outline:2px solid var(--gold);outline-offset:3px}button:disabled{opacity:.4;cursor:not-allowed}${props.onUpload?'':'button[aria-label="Attach or pick talents"]{display:none}'}`}</style>
+    <style>{sourceCSS}{template.css}{`:host{display:block;--ground:var(--color-ground);--ground-2:var(--color-ground);--surface:var(--color-surface);--surface-2:var(--color-surface-2);--surface-3:var(--color-surface-2);--line:var(--color-line);--line-2:var(--color-line-2);--line-live:var(--color-coral);--line-dash:var(--color-line);--panel-border:var(--color-line-2);--ink:var(--color-bone);--ink-dim:var(--color-dim);--ink-mute:var(--color-ghost);--ink-ghost:var(--color-ghost);--ink-faint:var(--color-line);--text:var(--color-bone);--text-primary:var(--color-bone);--bg:var(--color-ground);--rp-obsidian:var(--color-ground);--rp-charcoal:var(--color-surface);--rp-bone:var(--color-bone);--gold:var(--color-seal);--gold-fill:var(--color-seal);--gold-decor:var(--color-seal);--gold-ink:var(--color-ground);--gold-wash:color-mix(in srgb,var(--color-seal) 12%,transparent);--gold-glow:none;--accent-coral:var(--color-coral);--accent-seal:var(--color-seal);--accent-cream:var(--color-cream);--accent-ink:var(--color-ground);--font-display:'Space Grotesk',system-ui,sans-serif;--gala-clear:18px;--ag-accent:${agent.accent};--ag-panel-line:${rgba(.34)};--ag-panel-mute:${rgba(.25)}}button:focus-visible,[role=button]:focus-visible{outline:2px solid var(--gold);outline-offset:3px}button:disabled{opacity:.4;cursor:not-allowed}${props.onUpload?'':'button[aria-label="Attach or pick talents"]{display:none}'}`}</style>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"/>
     <input ref={fileInput} type="file" multiple hidden onChange={e=>setFiles(Array.from(e.target.files ?? []))}/>
     <style>{`:host{zoom:1;box-sizing:border-box;background:var(--ground);padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}[data-yard]{--gala-clear:18px}.bt-banner-nav,.bt-wordmark{translate:0 ${20/zoom}px}`}</style>

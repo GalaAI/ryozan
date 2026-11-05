@@ -4219,20 +4219,6 @@ input[type="range"]::-moz-range-thumb {
 
 .bkm-panel {
   padding: 0;
-  --text: #181411;
-  --text-light: #181411;
-  --muted: #6f5f55;
-  --text-muted: #6f5f55;
-  --panel: color-mix(in srgb, var(--cream) 94%, #121312);
-  --panel-hover: color-mix(in srgb, var(--cream) 88%, #121312);
-  --panel-border: rgba(var(--brick-red-rgb), 0.3);
-  --border-subtle: rgba(24, 20, 17, 0.14);
-  --bg-surface: rgba(24, 20, 17, 0.045);
-  --bg-dark: #181411;
-  --gold: var(--brick-red);
-  --gold-dim: rgba(var(--brick-red-rgb), 0.46);
-  background: var(--cream);
-  color: #181411;
 }
 
 /* ── Header ─────────────────────────────────── */
@@ -4242,9 +4228,8 @@ input[type="range"]::-moz-range-thumb {
   position: sticky;
   top: 0;
   z-index: 6;
-  background: color-mix(in srgb, var(--cream) 96%, #121312);
+  background: var(--surface);
   border-bottom: 1px solid var(--border-subtle);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
 }
 
 .bkm-title-row {
@@ -7605,12 +7590,12 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
 
 /* Huddl palette: cream paper, brick-red actions, dark readable ink. */
 .huddl-shell {
-  --huddl-ink: #181411;
-  --huddl-muted: #6f5f55;
-  --huddl-surface: color-mix(in srgb, var(--cream) 94%, #121312);
-  --huddl-surface-strong: color-mix(in srgb, var(--cream) 88%, #121312);
-  --huddl-line: rgba(var(--brick-red-rgb), 0.28);
-  background: var(--cream);
+  --huddl-ink: var(--ink);
+  --huddl-muted: var(--ink-mute);
+  --huddl-surface: var(--surface);
+  --huddl-surface-strong: var(--color-surface-2);
+  --huddl-line: var(--line-2);
+  background: var(--ground);
   color: var(--huddl-ink);
   scrollbar-color: var(--brick-red) transparent;
 }
@@ -28450,8 +28435,8 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   padding: 18px;
   border: 1px solid rgba(var(--brick-red-rgb), .46);
   border-radius: 22px;
-  background: var(--cream);
-  box-shadow: inset 5px 0 0 var(--brick-red), 0 18px 34px rgba(0, 0, 0, .3);
+  background: var(--surface);
+  box-shadow: inset 5px 0 0 var(--brick-red);
 }
 
 .ryozan-huddl-booking-prompt > span {
@@ -28468,7 +28453,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   font-size: 20px;
   line-height: 1.08;
   text-transform: uppercase;
-  color: #181411;
+  color: var(--ink);
 }
 
 .ryozan-huddl-booking-prompt > p {
@@ -29121,14 +29106,14 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 .ryozan-books-page .ryozan-books-calendar,
 .ryozan-books-page .ryozan-portal-list {
   border-color: rgba(var(--brick-red-rgb), .4);
-  background: var(--cream);
-  box-shadow: inset 5px 0 0 var(--brick-red), var(--shadow-lift);
+  background: var(--surface);
+  box-shadow: inset 5px 0 0 var(--brick-red);
 }
 
 .ryozan-books-page .ryozan-books-calendar > strong,
 .ryozan-books-page .ryozan-calendar-grid button,
 .ryozan-books-page .ryozan-book-row strong {
-  color: #181411;
+  color: var(--ink);
 }
 
 .ryozan-books-page .ryozan-calendar-rule,

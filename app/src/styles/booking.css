@@ -2765,7 +2765,7 @@
   padding: 6px;
   border: 1px solid rgba(var(--brick-red-rgb, 163, 58, 49), 0.5);
   border-radius: 8px;
-  background: var(--cream, #e2dac2);
+  background: var(--surface);
   box-shadow: inset 4px 0 0 var(--brick-red, #a33a31);
 }
 .bkm-booky-command {
@@ -2793,8 +2793,8 @@
   padding: 7px 9px;
   border: 1px solid rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--cream, #e2dac2) 92%, #121312);
-  color: #181411;
+  background: var(--color-surface-2);
+  color: var(--ink);
 }
 .bkm-booky-command button,
 .bkm-booky-sources button {
@@ -2826,8 +2826,8 @@
   overflow-x: auto;
   border: 1px solid rgba(var(--brick-red-rgb, 163, 58, 49), 0.42);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--cream, #e2dac2) 94%, #121312);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.38);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
   scrollbar-width: none;
 }
 .bkm-booky-sources::-webkit-scrollbar {
@@ -2857,7 +2857,7 @@
   white-space: nowrap;
 }
 .bkm-booky-sources strong {
-  color: #181411;
+  color: var(--ink);
   font-size: 0.72rem;
 }
 .bkm-booky-sources small {
@@ -3078,145 +3078,6 @@
   white-space: nowrap;
 }
 .bkm-proxy-submit:disabled { opacity: 0.6; cursor: default; }
-
-/* Booky lives inside Huddl's cream paper surface. This scoped layer stays
-   authoritative even when booking.css is mounted after dashboard.css. */
-.nexus-viewport > .dashboard-panel.bkm-panel {
-  background: var(--cream, #e2dac2);
-  color: #181411;
-}
-
-.bkm-panel .bkm-header .panel-title {
-  color: var(--bg-dark);
-}
-
-.bkm-panel .bkm-block-time-btn {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
-  background: transparent;
-  color: var(--brick-red, #a33a31);
-}
-
-.bkm-panel .bkm-schedule-board,
-.bkm-panel .bkm-card,
-.bkm-panel .bkm-proxy-form,
-.bkm-panel .bkm-proxy-card,
-.bkm-panel .bkm-proxy-calendar {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
-  background: color-mix(in srgb, var(--cream, #e2dac2) 94%, #121312);
-  color: #181411;
-}
-
-.bkm-panel .bkm-schedule-board-stats span,
-.bkm-panel .bkm-schedule-day {
-  border-color: rgba(24, 20, 17, 0.14);
-  background: rgba(24, 20, 17, 0.04);
-}
-
-.bkm-panel .bkm-schedule-pill {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.3);
-  background: rgba(var(--brick-red-rgb, 163, 58, 49), 0.07);
-}
-
-.bkm-panel .bkm-schedule-pill:hover {
-  border-color: var(--brick-red, #a33a31);
-  background: rgba(var(--brick-red-rgb, 163, 58, 49), 0.12);
-}
-
-.bkm-panel .bkm-booky-bar {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.5);
-  background: var(--cream, #e2dac2);
-  box-shadow: inset 4px 0 0 var(--brick-red, #a33a31);
-}
-
-.bkm-panel .bkm-booky-command > span {
-  color: var(--brick-red, #a33a31);
-}
-
-.bkm-panel .bkm-booky-command input,
-.bkm-panel .bkm-proxy-field input,
-.bkm-panel .bkm-proxy-field select,
-.bkm-panel .bkm-proxy-field textarea {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
-  background: rgba(24, 20, 17, 0.045);
-  color: #181411;
-}
-
-.bkm-panel .bkm-booky-command button,
-.bkm-panel .bkm-proxy-submit {
-  border-color: var(--brick-red, #a33a31);
-  background: var(--brick-red, #a33a31);
-  color: var(--cream, #e2dac2);
-}
-
-.bkm-panel .bkm-booky-sources {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.42);
-  background: color-mix(in srgb, var(--cream, #e2dac2) 94%, #121312);
-}
-
-.bkm-panel .bkm-booky-sources button {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.42);
-  background: rgba(24, 20, 17, 0.045);
-  color: #181411;
-}
-
-.bkm-panel .bkm-booky-sources button:hover,
-.bkm-panel :is(.bkm-artist-picker, .bkm-placement-chips, .bkm-duration-chips, .bkm-status-segments) button.is-active {
-  border-color: var(--brick-red, #a33a31);
-  background: rgba(var(--brick-red-rgb, 163, 58, 49), 0.12);
-  color: var(--brick-red, #a33a31);
-}
-
-.bkm-panel .bkm-proxy-form .day-pref-layout {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
-  background: rgba(var(--brick-red-rgb, 163, 58, 49), 0.1);
-}
-
-.bkm-panel .bkm-proxy-form .day-pref-tile {
-  background: color-mix(in srgb, var(--cream, #e2dac2) 91%, #121312);
-}
-
-.bkm-panel .bkm-proxy-form .day-pref-tile-cal .cal-heading,
-.bkm-panel .bkm-proxy-form .day-pref-slots-day {
-  color: #181411;
-}
-
-.bkm-panel .bkm-proxy-form .day-pref-tile-cal :is(.cal-nav-btn, .cal-weekday),
-.bkm-panel .bkm-proxy-form .day-pref-session-deposit {
-  color: var(--brick-red, #a33a31);
-}
-
-.bkm-panel .bkm-proxy-form .day-pref-tile-cal .cal-cell:not(.outside):not(:disabled) .cal-day-num {
-  color: #181411;
-}
-
-.bkm-panel .bkm-proxy-form .day-pref-tile-cal .cal-cell.today .cal-day-num {
-  color: var(--brick-red, #a33a31) !important;
-  text-shadow: none;
-}
-
-.bkm-panel .bkm-proxy-form .day-pref-tile-cal .cal-cell.selected .cal-day-num,
-.bkm-panel .bkm-proxy-form .day-pref-slot.selected {
-  border-color: var(--brick-red, #a33a31);
-  background: var(--brick-red, #a33a31);
-  color: var(--cream, #e2dac2);
-  box-shadow: 0 0 12px rgba(var(--brick-red-rgb, 163, 58, 49), 0.22);
-}
-
-.bkm-panel .bkm-proxy-form :is(.day-pref-slots-empty, .day-pref-slots-duration, .day-pref-session-info) {
-  color: #6f5f55;
-}
-
-.bkm-panel .bkm-proxy-form :is(.day-pref-first, .day-pref-flexible, .day-pref-slot) {
-  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.3);
-  background: rgba(24, 20, 17, 0.04);
-  color: #181411;
-}
-
-.bkm-panel .bkm-proxy-form :is(.day-pref-first, .day-pref-flexible, .day-pref-slot):hover:not(:disabled) {
-  border-color: var(--brick-red, #a33a31);
-  background: rgba(var(--brick-red-rgb, 163, 58, 49), 0.1);
-  color: var(--brick-red, #a33a31);
-}
 
 @media (max-width: 1100px) {
   .bkm-booky-bar {

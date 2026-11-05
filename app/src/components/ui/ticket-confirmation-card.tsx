@@ -31,9 +31,9 @@ export const PaymentMethodIcon = ({ brand = "card", ...props }: { brand?: string
     )
   }
   return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="32" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="text-[#D38A68]">
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="32" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--accent-coral)]">
       <rect width="20" height="14" x="2" y="5" rx="2" stroke="rgba(232,223,207,0.3)" fill="rgba(10,11,10,0.5)" />
-      <line x1="2" x2="22" y1="10" y2="10" stroke="#D38A68" />
+      <line x1="2" x2="22" y1="10" y2="10" stroke="#d9573c" />
     </svg>
   )
 }
@@ -154,7 +154,7 @@ export const AnimatedTicket = React.forwardRef<HTMLDivElement, TicketProps>(
           className={cn(
             "relative w-full max-w-sm rounded-2xl font-sans z-10 overflow-hidden",
             "bg-[#191a19] text-[#e2dac2] border border-[#3a301e]",
-            "shadow-[0_25px_60px_rgba(0,0,0,0.75),0_0_35px_rgba(211,138,104,0.12)]",
+            "shadow-[0_25px_60px_rgba(0,0,0,0.75),0_0_35px_rgba(217,87,60,0.12)]",
             className
           )}
           {...props}
@@ -195,7 +195,7 @@ export const AnimatedTicket = React.forwardRef<HTMLDivElement, TicketProps>(
               </div>
               <div className="text-right">
                 <p className="text-[8.5px] font-mono font-bold tracking-[0.18em] uppercase text-[rgba(226,218,194,0.5)]">Amount</p>
-                <p className="font-semibold text-sm text-[#D38A68] mt-0.5">{formattedAmount}</p>
+                <p className="font-semibold text-sm text-[var(--accent-coral)] mt-0.5">{formattedAmount}</p>
               </div>
               {artistName ? (
                 <div className="col-span-2 pt-2 border-t border-[#2a2316]">
@@ -224,7 +224,7 @@ export const AnimatedTicket = React.forwardRef<HTMLDivElement, TicketProps>(
             </div>
 
             {/* Connected collector-pass stub adapted from the 21st Admit One pattern. */}
-            <div className="relative -mx-6 -mb-5 mt-5 px-6 pb-5 pt-4 bg-[linear-gradient(90deg,rgba(211,138,104,0.08),rgba(10,11,10,0.28))]">
+            <div className="relative -mx-6 -mb-5 mt-5 px-6 pb-5 pt-4 bg-[linear-gradient(90deg,rgba(217,87,60,0.08),rgba(10,11,10,0.28))]">
               <div className="absolute -top-3 -left-3.5 w-6 h-6 rounded-full bg-[#0b0c0b] border border-[#3a301e] z-20" aria-hidden="true" />
               <div className="absolute -top-3 -right-3.5 w-6 h-6 rounded-full bg-[#0b0c0b] border border-[#3a301e] z-20" aria-hidden="true" />
               <DashedLine className="absolute top-0 left-0" />
