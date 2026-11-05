@@ -134,10 +134,18 @@ export default function ClientsPage() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    bookingsApi
-      .list({ limit: 500 })
-      .then((res) => {
-        if (!cancelled) setAllBookings(res.bookings)
+    const loadAllBookings = async () => {
+      const firstPage = await bookingsApi.list({ limit: 100 })
+      const rows = [...firstPage.bookings]
+      for (let skip = 100; skip < firstPage.total; skip += 100) {
+        const page = await bookingsApi.list({ skip, limit: 100 })
+        rows.push(...page.bookings)
+      }
+      return rows
+    }
+    loadAllBookings()
+      .then((rows) => {
+        if (!cancelled) setAllBookings(rows)
       })
       .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load bookings')

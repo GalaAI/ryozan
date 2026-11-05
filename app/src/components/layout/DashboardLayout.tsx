@@ -466,21 +466,24 @@ function OnboardingBanner() {
 
   return (
     <div className="onboarding-banner">
-      <div className="onboarding-banner-content">
-        <div className="onboarding-banner-top">
-          <div className="onboarding-banner-heading">
-            <h3>Complete your profile</h3>
-            <span className="onboarding-pct">{pct}% complete</span>
-          </div>
+      <details className="onboarding-banner-content">
+        <summary className="onboarding-banner-top">
+          <span className="onboarding-banner-heading">
+            <span className="onboarding-banner-title">Complete your profile</span>
+            <span className="onboarding-pct">{completed} of {total} done</span>
+          </span>
+          <span className="onboarding-progress" aria-hidden="true">
+            <span className="onboarding-progress-fill" style={{ width: `${pct}%` }} />
+          </span>
+          <button className="onboarding-cta" onClick={() => navigate('/dashboard/artist-profile')}>
+          Complete Profile
+        </button>
           <button className="onboarding-dismiss" onClick={handleDismiss} aria-label="Dismiss">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
           </button>
-        </div>
-        <div className="onboarding-progress">
-          <div className="onboarding-progress-fill" style={{ width: `${pct}%` }} />
-        </div>
+        </summary>
         <ul className="onboarding-checklist">
           {checks.map((item) => (
             <li key={item.label} className={item.done ? 'done' : ''}>
@@ -493,10 +496,7 @@ function OnboardingBanner() {
             </li>
           ))}
         </ul>
-        <button className="onboarding-cta" onClick={() => navigate('/dashboard/artist-profile')}>
-          Complete Profile
-        </button>
-      </div>
+      </details>
     </div>
   )
 }

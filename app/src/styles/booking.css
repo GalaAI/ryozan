@@ -3086,6 +3086,16 @@
   color: #181411;
 }
 
+.bkm-panel .bkm-header .panel-title {
+  color: var(--bg-dark);
+}
+
+.bkm-panel .bkm-block-time-btn {
+  border-color: rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
+  background: transparent;
+  color: var(--brick-red, #a33a31);
+}
+
 .bkm-panel .bkm-schedule-board,
 .bkm-panel .bkm-card,
 .bkm-panel .bkm-proxy-form,

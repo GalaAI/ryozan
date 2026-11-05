@@ -1074,24 +1074,6 @@ export default function HuddleLayout() {
 
   return (
     <div className="dashboard-panel home-panel nexus">
-      <header className="doc-hub-header">
-        <nav className="doc-tabs" aria-label="Huddl sections" role="tablist">
-          {TOOL_BELT.map((tool) => (
-            <button
-              key={tool.id}
-              type="button"
-              role="tab"
-              aria-selected={activePanel === tool.id}
-              className={`doc-tab${activePanel === tool.id ? ' active' : ''}`}
-              onClick={() => setActivePanel(tool.id)}
-            >
-              {tool.icon}
-              <span className="doc-tab-label">{tool.label}</span>
-            </button>
-          ))}
-        </nav>
-      </header>
-
       {/* ── Body: Viewport + Tool Belt (same as Nexus) ── */}
       <div className="nexus-body">
         <div className="nexus-viewport card">
