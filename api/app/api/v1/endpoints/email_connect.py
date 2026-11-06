@@ -177,7 +177,7 @@ async def connect_email(
     await db.flush()
 
     # Send verification email
-    base_url = getattr(settings, "API_PUBLIC_BASE_URL", None) or "http://127.0.0.1:18788"
+    base_url = getattr(settings, "API_PUBLIC_BASE_URL", None) or "http://127.0.0.1:18810"
     verify_url = f"{base_url.rstrip('/')}/api/v1/email/verify?token={token}"
 
     await send_email(

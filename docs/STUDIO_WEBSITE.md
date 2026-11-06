@@ -25,7 +25,7 @@ STUDIO_SOCIAL_LINKS=Instagram=https://instagram.com/lantern
 The browser reads them from `GET /api/v1/studio/settings` (public, cached for five minutes), under `site`. Check the result with:
 
 ```bash
-curl -s http://localhost:18788/api/v1/studio/settings
+curl -s http://localhost:18810/api/v1/studio/settings
 ```
 
 Only `PUBLIC_SITE_MODE=studio` is required. Every other value is optional, and a blank one hides its section: no gallery without gallery photos, no story teaser without a story, no hours or social links in the footer without them. A blank `STUDIO_NAME` shows "Tattoo studio".

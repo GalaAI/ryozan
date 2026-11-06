@@ -105,8 +105,8 @@ What comes next for these, including feature flags, is in [`ROADMAP.md`](ROADMAP
 
 ```mermaid
 flowchart LR
-  Staff["Staff and clients in the browser"] --> App["Ryozan web app (React 19, port 15300)"]
-  App -->|"/api/v1"| API["Ryozan API (FastAPI, port 18788)"]
+  Staff["Staff and clients in the browser"] --> App["Ryozan web app (React 19, port 15310)"]
+  App -->|"/api/v1"| API["Ryozan API (FastAPI, port 18810)"]
   API --> DB[("PostgreSQL")]
   API -->|"POST /chat/completions"| LLM["OpenAI-compatible model endpoint\n(default: Nemotron on Nebius Token Factory)"]
   API -.->|"optional"| Ext["Tavily, Stripe, Google, Resend,\nTwilio, Pinterest, Plaid"]
@@ -144,7 +144,7 @@ docker compose up -d db api app
 docker compose logs api | grep "New install"
 ```
 
-Open http://localhost:15300/setup, enter the setup code, and name your studio, its time zone and your owner account. You are signed in when it finishes. Every port binds to 127.0.0.1.
+Open http://localhost:15310/setup, enter the setup code, and name your studio, its time zone and your owner account. You are signed in when it finishes. Every port binds to 127.0.0.1.
 
 ### Manual (Python 3.12, Node 20+)
 
@@ -153,14 +153,14 @@ cp .env.example .env && cp api/.env.example api/.env
 docker compose up -d db                       # or point DATABASE_URL at your own Postgres 16
 cd api && python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/alembic upgrade head                # builds the schema; the API never creates tables itself
-.venv/bin/uvicorn main:app --host 127.0.0.1 --port 18788
+.venv/bin/uvicorn main:app --host 127.0.0.1 --port 18810
 # in a second terminal
 cd app && npm ci && npm run dev
 ```
 
-Then open http://localhost:15300/setup and enter the setup code from the API's startup log (the line that starts `[Ryozan] New install`).
+Then open http://localhost:15310/setup and enter the setup code from the API's startup log (the line that starts `[Ryozan] New install`).
 
-Alembic builds and changes the schema ([`api/alembic/README.md`](api/alembic/README.md)). The Docker images run `alembic upgrade head` before the API starts. The web dev server proxies `/api` to `http://127.0.0.1:18788`.
+Alembic builds and changes the schema ([`api/alembic/README.md`](api/alembic/README.md)). The Docker images run `alembic upgrade head` before the API starts. The web dev server proxies `/api` to `http://127.0.0.1:18810`.
 
 ### Production image
 
@@ -260,7 +260,7 @@ The Connections screen offers Google Calendar, Google sign-in linking (staff), P
 
 ## MCP server
 
-The API serves a Model Context Protocol server at `POST /mcp` (Streamable HTTP, stateless JSON responses). Point any MCP client at `<API_PUBLIC_BASE_URL>/mcp`, for example `http://localhost:18788/mcp`.
+The API serves a Model Context Protocol server at `POST /mcp` (Streamable HTTP, stateless JSON responses). Point any MCP client at `<API_PUBLIC_BASE_URL>/mcp`, for example `http://localhost:18810/mcp`.
 
 - Sign-in is OAuth 2.1 with dynamic client registration (`/oauth/register`, `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`) and discovery at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource`.
 - Shop scopes are `ryozan.shop.read`, `ryozan.shop.send` and `ryozan.shop.write`.

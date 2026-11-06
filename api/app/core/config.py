@@ -153,8 +153,8 @@ class Settings(BaseSettings):
 
     # CORS — origins that can call this API
     CORS_ORIGINS: list[str] = [
-        "http://localhost:15300",  # Vite dev server (judge and local build)
-        "http://127.0.0.1:15300",
+        "http://localhost:15310",  # Vite dev server (judge and local build)
+        "http://127.0.0.1:15310",
         "http://localhost:5173",  # legacy Vite default
     ]
     # Optional preview-deploy origin pattern; env-only.
@@ -539,7 +539,7 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GOOGLE_REFRESH_TOKEN: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:18788/api/v1/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str = "http://localhost:18810/api/v1/auth/google/callback"
 
     # Calendar authority. `oauth` preserves the per-artist refresh-token path
     # during migration. `workspace_delegated` uses one Ryozan Workspace identity
@@ -582,7 +582,7 @@ class Settings(BaseSettings):
     # developer dashboard at developers.pinterest.com/apps. Base: https://api.pinterest.com/v5
     PINTEREST_CLIENT_ID: str = ""
     PINTEREST_CLIENT_SECRET: str = ""
-    PINTEREST_REDIRECT_URI: str = "http://localhost:18788/api/v1/auth/pinterest/callback"
+    PINTEREST_REDIRECT_URI: str = "http://localhost:18810/api/v1/auth/pinterest/callback"
     PINTEREST_API_BASE: str = "https://api.pinterest.com/v5"
     # Sandbox host (Trial access, full read+write but isolated). Standard access
     # unlocks writes on the production host and requires a video-demo review.
@@ -593,10 +593,10 @@ class Settings(BaseSettings):
 
     # Frontend URL (for magic links in emails). Local default; hosted values
     # are set only in the deployed environment.
-    FRONTEND_URL: str = "http://localhost:15300"
+    FRONTEND_URL: str = "http://localhost:15310"
 
     # API public base URL (for verification links, webhooks, etc.). Local default.
-    API_PUBLIC_BASE_URL: str = "http://localhost:18788"
+    API_PUBLIC_BASE_URL: str = "http://localhost:18810"
 
     # Where client email loads its brand images (tiger-mark.png, starseed-tile.png).
     # Blank serves the copies shipped in app/public/email from FRONTEND_URL.
@@ -844,7 +844,7 @@ class Settings(BaseSettings):
     CLOVER_MERCHANT_ID: str = ""
     CLOVER_ACCESS_TOKEN: str = ""
     CLOVER_ENVIRONMENT: str = "sandbox"  # sandbox | production
-    CLOVER_REDIRECT_URI: str = "http://localhost:18788/api/v1/econ/clover/callback"
+    CLOVER_REDIRECT_URI: str = "http://localhost:18810/api/v1/econ/clover/callback"
 
     # Mercury banking connector
     MERCURY_API_TOKEN: str = ""
@@ -862,7 +862,7 @@ class Settings(BaseSettings):
     # Account Link callbacks stay on the single authenticated artist-managed
     # Connections workflow. The endpoint adds the return or refresh state so
     # an expired Stripe link can be replaced through the authenticated owner.
-    STRIPE_CONNECT_RETURN_URL: str = "http://localhost:15300/dashboard?portal=hub&workflow=connections"
+    STRIPE_CONNECT_RETURN_URL: str = "http://localhost:15310/dashboard?portal=hub&workflow=connections"
     # Country of the artists' connected accounts (ISO 3166-1 alpha-2), for
     # example US, GB or CA. Stripe Connect must support it for the platform.
     STRIPE_CONNECT_COUNTRY: str = "US"

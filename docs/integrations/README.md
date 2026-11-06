@@ -12,8 +12,8 @@ Set these two first, because several callback URLs are built from them:
 
 | Variable | Production example | Local default |
 | --- | --- | --- |
-| `API_PUBLIC_BASE_URL` | `https://studio.example.com` | `http://localhost:18788` |
-| `FRONTEND_URL` | `https://studio.example.com` | `http://localhost:15300` |
+| `API_PUBLIC_BASE_URL` | `https://studio.example.com` | `http://localhost:18810` |
+| `FRONTEND_URL` | `https://studio.example.com` | `http://localhost:15310` |
 
 Some callback URLs have their own variable with a localhost default. Those defaults are wrong for any hosted install, so each guide lists the variable to set.
 

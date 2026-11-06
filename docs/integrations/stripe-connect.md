@@ -86,7 +86,7 @@ Thin events the readiness endpoint acts on:
 
 | Production | Set by | Local default |
 | --- | --- | --- |
-| `https://studio.example.com/dashboard?portal=hub&workflow=connections` | `STRIPE_CONNECT_RETURN_URL` | `http://localhost:15300/dashboard?portal=hub&workflow=connections` |
+| `https://studio.example.com/dashboard?portal=hub&workflow=connections` | `STRIPE_CONNECT_RETURN_URL` | `http://localhost:15310/dashboard?portal=hub&workflow=connections` |
 
 Ryozan adds `stripe=return` or `stripe=refresh` to this URL and gives both to Stripe as the Account Link `return_url` and `refresh_url`. These are not registered in the Dashboard. They only need to point at your own site.
 
@@ -102,16 +102,16 @@ Checkout success and cancel pages are built from `FRONTEND_URL`.
 | `STRIPE_CONNECT_THIN_WEBHOOK_SECRET` | Yes for live readiness updates | blank | Without it, `/stripe/connect/webhook` answers 503. Readiness is still refreshed when an artist opens their status. |
 | `STRIPE_CONNECT_RETURN_URL` | Yes on a hosted install | localhost | See above. |
 | `STRIPE_CONNECT_COUNTRY` | Outside the US | `US` | Country of every artist's connected account, as an ISO 3166-1 alpha-2 code (`GB`, `CA`, `AU` ...). Validated at startup; an unassigned code stops the API. Stripe must support Connect in that country for your platform. |
-| `FRONTEND_URL` | Yes on a hosted install | `http://localhost:15300` | Checkout return pages. |
+| `FRONTEND_URL` | Yes on a hosted install | `http://localhost:15310` | Checkout return pages. |
 
 If no webhook secret is set, `/stripe/webhook` accepts unsigned events only when `APP_ENV` is a development value or `DEBUG`/`LOCAL_DEV_MODE` is on. Otherwise it answers 503.
 
 For local testing, the Stripe CLI can forward both scopes:
 
 ```bash
-stripe listen --forward-to localhost:18788/api/v1/stripe/webhook
-stripe listen --forward-connect-to localhost:18788/api/v1/stripe/webhook
-stripe listen --forward-thin-to localhost:18788/api/v1/stripe/connect/webhook --thin-events "*"
+stripe listen --forward-to localhost:18810/api/v1/stripe/webhook
+stripe listen --forward-connect-to localhost:18810/api/v1/stripe/webhook
+stripe listen --forward-thin-to localhost:18810/api/v1/stripe/connect/webhook --thin-events "*"
 ```
 
 Each command prints its own `whsec_` secret.

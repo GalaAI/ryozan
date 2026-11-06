@@ -1,10 +1,10 @@
 /**
- * API client for the Ryozan FastAPI backend (local dev port 18788).
+ * API client for the Ryozan FastAPI backend (local dev port 18810).
  *
  * - Token stored in memory by default
  * - "Stay logged in" persists token to localStorage
  * - All methods return typed responses
- * - Vite proxy handles /api -> 127.0.0.1:18788 in dev (VITE_API_TARGET overrides)
+ * - Vite proxy handles /api -> 127.0.0.1:18810 in dev (VITE_API_TARGET overrides)
  */
 
 export const API_BASE = (import.meta.env.VITE_API_URL ?? '') + '/api/v1'

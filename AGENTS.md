@@ -21,7 +21,7 @@ cd api
 python -m venv .venv
 # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --reload --port 18788
+uvicorn main:app --reload --port 18810
 ```
 
 **App**
@@ -32,7 +32,7 @@ npm install
 npm run dev
 ```
 
-Default Vite dev server: **http://localhost:15300**. The app proxies `/api` to the local API on **http://localhost:18788** by default (override with `VITE_API_TARGET`). Use `npm run dev:prod` only when intentionally testing the local UI against Railway production.
+Default Vite dev server: **http://localhost:15310**. The app proxies `/api` to the local API on **http://localhost:18810** by default (override with `VITE_API_TARGET`). Use `npm run dev:prod` only when intentionally testing the local UI against Railway production. Ryozan's dev ports (web 15310, API 18810) stay clear of ArkStation's dev ports (15300, 18788), so both can run on one machine.
 
 **CRM pipeline v1:** staff endpoints `GET/POST /crm/pipeline-tasks`, `PATCH /crm/pipeline-tasks/{id}/status` (requires assistant+). Alembic revision `20260515_crm_pipeline_tasks`. Frontend: `crm` client in `app/src/lib/api.ts`.
 
@@ -96,12 +96,12 @@ Copy `api/.env.example` to `api/.env` and set at least `LOCAL_DEV_MODE=true`, `E
 From repo root, in separate sessions:
 
 ```bash
-cd api && source .venv/bin/activate && uvicorn main:app --reload --host 127.0.0.1 --port 18788
+cd api && source .venv/bin/activate && uvicorn main:app --reload --host 127.0.0.1 --port 18810
 cd app && npm run dev
 ```
 
-- App: http://localhost:15300 (proxies `/api` and `/health` to :18788)
-- API health: http://localhost:18788/health
+- App: http://localhost:15310 (proxies `/api` and `/health` to :18810)
+- API health: http://localhost:18810/health
 
 ### Local staff login
 
