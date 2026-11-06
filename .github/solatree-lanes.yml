@@ -1,0 +1,14 @@
+# Which lane a pull request belongs to, by the paths it changes. SolaTree reads
+# this file. A change that matches more than one lane is cross-layer.
+lane:backend:
+  - changed-files:
+      - any-glob-to-any-file: ["api/**", "docs/**"]
+lane:aios:
+  - changed-files:
+      - any-glob-to-any-file: [".claude/skills/**", ".claude/agents/**"]
+lane:middleware:
+  - changed-files:
+      - any-glob-to-any-file: [".github/**", ".claude/settings.json", ".cursor/**", "scripts/**", "Dockerfile", "docker-compose.yml", "railway.toml"]
+lane:frontend:
+  - changed-files:
+      - any-glob-to-any-file: ["app/**", "packages/**"]
