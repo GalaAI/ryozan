@@ -48,6 +48,8 @@ MCP_RESOURCE_METADATA = f"{MCP_ISSUER}/.well-known/oauth-protected-resource"
 SHOP_READ_SCOPE = "ryozan.shop.read"
 SHOP_SEND_SCOPE = "ryozan.shop.send"
 SHOP_WRITE_SCOPE = "ryozan.shop.write"
+# A person acting as themselves: their own booking requests, flash bookings and in-app messages.
+CLIENT_WRITE_SCOPE = "ryozan.client.write"
 DEV_READ_SCOPE = "ryozan.dev.read"
 DEV_WRITE_SCOPE = "ryozan.dev.write"
 SERVICE_READ_SCOPE = "ryozan.service.read"
@@ -66,6 +68,7 @@ SUPPORTED_SCOPES = (
     SHOP_READ_SCOPE,
     SHOP_SEND_SCOPE,
     SHOP_WRITE_SCOPE,
+    CLIENT_WRITE_SCOPE,
     DEV_READ_SCOPE,
     DEV_WRITE_SCOPE,
     DEV_EXECUTE_SCOPE,
@@ -83,14 +86,15 @@ SUPPORTED_SCOPES = (
 )
 
 ROLE_SCOPES: dict[str, set[str]] = {
-    "collector": {SHOP_READ_SCOPE, SERVICE_READ_SCOPE},
+    "collector": {SHOP_READ_SCOPE, CLIENT_WRITE_SCOPE, SERVICE_READ_SCOPE},
     # Booking changes still pass the REST assigned-artist and shop-manager gate.
-    "assistant": {SHOP_READ_SCOPE, SHOP_WRITE_SCOPE, SERVICE_READ_SCOPE},
-    "artist": {SHOP_READ_SCOPE, SHOP_WRITE_SCOPE, SERVICE_READ_SCOPE},
+    "assistant": {SHOP_READ_SCOPE, SHOP_WRITE_SCOPE, CLIENT_WRITE_SCOPE, SERVICE_READ_SCOPE},
+    "artist": {SHOP_READ_SCOPE, SHOP_WRITE_SCOPE, CLIENT_WRITE_SCOPE, SERVICE_READ_SCOPE},
     "admin": {
         SHOP_READ_SCOPE,
         SHOP_SEND_SCOPE,
         SHOP_WRITE_SCOPE,
+        CLIENT_WRITE_SCOPE,
         DEV_READ_SCOPE,
         DEV_WRITE_SCOPE,
         SERVICE_READ_SCOPE,

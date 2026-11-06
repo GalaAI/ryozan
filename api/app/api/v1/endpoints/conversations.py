@@ -167,6 +167,12 @@ async def _require_conversation_creation_access(
 
     other_id = next(iter(other_ids))
     if effective_user.role == "artist":
+        # An artist may always reach shop management, for time off and other staff matters.
+        manager = await db.execute(
+            select(User.id).where(User.id == other_id, User.role.in_(("admin", "founder"))).limit(1)
+        )
+        if manager.scalar_one_or_none() is not None:
+            return
         relationship = await db.execute(
             select(Booking.id)
             .where(
