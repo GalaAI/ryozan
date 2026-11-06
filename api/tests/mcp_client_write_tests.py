@@ -78,13 +78,17 @@ class McpClientWriteTests(unittest.TestCase):
         calls, body = _run_with_fakes(
             tools.tool_start_conversation,
             "artist-token",
-            {"participant_ids": ["owner-1"], "content": "Can I take Friday off?"},
+            {"participant_ids": ["0d89b447-9c7a-4b9f-9ac8-a39944a05618"], "content": "Can I take Friday off?"},
             write_replies={"/conversations/": {"id": "c-1"}, "/conversations/c-1/messages": {"id": "m-1"}},
         )
         self.assertEqual(
             calls,
             [
-                ("POST", "/conversations/", {"participant_ids": ["owner-1"], "is_group": False}),
+                (
+                    "POST",
+                    "/conversations/",
+                    {"participant_ids": ["0d89b447-9c7a-4b9f-9ac8-a39944a05618"], "is_group": False},
+                ),
                 ("POST", "/conversations/c-1/messages", {"content": "Can I take Friday off?"}),
             ],
         )
@@ -146,6 +150,16 @@ class McpCloneFindingsTests(unittest.TestCase):
                 write_replies={"/bookings/": {"id": "b-1", "status": "pending"}},
             )
             self.assertEqual(calls[-1][2]["artist_id"], "j-1", named)
+
+    def test_a_thread_can_name_the_owner_instead_of_an_id(self):
+        calls, _ = _run_with_fakes(
+            tools.tool_start_conversation,
+            "artist-token",
+            {"participant_ids": ["Justin Walker"], "content": "Can I take Friday off?"},
+            get_replies={"/artists/": ARTISTS},
+            write_replies={"/conversations/": {"id": "c-1"}, "/conversations/c-1/messages": {"id": "m-1"}},
+        )
+        self.assertEqual(calls[1], ("POST", "/conversations/", {"participant_ids": ["j-1"], "is_group": False}))
 
     def test_an_unknown_artist_is_refused_with_a_way_forward(self):
         with self.assertRaises(upstream.UpstreamError) as ctx:

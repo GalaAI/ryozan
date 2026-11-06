@@ -12,6 +12,7 @@ Design rules applied here:
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from app.constants.timezones import shop_timezone
@@ -394,6 +395,9 @@ def _receipt(**fields: Any) -> str:
     return json.dumps({k: v for k, v in fields.items() if v is not None}, ensure_ascii=False, indent=2)
 
 
+_UUID_TEXT = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+
 async def _resolve_artist(token: str | None, value: Any) -> dict | None:
     """An artist named by id, slug or name, as agents and people both refer to them."""
     wanted = str(value or "").strip().lower()
@@ -508,6 +512,15 @@ async def tool_start_conversation(token: str | None, args: dict) -> str:
         return "participant_ids is required."
     if not content:
         return "content is required."
+    # Agents name the shop's people the way people do ("Justin Walker"); an id
+    # passes straight through, a name resolves through the artist list.
+    resolved = []
+    for value in participant_ids:
+        if _UUID_TEXT.match(value):
+            resolved.append(value)
+        else:
+            resolved.append(str((await _resolve_artist(token, value) or {}).get("id")))
+    participant_ids = resolved
     body: dict[str, Any] = {"participant_ids": participant_ids, "is_group": len(participant_ids) > 1}
     if args.get("name"):
         body["name"] = str(args["name"])
@@ -1440,7 +1453,12 @@ TOOL_SPECS += [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "participant_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "participant_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 1,
+                    "description": "User ids, or names of the shop's artists and owner.",
+                },
                 "content": {"type": "string", "minLength": 1, "maxLength": 10000},
                 "name": {"type": "string", "description": "Thread name; set it for a group thread."},
             },
