@@ -33,6 +33,12 @@ def _run_with_fakes(coro_fn, token, args, get_replies=None, write_replies=None):
     return calls, body
 
 
+ARTISTS = [
+    {"id": "j-1", "slug": "justin", "name": "Justin Walker"},
+    {"id": "a-1", "slug": "sample-artist", "name": "Sample Artist"},
+]
+
+
 class McpClientWriteTests(unittest.TestCase):
     def test_every_role_can_grant_client_write(self):
         for role in ("collector", "assistant", "artist", "admin", "founder"):
@@ -88,11 +94,12 @@ class McpClientWriteTests(unittest.TestCase):
         calls, _ = _run_with_fakes(
             tools.tool_block_time,
             "owner-token",
-            {"artist_id": "a-1", "block_date": "2026-11-21", "all_day": True, "reason": "Time off"},
+            {"artist_id": "Sample Artist", "block_date": "2026-11-21", "all_day": True, "reason": "Time off"},
+            get_replies={"/artists/": ARTISTS},
             write_replies={"/calendar/time-blocks": {"id": "t-1", "block_date": "2026-11-21", "all_day": True}},
         )
         self.assertEqual(
-            calls,
+            calls[1:],
             [
                 (
                     "POST",
@@ -124,6 +131,44 @@ class McpClientWriteTests(unittest.TestCase):
         calls, body = _run_with_fakes(tools.tool_update_flash, "owner-token", {"design_id": "d-1"})
         self.assertEqual(calls, [])
         self.assertIn("Nothing to change", body)
+
+
+class McpCloneFindingsTests(unittest.TestCase):
+    """Defects the Eden matrix Clones found in their first runs."""
+
+    def test_an_artist_can_be_named_by_id_slug_full_name_or_first_name(self):
+        for named in ("j-1", "justin", "Justin Walker", "Justin"):
+            calls, _ = _run_with_fakes(
+                tools.tool_request_booking,
+                "collector-token",
+                {"artist_id": named, "description": "Dragon with Umbrella flash"},
+                get_replies={"/artists/": ARTISTS},
+                write_replies={"/bookings/": {"id": "b-1", "status": "pending"}},
+            )
+            self.assertEqual(calls[-1][2]["artist_id"], "j-1", named)
+
+    def test_an_unknown_artist_is_refused_with_a_way_forward(self):
+        with self.assertRaises(upstream.UpstreamError) as ctx:
+            _run_with_fakes(
+                tools.tool_find_slots,
+                "t",
+                {"artist_slug": "Nobody", "start": "2026-11-18", "end": "2026-11-18"},
+                get_replies={"/artists/": ARTISTS},
+            )
+        self.assertIn("ryozan_list_artists", str(ctx.exception))
+
+    def test_a_text_search_reads_a_full_page_before_it_applies_the_limit(self):
+        rows = [{"id": f"b-{i}", "status": "pending", "client_name": "Walk-in"} for i in range(5)]
+        rows.append({"id": "b-9", "status": "pending", "client_name": "Sample Collector"})
+        calls, body = _run_with_fakes(
+            tools.tool_search_bookings,
+            "owner-token",
+            {"status": "pending", "query": "Sample Collector", "limit": 1},
+            get_replies={"/bookings/": {"bookings": rows, "total": 6}},
+        )
+        self.assertEqual(calls[0][2]["limit"], 100)
+        self.assertIn("1 booking(s) shown", body)
+        self.assertIn("b-9", body)
 
 
 class McpWriteRetryTests(unittest.TestCase):
