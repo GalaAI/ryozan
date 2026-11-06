@@ -28,7 +28,7 @@ Code: `api/app/api/v1/endpoints/pinterest.py`, `api/app/services/pinterest.py`.
 
 | Production | Set by | Local default |
 | --- | --- | --- |
-| `https://studio.example.com/api/v1/auth/pinterest/callback` | `PINTEREST_REDIRECT_URI` | `http://localhost:18788/api/v1/auth/pinterest/callback` |
+| `https://studio.example.com/api/v1/auth/pinterest/callback` | `PINTEREST_REDIRECT_URI` | `http://localhost:18810/api/v1/auth/pinterest/callback` |
 
 The same value is sent on the authorize request and on the token exchange, so it must match the registered URI exactly. After the callback, the API sends the browser to `FRONTEND_URL` + `/dashboard?portal=hub&workflow=connections&pinterest=connected`.
 
@@ -46,7 +46,7 @@ The authorize URL is `https://www.pinterest.com/oauth/`. The token exchange asks
 | --- | --- | --- | --- |
 | `PINTEREST_CLIENT_ID` | Yes | blank | App id. |
 | `PINTEREST_CLIENT_SECRET` | Yes | blank | App secret key. Sent as HTTP Basic auth on token calls. |
-| `PINTEREST_REDIRECT_URI` | Yes on a hosted install | `http://localhost:18788/api/v1/auth/pinterest/callback` | Must match the app settings. |
+| `PINTEREST_REDIRECT_URI` | Yes on a hosted install | `http://localhost:18810/api/v1/auth/pinterest/callback` | Must match the app settings. |
 | `PINTEREST_USE_SANDBOX` | No | `true` | `true` sends every API call, including the token exchange, to the sandbox host. |
 | `PINTEREST_SANDBOX_API_BASE` | No | `https://api-sandbox.pinterest.com/v5` | |
 | `PINTEREST_API_BASE` | No | `https://api.pinterest.com/v5` | Used when `PINTEREST_USE_SANDBOX=false`. |

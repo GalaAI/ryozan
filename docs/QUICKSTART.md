@@ -1,7 +1,7 @@
 # Ryozan quickstart (local, about 10 minutes)
 
-Ryozan runs on your machine: a FastAPI API on port 18788, a Vite web app on
-port 15300, and PostgreSQL on 5433. The agents call an OpenAI-compatible model
+Ryozan runs on your machine: a FastAPI API on port 18810, a Vite web app on
+port 15310, and PostgreSQL on 5433. The agents call an OpenAI-compatible model
 endpoint. The default is NVIDIA Nemotron on Nebius Token Factory, so the only
 credential you need to start is a Token Factory API key. Without one the app
 still runs; agent chat answers with a 503 that says to set `NEBIUS_API_KEY`.
@@ -30,7 +30,7 @@ Or natively (Python 3.12, Node 20+), with only the database in Docker:
 ```bash
 docker compose up -d db
 cd api && python -m venv .venv && .venv/bin/pip install -r requirements.txt
-.venv/bin/uvicorn main:app --host 127.0.0.1 --port 18788
+.venv/bin/uvicorn main:app --host 127.0.0.1 --port 18810
 cd ../app && npm ci && npm run dev
 ```
 
@@ -39,7 +39,7 @@ On Windows (PowerShell) the virtual environment keeps its programs in `Scripts`:
 ```powershell
 docker compose up -d db
 cd api; python -m venv .venv; .venv\Scripts\pip install -r requirements.txt
-.venv\Scripts\uvicorn main:app --host 127.0.0.1 --port 18788
+.venv\Scripts\uvicorn main:app --host 127.0.0.1 --port 18810
 cd ..\app; npm ci; npm run dev
 ```
 
@@ -47,7 +47,7 @@ cd ..\app; npm ci; npm run dev
 installs `tzdata`, which Python's `zoneinfo` needs there.
 
 Before the API starts, `alembic upgrade head` builds or updates the schema. Every port binds to 127.0.0.1. The
-web dev server proxies `/api` to `http://127.0.0.1:18788` by default; set
+web dev server proxies `/api` to `http://127.0.0.1:18810` by default; set
 `VITE_API_TARGET` only to point it somewhere else.
 
 ## 3. Set up your studio
@@ -58,7 +58,7 @@ The API prints a setup code at startup while the install has no owner:
 docker compose logs api | grep "New install"   # or read the terminal running uvicorn
 ```
 
-Open http://localhost:15300/setup, enter the code, and name your studio, its
+Open http://localhost:15310/setup, enter the code, and name your studio, its
 time zone and your owner account. That account can change all the studio
 details later, under Account, then Studio settings.
 
@@ -73,7 +73,7 @@ does not recognize as local without `--allow-nonlocal-db`.
 
 ## 4. Use it
 
-1. After setup you land in the portal. Later, open http://localhost:15300,
+1. After setup you land in the portal. Later, open http://localhost:15310,
    choose **Open the studio portal** and sign in.
 2. Under Account, open **Studio settings** and fill in your contact details and booking hours. New installs start on Wednesday to Saturday.
 3. On the Booking tab, use **New booking** to record a real inquiry through the

@@ -31,7 +31,7 @@ services:
   api:
     build: ./api
     ports:
-      - "127.0.0.1:18788:8801"
+      - "127.0.0.1:18810:8801"
     env_file:
       - ./api/.env
     environment:
@@ -51,7 +51,7 @@ services:
     image: node:20-alpine
     working_dir: /app
     ports:
-      - "127.0.0.1:15300:5173"
+      - "127.0.0.1:15310:5173"
     volumes:
       - ./app:/app
       - /app/node_modules

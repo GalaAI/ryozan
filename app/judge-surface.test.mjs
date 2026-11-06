@@ -6,9 +6,9 @@ import { existsSync, readFileSync } from 'node:fs'
 
 const read = path => readFileSync(new URL(path, import.meta.url), 'utf8')
 
-test('the dev proxy defaults to the local API on 18788 with no committed override', () => {
+test('the dev proxy defaults to the local API on 18810 with no committed override', () => {
   assert.equal(existsSync(new URL('./.env.development', import.meta.url)), false)
-  assert.match(read('./vite.config.ts'), /return 'http:\/\/127\.0\.0\.1:18788'/)
+  assert.match(read('./vite.config.ts'), /return 'http:\/\/127\.0\.0\.1:18810'/)
 })
 
 test('the inherited shop site is gone: no shop pages or location data, the studio site reads settings', () => {

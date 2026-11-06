@@ -16,7 +16,7 @@ function resolveApiTarget(mode: string, fileEnv: Record<string, string>): string
   if (process.env.VITE_API_TARGET) return process.env.VITE_API_TARGET
   if (fileEnv.VITE_API_TARGET) return fileEnv.VITE_API_TARGET
   if (mode === 'prod-proxy') return 'https://ryozan-production.up.railway.app'
-  return 'http://127.0.0.1:18788'
+  return 'http://127.0.0.1:18810'
 }
 
 /* ── GDT Dev API Plugin ─────────────────────────────────────────
@@ -147,8 +147,8 @@ export default defineConfig(({ mode }) => {
       fs: {
         allow: [__dirname, path.resolve(__dirname, '../packages/ui')],
       },
-      // Ryozan's local web port is 15300 (API 18788); PORT still overrides it.
-      port: assignedPort ?? 15300,
+      // Ryozan's local web port is 15310 (API 18810); PORT still overrides it.
+      port: assignedPort ?? 15310,
       strictPort: true,
       proxy: {
         '/api': {

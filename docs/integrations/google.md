@@ -35,7 +35,7 @@ In the [Google Cloud console](https://console.cloud.google.com/):
 https://studio.example.com
 ```
 
-This is your `FRONTEND_URL`. The quote confirmation page loads Google Identity Services in the browser, and Google only accepts that from a listed origin. For local work also add `http://localhost:15300`.
+This is your `FRONTEND_URL`. The quote confirmation page loads Google Identity Services in the browser, and Google only accepts that from a listed origin. For local work also add `http://localhost:15310`.
 
 ### Authorized redirect URIs
 
@@ -43,8 +43,8 @@ Add both. They must match byte for byte.
 
 | Purpose | Production URI | How Ryozan builds it | Local default |
 | --- | --- | --- | --- |
-| Sign-in and login linking | `https://studio.example.com/api/v1/auth/google/callback-signin` | `API_PUBLIC_BASE_URL` + `/api/v1/auth/google/callback-signin`. No separate variable. | `http://localhost:18788/api/v1/auth/google/callback-signin` |
-| Calendar connect | `https://studio.example.com/api/v1/auth/google/callback` | The value of `GOOGLE_REDIRECT_URI` | `http://localhost:18788/api/v1/auth/google/callback` |
+| Sign-in and login linking | `https://studio.example.com/api/v1/auth/google/callback-signin` | `API_PUBLIC_BASE_URL` + `/api/v1/auth/google/callback-signin`. No separate variable. | `http://localhost:18810/api/v1/auth/google/callback-signin` |
+| Calendar connect | `https://studio.example.com/api/v1/auth/google/callback` | The value of `GOOGLE_REDIRECT_URI` | `http://localhost:18810/api/v1/auth/google/callback` |
 
 `GOOGLE_REDIRECT_URI` defaults to the localhost value. Set it on every hosted install, or Calendar connect sends Google a localhost callback.
 
@@ -85,9 +85,9 @@ A narrower scope does not skip review. Calendar scopes are still sensitive. It d
 | --- | --- | --- | --- |
 | `GOOGLE_CLIENT_ID` | Yes | blank | Web application client id. |
 | `GOOGLE_CLIENT_SECRET` | Yes | blank | Must be the secret of the same client. |
-| `GOOGLE_REDIRECT_URI` | Yes for Calendar on a hosted install | `http://localhost:18788/api/v1/auth/google/callback` | Calendar connect callback. |
-| `API_PUBLIC_BASE_URL` | Yes on a hosted install | `http://localhost:18788` | Builds the sign-in callback. |
-| `FRONTEND_URL` | Yes on a hosted install | `http://localhost:15300` | Where the API sends the browser afterwards. |
+| `GOOGLE_REDIRECT_URI` | Yes for Calendar on a hosted install | `http://localhost:18810/api/v1/auth/google/callback` | Calendar connect callback. |
+| `API_PUBLIC_BASE_URL` | Yes on a hosted install | `http://localhost:18810` | Builds the sign-in callback. |
+| `FRONTEND_URL` | Yes on a hosted install | `http://localhost:15310` | Where the API sends the browser afterwards. |
 | `VITE_GOOGLE_CLIENT_ID` | For the in-browser Google button on the quote confirmation page | blank | Build-time variable for the web app. Pass it as a Docker build arg. Use the same id as `GOOGLE_CLIENT_ID`. |
 | `GOOGLE_SIGNIN_CLIENT_ID` | No | blank | A separate OAuth client for sign-in and login linking. Blank: sign-in uses `GOOGLE_CLIENT_ID`. Build the web app with `VITE_GOOGLE_CLIENT_ID` set to this id. |
 | `GOOGLE_SIGNIN_CLIENT_SECRET` | With a separate `GOOGLE_SIGNIN_CLIENT_ID` | blank | The secret of that sign-in client, sent in the sign-in token exchange. Without it, sign-in reports itself unconfigured (`/auth/options` `google: false`, `/auth/google/link` answers 503 naming this variable). |

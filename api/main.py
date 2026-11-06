@@ -3,7 +3,7 @@ Ryozan API — entry point.
 
 Start with:
     alembic upgrade head          # the schema is Alembic's alone; startup issues no DDL
-    uvicorn main:app --reload --port 18788
+    uvicorn main:app --reload --port 18810
 
 A database built by the pre-2026-10-31 boot path (it has the tables but no
 alembic_version) is adopted once with `python scripts/adopt_schema.py --apply`.
