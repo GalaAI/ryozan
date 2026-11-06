@@ -3609,7 +3609,7 @@ export const googleAuth = {
     request<{ linked: boolean }>('/auth/google/link/status'),
 }
 
-export type IntegrationId = 'google_calendar' | 'google_signin_link' | 'pinterest' | 'plaid' | 'stripe_connect' | 'push' | 'email_forwarding'
+export type IntegrationId = 'google_calendar' | 'google_signin_link' | 'pinterest' | 'plaid' | 'stripe_connect' | 'push' | 'email_forwarding' | 'shop_email'
 
 export interface IntegrationOption {
   id: IntegrationId
@@ -3621,6 +3621,43 @@ export interface IntegrationOption {
 
 export interface IntegrationOptionsResponse {
   integrations: IntegrationOption[]
+}
+
+export interface ShopEmailRecord {
+  record?: string
+  type?: string
+  name?: string
+  value?: string
+  priority?: number
+  ttl?: string
+  status?: string
+}
+
+/** GET /connections/email: where the shop's mail goes out from. Never carries a key. */
+export interface ShopEmailConnection {
+  platform_ready: boolean
+  platform_sender: string | null
+  sender_name: string | null
+  domain: string | null
+  from_address: string | null
+  status: string | null
+  records: ShopEmailRecord[]
+  checked_at: string | null
+  sending_from: string | null
+  demo: boolean
+}
+
+export const shopConnections = {
+  email: () => request<ShopEmailConnection>('/connections/email'),
+  addEmailDomain: (domain: string, fromLocal: string) =>
+    request<ShopEmailConnection>('/connections/email/domain', {
+      method: 'POST',
+      body: JSON.stringify({ domain, from_local: fromLocal }),
+    }),
+  checkEmailDomain: () =>
+    request<ShopEmailConnection>('/connections/email/domain/check', { method: 'POST' }),
+  removeEmailDomain: () =>
+    request<ShopEmailConnection>('/connections/email/domain', { method: 'DELETE' }),
 }
 
 export const integrations = {

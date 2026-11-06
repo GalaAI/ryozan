@@ -38,6 +38,8 @@ STRIPE_CONNECT_ROLES = frozenset({"artist", "founder"})
 PUSH_ROLES = ALL_SIGNED_IN
 # POST /email/connect: any signed-in user.
 EMAIL_FORWARDING_ROLES = ALL_SIGNED_IN
+# /connections/email: require_role("admin"), so admins and the owner.
+SHOP_EMAIL_ROLES = frozenset(ROLE_HIERARCHY[ROLE_HIERARCHY.index("admin") :])
 
 
 def _set(*values: str) -> bool:
@@ -79,6 +81,13 @@ def _push_configured() -> bool:
     return get_settings().push_configured
 
 
+def _shop_email_configured() -> bool:
+    # The platform key sends every shop's mail; the demo shop shows the card without one.
+    from app.services.demo_shop import demo_shop_enabled
+
+    return _set(get_settings().RESEND_API_KEY) or demo_shop_enabled()
+
+
 INTEGRATIONS = (
     ("google_calendar", _google_calendar_configured, GOOGLE_CALENDAR_ROLES),
     ("google_signin_link", _google_signin_link_configured, GOOGLE_SIGNIN_LINK_ROLES),
@@ -87,6 +96,7 @@ INTEGRATIONS = (
     ("stripe_connect", _stripe_connect_configured, STRIPE_CONNECT_ROLES),
     ("push", _push_configured, PUSH_ROLES),
     ("email_forwarding", email_forwarding_configured, EMAIL_FORWARDING_ROLES),
+    ("shop_email", _shop_email_configured, SHOP_EMAIL_ROLES),
 )
 
 
