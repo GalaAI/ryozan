@@ -107,12 +107,12 @@ export function ActionDeck({ actions, glyph, working, onActivate }: { actions: D
           onFocus={event => { showPreview(item.id, true); const box=event.currentTarget.getBoundingClientRect(); hover(box.left+box.width/2,item.id) }}
           onBlur={() => { hover(null); showPreview(null) }}
           onKeyDown={event => { if (event.key === 'Escape') { showPreview(null); hover(null) } }}
-          style={{ position: 'relative', flex: '0 0 auto', width: 56, height: 80, marginLeft: index ? -9 : 0, padding: 0, border: 0, background: 'transparent', borderRadius: 9 }}>
+          style={{ position: 'relative', flex: '0 0 auto', width: 60, height: 80, marginLeft: index ? -9 : 0, padding: 0, border: 0, background: 'transparent', borderRadius: 9 }}>
           <span data-deck-back style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', pointerEvents: 'none', border: `1px solid ${receipt ? '#D94E34' : 'color-mix(in oklab,var(--ag-accent) 28%,transparent)'}`, borderRadius: 9, background: 'linear-gradient(160deg,#1b1a18,#050607)', transform: `rotate(${(index-(actions.length-1)/2)*3.2}deg)`, transformOrigin: '50% 140%', boxShadow: '0 12px 24px -14px rgba(0,0,0,.95)' }}>
             <span data-deck-glow aria-hidden="true" />
             <span aria-hidden="true" style={{ position: 'absolute', top: 4, right: 5, fontSize: 9, lineHeight: 1, opacity: .85 }}>{pipSymbol}</span>
             <span data-deck-emblem aria-hidden="true" style={{ fontSize: 26, color: 'rgba(0,0,0,.55)', textShadow: '0 1px 0 rgba(232,223,207,.10),0 -1px 1px rgba(0,0,0,.6)' }}>{glyph}</span>
-            <span aria-hidden="true" style={{ position: 'absolute', left: 3, right: 3, bottom: 5, fontSize: 7.5, lineHeight: 1.15, letterSpacing: '.06em', textTransform: 'uppercase', color: 'rgba(232,223,207,.78)', textAlign: 'center', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.title}</span>
+            <span aria-hidden="true" style={{ position: 'absolute', left: 2, right: 2, bottom: 5, fontSize: 7, lineHeight: 1.15, letterSpacing: 0, textTransform: 'uppercase', color: 'rgba(232,223,207,.78)', textAlign: 'center', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{item.title}</span>
             {receipt && <span data-deck-hanko="executed" aria-hidden="true" style={{ position: 'absolute', bottom: 4, right: 4, width: 15, height: 15, borderRadius: 99, border: '1.5px solid #D94E34', background: 'rgba(217,78,52,.2)', color: '#D94E34', fontSize: 8.5, fontWeight: 900, display: 'grid', placeItems: 'center' }}>済</span>}
           </span>
         </button>

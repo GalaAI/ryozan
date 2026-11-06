@@ -2785,7 +2785,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
       ? {
           id: 'bella' as const,
           name: 'Ensei',
-          accent: '#D38A68',
+          accent: 'var(--accent-coral)',
           opener: 'Your account is open. I can help you keep your profile and shop preferences current.',
           tab: 'home',
         }
@@ -3579,7 +3579,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
 
   const accountAgent = agentOverrideId === 'bella'
     ? {
-        id: 'bella', name: 'Ensei', role: 'Front desk · the shop bot', accent: '#D38A68', bloom: '211,138,104', glyph: '✧' as ReactNode,
+        id: 'bella', name: 'Ensei', role: 'Front desk · the shop bot', accent: 'var(--accent-coral)', bloom: '217,87,60', glyph: '✧' as ReactNode,
         opener: 'Your account is open. I can help you keep your profile and shop preferences current.',
         suggestion: 'Help me update my account.',
       }

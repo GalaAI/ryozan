@@ -5,6 +5,7 @@ the in-flow bottom nav. This source contract guards those regression boundaries
 without duplicating the shared TabBar or introducing a second navigation owner.
 """
 
+import json
 import tarfile
 import unittest
 from pathlib import Path
@@ -14,7 +15,8 @@ MOBILE_PORTAL = ROOT / "app" / "src" / "pages" / "dashboard" / "MobilePortalHome
 GALA_PANEL = ROOT / "app" / "src" / "components" / "GalaPanel.tsx"
 API_CLIENT = ROOT / "app" / "src" / "lib" / "api.ts"
 DASHBOARD_STYLES = ROOT / "app" / "src" / "styles" / "dashboard.css"
-UI_ARCHIVE = ROOT / "app" / "vendor" / "ryozan-ui-0.2.2.tgz"
+UI_VERSION = json.loads((ROOT / "packages" / "ui" / "package.json").read_text(encoding="utf-8"))["version"]
+UI_ARCHIVE = ROOT / "app" / "vendor" / f"ryozan-ui-{UI_VERSION}.tgz"
 DASHBOARD_HOME = ROOT / "app" / "src" / "pages" / "dashboard" / "DashboardHome.tsx"
 
 

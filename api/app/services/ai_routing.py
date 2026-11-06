@@ -44,6 +44,20 @@ def _is_token_factory_model(model_name: str) -> bool:
     return (model_name or "").startswith("nvidia/")
 
 
+def _is_vision_model(model_name: str) -> bool:
+    return (model_name or "").lower().endswith("-vl")
+
+
+def _has_image_part(messages: list[dict]) -> bool:
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list) and any(
+            isinstance(part, dict) and part.get("type") in {"image_url", "input_image", "image"} for part in content
+        ):
+            return True
+    return False
+
+
 ACTIVE_STATUSES = {"active", "trialing"}
 
 
@@ -252,6 +266,12 @@ async def call_ark_gateway_chat_completion(
     HTTPException(502) if every candidate fails.
     """
     models = [primary_model, *fallback_models]
+    if not _has_image_part(messages):
+        # A vision model only earns its latency on an image; on Token Factory
+        # Nemotron 3.5 Super VL took about 40 s per text turn against about 1 s
+        # for Super, so text-only turns skip it when another model is in the chain.
+        text_models = [model for model in models if not _is_vision_model(model)]
+        models = text_models or models
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {settings.ARK_MODEL_GATEWAY_KEY}",

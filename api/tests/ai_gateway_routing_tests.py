@@ -106,6 +106,36 @@ class ArkGatewayRoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([c["json"]["model"] for c in client.calls], ["ark/bttco/gemini", "ark/deepseek"])
         self.assertEqual(data["choices"][0]["message"]["content"], "recovered")
 
+    async def test_text_turn_skips_vision_model(self):
+        client = _FakeAsyncClient([_completion("fast")])
+        with patch.object(ai_routing.httpx, "AsyncClient", return_value=client):
+            await ai_routing.call_ark_gateway_chat_completion(
+                settings=_settings(),
+                system_prompt="s",
+                messages=[{"role": "user", "content": "Do you have my bookings?"}],
+                tools=[],
+                primary_model="nvidia/Nemotron-3.5-Super-VL",
+                fallback_models=["nvidia/nemotron-3-super-120b-a12b"],
+            )
+        self.assertEqual([c["json"]["model"] for c in client.calls], ["nvidia/nemotron-3-super-120b-a12b"])
+
+    async def test_image_turn_keeps_vision_model(self):
+        client = _FakeAsyncClient([_completion("looks clean")])
+        image_turn = [{"role": "user", "content": [
+            {"type": "text", "text": "Critique this flash"},
+            {"type": "image_url", "image_url": {"url": "https://example.org/flash.png"}},
+        ]}]
+        with patch.object(ai_routing.httpx, "AsyncClient", return_value=client):
+            await ai_routing.call_ark_gateway_chat_completion(
+                settings=_settings(),
+                system_prompt="s",
+                messages=image_turn,
+                tools=[],
+                primary_model="nvidia/Nemotron-3.5-Super-VL",
+                fallback_models=["nvidia/nemotron-3-super-120b-a12b"],
+            )
+        self.assertEqual([c["json"]["model"] for c in client.calls], ["nvidia/Nemotron-3.5-Super-VL"])
+
     async def test_auth_failure_fails_fast_without_walking_fallbacks(self):
         # 401 is not retryable: the same key is reused for every slug, so the client
         # must stop after the first attempt instead of repeating the auth failure.

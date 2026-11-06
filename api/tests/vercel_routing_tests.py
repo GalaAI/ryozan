@@ -120,7 +120,8 @@ class VercelRoutingTests(unittest.TestCase):
         tab_bar_path = repo_root / "packages" / "ui" / "src" / "components" / "TabBar.tsx"
         portal_shell_path = repo_root / "packages" / "ui" / "src" / "screens" / "PortalShell.tsx"
         app_package = json.loads((repo_root / "app" / "package.json").read_text(encoding="utf-8"))
-        vendor_name = "ryozan-ui-0.2.2.tgz"
+        ui_package = json.loads((repo_root / "packages" / "ui" / "package.json").read_text(encoding="utf-8"))
+        vendor_name = f"ryozan-ui-{ui_package['version']}.tgz"
         vendor_path = repo_root / "app" / "vendor" / vendor_name
 
         self.assertEqual(app_package["dependencies"]["@ryozan/ui"], f"file:vendor/{vendor_name}")
