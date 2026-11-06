@@ -67,6 +67,9 @@ from app.api.v1.endpoints import (
 from app.api.v1.endpoints import (
     messages as _messages_endpoints,
 )
+from app.api.v1.endpoints import (
+    shop_connections as _shop_connections_endpoints,
+)
 from app.services.demo_shop import refuse_demo_owner_writes
 
 api_router = APIRouter()
@@ -131,3 +134,4 @@ api_router.include_router(workspaces.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(viber.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(whatsapp.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(_demo_shop_endpoints.router)
+api_router.include_router(_shop_connections_endpoints.router)

@@ -109,7 +109,10 @@ def sender_identity(provider: str, settings=None) -> tuple[str, str]:
     if provider == "sendgrid":
         email, name = settings.SENDGRID_FROM_EMAIL, settings.SENDGRID_FROM_NAME
     elif provider == "resend":
-        email, name = settings.RESEND_FROM_EMAIL, settings.RESEND_FROM_NAME
+        from app.services.shop_email_domain import own_sender
+
+        # A shop that verified its own domain sends from it on the platform key.
+        email, name = own_sender() or settings.RESEND_FROM_EMAIL, settings.RESEND_FROM_NAME
     elif provider == "smtp":
         email = (settings.SMTP_FROM_EMAIL or "").strip() or settings.SMTP_USER
         name = settings.SMTP_FROM_NAME

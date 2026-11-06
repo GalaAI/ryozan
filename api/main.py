@@ -493,8 +493,11 @@ async def _ensure_demo_shop() -> bool:
 
 async def _load_saved_studio_settings() -> None:
     """Saved values first, so the seeds and every reader after them see the studio's own."""
+    from app.services import shop_email_domain
+
     async with async_session() as db:
         loaded = await load_saved_settings(db)
+        await shop_email_domain.load(db)
     print(f"[Ryozan] Saved studio settings: {loaded}")
 
 
