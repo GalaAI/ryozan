@@ -1394,7 +1394,7 @@ async def push_training_manifest_to_apex(
 
 @router.get("/store", response_model=FlashDesignListResponse)
 async def browse_store(
-    artist_id: str | None = None,
+    artist_id: UUID | None = None,
     style: str | None = None,
     skip: int = 0,
     limit: int = Query(default=30, le=50),

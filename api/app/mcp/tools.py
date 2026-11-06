@@ -12,6 +12,7 @@ Design rules applied here:
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from app.constants.timezones import shop_timezone
@@ -155,7 +156,10 @@ async def tool_today(token: str | None, args: dict) -> str:
 async def tool_search_bookings(token: str | None, args: dict) -> str:
     """Search the booking pipeline with role-correct scoping."""
     limit = min(int(args.get("limit") or 20), 100)
-    params: dict[str, Any] = {"limit": limit, "skip": int(args.get("skip") or 0)}
+    query = (args.get("query") or "").strip().lower()
+    # The text filter runs here, so fetch a full page first; a small limit would
+    # otherwise filter only the newest rows and miss the match.
+    params: dict[str, Any] = {"limit": 100 if query else limit, "skip": int(args.get("skip") or 0)}
     if args.get("status"):
         params["status"] = args["status"]
     if args.get("whole_shop"):
@@ -165,7 +169,6 @@ async def tool_search_bookings(token: str | None, args: dict) -> str:
     bookings = data.get("bookings", [])
     total = data.get("total", len(bookings))
 
-    query = (args.get("query") or "").strip().lower()
     if query:
         bookings = [
             b
@@ -174,7 +177,7 @@ async def tool_search_bookings(token: str | None, args: dict) -> str:
             or query in str(b.get("client_name") or "").lower()
             or query in str(b.get("description") or "").lower()
             or query in str(b.get("reference_code") or "").lower()
-        ]
+        ][:limit]
 
     header = f"{len(bookings)} booking(s) shown of {total} matching in scope."
     if query:
@@ -392,6 +395,22 @@ def _receipt(**fields: Any) -> str:
     return json.dumps({k: v for k, v in fields.items() if v is not None}, ensure_ascii=False, indent=2)
 
 
+_UUID_TEXT = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+
+
+async def _resolve_artist(token: str | None, value: Any) -> dict | None:
+    """An artist named by id, slug or name, as agents and people both refer to them."""
+    wanted = str(value or "").strip().lower()
+    if not wanted:
+        return None
+    for artist in await get_json("/artists/", token):
+        names = {str(artist.get(key) or "").lower() for key in ("id", "slug", "name")}
+        first = str(artist.get("name") or "").split(" ")[0].lower()
+        if wanted in names or wanted == first:
+            return artist
+    raise UpstreamError(f"No artist matches '{value}'. Call ryozan_list_artists for the names and ids.")
+
+
 async def tool_list_artists(token: str | None, args: dict) -> str:
     """The shop's artists with the ids booking and messaging need."""
     artists = await get_json("/artists/", token)
@@ -405,7 +424,8 @@ async def tool_list_artists(token: str | None, args: dict) -> str:
 
 async def tool_list_flash(token: str | None, args: dict) -> str:
     """Published flash designs a client can book."""
-    params = {"artist_id": args.get("artist_id"), "limit": min(int(args.get("limit") or 20), 50)}
+    artist = await _resolve_artist(token, args.get("artist_id"))
+    params = {"artist_id": artist and artist.get("id"), "limit": min(int(args.get("limit") or 20), 50)}
     data = await get_json("/flash/store", token, params)
     designs = data.get("designs", [])
     if not designs:
@@ -420,9 +440,10 @@ async def tool_list_flash(token: str | None, args: dict) -> str:
 
 async def tool_find_slots(token: str | None, args: dict) -> str:
     """Free booking slots for one artist, from the same route the public booking form uses."""
-    slug = str(args.get("artist_slug") or "").strip()
-    if not slug:
+    artist = await _resolve_artist(token, args.get("artist_slug"))
+    if not artist:
         return "artist_slug is required (see ryozan_list_artists)."
+    slug = str(artist.get("slug"))
     params = {"start": args.get("start"), "end": args.get("end"), "duration_minutes": args.get("duration_minutes")}
     data = await get_json(f"/calendar/slots/{slug}", token, params)
     slots = data.get("slots", [])
@@ -447,6 +468,10 @@ async def tool_request_booking(token: str | None, args: dict) -> str:
         "client_notes",
     )
     payload = {key: args[key] for key in fields if args.get(key) is not None}
+    artist = await _resolve_artist(token, args.get("artist_id"))
+    if not artist:
+        return "artist_id is required (see ryozan_list_artists)."
+    payload["artist_id"] = artist.get("id")
     booking = await write_json("/bookings/", token, "POST", payload)
     return _receipt(
         status=booking.get("status"),
@@ -487,6 +512,15 @@ async def tool_start_conversation(token: str | None, args: dict) -> str:
         return "participant_ids is required."
     if not content:
         return "content is required."
+    # Agents name the shop's people the way people do ("Justin Walker"); an id
+    # passes straight through, a name resolves through the artist list.
+    resolved = []
+    for value in participant_ids:
+        if _UUID_TEXT.match(value):
+            resolved.append(value)
+        else:
+            resolved.append(str((await _resolve_artist(token, value) or {}).get("id")))
+    participant_ids = resolved
     body: dict[str, Any] = {"participant_ids": participant_ids, "is_group": len(participant_ids) > 1}
     if args.get("name"):
         body["name"] = str(args["name"])
@@ -512,6 +546,8 @@ async def tool_block_time(token: str | None, args: dict) -> str:
     """Block personal time on an artist's calendar, such as approved time off."""
     fields = ("artist_id", "block_date", "all_day", "start_time", "end_time", "reason")
     payload = {key: args[key] for key in fields if args.get(key) is not None}
+    if payload.get("artist_id"):
+        payload["artist_id"] = (await _resolve_artist(token, payload["artist_id"]) or {}).get("id")
     block = await write_json("/calendar/time-blocks", token, "POST", payload)
     return _receipt(
         time_block_id=block.get("id"),
@@ -1332,7 +1368,7 @@ TOOL_SPECS += [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "artist_id": {"type": "string", "description": "Only this artist's designs."},
+                "artist_id": {"type": "string", "description": "Only this artist's designs: id, slug or name."},
                 "limit": {"type": "integer", "minimum": 1, "maximum": 50},
             },
             "additionalProperties": False,
@@ -1350,7 +1386,7 @@ TOOL_SPECS += [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "artist_slug": {"type": "string", "description": "Artist slug from ryozan_list_artists."},
+                "artist_slug": {"type": "string", "description": "Artist slug, id or name from ryozan_list_artists."},
                 "start": {"type": "string", "description": "YYYY-MM-DD."},
                 "end": {"type": "string", "description": "YYYY-MM-DD."},
                 "duration_minutes": {"type": "integer", "minimum": 15, "maximum": 720},
@@ -1371,7 +1407,7 @@ TOOL_SPECS += [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "artist_id": {"type": "string", "description": "Artist id from ryozan_list_artists."},
+                "artist_id": {"type": "string", "description": "Artist id, slug or name from ryozan_list_artists."},
                 "description": {"type": "string", "minLength": 10, "maxLength": 5000},
                 "placement": {"type": "string"},
                 "size_estimate": {"type": "string"},
@@ -1417,7 +1453,12 @@ TOOL_SPECS += [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "participant_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "participant_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "minItems": 1,
+                    "description": "User ids, or names of the shop's artists and owner.",
+                },
                 "content": {"type": "string", "minLength": 1, "maxLength": 10000},
                 "name": {"type": "string", "description": "Thread name; set it for a group thread."},
             },
@@ -1453,7 +1494,10 @@ TOOL_SPECS += [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "artist_id": {"type": "string", "description": "Shop management only; defaults to the caller."},
+                "artist_id": {
+                    "type": "string",
+                    "description": "Artist id, slug or name. Shop management only; defaults to the caller.",
+                },
                 "block_date": {"type": "string", "description": "YYYY-MM-DD."},
                 "all_day": {"type": "boolean", "default": False},
                 "start_time": {"type": "string", "description": "HH:MM; required unless all_day."},

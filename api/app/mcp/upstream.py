@@ -90,7 +90,9 @@ async def get_json(
                 if response.status_code == 403:
                     raise UpstreamError("This Ryozan account does not have access to that record.")
                 if response.status_code == 404:
-                    raise UpstreamError("Not found.")
+                    raise UpstreamError(_refusal(response, "Not found.", prefix=""))
+                if response.status_code == 422:
+                    raise UpstreamError(_refusal(response, "Ryozan rejected these values.", prefix="Rejected: "))
                 if response.status_code not in _RETRY_STATUSES:
                     response.raise_for_status()
                     return response.json()
