@@ -364,6 +364,24 @@ async def send_email(
     # Infer template name from tags (first tag wins, fallback to "general")
     template_name = (tags[0] if tags else None) or "general"
 
+    from app.services.demo_shop import demo_outbound_refusal
+
+    demo_refusal = demo_outbound_refusal("email", to)
+    if demo_refusal:
+        logger.info("[DEMO_SHOP] email refused (%s). to=%s", demo_refusal, to)
+        await _log_email_send(
+            to=to,
+            subject=subject,
+            template=template_name,
+            from_alias=alias_key,
+            resend_id=None,
+            status="demo_refused",
+            error=demo_refusal,
+            courier_message_id=courier_message_id,
+            courier_attempt=courier_attempt,
+        )
+        return False
+
     if settings.LOCAL_DEV_MODE and not redirect_active:
         logger.info("[LOCAL_DEV_MODE] email send skipped. to=%s subject=%s", to, subject)
         await _log_email_send(

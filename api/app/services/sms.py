@@ -504,6 +504,17 @@ async def send_sms(
         logger.error("sms.send.sender_lane_blocked lane=%s code=%s", lane_id, lane_error.code)
         return log
 
+    from app.services.demo_shop import demo_outbound_refusal
+
+    demo_refusal = demo_outbound_refusal("sms", e164 or to)
+    if demo_refusal:
+        log.status = "failed"
+        log.error_code = "DEMO_SHOP"
+        log.error_message = f"Demo shop: {demo_refusal}"
+        await db.flush()
+        logger.info("sms.send.demo_refused to=%s reason=%s", e164 or to, demo_refusal)
+        return log
+
     if settings.LOCAL_DEV_MODE:
         log.status = "dev_skipped"
         log.twilio_sid = f"dev-mock-{int(datetime.now(UTC).timestamp())}"

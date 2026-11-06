@@ -1,0 +1,246 @@
+{
+  "about": "Justin Walker's public BTTCO catalog, read 2026-11-05: profile, services, flash. It is written onto the demo owner account. No other artist's work. Sample clients are invented and use @example.com.",
+  "artist": {
+    "profile_fields": [
+      "name",
+      "slug",
+      "title",
+      "specialty",
+      "bio",
+      "avatar_url",
+      "portfolio_images",
+      "instagram_url",
+      "booking_mode",
+      "availability_source",
+      "booking_slot_interval_minutes",
+      "booking_buffer_minutes",
+      "booking_min_notice_hours",
+      "booking_max_advance_days",
+      "booking_allow_same_day",
+      "flash_deposit_amount",
+      "allow_prepay_full"
+    ],
+    "name": "Justin Walker",
+    "slug": "justin",
+    "title": "Founder / 2nd Gen Tattoo Artist",
+    "specialty": [
+      "Japanese",
+      "Black & Grey",
+      "Traditional"
+    ],
+    "bio": "Owner/Founder & artist at Blind Tiger Tattoo Co. \nPracticing tradition with a modern touch.",
+    "avatar_url": "https://assets.blindtigertattoo.co/avatars/68a8d9d0-940a-46ec-ae73-803d1a0aa093/d6a552ee620c42acad98d4ef64c4be71.png",
+    "portfolio_images": [
+      "https://assets.blindtigertattoo.co/portfolios/justin/BF360C9F-53E3-4B30-9B53-3547C16CA23F.jpg",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_0212.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_1470.PNG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_1777.PNG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_4096.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_4113.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_4814.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_5124.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_6198.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_6201.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_9504.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/IMG_9861.JPG",
+      "https://assets.blindtigertattoo.co/portfolios/justin/Untitled-6.png"
+    ],
+    "instagram_url": "https://instagram.com/justinwalkertattoo",
+    "booking_mode": "api",
+    "availability_source": "none",
+    "booking_slot_interval_minutes": 30,
+    "booking_buffer_minutes": 30,
+    "booking_min_notice_hours": 24,
+    "booking_max_advance_days": 180,
+    "booking_allow_same_day": false,
+    "flash_deposit_amount": 100.0,
+    "allow_prepay_full": false
+  },
+  "session_types": [
+    {
+      "label": "45 Minute Mini Tattoo",
+      "size": "small",
+      "placements": [],
+      "duration_minutes": 45,
+      "buffer_minutes": 0,
+      "deposit_amount": 50.0,
+      "hourly_rate": 150.0,
+      "price_min": 100.0,
+      "price_max": 150.0
+    },
+    {
+      "label": "3 Hour Flash, Palm Sized",
+      "size": "small",
+      "placements": [],
+      "duration_minutes": 180,
+      "buffer_minutes": 0,
+      "deposit_amount": 100.0,
+      "hourly_rate": 175.0,
+      "price_min": 400.0,
+      "price_max": 650.0
+    },
+    {
+      "label": "Half Day Session",
+      "size": "large",
+      "placements": [],
+      "duration_minutes": 240,
+      "buffer_minutes": 60,
+      "deposit_amount": 200.0,
+      "hourly_rate": 175.0,
+      "price_min": 700.0,
+      "price_max": 1000.0
+    },
+    {
+      "label": "Full Day Session",
+      "size": "xlarge",
+      "placements": [],
+      "duration_minutes": 480,
+      "buffer_minutes": 0,
+      "deposit_amount": 300.0,
+      "hourly_rate": 175.0,
+      "price_min": 1200.0,
+      "price_max": 1600.0
+    }
+  ],
+  "flash_sheet": {
+    "title": "Justin Walker flash",
+    "image_url": "https://assets.blindtigertattoo.co/flash/justin/previews/20260809-tengu-mask-ac2790ec31ab.webp"
+  },
+  "flash": [
+    {
+      "name": "Tengu Mask",
+      "image_url": "https://assets.blindtigertattoo.co/flash/justin/previews/20260809-tengu-mask-ac2790ec31ab.webp",
+      "estimated_minutes": 180,
+      "style": "japanese",
+      "price": null
+    },
+    {
+      "name": "Hannya with Hat",
+      "image_url": "https://assets.blindtigertattoo.co/flash/justin/previews/20260809-hannya-with-hat-04026acc470a.webp",
+      "estimated_minutes": 210,
+      "style": "japanese",
+      "price": null
+    },
+    {
+      "name": "Red Crab",
+      "image_url": "https://assets.blindtigertattoo.co/flash/justin/previews/20260809-red-crab-c5f0c64f6a27.webp",
+      "estimated_minutes": 180,
+      "style": "japanese",
+      "price": null
+    },
+    {
+      "name": "Dragon with Umbrella",
+      "image_url": "https://assets.blindtigertattoo.co/flash/justin/previews/20260809-dragon-with-umbrella-59117546b1ef.webp",
+      "estimated_minutes": 240,
+      "style": "japanese",
+      "price": null
+    }
+  ],
+  "sample_clients": [
+    {
+      "name": "Sample Client: Noor Haddad",
+      "email": "noor.sample@example.com",
+      "description": "Script lettering on the collarbone, second session",
+      "placement": "Collarbone",
+      "size": "4 in",
+      "status": "confirmed",
+      "reference_code": "DEMO-001",
+      "days_out": 1,
+      "time": "14:00",
+      "minutes": 90,
+      "deposit": 50,
+      "total": 240,
+      "deposit_paid": true
+    },
+    {
+      "name": "Sample Client: Rae Ortiz",
+      "email": "rae.sample@example.com",
+      "description": "Koi on the forearm, about 6 inches, black and grey",
+      "placement": "Forearm",
+      "size": "6 in",
+      "status": "confirmed",
+      "reference_code": "DEMO-002",
+      "days_out": 3,
+      "time": "11:00",
+      "minutes": 180,
+      "deposit": 100,
+      "total": 550,
+      "deposit_paid": true
+    },
+    {
+      "name": "Sample Client: Theo Lang",
+      "email": "theo.sample@example.com",
+      "description": "The Red Crab from the flash wall",
+      "placement": "Calf",
+      "size": "5 in",
+      "status": "confirmed",
+      "reference_code": "DEMO-003",
+      "days_out": 5,
+      "time": "15:00",
+      "minutes": 180,
+      "deposit": 100,
+      "total": 500,
+      "deposit_paid": false
+    },
+    {
+      "name": "Sample Client: Ines Moreau",
+      "email": "ines.sample@example.com",
+      "description": "Touch-up on an older peony piece",
+      "placement": "Shoulder",
+      "size": "3 in",
+      "status": "confirmed",
+      "reference_code": "DEMO-004",
+      "days_out": 8,
+      "time": "12:30",
+      "minutes": 60,
+      "deposit": 0,
+      "total": 80,
+      "deposit_paid": false
+    },
+    {
+      "name": "Sample Client: Dev Patel",
+      "email": "dev.sample@example.com",
+      "description": "Japanese sleeve start, wants a consult first",
+      "placement": "Full sleeve",
+      "size": "Sleeve",
+      "status": "quoted",
+      "reference_code": "DEMO-005",
+      "days_out": 12,
+      "time": "10:00",
+      "minutes": 240,
+      "deposit": 200,
+      "total": 1200,
+      "deposit_paid": false
+    },
+    {
+      "name": "Sample Client: Sam Reyes",
+      "email": "sam.sample@example.com",
+      "description": "Is the Tengu Mask still available? Hoping for this month",
+      "placement": "Thigh",
+      "size": "6 in",
+      "status": "pending",
+      "reference_code": "DEMO-006",
+      "days_out": null,
+      "time": null,
+      "minutes": null,
+      "deposit": null,
+      "total": null,
+      "deposit_paid": false
+    },
+    {
+      "name": "Sample Client: Mika Chen",
+      "email": "mika.sample@example.com",
+      "description": "Hannya on the back of the arm, has references and a budget",
+      "placement": "Upper arm",
+      "size": "7 in",
+      "status": "pending",
+      "reference_code": "DEMO-007",
+      "days_out": null,
+      "time": null,
+      "minutes": null,
+      "deposit": null,
+      "total": null,
+      "deposit_paid": false
+    }
+  ]
+}

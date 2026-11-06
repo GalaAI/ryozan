@@ -1770,7 +1770,7 @@ async def execute_tool(
         if not query:
             raise WebSearchError("web_search needs a query.")
         # A WebSearchError propagates so the caller records a failed receipt.
-        if user.role not in STAFF_ROLES:
+        if user.role not in STAFF_ROLES or is_demo_account(user):
             settings = get_settings()
             cap = (
                 settings.DEMO_ACCOUNT_MONTHLY_SEARCHES

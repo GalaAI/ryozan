@@ -239,10 +239,24 @@ class ConversationCreationBoundaryTests(unittest.IsolatedAsyncioTestCase):
     async def test_assigned_artist_can_start_one_to_one_client_thread(self):
         artist = _user("artist")
         collector = _user("collector")
-        db = _Session(_Result(scalar=uuid.uuid4()))
+        # First lookup: is the other person shop management? Second: the booking link.
+        db = _Session(_Result(scalar=None), _Result(scalar=uuid.uuid4()))
 
         await conversations._require_conversation_creation_access(
             ConversationCreate(participant_ids=[collector.id]),
+            artist,
+            db,
+        )
+
+        self.assertEqual(db.execute_count, 2)
+
+    async def test_artist_can_always_start_one_to_one_thread_with_shop_management(self):
+        artist = _user("artist")
+        owner = _user("founder")
+        db = _Session(_Result(scalar=owner.id))
+
+        await conversations._require_conversation_creation_access(
+            ConversationCreate(participant_ids=[owner.id]),
             artist,
             db,
         )
@@ -252,7 +266,7 @@ class ConversationCreationBoundaryTests(unittest.IsolatedAsyncioTestCase):
     async def test_unassigned_artist_is_blocked_before_conversation_creation(self):
         artist = _user("artist")
         collector = _user("collector")
-        db = _Session(_Result(scalar=None))
+        db = _Session(_Result(scalar=None), _Result(scalar=None))
 
         with self.assertRaises(HTTPException) as ctx:
             await conversations.create_conversation(
@@ -262,7 +276,7 @@ class ConversationCreationBoundaryTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(ctx.exception.status_code, 403)
-        self.assertEqual(db.execute_count, 1)
+        self.assertEqual(db.execute_count, 2)
 
     async def test_collector_can_start_thread_only_with_their_booked_artist(self):
         collector = _user("collector")

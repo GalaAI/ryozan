@@ -384,6 +384,182 @@ async def tool_search_contacts(token: str | None, args: dict) -> str:
     return "\n".join(lines)
 
 
+# Shop actions a person takes as themselves, so test agents (the matrix NPCs)
+# and a signed-in client's own assistant use the web app's routes, not a copy.
+
+
+def _receipt(**fields: Any) -> str:
+    return json.dumps({k: v for k, v in fields.items() if v is not None}, ensure_ascii=False, indent=2)
+
+
+async def tool_list_artists(token: str | None, args: dict) -> str:
+    """The shop's artists with the ids booking and messaging need."""
+    artists = await get_json("/artists/", token)
+    if not artists:
+        return "No artists are listed."
+    lines = [f"{len(artists)} artist(s):", ""]
+    for artist in artists[:MAX_ROWS]:
+        lines.append(f"  {artist.get('name')} · slug {artist.get('slug')} · id {artist.get('id')}")
+    return "\n".join(lines)
+
+
+async def tool_list_flash(token: str | None, args: dict) -> str:
+    """Published flash designs a client can book."""
+    params = {"artist_id": args.get("artist_id"), "limit": min(int(args.get("limit") or 20), 50)}
+    data = await get_json("/flash/store", token, params)
+    designs = data.get("designs", [])
+    if not designs:
+        return "No published flash designs."
+    lines = [f"{len(designs)} of {data.get('total', len(designs))} published flash design(s):", ""]
+    for design in designs[:MAX_ROWS]:
+        price = _fmt_money(design.get("price")) if design.get("price") is not None else "price on request"
+        claimed = " · claimed" if design.get("claimed_by") else ""
+        lines.append(f"  {design.get('name') or 'Untitled'} · {price} · id {design.get('id')}{claimed}")
+    return "\n".join(lines)
+
+
+async def tool_find_slots(token: str | None, args: dict) -> str:
+    """Free booking slots for one artist, from the same route the public booking form uses."""
+    slug = str(args.get("artist_slug") or "").strip()
+    if not slug:
+        return "artist_slug is required (see ryozan_list_artists)."
+    params = {"start": args.get("start"), "end": args.get("end"), "duration_minutes": args.get("duration_minutes")}
+    data = await get_json(f"/calendar/slots/{slug}", token, params)
+    slots = data.get("slots", [])
+    if not slots:
+        return f"No free slots for {slug} between {args.get('start')} and {args.get('end')}."
+    lines = [f"{len(slots)} free slot(s) for {slug}, {data.get('duration_minutes')} min sessions:", ""]
+    for slot in slots[:MAX_ROWS]:
+        lines.append(f"  {slot.get('label')} · start {slot.get('start')}")
+    return "\n".join(lines)
+
+
+async def tool_request_booking(token: str | None, args: dict) -> str:
+    """Send a booking request to an artist as the signed-in client."""
+    fields = (
+        "artist_id",
+        "description",
+        "placement",
+        "size_estimate",
+        "style_preference",
+        "preferred_date",
+        "preferred_time",
+        "client_notes",
+    )
+    payload = {key: args[key] for key in fields if args.get(key) is not None}
+    booking = await write_json("/bookings/", token, "POST", payload)
+    return _receipt(
+        status=booking.get("status"),
+        booking_id=booking.get("id"),
+        reference_code=booking.get("reference_code"),
+        preferred_date=booking.get("preferred_date"),
+    )
+
+
+async def tool_book_flash(token: str | None, args: dict) -> str:
+    """Book a flash design for the signed-in client, never on someone else's name."""
+    me = await get_json("/auth/me", token)
+    payload = {
+        "design_id": str(args.get("design_id") or ""),
+        "scheduled_date": str(args.get("scheduled_date") or ""),
+        "scheduled_time": str(args.get("scheduled_time") or ""),
+        "guest_name": me.get("name") or me.get("email"),
+        "guest_email": me.get("email"),
+        "pay_full": False,
+    }
+    booked = await write_json("/flash/book", token, "POST", payload)
+    return _receipt(
+        booking_reference=booked.get("booking_reference"),
+        design_name=booked.get("design_name"),
+        scheduled_date=booked.get("scheduled_date"),
+        scheduled_time=booked.get("scheduled_time"),
+        checkout_required=booked.get("checkout_required"),
+        checkout_url=booked.get("checkout_url"),
+        amount_cents=booked.get("amount_cents"),
+    )
+
+
+async def tool_start_conversation(token: str | None, args: dict) -> str:
+    """Open an in-app thread with other shop members and post its first message."""
+    participant_ids = [str(value) for value in (args.get("participant_ids") or []) if value]
+    content = str(args.get("content") or "").strip()
+    if not participant_ids:
+        return "participant_ids is required."
+    if not content:
+        return "content is required."
+    body: dict[str, Any] = {"participant_ids": participant_ids, "is_group": len(participant_ids) > 1}
+    if args.get("name"):
+        body["name"] = str(args["name"])
+    conversation = await write_json("/conversations/", token, "POST", body)
+    conversation_id = conversation.get("id")
+    message = await write_json(f"/conversations/{conversation_id}/messages", token, "POST", {"content": content})
+    return _receipt(conversation_id=conversation_id, message_id=message.get("id"))
+
+
+async def tool_post_message(token: str | None, args: dict) -> str:
+    """Post an in-app message in a thread the caller belongs to. Sends no email or SMS."""
+    conversation_id = str(args.get("conversation_id") or "").strip()
+    content = str(args.get("content") or "").strip()
+    if not conversation_id:
+        return "conversation_id is required."
+    if not content:
+        return "content is required."
+    message = await write_json(f"/conversations/{conversation_id}/messages", token, "POST", {"content": content})
+    return _receipt(conversation_id=conversation_id, message_id=message.get("id"))
+
+
+async def tool_block_time(token: str | None, args: dict) -> str:
+    """Block personal time on an artist's calendar, such as approved time off."""
+    fields = ("artist_id", "block_date", "all_day", "start_time", "end_time", "reason")
+    payload = {key: args[key] for key in fields if args.get(key) is not None}
+    block = await write_json("/calendar/time-blocks", token, "POST", payload)
+    return _receipt(
+        time_block_id=block.get("id"),
+        artist_id=block.get("artist_id"),
+        block_date=block.get("block_date"),
+        all_day=block.get("all_day"),
+        start_time=block.get("start_time"),
+        end_time=block.get("end_time"),
+        reason=block.get("reason"),
+    )
+
+
+async def tool_approve_booking(token: str | None, args: dict) -> str:
+    """Approve a booking request with one time and a deposit, through the staff approval route."""
+    booking_id = str(args.get("booking_id") or "").strip()
+    if not booking_id:
+        return "booking_id is required."
+    fields = ("scheduled_date", "scheduled_time", "duration_minutes", "deposit_amount", "artist_message")
+    payload = {key: args[key] for key in fields if args.get(key) is not None}
+    result = await write_json(f"/bookings/{booking_id}/approve", token, "POST", payload)
+    return _receipt(
+        booking_id=(result.get("booking") or {}).get("id") or booking_id,
+        status=result.get("status"),
+        scheduled_date=result.get("scheduled_date"),
+        scheduled_time=result.get("scheduled_time"),
+        deposit_amount=result.get("deposit_amount"),
+        deposit_link_sent=result.get("deposit_link_sent"),
+    )
+
+
+async def tool_update_flash(token: str | None, args: dict) -> str:
+    """Change a flash design's name, price, deposit or status, for example to run a promo."""
+    design_id = str(args.get("design_id") or "").strip()
+    if not design_id:
+        return "design_id is required."
+    payload = {key: args[key] for key in ("name", "price", "deposit_amount", "status") if args.get(key) is not None}
+    if not payload:
+        return "Nothing to change: pass name, price, deposit_amount or status."
+    design = await write_json(f"/flash/designs/{design_id}", token, "PATCH", payload)
+    return _receipt(
+        design_id=design.get("id") or design_id,
+        name=design.get("name"),
+        price=design.get("price"),
+        deposit_amount=design.get("deposit_amount"),
+        status=design.get("status"),
+    )
+
+
 async def _resolve_workspace_slug(token: str | None, args: dict) -> str | None:
     requested = (args.get("slug") or "").strip()
     if requested:
@@ -1135,6 +1311,207 @@ TOOL_SPECS += [
         "handler": tool_search_contacts,
     },
     {
+        "name": "ryozan_list_artists",
+        "title": "List Ryozan artists",
+        "description": (
+            "Lists the shop's artists with the slug and id that ryozan_request_booking, "
+            "ryozan_start_conversation and ryozan_block_time take."
+        ),
+        "annotations": _READ_ONLY,
+        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "handler": tool_list_artists,
+    },
+    {
+        "name": "ryozan_list_flash",
+        "title": "List bookable flash",
+        "description": (
+            "Lists published flash designs with price, id and whether one is already claimed. Use the id "
+            "with ryozan_book_flash or ryozan_update_flash."
+        ),
+        "annotations": _READ_ONLY,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "artist_id": {"type": "string", "description": "Only this artist's designs."},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+            },
+            "additionalProperties": False,
+        },
+        "handler": tool_list_flash,
+    },
+    {
+        "name": "ryozan_find_slots",
+        "title": "Find free booking slots",
+        "description": (
+            "Lists one artist's free booking slots between two dates, using the shop's hours, buffers, "
+            "minimum notice, time blocks and calendar busy times. Book one with ryozan_book_flash."
+        ),
+        "annotations": _READ_ONLY,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "artist_slug": {"type": "string", "description": "Artist slug from ryozan_list_artists."},
+                "start": {"type": "string", "description": "YYYY-MM-DD."},
+                "end": {"type": "string", "description": "YYYY-MM-DD."},
+                "duration_minutes": {"type": "integer", "minimum": 15, "maximum": 720},
+            },
+            "required": ["artist_slug", "start", "end"],
+            "additionalProperties": False,
+        },
+        "handler": tool_find_slots,
+    },
+    {
+        "name": "ryozan_request_booking",
+        "title": "Request a booking as yourself",
+        "description": (
+            "Sends a booking request to one artist as the signed-in client, through the same route as "
+            "the client portal. The artist approves a time and deposit later. Takes no payment."
+        ),
+        "annotations": _WRITE,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "artist_id": {"type": "string", "description": "Artist id from ryozan_list_artists."},
+                "description": {"type": "string", "minLength": 10, "maxLength": 5000},
+                "placement": {"type": "string"},
+                "size_estimate": {"type": "string"},
+                "style_preference": {"type": "string"},
+                "preferred_date": {"type": "string", "description": "YYYY-MM-DD."},
+                "preferred_time": {"type": "string", "description": "HH:MM, shop local time."},
+                "client_notes": {"type": "string"},
+            },
+            "required": ["artist_id", "description"],
+            "additionalProperties": False,
+        },
+        "handler": tool_request_booking,
+    },
+    {
+        "name": "ryozan_book_flash",
+        "title": "Book a flash design as yourself",
+        "description": (
+            "Books one published flash design for the signed-in client at a free slot, always in the "
+            "caller's own name and email. When the design needs a deposit the shop returns a Stripe "
+            "checkout link; this tool never pays it."
+        ),
+        "annotations": _WRITE,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "design_id": {"type": "string", "description": "Design id from ryozan_list_flash."},
+                "scheduled_date": {"type": "string", "description": "YYYY-MM-DD."},
+                "scheduled_time": {"type": "string", "description": "HH:MM, shop local time."},
+            },
+            "required": ["design_id", "scheduled_date", "scheduled_time"],
+            "additionalProperties": False,
+        },
+        "handler": tool_book_flash,
+    },
+    {
+        "name": "ryozan_start_conversation",
+        "title": "Start an in-app thread",
+        "description": (
+            "Opens an in-app Courier thread with other shop members and posts its first message. "
+            "In-app only: sends no email, SMS or WhatsApp."
+        ),
+        "annotations": _WRITE,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "participant_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "content": {"type": "string", "minLength": 1, "maxLength": 10000},
+                "name": {"type": "string", "description": "Thread name; set it for a group thread."},
+            },
+            "required": ["participant_ids", "content"],
+            "additionalProperties": False,
+        },
+        "handler": tool_start_conversation,
+    },
+    {
+        "name": "ryozan_post_message",
+        "title": "Post in an in-app thread",
+        "description": "Posts one in-app message in a thread the caller belongs to. Sends no email, SMS or WhatsApp.",
+        "annotations": _WRITE,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "conversation_id": {"type": "string"},
+                "content": {"type": "string", "minLength": 1, "maxLength": 10000},
+            },
+            "required": ["conversation_id", "content"],
+            "additionalProperties": False,
+        },
+        "handler": tool_post_message,
+    },
+    {
+        "name": "ryozan_block_time",
+        "title": "Block time on an artist's calendar",
+        "description": (
+            "Blocks personal time, such as approved time off, on the caller's calendar or, for shop "
+            "management, on another artist's. Booking availability excludes it at once."
+        ),
+        "annotations": _WRITE,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "artist_id": {"type": "string", "description": "Shop management only; defaults to the caller."},
+                "block_date": {"type": "string", "description": "YYYY-MM-DD."},
+                "all_day": {"type": "boolean", "default": False},
+                "start_time": {"type": "string", "description": "HH:MM; required unless all_day."},
+                "end_time": {"type": "string", "description": "HH:MM; required unless all_day."},
+                "reason": {"type": "string", "maxLength": 255},
+            },
+            "required": ["block_date"],
+            "additionalProperties": False,
+        },
+        "handler": tool_block_time,
+    },
+    {
+        "name": "ryozan_approve_booking",
+        "title": "Approve a booking request",
+        "description": (
+            "Approves one booking request with a time and deposit through the staff approval route, "
+            "which checks hours, buffers and other bookings. A zero deposit confirms it; a positive one "
+            "leaves it waiting on the deposit. Moves no money."
+        ),
+        "annotations": _WRITE,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "booking_id": {"type": "string"},
+                "scheduled_date": {"type": "string", "description": "YYYY-MM-DD."},
+                "scheduled_time": {"type": "string", "description": "HH:MM, shop local time."},
+                "duration_minutes": {"type": "integer", "minimum": 15, "maximum": 720},
+                "deposit_amount": {"type": "number", "minimum": 0, "maximum": 5000},
+                "artist_message": {"type": "string", "maxLength": 1000},
+            },
+            "required": ["booking_id", "scheduled_date", "scheduled_time", "deposit_amount"],
+            "additionalProperties": False,
+        },
+        "handler": tool_approve_booking,
+    },
+    {
+        "name": "ryozan_update_flash",
+        "title": "Change a flash design",
+        "description": (
+            "Changes one flash design's name, price, deposit or status (draft, published, archived), "
+            "for example to run a promo price. Only its artist or shop management may change it."
+        ),
+        "annotations": _UPSERT,
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "design_id": {"type": "string"},
+                "name": {"type": "string"},
+                "price": {"type": "number", "minimum": 0},
+                "deposit_amount": {"type": "number", "minimum": 0},
+                "status": {"type": "string", "enum": ["draft", "published", "archived"]},
+            },
+            "required": ["design_id"],
+            "additionalProperties": False,
+        },
+        "handler": tool_update_flash,
+    },
+    {
         "name": "ryozan_triage_booking_with_calendar",
         "title": "Triage a booking with live consultation times",
         "description": (
@@ -1466,6 +1843,16 @@ TOOL_ACCESS_POLICY: dict[str, tuple[str, str]] = {
     "ryozan_draft_reply": ("assistant", "ryozan.shop.read"),
     "ryozan_send_channel_message": ("admin", "ryozan.shop.send"),
     "ryozan_search_contacts": ("assistant", "ryozan.shop.read"),
+    "ryozan_list_artists": ("collector", "ryozan.shop.read"),
+    "ryozan_list_flash": ("collector", "ryozan.shop.read"),
+    "ryozan_find_slots": ("collector", "ryozan.shop.read"),
+    "ryozan_request_booking": ("collector", "ryozan.client.write"),
+    "ryozan_book_flash": ("collector", "ryozan.client.write"),
+    "ryozan_start_conversation": ("collector", "ryozan.client.write"),
+    "ryozan_post_message": ("collector", "ryozan.client.write"),
+    "ryozan_block_time": ("artist", "ryozan.shop.write"),
+    "ryozan_approve_booking": ("assistant", "ryozan.shop.write"),
+    "ryozan_update_flash": ("artist", "ryozan.shop.write"),
     "ryozan_reschedule_booking": ("assistant", "ryozan.shop.write"),
     "ryozan_cancel_booking": ("assistant", "ryozan.shop.write"),
     "ryozan_triage_booking_with_calendar": ("assistant", "ryozan.shop.read"),

@@ -473,6 +473,24 @@ async def _ensure_demo_account() -> None:
         print(f"[Ryozan] Demo account failed: {type(exc).__name__}")
 
 
+async def _ensure_demo_shop() -> bool:
+    """Seed the shared judge shop when DEMO_SHOP_ENABLED is on; True when it is running."""
+    from app.services.demo_shop import demo_shop_enabled, open_owner_booking, refuse_live_stripe_key, seed_demo_shop
+
+    if not demo_shop_enabled():
+        return False
+    open_owner_booking()
+    if refuse_live_stripe_key():
+        print("[Ryozan] Demo shop: live Stripe key refused, checkout is off until a test key is set")
+    try:
+        async with async_session() as session:
+            outcome = await seed_demo_shop(session)
+        print(f"[Ryozan] Demo shop: {outcome}")
+    except Exception as exc:  # a broken seed must not stop the API
+        print(f"[Ryozan] Demo shop seed failed: {type(exc).__name__}")
+    return True
+
+
 async def _load_saved_studio_settings() -> None:
     """Saved values first, so the seeds and every reader after them see the studio's own."""
     async with async_session() as db:
@@ -500,6 +518,11 @@ async def lifespan(app: FastAPI):
     await _load_saved_studio_settings()
     await _run_startup_seeds()
     await _ensure_demo_account()
+    demo_shop_task = None
+    if await _ensure_demo_shop():
+        from app.services.demo_shop import run_nightly_resets
+
+        demo_shop_task = asyncio.create_task(run_nightly_resets(async_session))
     await _announce_first_run_setup()
     outbox_task = asyncio.create_task(_run_owner_email_outbox())
     derivatives_task = (
@@ -515,6 +538,10 @@ async def lifespan(app: FastAPI):
             derivatives_task.cancel()
             with suppress(asyncio.CancelledError):
                 await derivatives_task
+        if demo_shop_task:
+            demo_shop_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await demo_shop_task
         # ── Shutdown ──────────────────────────────
         print("[Ryozan] Shutting down...")
 

@@ -103,6 +103,20 @@ async def get_json(
     raise UpstreamError(f"Ryozan API is not answering ({last_detail}). Nothing was changed.")
 
 
+def _refusal(response: httpx.Response, fallback: str, prefix: str = "Nothing was changed: ") -> str:
+    """The route's own refusal text, so an agent sees which rule stopped the write."""
+    try:
+        detail = response.json().get("detail")
+    except ValueError:
+        detail = None
+    if isinstance(detail, str) and detail.strip():
+        return f"{prefix}{detail.strip()}"
+    if isinstance(detail, list) and detail:
+        fields = ", ".join(str(item.get("loc", ["?"])[-1]) for item in detail if isinstance(item, dict))
+        return f"{prefix}invalid {fields}." if fields else fallback
+    return fallback
+
+
 async def write_json(
     path: str,
     token: str | None,
@@ -131,23 +145,39 @@ async def write_json(
         for attempt in range(1, _MAX_ATTEMPTS + 1):
             try:
                 response = await client.request(normalized_method, url, headers=headers, json=payload)
-            except httpx.TimeoutException:
-                last_detail = "upstream timed out"
-            except httpx.HTTPError as exc:
+            except httpx.ConnectError as exc:
+                # Only a write that never reached the API is safe to send again.
                 last_detail = f"upstream unreachable ({type(exc).__name__})"
+            except httpx.HTTPError as exc:
+                raise UpstreamError(
+                    f"Ryozan did not answer this write ({type(exc).__name__}). It may have been applied; "
+                    "check before sending it again."
+                ) from exc
             else:
                 if response.status_code == 401:
                     raise UpstreamError("Ryozan OAuth grant was rejected or expired. Reconnect the MCP server.")
                 if response.status_code == 403:
-                    raise UpstreamError("This write requires Ryozan admin or founder access.")
+                    raise UpstreamError(_refusal(response, "Ryozan refused this write for this account."))
                 if response.status_code == 404:
-                    raise UpstreamError("Not found.")
+                    raise UpstreamError(_refusal(response, "Not found."))
                 if response.status_code == 409:
-                    raise UpstreamError("The requested Ryozan record already exists or conflicts with current state.")
-                if response.status_code not in _RETRY_STATUSES:
-                    response.raise_for_status()
-                    return response.json()
-                last_detail = f"upstream returned {response.status_code}"
+                    raise UpstreamError(
+                        _refusal(
+                            response, "The requested Ryozan record already exists or conflicts with current state."
+                        )
+                    )
+                if response.status_code == 422:
+                    raise UpstreamError(_refusal(response, "Ryozan rejected these values."))
+                if response.status_code in _RETRY_STATUSES:
+                    raise UpstreamError(
+                        _refusal(
+                            response,
+                            f"Ryozan returned {response.status_code} for this write. Check before retrying.",
+                            prefix=f"Ryozan returned {response.status_code}: ",
+                        )
+                    )
+                response.raise_for_status()
+                return response.json()
 
             if attempt < _MAX_ATTEMPTS:
                 delay = min(_BACKOFF_FLOOR_SECONDS * (2 ** (attempt - 1)), _BACKOFF_CAP_SECONDS)

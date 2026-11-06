@@ -711,6 +711,16 @@ class Settings(BaseSettings):
     DEMO_ACCOUNT_PASSWORD: str = ""
     DEMO_ACCOUNT_MONTHLY_AI_TURNS: int = 300
     DEMO_ACCOUNT_MONTHLY_SEARCHES: int = 150
+    # Shared judge shop (app.services.demo_shop). On, the demo account owns the
+    # install, the shop is seeded with one artist's public catalog and sample
+    # clients, outbound sends are capped and never reach sample addresses, a
+    # live Stripe key is dropped, and the shop resets daily at the hour below.
+    DEMO_SHOP_ENABLED: bool = False
+    DEMO_SHOP_DAILY_SENDS: int = 40
+    DEMO_SHOP_RESET_HOUR_UTC: int = 9
+    # Password for the sample artist and sample collector accounts that test
+    # agents sign in as. Blank or under 12 characters leaves them unusable.
+    DEMO_NPC_PASSWORD: str = ""
 
     # Live web search for agent turns (app.services.web_search, Tavily Search
     # API). Blank hides the web_search tool from every agent.
