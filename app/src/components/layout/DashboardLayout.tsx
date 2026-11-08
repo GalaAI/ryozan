@@ -223,6 +223,16 @@ const icons = {
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
     </svg>
   ),
+  mods: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/>
+    </svg>
+  ),
+  matrix: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 21 7v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/>
+    </svg>
+  ),
 }
 
 /* ── Nav item configs by role (matches original SECTION arrays) ───── */
@@ -270,6 +280,13 @@ function getNavSections(role?: string): NavSection[] {
   }
 
   // Artist / Admin / Founder: clean minimal sidebar. Extras live in Toolkit + Axiom.
+  // Owners and admins also get the Mods rail: the inventory and the Ark Matrix Mod.
+  const modsRail: NavSection[] = r === 'admin' || r === 'founder'
+    ? [{ label: 'Mods', items: [
+      { to: '/dashboard/mods', label: 'Mods', icon: icons.mods, end: true },
+      { to: '/dashboard/mods?view=matrix', label: 'Matrix', icon: icons.matrix },
+    ]}]
+    : []
   return [{ label: null, items: [
     { to: '/dashboard', label: 'Home', icon: icons.dashboard, end: true },
     { to: '/dashboard/huddle', label: 'Huddle', icon: icons.huddle },
@@ -278,7 +295,7 @@ function getNavSections(role?: string): NavSection[] {
     { to: '/dashboard/guild', label: 'Guild', icon: icons.guild },
     { to: '/dashboard/vault', label: 'Vault', icon: icons.vault },
     { to: '/dashboard/herald', label: 'Herald', icon: icons.herald },
-  ]}]
+  ]}, ...modsRail]
 }
 
 function getDevModeMeta(): DevModeMeta | null {
@@ -536,10 +553,13 @@ const pageTitles: Record<string, string> = {
   '/dashboard/artist-profile': 'Profile',
   '/dashboard/admin/users': 'User Management',
   '/dashboard/herald': 'HERALD',
+  '/dashboard/mods': 'MODS',
 }
 
 function mobilePortalTabForRoute(pathname: string, role?: string): string | null {
   if (pathname === ROUTES.DASHBOARD) return null
+  // The Mods rail has no portal tab of its own; its page renders on phones too.
+  if (pathname.startsWith(ROUTES.MODS)) return null
   const collector = role === 'collector'
 
   if (pathname.startsWith('/dashboard/courier') || pathname.startsWith('/dashboard/messages')) return 'table'
@@ -551,8 +571,14 @@ function mobilePortalTabForRoute(pathname: string, role?: string): string | null
   return 'home'
 }
 
+/* The Mods rail's two items share a page and differ by ?view=. */
+function sameView(to: string, search: string): boolean {
+  const wanted = new URLSearchParams(to.split('?')[1] ?? '').get('view')
+  return wanted === new URLSearchParams(search).get('view')
+}
+
 /* Mod routes get the Oswald-styled title treatment */
-const MOD_TITLE_ROUTES = new Set(['/dashboard', '/dashboard/huddle', '/dashboard/courier', '/dashboard/guild', '/dashboard/vault', '/dashboard/hustle', '/dashboard/flash', '/dashboard/herald'])
+const MOD_TITLE_ROUTES = new Set(['/dashboard', '/dashboard/huddle', '/dashboard/courier', '/dashboard/guild', '/dashboard/vault', '/dashboard/hustle', '/dashboard/flash', '/dashboard/herald', '/dashboard/mods'])
 
 /* ── Notification URL sanitizer ───────────────── */
 // Maps known bad / stale action_urls to correct ROUTES constants.
@@ -880,7 +906,7 @@ export default function DashboardLayout() {
                   to={item.to}
                   end={item.end}
                   className={({ isActive }) =>
-                    `sidebar-item${isActive ? ' is-active' : ''}`
+                    `sidebar-item${isActive && (!item.to.startsWith(ROUTES.MODS) || sameView(item.to, location.search)) ? ' is-active' : ''}`
                   }
                   data-label={item.label}
                   aria-label={item.label}

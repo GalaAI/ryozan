@@ -153,7 +153,8 @@ export default function DesktopPortalPage() {
   }, [api, tab, conversationId, threadRevision])
 
   // The Club tab's internal id is arkstation; its public route id is club.
-  const selectTab = (next: string) => setParams(previous => { const p = new URLSearchParams(previous); p.set('portal', next === 'arkstation' ? 'club' : next); p.delete('convo'); p.delete('workflow'); p.delete('panel'); p.delete('view'); p.delete('stripe'); return p })
+  // The Mods tab opens the Mods page; it has no portal workspace of its own.
+  const selectTab = (next: string) => next === 'mods' ? navigate(ROUTES.MODS) : setParams(previous => { const p = new URLSearchParams(previous); p.set('portal', next === 'arkstation' ? 'club' : next); p.delete('convo'); p.delete('workflow'); p.delete('panel'); p.delete('view'); p.delete('stripe'); return p })
   const openHubWorkflow = (workflow: string) => setParams({ portal: 'hub', workflow })
   const openThread = (id: string) => setParams(previous => { const p = new URLSearchParams(previous); p.set('portal', 'courier'); p.set('convo', id); p.delete('workflow'); p.delete('panel'); p.delete('view'); return p })
   const execute = (intent: DesktopPortalIntent) => {

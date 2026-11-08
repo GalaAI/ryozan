@@ -311,3 +311,25 @@ export interface ChipGroupProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode
 }
 export declare function ChipGroup(props: ChipGroupProps): React.JSX.Element
+
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  tone?: BadgeTone
+  filled?: boolean
+}
+export declare function Badge(props: BadgeProps): React.JSX.Element
+
+export type PanelSurface = 'raised' | 'flat' | 'well'
+export type PanelRadius = 'md' | 'lg' | 'xl'
+export interface PanelProps extends React.HTMLAttributes<HTMLDivElement> {
+  surface?: PanelSurface
+  radiusStep?: PanelRadius
+  bordered?: boolean
+  lifted?: boolean
+  children?: React.ReactNode
+}
+export declare const Panel: React.ForwardRefExoticComponent<PanelProps & React.RefAttributes<HTMLDivElement>>
+
+export interface MetaListProps extends React.HTMLAttributes<HTMLDivElement> {
+  rows: Array<{ label: React.ReactNode; value: React.ReactNode; valueColor?: string }>
+}
+export declare function MetaList(props: MetaListProps): React.JSX.Element

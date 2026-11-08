@@ -51,7 +51,7 @@ const agents = {
   smoku: { name:'Rochishin · Tattooed Monk', accent:'var(--gold)', rgb:'166,125,67' },
 }
 const labels: Record<string,string> = { home:'Home',books:'Booking',studio:'Profile',hub:'Account',courier:'Courier',arkstation:'Club',pit:'Hub',guild:'Guild',shop:'Shop',you:'You' }
-const navLabels: Record<string,string> = {home:'Home',books:'Booking',studio:'Profile',courier:'Inbox',arkstation:'Club',pit:'Hub',shop:'Shop',you:'You'}
+const navLabels: Record<string,string> = {home:'Home',books:'Booking',studio:'Profile',courier:'Inbox',arkstation:'Club',pit:'Hub',mods:'Mods',shop:'Shop',you:'You'}
 
 /** Longest prompt a person can type. The API accepts more (CHAT_MESSAGE_MAX_LENGTH in gala_chat.py)
  * because Courier appends a bounded conversation excerpt to the typed prompt. */
@@ -153,10 +153,10 @@ export function NativeDesktopPortal(props: NativeDesktopPortalProps) {
   }, [root, props.reducedMotion])
   const select = (tab: string) => { setWorkspaceAction(null);setInput('');setPlus(false);props.onSelectTab(tab) }
   const collector = props.role === 'collector'
-  const staffTabs = ['home','books','studio','courier','arkstation','pit']
-  const tabs = (collector ? ['home','arkstation','shop','courier','you'] : staffTabs.filter(tab => tab !== 'pit' || props.role === 'founder'))
+  const staffTabs = ['home','books','studio','courier','arkstation','pit','mods']
+  const tabs = (collector ? ['home','arkstation','shop','courier','you'] : staffTabs.filter(tab => (tab !== 'pit' || props.role === 'founder') && (tab !== 'mods' || props.role === 'founder' || props.role === 'admin')))
     .filter(tab => tab === props.activeTab || !props.hiddenTabs?.includes(tab))
-  const iconKeys: Record<string,string> = {home:'house',books:'books',studio:'studio',courier:'courier',arkstation:collector?'toolkit':'guild',pit:'pit',shop:'bag',you:'person'}
+  const iconKeys: Record<string,string> = {home:'house',books:'books',studio:'studio',courier:'courier',arkstation:collector?'toolkit':'guild',pit:'pit',mods:'mods',shop:'bag',you:'person'}
   const glyph = useMemo(() => props.agentId === 'herald'
     ? <span data-agent-emblem="herald" aria-hidden="true" style={{display:'inline-block',width:'1em',height:'1em',background:'currentColor',mask:'url(/assets/herald-horn.png) center / contain no-repeat',WebkitMask:'url(/assets/herald-horn.png) center / contain no-repeat'}} />
     : compileTemplate(`<svg data-agent-emblem="${props.agentId}" aria-hidden="true" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle">${sourceAgentMarks[props.agentId]}</svg>`).render({}), [props.agentId])
