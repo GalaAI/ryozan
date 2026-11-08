@@ -333,6 +333,13 @@ def resolve_sms_lane_by_number(to_number: str | None, settings: Any | None = Non
     normalized_number = normalise_phone(to_number)
     if not normalized_number:
         raise SmsLaneConfigurationError("INVALID_DESTINATION", "Inbound Twilio To number is not valid E.164")
+    from app.services.shop_texts import shop_sender
+
+    line = shop_sender()
+    if line is not None and line.from_number == normalized_number:
+        # The shop's own line is answered by the front desk, like Bella's number.
+        label, _, agent_id, agent_label, reply_mode, _ = _SMS_LANE_FIELDS["bella"]
+        return SmsLane("bella", label, normalized_number, agent_id, agent_label, reply_mode, "not_configured")
     lanes = _configured_sms_lanes(settings)
     matches = [lane for lane in lanes.values() if lane.from_number == normalized_number]
     if len(matches) != 1:
@@ -400,10 +407,15 @@ async def _twilio_post_message(
     sender identity. WhatsApp retains its existing dedicated From behavior.
     """
     settings = get_settings()
-    if not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN:
+    from app.services.shop_texts import shop_sender
+
+    # The shop's own line (its sub-account or its own Twilio) sends its texts once it may.
+    shop_line = shop_sender() if channel != "whatsapp" else None
+    if shop_line is None and (not settings.TWILIO_ACCOUNT_SID or not settings.TWILIO_AUTH_TOKEN):
         raise TwilioError("CONFIG", "Twilio credentials not configured")
 
-    url = f"https://api.twilio.com/2010-04-01/Accounts/{settings.TWILIO_ACCOUNT_SID}/Messages.json"
+    account_sid = shop_line.account_sid if shop_line else settings.TWILIO_ACCOUNT_SID
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
     status_callback = f"{settings.API_PUBLIC_BASE_URL.rstrip('/')}/api/v1/sms/webhook/status"
     is_whatsapp = channel == "whatsapp"
     destination = f"whatsapp:{to}" if is_whatsapp else to
@@ -412,6 +424,8 @@ async def _twilio_post_message(
         data["From"] = f"whatsapp:{settings.TWILIO_FROM_NUMBER}"
     elif is_whatsapp:
         raise TwilioError("CONFIG", "TWILIO_FROM_NUMBER is not configured for WhatsApp")
+    elif shop_line:
+        data["From"] = shop_line.from_number
     else:
         try:
             lane = sms_lane or resolve_sms_lane_by_id("bella", settings)
@@ -426,7 +440,9 @@ async def _twilio_post_message(
         resp = await client.post(
             url,
             data=data,
-            auth=(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN),
+            auth=(shop_line.account_sid, shop_line.auth_token)
+            if shop_line
+            else (settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN),
         )
     if resp.status_code >= 300:
         try:
@@ -495,6 +511,14 @@ async def send_sms(
         sender_id=sender_id,
     )
     db.add(log)
+
+    from app.services.shop_texts import shop_sender
+
+    if shop_sender() is not None:
+        # The shop's own line needs no platform sender lane.
+        lane_error = None
+        from_phone = shop_sender().from_number
+        log.from_phone = from_phone
 
     if lane_error:
         log.status = "failed"

@@ -3609,7 +3609,7 @@ export const googleAuth = {
     request<{ linked: boolean }>('/auth/google/link/status'),
 }
 
-export type IntegrationId = 'google_calendar' | 'google_signin_link' | 'pinterest' | 'plaid' | 'stripe_connect' | 'push' | 'email_forwarding' | 'shop_email'
+export type IntegrationId = 'google_calendar' | 'google_signin_link' | 'pinterest' | 'plaid' | 'stripe_connect' | 'push' | 'email_forwarding' | 'shop_email' | 'shop_texts'
 
 export interface IntegrationOption {
   id: IntegrationId
@@ -3647,6 +3647,44 @@ export interface ShopEmailConnection {
   demo: boolean
 }
 
+/** GET /connections/texts: the shop's texting line. Never carries a token. */
+export interface ShopTextsConnection {
+  platform_ready: boolean
+  mode: 'platform' | 'own' | null
+  account_sid: string | null
+  phone_number: string | null
+  verification_status: string | null
+  verification_submitted_at: string | null
+  verification_reason: string | null
+  sending_ready: boolean
+  checked_at: string | null
+  demo: boolean
+  use_cases: string[]
+  opt_in_types: string[]
+  volumes: string[]
+}
+
+export interface ShopTextsVerification {
+  business_name: string
+  business_type: 'PRIVATE_PROFIT' | 'SOLE_PROPRIETOR' | 'NON_PROFIT'
+  ein?: string
+  website: string
+  notification_email: string
+  contact_first_name: string
+  contact_last_name: string
+  contact_phone: string
+  street: string
+  city: string
+  state: string
+  postal_code: string
+  use_case: string
+  use_case_summary: string
+  message_sample: string
+  opt_in_type: string
+  opt_in_image_url: string
+  volume: string
+}
+
 export const shopConnections = {
   email: () => request<ShopEmailConnection>('/connections/email'),
   addEmailDomain: (domain: string, fromLocal: string) =>
@@ -3658,6 +3696,26 @@ export const shopConnections = {
     request<ShopEmailConnection>('/connections/email/domain/check', { method: 'POST' }),
   removeEmailDomain: () =>
     request<ShopEmailConnection>('/connections/email/domain', { method: 'DELETE' }),
+  texts: () => request<ShopTextsConnection>('/connections/texts'),
+  startPlatformTexts: () => request<ShopTextsConnection>('/connections/texts/platform', { method: 'POST' }),
+  findTextsNumbers: (areaCode?: string) =>
+    request<{ numbers: { phone_number: string; friendly_name?: string }[] }>(
+      `/connections/texts/numbers${areaCode ? `?area_code=${encodeURIComponent(areaCode)}` : ''}`,
+    ),
+  buyTextsNumber: (phoneNumber: string) =>
+    request<ShopTextsConnection>('/connections/texts/number', {
+      method: 'POST',
+      body: JSON.stringify({ phone_number: phoneNumber }),
+    }),
+  submitTextsVerification: (form: ShopTextsVerification) =>
+    request<ShopTextsConnection>('/connections/texts/verification', { method: 'POST', body: JSON.stringify(form) }),
+  checkTexts: () => request<ShopTextsConnection>('/connections/texts/check', { method: 'POST' }),
+  connectOwnTexts: (accountSid: string, authToken: string, phoneNumber: string) =>
+    request<ShopTextsConnection>('/connections/texts/own', {
+      method: 'POST',
+      body: JSON.stringify({ account_sid: accountSid, auth_token: authToken, phone_number: phoneNumber }),
+    }),
+  disconnectTexts: () => request<ShopTextsConnection>('/connections/texts', { method: 'DELETE' }),
 }
 
 export const integrations = {
