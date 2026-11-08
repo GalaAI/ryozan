@@ -86,7 +86,7 @@ RESET_TABLES = (
 
 
 # Connection settings a judge can add in demo mode, cleared with the rest.
-RESET_SETTING_KEYS = ("email_domain",)
+RESET_SETTING_KEYS = ("email_domain", "texts_connection")
 
 
 def demo_shop_enabled() -> bool:
@@ -337,9 +337,10 @@ async def reset_demo_shop(db: AsyncSession) -> dict:
             await db.delete(row)
             removed[f"setting:{key}"] = 1
     await db.commit()
-    from app.services import shop_email_domain
+    from app.services import shop_email_domain, shop_texts
 
     await shop_email_domain.load(db)
+    await shop_texts.load(db)
     return {"removed": removed, "seed": await seed_demo_shop(db, restart_window=True)}
 
 

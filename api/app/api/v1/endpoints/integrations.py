@@ -40,6 +40,8 @@ PUSH_ROLES = ALL_SIGNED_IN
 EMAIL_FORWARDING_ROLES = ALL_SIGNED_IN
 # /connections/email: require_role("admin"), so admins and the owner.
 SHOP_EMAIL_ROLES = frozenset(ROLE_HIERARCHY[ROLE_HIERARCHY.index("admin") :])
+# /connections/texts: the same owners and admins.
+SHOP_TEXTS_ROLES = SHOP_EMAIL_ROLES
 
 
 def _set(*values: str) -> bool:
@@ -97,6 +99,8 @@ INTEGRATIONS = (
     ("push", _push_configured, PUSH_ROLES),
     ("email_forwarding", email_forwarding_configured, EMAIL_FORWARDING_ROLES),
     ("shop_email", _shop_email_configured, SHOP_EMAIL_ROLES),
+    # Always offered: a shop can bring its own Twilio where the platform has none.
+    ("shop_texts", lambda: True, SHOP_TEXTS_ROLES),
 )
 
 

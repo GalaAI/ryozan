@@ -30,12 +30,14 @@ IDS = [
     "push",
     "email_forwarding",
     "shop_email",
+    "shop_texts",
 ]
 # Roles the endpoint behind each id refuses.
 REFUSED = {
     "stripe_connect": {"collector", "assistant", "admin"},
     "google_signin_link": {"collector"},
     "shop_email": {"collector", "assistant", "artist"},
+    "shop_texts": {"collector", "assistant", "artist"},
 }
 
 SECRETS = {
@@ -143,7 +145,10 @@ class IntegrationOptionsTests(unittest.TestCase):
         )
 
     def test_nothing_configured_on_bare_install(self):
-        self.assertFalse(any(item["configured"] for item in _options("artist", _settings()).values()))
+        # Shop texts stay offered: a shop can bring its own Twilio account to any install.
+        options = _options("artist", _settings())
+        self.assertFalse(any(item["configured"] for key, item in options.items() if key != "shop_texts"))
+        self.assertTrue(options["shop_texts"]["configured"])
 
     def test_each_integration_needs_its_full_credential_pair(self):
         cases = {

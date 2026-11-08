@@ -319,8 +319,12 @@ def _validate_twilio_signature(request: Request, body_form: dict[str, Any]) -> b
     base64-encoded. We compare with the X-Twilio-Signature header.
     """
     settings = get_settings()
+    from app.services.shop_texts import webhook_tokens
+
     token = settings.TWILIO_WEBHOOK_AUTH_TOKEN or settings.TWILIO_AUTH_TOKEN
-    if not token:
+    # The shop's own line signs with its own account's token.
+    tokens = [t for t in (token, *webhook_tokens()) if t]
+    if not tokens:
         is_local_dev = settings.DEBUG or settings.APP_ENV.lower() in {"development", "dev", "local", "test"}
         if is_local_dev:
             logger.warning("twilio.webhook.no_token_configured — skipping signature check in local/dev")
@@ -339,9 +343,12 @@ def _validate_twilio_signature(request: Request, body_form: dict[str, Any]) -> b
         url = str(request.url)
     sorted_keys = sorted(body_form.keys())
     payload = url + "".join(f"{k}{body_form[k]}" for k in sorted_keys)
-    digest = hmac.new(token.encode(), payload.encode(), hashlib.sha1).digest()
-    expected = b64encode(digest).decode()
-    return hmac.compare_digest(expected, signature)
+    return any(
+        hmac.compare_digest(
+            b64encode(hmac.new(t.encode(), payload.encode(), hashlib.sha1).digest()).decode(), signature
+        )
+        for t in tokens
+    )
 
 
 def _twiml_response(message: str | None = None) -> Response:

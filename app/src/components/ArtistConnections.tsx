@@ -27,6 +27,7 @@ import { isPushSupported } from '../lib/pushNotifications'
 import EmailConnectQuest from './EmailConnectQuest'
 import PushOptIn from './PushOptIn'
 import ShopEmailConnection from './ShopEmailConnection'
+import ShopTextsConnection from './ShopTextsConnection'
 
 type Loadable<T> =
   | { state: 'loading'; value: null }
@@ -361,7 +362,8 @@ export default function ArtistConnections() {
   const pushSupported = isPushSupported()
   // The shop's own senders read their own status, so they too need a successful options read.
   const showShopEmail = availability.state === 'ready' && availability.offered.has('shop_email')
-  const noneShown = ![showStripe, showGoogle, showGoogleSignin, showPinterest, showEmail, showPush, showShopEmail].some(Boolean)
+  const showShopTexts = availability.state === 'ready' && availability.offered.has('shop_texts')
+  const noneShown = ![showStripe, showGoogle, showGoogleSignin, showPinterest, showEmail, showPush, showShopEmail, showShopTexts].some(Boolean)
 
   return (
     <section className="ryozan-hub-workflow-card ryozan-artist-connections" aria-label="Connections">
@@ -498,6 +500,8 @@ export default function ArtistConnections() {
         )}
 
         {showShopEmail && <ShopEmailConnection />}
+
+        {showShopTexts && <ShopTextsConnection />}
 
         {showPush && (
           <ConnectionCard

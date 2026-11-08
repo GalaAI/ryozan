@@ -32257,3 +32257,26 @@ body:has(.app-view--portal-home) {
   display: flex;
   gap: 8px;
 }
+
+.ryozan-shop-texts__verify {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.ryozan-shop-texts__verify label {
+  display: grid;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.ryozan-shop-email select,
+.ryozan-shop-texts__verify input {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line, rgba(217, 191, 149, 0.28));
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
