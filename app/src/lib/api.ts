@@ -3666,6 +3666,78 @@ export const integrations = {
     request<IntegrationOptionsResponse>('/integrations/options'),
 }
 
+/* ── Mods: the Mods inventory (Ark Mold contract) and the Ark Matrix Mod ── */
+
+export type ModTier = 'unknown' | 'planned' | 'scaffolded' | 'implemented' | 'validated' | 'integrated' | 'runtime-proven'
+
+export interface ModMoldTab {
+  id: string
+  label: string
+  prefix: string
+}
+
+export interface ModEntry {
+  code: string
+  kind: 'mod'
+  group: string
+  tab: string
+  name: string
+  alt: string
+  status: ModTier
+  tier: ModTier
+  source: string
+  /** null when the Mod has no setting to check. */
+  connected: boolean | null
+  route: string | null
+  gaps: [string, string][]
+}
+
+export interface ModsInventory {
+  mold: { id: string; itemType: string; title: string; eyebrow: string; headline: string; agent: string; tabs: ModMoldTab[]; source: string }
+  feed: { status: 'live' | 'unavailable'; entries: ModEntry[]; warnings: string[] }
+}
+
+export interface MatrixModTool {
+  capabilityId: string
+  name: string
+  risk: 'read' | 'write'
+  description: string
+}
+
+export interface MatrixModMatrix {
+  slug: string
+  matrixRef: string
+  label: string
+  covers: 'one' | 'kind'
+  engine: { name: string; starts: string; server: 'own' | 'shared' | 'none'; serverDetail: string }
+  scopes: { read: string; write: string | null }
+  writeRefusal: string | null
+  tools: MatrixModTool[]
+}
+
+export interface MatrixModRun {
+  runId: string
+  state: string
+  scenario?: { id: string; title: string }
+  change?: string
+  startedAt?: string
+}
+
+export interface MatrixModView {
+  connected: boolean
+  reason?: string
+  matrices: MatrixModMatrix[]
+  runs: MatrixModRun[] | null
+  runsNote?: string | null
+}
+
+export const mods = {
+  /** The shop's Mods inventory (admin and founder) */
+  inventory: () => request<ModsInventory>('/mods'),
+  /** Ark's Matrix Mod: Eden Matrices with their engines, scopes and tools, plus recent runs */
+  matrix: () => request<MatrixModView>('/mods/matrix'),
+}
+
 export interface PinterestBoard {
   id: string
   name: string

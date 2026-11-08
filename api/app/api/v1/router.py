@@ -34,6 +34,7 @@ from app.api.v1.endpoints import (
     gift_cards,
     google_auth,
     integrations,
+    mods,
     notification_preferences,
     notifications,
     phone_agents,
@@ -120,6 +121,7 @@ api_router.include_router(google_auth.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(plaid.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(pinterest.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(integrations.router, dependencies=DEMO_SHOP_READ_ONLY)
+api_router.include_router(mods.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(email_log.router)
 api_router.include_router(email_templates.router, dependencies=DEMO_SHOP_READ_ONLY)
 api_router.include_router(references.router)

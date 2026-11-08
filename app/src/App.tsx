@@ -68,6 +68,7 @@ const LootPage = lazyRetry(() => import('./pages/dashboard/LootPage'))
 const ShopPage = lazyRetry(() => import('./pages/dashboard/ShopPage'))
 const HustlePage = lazyRetry(() => import('./pages/dashboard/HustlePage'))
 const HeraldsPage  = lazyRetry(() => import('./pages/dashboard/HeraldsPage'))
+const ModsPage     = lazyRetry(() => import('./pages/dashboard/ModsPage'))
 
 function RedirectWithSearch({ to }: { to: string }) {
   const location = useLocation()
@@ -278,6 +279,7 @@ export default function App() {
           <Route path="dashboard/hustle" element={<RequireRoles roles={['artist', 'admin', 'founder']}><Suspended><HustlePage /></Suspended></RequireRoles>} />
           <Route path="dashboard/flash" element={<RequireRoles roles={['artist', 'admin', 'founder']}><Navigate to="/dashboard/hustle" replace /></RequireRoles>} />
           <Route path="dashboard/herald" element={<Suspended><HeraldsPage /></Suspended>} />
+          <Route path="dashboard/mods" element={<RequireRoles roles={['admin', 'founder']}><Suspended><ModsPage /></Suspended></RequireRoles>} />
         </Route>
       </Route>
 

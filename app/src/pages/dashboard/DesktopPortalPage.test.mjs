@@ -17,6 +17,7 @@ const { outputText } = ts.transpileModule(source, {
 
 function page(query, role = 'founder', { evolution = true } = {}) {
   let params = new URLSearchParams(query)
+  const navigated = []
   let index = 0
   // Slot 1 is the Ark agent-evolution capability (useState after the portal data).
   const state = [undefined, evolution]
@@ -39,7 +40,7 @@ function page(query, role = 'founder', { evolution = true } = {}) {
     require: name => {
       if (name === 'react') return hooks
       if (name === 'react/jsx-runtime') return require(name)
-      if (name === 'react-router-dom') return { useSearchParams: () => [params, next => { params = new URLSearchParams(typeof next === 'function' ? next(params) : next) }] }
+      if (name === 'react-router-dom') return { useNavigate: () => to => { navigated.push(to) }, useSearchParams: () => [params, next => { params = new URLSearchParams(typeof next === 'function' ? next(params) : next) }] }
       if (name.endsWith('/desktop-portal-api')) return {
         createDesktopPortalApi: () => ({execute:async intent=>({kind:intent.kind,result:{response:'Fixture agent response',components:[],tool_calls:[]}})}),
         initialDesktopPortalData: { user: { status: 'ready', data: { id: 'test-founder', name: 'Test account', role } }, artist: empty, bookings: empty, inbox: empty, club: empty, quests: empty },

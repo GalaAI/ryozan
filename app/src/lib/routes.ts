@@ -36,6 +36,7 @@ export const ROUTES = {
   SCROLL: '/dashboard?portal=hub&workflow=artist-scroll',
   ARTIST_PROFILE: '/dashboard/artist-profile',
   ADMIN_USERS: '/dashboard/admin/users',
+  MODS: '/dashboard/mods',
   WALLET: '/dashboard/wallet',
 
   // Collector pages

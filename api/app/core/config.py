@@ -913,6 +913,10 @@ class Settings(BaseSettings):
     # Scoped Ryozan to Ark Pack bridge. Blank values fail closed and keep the
     # provider receipt in Ryozan until KeyMaster provisions the runtime binding.
     ARK_PACK_BRIDGE_URL: str = ""
+    # Ark's Matrix Mod route (for example http://127.0.0.1:8788/api/eden/matrix-mod) and an
+    # Ark operator token for reading runs. Blank shows the Matrix view as not connected.
+    ARK_MATRIX_MOD_URL: str = ""
+    ARK_MATRIX_MOD_TOKEN: str = ""
     # Model-assignment previews use a local Ark API without redirecting the
     # existing hosted profiles, intake, or phone-agent bridge.
     ARK_ORCHESTRA_CONFIG_URL: str = ""
