@@ -114,13 +114,14 @@ class OutboundTests(unittest.TestCase):
 
 
 class WriteGuardTests(unittest.IsolatedAsyncioTestCase):
-    async def _guard(self, method, user, **overrides):
+    async def _guard(self, method, user, path="/api/v1/studio/settings/edit", **overrides):
         settings = _settings(**overrides)
         with (
             patch.object(demo_shop, "get_settings", return_value=settings),
             patch.object(demo_account, "get_settings", return_value=settings),
         ):
-            await demo_shop.refuse_demo_owner_writes(SimpleNamespace(method=method), user)
+            request = SimpleNamespace(method=method, url=SimpleNamespace(path=path))
+            await demo_shop.refuse_demo_owner_writes(request, user)
 
     async def test_judge_reads_but_cannot_write(self):
         judge = SimpleNamespace(email="judge@ryozan.app")
@@ -128,6 +129,12 @@ class WriteGuardTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException) as refused:
             await self._guard("PATCH", judge)
         self.assertEqual(refused.exception.status_code, 403)
+
+    async def test_judge_may_start_stripe_connect_test_onboarding(self):
+        judge = SimpleNamespace(email="judge@ryozan.app")
+        await self._guard("POST", judge, path="/api/v1/stripe/connect/onboard")
+        with self.assertRaises(HTTPException):
+            await self._guard("POST", judge, path="/api/v1/stripe/booth-rent/artists/x/cash-payment")
 
     async def test_sample_accounts_cannot_write_either(self):
         with self.assertRaises(HTTPException):

@@ -109,10 +109,16 @@ def load_catalog() -> dict:
 
 # ── Write guard ────────────────────────────────────────
 
+# Writes on guarded screens the judge may still make. Stripe Connect onboarding
+# only reaches Stripe test mode, since a live key is dropped at startup.
+DEMO_OPEN_WRITES = ("/stripe/connect/onboard",)
+
 
 async def refuse_demo_owner_writes(request: Request, user: User | None = Depends(get_optional_current_user)) -> None:
     """Router dependency: the judge reads these screens but cannot change them."""
     if request.method in ("GET", "HEAD", "OPTIONS") or not demo_shop_enabled():
+        return
+    if request.url.path.endswith(DEMO_OPEN_WRITES):
         return
     if is_demo_account(user) or is_demo_npc(user):
         raise HTTPException(
@@ -213,6 +219,10 @@ async def seed_demo_shop(db: AsyncSession, *, restart_window: bool = False) -> s
     artist_data = catalog["artist"]
     for name in artist_data["profile_fields"]:
         setattr(artist, name, artist_data[name])
+    if restart_window:
+        # Each day's judges start Stripe Connect test onboarding from scratch.
+        artist.stripe_account_id = None
+        artist.stripe_onboarding_complete = False
     npc_password = settings.DEMO_NPC_PASSWORD
     npc_hash = hash_password(npc_password) if len(npc_password) >= 12 else None
     await _seed_user(db, NPC_EMAILS[0], npc_hash, role="artist", name="Sample Artist", slug="sample-artist")
