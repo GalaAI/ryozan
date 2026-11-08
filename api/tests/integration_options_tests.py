@@ -21,11 +21,21 @@ from app.core.database import get_db
 from app.core.security import ROLE_HIERARCHY, ROLE_RANK, get_optional_current_user, require_role
 from app.services import calendar_sync
 
-IDS = ["google_calendar", "google_signin_link", "pinterest", "plaid", "stripe_connect", "push", "email_forwarding"]
+IDS = [
+    "google_calendar",
+    "google_signin_link",
+    "pinterest",
+    "plaid",
+    "stripe_connect",
+    "push",
+    "email_forwarding",
+    "shop_email",
+]
 # Roles the endpoint behind each id refuses.
 REFUSED = {
     "stripe_connect": {"collector", "assistant", "admin"},
     "google_signin_link": {"collector"},
+    "shop_email": {"collector", "assistant", "artist"},
 }
 
 SECRETS = {
