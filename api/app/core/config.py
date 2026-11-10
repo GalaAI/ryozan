@@ -186,6 +186,14 @@ class Settings(BaseSettings):
     # email handles (<handle>@) live on it. Blank turns both off.
     COURIER_REPLY_DOMAIN: str = ""
 
+    @field_validator("GIFT_CARD_CODE_PREFIX")
+    @classmethod
+    def _validate_gift_card_code_prefix(cls, value: str) -> str:
+        prefix = (value or "").strip().upper()
+        if not re.fullmatch(r"[A-Z0-9]{1,6}", prefix):
+            raise ValueError("GIFT_CARD_CODE_PREFIX must be 1 to 6 letters or digits")
+        return prefix
+
     @field_validator("COURIER_REPLY_DOMAIN")
     @classmethod
     def validate_courier_reply_domain(cls, value: str) -> str:
@@ -211,6 +219,9 @@ class Settings(BaseSettings):
     # Studio identity printed on client email, SMS and PDF output. The postal
     # address is env-only: a deployment sets its own, and nothing prints when blank.
     STUDIO_NAME: str = "Ryozan Studio"
+    # Prefix on newly issued gift card codes (PREFIX-XXXX-XXXX-XXXX). Codes already
+    # issued under another prefix keep redeeming: redemption matches the stored code.
+    GIFT_CARD_CODE_PREFIX: str = "GC"
     # IANA zone the studio trades in: every "which day" question, client-facing
     # time and calendar entry. The owner sets it during first-run setup.
     STUDIO_TIMEZONE: str = "America/New_York"
