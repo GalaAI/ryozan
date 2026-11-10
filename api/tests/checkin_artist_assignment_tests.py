@@ -22,6 +22,17 @@ from app.models.booking import Booking  # noqa: E402
 from app.models.notification import Notification  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.schemas.document import DocumentPublicSubmit  # noqa: E402
+from app.services import storage  # noqa: E402
+
+# Fake storage settings so the photo ID is a real upload link this server signed (no network, no real bucket).
+FAKE_STORAGE = SimpleNamespace(
+    R2_ACCOUNT_ID="account-id",
+    R2_ACCESS_KEY_ID="access-key",
+    R2_SECRET_ACCESS_KEY="secret-key",
+    R2_BUCKET_NAME="fake-shop-bucket",
+    R2_PUBLIC_DOMAIN="assets.example.test",
+)
+ID_KEY = "waivers/pending-ids/0b6f3c1e-1111-4222-8333-944445555666.jpg"
 
 ARTIST_A = SimpleNamespace(id=uuid.uuid4(), slug="artist-a", name="Artist A")
 ARTIST_B = SimpleNamespace(id=uuid.uuid4(), slug="artist-b", name="Artist B")
@@ -89,6 +100,11 @@ def _waiver_instance(stored: dict):
     )
 
 
+def _signed_upload_link() -> str:
+    with patch.object(storage, "get_settings", return_value=FAKE_STORAGE):
+        return storage.presign_get_url(ID_KEY, 600)
+
+
 def _submission(**overrides) -> DocumentPublicSubmit:
     data = {
         "full_name": "Test Client",
@@ -104,7 +120,7 @@ def _submission(**overrides) -> DocumentPublicSubmit:
         "blood_disorder": "No",
         "skin_condition": "No",
         "health_same_as_last_visit": False,
-        "photo_id_url": "https://files.example.test/id.png",
+        "photo_id_url": _signed_upload_link(),
         "health_and_eligibility": True,
         "risks_and_consent": True,
         "accept_terms": True,
@@ -134,6 +150,7 @@ class CompleteWaiverAssignmentTests(unittest.IsolatedAsyncioTestCase):
         instance = _waiver_instance(stored)
         db = _Db(instance)
         with (
+            patch.object(storage, "get_settings", return_value=FAKE_STORAGE),
             patch.object(documents.asyncio, "create_task", lambda coro: coro.close()),
             patch.object(documents, "spawn_background", lambda coro: coro.close()),
         ):
