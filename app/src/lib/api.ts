@@ -883,6 +883,8 @@ export interface PublicBookingSubmit {
   preferred_date?: string
   preferred_time?: string
   hold_token?: string
+  /** 1 to 3 proposed times with no hold and no deposit; the artist confirms one. */
+  preferred_slots?: { date: string; time: string }[]
   booking_add_on_ids?: string[]
   save_payment_method?: boolean
   reference_image_urls?: string[]
@@ -904,6 +906,35 @@ export interface PublicBookingResponse {
   booky_outcome: BookingOutcomeEnvelope | null
   idempotent_acknowledgement: boolean
   account_setup_token: string | null
+}
+
+export interface PublicInquirySubmit {
+  inquiry_id?: string
+  artist_slug?: string | null
+  first_name: string
+  last_name: string
+  email: string
+  phone?: string
+  sms_opt_in?: boolean
+  message: string
+}
+
+export interface PublicInquiryResponse {
+  reference_code: string
+  conversation_id: string | null
+  message: string
+  idempotent_acknowledgement: boolean
+}
+
+/** GET /bookings/checkout-status/{session_id}: where a booking stands after Stripe. No contact details. */
+export interface PublicCheckoutStatus {
+  reference_code: string | null
+  artist_name: string | null
+  booking_status: string
+  deposit_state: 'paid' | 'authorized' | 'pending' | 'none'
+  deposit_amount: number | null
+  scheduled_date: string | null
+  scheduled_time: string | null
 }
 
 export interface PublicBookingDraft {
@@ -992,6 +1023,14 @@ export const bookings = {
     }
     return res.json()
   },
+
+  /** Public: a general question for the shop; opens a Courier thread, never a booking */
+  submitInquiry: (data: PublicInquirySubmit): Promise<PublicInquiryResponse> =>
+    request('/bookings/inquiry', { method: 'POST', body: JSON.stringify(data) }),
+
+  /** Public: the booking behind a Stripe Checkout Session, read on the confirm page */
+  checkoutStatus: (sessionId: string): Promise<PublicCheckoutStatus> =>
+    request(`/bookings/checkout-status/${encodeURIComponent(sessionId)}`),
 
   /** Auth: link a guest booking to a newly created account */
   linkAccount: (referenceCode: string) =>

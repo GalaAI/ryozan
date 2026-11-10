@@ -36,7 +36,7 @@ export function StudioHomeView({ settings, artists }: { settings: StudioSettings
         <div className="container hero-content">
           <h1 className="booking-cta-heading serif">{name}</h1>
           {tagline && <p className="subheading">{tagline}</p>}
-          <Link to="/dashboard/book" className="btn btn-primary">Book a session</Link>
+          <Link to="/book" className="btn btn-primary">Book a session</Link>
         </div>
       </section>
 
@@ -103,10 +103,11 @@ export function StudioHomeView({ settings, artists }: { settings: StudioSettings
             <span className="booking-cta-eyebrow">Bookings</span>
             <h2 id="studio-booking-title" className="booking-cta-heading serif">Book a session</h2>
             <p className="booking-cta-body">Choose an artist, send your idea and manage the appointment from one account.</p>
-            <Link to="/dashboard/book" className="btn btn-primary booking-cta-btn">Start a booking</Link>
-            {email && (
-              <p className="booking-cta-aside">A question first? <a href={`mailto:${email}`}>{email}</a></p>
-            )}
+            <Link to="/book" className="btn btn-primary booking-cta-btn">Start a booking</Link>
+            <p className="booking-cta-aside">
+              A question first? <Link to="/ask">Ask the shop</Link>
+              {email && <> or write to <a href={`mailto:${email}`}>{email}</a></>}
+            </p>
           </div>
         </div>
       </section>
