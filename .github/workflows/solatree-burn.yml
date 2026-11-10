@@ -1,0 +1,15 @@
+name: solatree-burn
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  burn:
+    runs-on: ${{ vars.SOLATREE_LIGHT_RUNNER || vars.SOLATREE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: GalaAI/solatree/actions/burn@1e322e9a6ac6eec23733833d89841e380f6228e2
+        with:
+          github-token: ${{ github.token }}

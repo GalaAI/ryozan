@@ -4,13 +4,18 @@ on:
   push:
     branches: [main]
   pull_request:
+  # gate.yml calls this too. The direct triggers stay until main's branch
+  # protection requires gate instead of this workflow's job names.
+  workflow_call:
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: frontend-ci-${{ github.event.pull_request.number || github.ref }}
+  # github.workflow is the caller's name when gate runs this, so the two runs
+  # never cancel each other.
+  group: frontend-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   # Superseded PR pushes are cancelled; every commit on main gets a full run.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 

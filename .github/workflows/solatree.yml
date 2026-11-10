@@ -1,0 +1,23 @@
+name: solatree
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, ready_for_review]
+  pull_request_review:
+    types: [submitted, dismissed]
+  issue_comment:
+    types: [created, edited]
+  workflow_run:
+    workflows: [gate]
+    types: [completed]
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+jobs:
+  graft:
+    if: github.event_name != 'workflow_run' && (github.event_name != 'issue_comment' || github.event.issue.pull_request)
+    uses: GalaAI/solatree/.github/workflows/graft.yml@1e322e9a6ac6eec23733833d89841e380f6228e2
+  tend:
+    if: github.event_name == 'workflow_run'
+    uses: GalaAI/solatree/.github/workflows/tend.yml@1e322e9a6ac6eec23733833d89841e380f6228e2

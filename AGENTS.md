@@ -128,8 +128,10 @@ This repo has four lanes: backend, aios, middleware, frontend. Every edit, code 
 
 1. Pick the lane: `node "$(git rev-parse --git-common-dir)/solatree/solatree.mjs" lane which <paths>`. Work crossing layers uses one lead lane, and the PR takes the `solatree:cross-layer` label.
 2. Open it: `node "$(git rev-parse --git-common-dir)/solatree/solatree.mjs" lane open <layer> --task <slug> --holder <your session id>`. It prints the path. Work only there. If the lane is busy, add `--wait 1800`, or ask.
-3. Finish: commit, push, open the PR with `--label solatree:graft`.
-4. Close it: `node "$(git rev-parse --git-common-dir)/solatree/solatree.mjs" lane close <layer>`. To fix that PR later, reopen with `--branch <its branch>`.
+3. Repairs, fixes, review responses and validation corrections continue the associated open PR. Open with `--pr <number> --purpose repair` (or fix, review, validation). A published task branch is resumed automatically. Never reset another owner's branch.
+4. Finish: commit and push normally to that same branch. Preserve draft, hold and auto-merge intent; never force-push or re-arm merge merely because a repair passed. Use `node "$(git rev-parse --git-common-dir)/solatree/solatree.mjs" lane publish <layer> --title "title" --body-file <file>`: it returns the associated PR, or creates the first one as a draft. Apply the operator's chosen review/merge policy separately.
+5. If a separate PR is necessary, use `--successor-of <number> --reason "concrete reason"` and put the predecessor and reason in the successor PR body. Unavailable ownership means coordinate or wait, never take over.
+6. Close it: `node "$(git rev-parse --git-common-dir)/solatree/solatree.mjs" lane close <layer>`. To fix that PR later, reopen with `--pr <number>`.
 
 Do not run `git worktree add`, create branches by hand, or commit anywhere else. Hooks refuse them. See who holds what with `node "$(git rev-parse --git-common-dir)/solatree/solatree.mjs" lane status`.
 <!-- solatree:lanes end -->
