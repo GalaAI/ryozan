@@ -604,7 +604,17 @@ export interface GiftCardRedeemResponse {
   status: string
 }
 
+export interface GiftCardTerms {
+  currency: string
+  min_amount_cents: number
+  max_amount_cents: number
+  /** Customer price adjustment in basis points; checkout charges face value plus this. */
+  price_adjustment_bps: number
+}
+
 export const giftCards = {
+  /** Public: the amount range and price adjustment the purchase page shows before checkout. */
+  terms: () => request<GiftCardTerms>('/gift-cards/terms'),
   checkout: (data: GiftCardCheckoutRequest) => request<GiftCardCheckoutResponse>('/gift-cards/checkout', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -1671,6 +1681,39 @@ export interface DocumentPublicForm {
   prefill_notice: string | null
 }
 
+export type CheckinLookupResult =
+  | { found: false }
+  | { found: true; challenge: string; channel: 'email' | 'phone'; sent_to: string }
+
+export interface CheckinBookingView {
+  reference: string | null
+  artist_name: string | null
+  artist_slug: string | null
+  description: string | null
+  placement: string | null
+  size: string | null
+  date: string | null
+  time: string | null
+  status: string
+}
+
+export interface CheckinOnFile {
+  signed_at: string | null
+  photo_id_url: string | null
+  signature_url: string | null
+  health: Record<string, string>
+}
+
+export interface CheckinVerifyResult {
+  token: string
+  first_name: string
+  booking: CheckinBookingView | null
+  visits: number
+  last_visit: string | null
+  member: { tier: string | null } | null
+  on_file: CheckinOnFile | null
+}
+
 export interface DocumentPublicSubmit {
   data: Record<string, unknown>
   signature_data?: string   // base64 PNG
@@ -1770,6 +1813,20 @@ export const documents = {
     }
     return res.json()
   },
+
+  /** Public: step one of kiosk check-in. A match sends a one-time code to the contact on file. */
+  checkinLookup: (contact: string) =>
+    request<CheckinLookupResult>('/documents/checkin/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ contact }),
+    }),
+
+  /** Public: step two. A correct code opens a waiver token prefilled from the booking or last visit. */
+  checkinVerify: (challenge: string, code: string) =>
+    request<CheckinVerifyResult>('/documents/checkin/verify', {
+      method: 'POST',
+      body: JSON.stringify({ challenge, code }),
+    }),
 
   /** Manual resend reminder for a sent document */
   remind: (id: string) =>

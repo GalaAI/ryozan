@@ -20,6 +20,8 @@ interface SignaturePadProps {
   strokeColor?: string
   /** Stroke width in px */
   strokeWidth?: number
+  /** Accessible name for the pad and its clear button. */
+  ariaLabel?: string
 }
 
 export default function SignaturePad({
@@ -29,6 +31,7 @@ export default function SignaturePad({
   height = 140,
   strokeColor = '#faae15',
   strokeWidth = 2.5,
+  ariaLabel = 'Signature',
 }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const drawingRef = useRef(false)
@@ -105,6 +108,8 @@ export default function SignaturePad({
         width={width}
         height={height}
         className="sig-canvas"
+        role="img"
+        aria-label={value ? `${ariaLabel}, captured` : `${ariaLabel} pad. Sign with mouse or finger`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -113,7 +118,7 @@ export default function SignaturePad({
         <span className="sig-placeholder">Sign here with mouse or finger</span>
       )}
       <div className="sig-actions">
-        <button type="button" className="sig-clear-btn" onClick={handleClear}>
+        <button type="button" className="sig-clear-btn" onClick={handleClear} aria-label={`Clear ${ariaLabel.toLowerCase()}`}>
           Clear
         </button>
         {value && <span className="sig-confirmed">Signature captured</span>}

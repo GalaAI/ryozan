@@ -28,6 +28,7 @@ class WaiverSubmit(BaseModel):
     tattoo_description: str
     tattoo_placement: str
     pregnant: str  # "Yes" | "No"
+    blood_thinners: str | None = None  # "Yes" | "No"; None only from a form that never asked it
     blood_disorder: str  # "Yes" | "No"
     skin_condition: str  # "Yes" | "No"
     allergies: str | None = None
