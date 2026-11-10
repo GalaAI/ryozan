@@ -140,12 +140,30 @@ export function resolvePublicSiteMode(settings: StudioSettings, hostname: string
 }
 
 /**
- * One cached read per page load. A failed read resolves neutral and is not
- * cached, so the next caller tries again.
+ * A settings read that says whether it succeeded: `error` means the read
+ * failed (offline, server error), never that the studio left a value empty.
+ */
+export type StudioSettingsLoadResult =
+  | { status: 'loaded'; settings: StudioSettings }
+  | { status: 'error'; error: unknown }
+
+/**
+ * One cached read per page load. A failed read is not cached, so the next
+ * caller tries again. `load()` resolves neutral on failure; `loadResult()`
+ * reports the failure so a caller can tell it from an empty setting.
  */
 export function createStudioSettingsLoader(fetchSettings: () => Promise<unknown>) {
   let pending: Promise<StudioSettings> | null = null
   let loaded: StudioSettings | null = null
+  const read = (): Promise<StudioSettings> => {
+    if (loaded) return Promise.resolve(loaded)
+    if (!pending) {
+      pending = fetchSettings()
+        .then((raw) => { loaded = normalizeStudioSettings(raw); return loaded })
+        .finally(() => { pending = null })
+    }
+    return pending
+  }
   return {
     cached: () => loaded,
     /** Replace the cached read after a save; a failed read keeps the old one. */
@@ -153,16 +171,27 @@ export function createStudioSettingsLoader(fetchSettings: () => Promise<unknown>
       loaded = normalizeStudioSettings(await fetchFresh())
     },
     load(): Promise<StudioSettings> {
-      if (loaded) return Promise.resolve(loaded)
-      if (!pending) {
-        pending = fetchSettings()
-          .then((raw) => { loaded = normalizeStudioSettings(raw); return loaded })
-          .catch(() => NEUTRAL_STUDIO_SETTINGS)
-          .finally(() => { pending = null })
-      }
-      return pending
+      return read().catch(() => NEUTRAL_STUDIO_SETTINGS)
+    },
+    loadResult(): Promise<StudioSettingsLoadResult> {
+      return read().then(
+        (settings) => ({ status: 'loaded' as const, settings }),
+        (error: unknown) => ({ status: 'error' as const, error }),
+      )
     },
   }
+}
+
+/**
+ * The install's shop brand pack as a settings read reports it: `error` when
+ * the read failed (retry it), `none` when the studio has no pack scope.
+ */
+export type ShopPackScopeState = { state: 'error' } | { state: 'none' } | { state: 'ready'; scope: string }
+
+export function shopPackScopeState(result: StudioSettingsLoadResult): ShopPackScopeState {
+  if (result.status === 'error') return { state: 'error' }
+  const scope = result.settings.shop_pack_scope
+  return scope ? { state: 'ready', scope } : { state: 'none' }
 }
 
 /** The browser's own IANA zone: the starting value on first-run setup. */
