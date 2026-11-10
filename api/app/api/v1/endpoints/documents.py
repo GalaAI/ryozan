@@ -698,9 +698,9 @@ async def submit_scroll(
     # certificate objects in place and silently rewrote what earlier archive copies
     # pointed at.
     storage_prefix = build_submission_prefix(str(current_user.id))
-    # Files that are, or embed, the government ID stay under the private "scrolls/" prefix; every
-    # other file of the submission (signatures, certificates, a PDF without the ID) goes under the
-    # public "scrolls-public/" twin, since everything under "scrolls/" is private by key.
+    # Files that are, or embed, the government ID, and the signature images, stay under the private
+    # "scrolls/" prefix; the certificates and a PDF without the ID go under the public
+    # "scrolls-public/" twin, since everything under "scrolls/" is private by key.
     public_prefix = public_scroll_prefix(storage_prefix)
 
     def _decode_signature(raw_b64: str, label: str) -> bytes:
@@ -785,7 +785,7 @@ async def submit_scroll(
                 file_bytes=sig_bytes,
                 filename=name,
                 mime_type="image/png",
-                folder_path=public_prefix,
+                folder_path=storage_prefix,
             )
         except Exception:
             logger.error(
@@ -900,6 +900,7 @@ async def submit_scroll(
     # scroll itself.
     scroll_pdf_url: str | None = None
     pdf_bytes: bytes | None = None
+    pdf_filename: str | None = None
     try:
         report = build_scroll_pdf_report(
             ScrollPdfInput(
@@ -921,9 +922,10 @@ async def submit_scroll(
         pdf_bytes = report.pdf
         # Named by content: a PDF that actually embeds the government ID image is the private
         # "artist-scroll.id.pdf"; without an embedded ID it is the public "artist-scroll.noid.pdf".
+        pdf_filename = SCROLL_ID_PDF_FILENAME if report.embeds_government_id else SCROLL_NOID_PDF_FILENAME
         scroll_pdf_url = await upload_to_blob(
             file_bytes=pdf_bytes,
-            filename=SCROLL_ID_PDF_FILENAME if report.embeds_government_id else SCROLL_NOID_PDF_FILENAME,
+            filename=pdf_filename,
             mime_type="application/pdf",
             folder_path=storage_prefix if report.embeds_government_id else public_prefix,
         )
@@ -987,6 +989,8 @@ async def submit_scroll(
             assets,
             bool(scroll_pdf_url),
             submission_id,
+            # Storing the PDF failed: keep its bytes in the DB (never attached) so it can be retried.
+            unstored_pdf=(pdf_bytes, pdf_filename) if pdf_bytes and pdf_filename and not scroll_pdf_url else None,
         )
     except Exception:
         logger.error(
@@ -1664,7 +1668,7 @@ async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = D
         on_file = {
             "signed_at": prior["signed_at"].isoformat() if prior["signed_at"] else None,
             "photo_id_url": signed_id_url(_stored_photo_id_url(prior_data), ID_VIEW_SECONDS),
-            "signature_url": _stored_signature_url(prior_data),
+            "signature_url": signed_id_url(_stored_signature_url(prior_data), ID_VIEW_SECONDS),
             "health": {key: prior_data[key] for key in WAIVER_HEALTH_KEYS if prior_data.get(key) not in (None, "")},
         }
     return {

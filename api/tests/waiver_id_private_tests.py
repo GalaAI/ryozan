@@ -180,7 +180,7 @@ class SignedIdUrlTests(unittest.TestCase):
         for reference in (
             f"https://{ASSETS_HOST}/portfolios/artist/image.webp",
             f"https://{ASSETS_HOST}/scrolls-public/artist-1/20261110T120000-abcd1234/bbp-cert.png",
-            f"https://{ASSETS_HOST}/waivers/2026-11/Jane_WVR/signature.png",
+            f"https://{ASSETS_HOST}/avatars/u-1/signature.png",
             f"https://evil.example.test/{ID_KEY}",
             f"https://pub-account-id.r2.dev/other-bucket/{ID_KEY}",
             f"https://account-id.r2.cloudflarestorage.com/other-bucket/{ID_KEY}",
@@ -228,7 +228,8 @@ class SignedIdUrlTests(unittest.TestCase):
         _assert_signed(self, view["photo_id"], ID_KEY)
         _assert_signed(self, view["govt_id_url"], SCROLL_ID_KEY)
         _assert_signed(self, view["certs_stored"]["govt_id"]["url"], SCROLL_ID_KEY)
-        self.assertEqual(view["signature_url"], data["signature_url"])
+        # Waiver signature images are private too (waivers/ is private by key).
+        _assert_signed(self, view["signature_url"], "waivers/2026-11/x/signature.png")
         self.assertEqual(view["certs_stored"]["bbp_cert"], data["certs_stored"]["bbp_cert"])
         self.assertEqual(data, snapshot, "stored data must not be mutated")
 

@@ -41,6 +41,7 @@ from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
 from app.models.user import User
+from app.services import storage
 from app.services.email import FROM_ADMIN, send_email
 
 if TYPE_CHECKING:
@@ -305,8 +306,15 @@ def queue_owner_emails(
     assets: list[ScrollAsset],
     pdf_filed: bool,
     submission_id: str,
+    *,
+    unstored_pdf: tuple[bytes, str] | None = None,
 ) -> int:
-    """Persist owner email obligations in the archive transaction. Link only, never an attachment."""
+    """Persist owner email obligations in the archive transaction. Link only, never an attachment.
+
+    `unstored_pdf` is (bytes, target filename) when the scroll PDF was generated but storing it
+    failed. Those bytes are kept on the row only so retry_unstored_scroll_pdfs can store them later;
+    they are never attached to the email.
+    """
     html = build_owner_archive_email_html(
         artist.name or "An artist",
         submitted_at,
@@ -329,8 +337,8 @@ def queue_owner_emails(
                 to_email=founder.email,
                 subject=f"Artist Scroll Submitted: {artist.name}",
                 html_body=html,
-                attachment_filename=None,
-                attachment_content=None,
+                attachment_filename=unstored_pdf[1] if unstored_pdf else None,
+                attachment_content=unstored_pdf[0] if unstored_pdf else None,
                 status="queued",
                 attempts=0,
                 next_attempt_at=submitted_at,
@@ -474,3 +482,117 @@ async def count_legacy_scroll_references(conn: AsyncConnection) -> int:
     ).scalar_one()
     logger.info("Document rows referencing legacy scrolls/ objects (served signed): %d", count)
     return int(count)
+
+
+def _set_scroll_pdf_reference(doc: DocumentInstance, url: str) -> None:
+    """Record a newly stored scroll PDF on a document row, filling only empty references."""
+    if not doc.file_url:
+        doc.file_url = url
+    try:
+        data = json.loads(doc.data_json or "{}")
+    except (TypeError, ValueError):
+        return
+    if not isinstance(data, dict):
+        return
+    if not data.get("scroll_pdf_url"):
+        data["scroll_pdf_url"] = url
+    nested = data.get("fields")
+    if isinstance(nested, dict) and not nested.get("scroll_pdf_url"):
+        nested["scroll_pdf_url"] = url
+    doc.data_json = json.dumps(data)
+
+
+async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple[int, int, int]:
+    """Store scroll PDFs whose upload failed, from the bytes kept for that purpose. Idempotent.
+
+    A submission's bytes are kept on its outbox rows only while its archive PDF is not stored
+    (never attached to an email). For each such submission this uploads the bytes under the
+    submission's storage prefix (an ID-bearing PDF, or one whose content is unknown, stays under the
+    private "scrolls/" prefix; a ".noid" PDF goes under "scrolls-public/"), records the URL on the
+    archive copies and the artist's scroll record, then clears the bytes. A failed upload keeps the
+    bytes for the next run. Returns (pending, stored, failed). Logs counts only.
+    """
+    table = ScrollOwnerEmailOutbox.__tablename__
+    rows = (
+        (
+            await db.execute(
+                select(ScrollOwnerEmailOutbox)
+                .where(
+                    ScrollOwnerEmailOutbox.attachment_content.is_not(None),
+                    text(f"NOT {_archive_pdf_confirmed_sql(table)}"),
+                )
+                .order_by(ScrollOwnerEmailOutbox.created_at)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    by_submission: dict[str, list[ScrollOwnerEmailOutbox]] = {}
+    for row in rows:
+        by_submission.setdefault(row.submission_id, []).append(row)
+    if not by_submission:
+        return 0, 0, 0
+
+    stored = failed = 0
+    for submission_id, group in list(by_submission.items())[:limit]:
+        docs = (
+            (
+                await db.execute(
+                    select(DocumentInstance).where(
+                        DocumentInstance.category.in_(("scroll", OWNER_ARCHIVE_CATEGORY)),
+                        DocumentInstance.data_json.contains(f'"submission_id": "{submission_id}"', autoescape=True),
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+        prefix = None
+        for doc in docs:
+            try:
+                candidate = json.loads(doc.data_json or "{}").get("storage_prefix")
+            except (TypeError, ValueError, AttributeError):
+                candidate = None
+            if isinstance(candidate, str) and candidate.startswith("scrolls/") and ".." not in candidate.split("/"):
+                prefix = candidate
+                break
+        if not prefix:
+            failed += 1
+            continue
+        is_public = group[0].attachment_filename == storage.SCROLL_NOID_PDF_FILENAME
+        filename = storage.SCROLL_NOID_PDF_FILENAME if is_public else storage.SCROLL_ID_PDF_FILENAME
+        try:
+            url = await storage.upload_file(
+                file_bytes=group[0].attachment_content,
+                filename=filename,
+                mime_type="application/pdf",
+                folder_path=storage.public_scroll_prefix(prefix) if is_public else prefix,
+            )
+        except Exception:
+            url = None
+        if not url:
+            failed += 1
+            continue
+        for doc in docs:
+            _set_scroll_pdf_reference(doc, url)
+        for row in group:
+            row.attachment_content = None
+            row.attachment_filename = None
+            row.updated_at = datetime.now(UTC)
+        await db.commit()
+        stored += 1
+
+    logger.info("Scroll PDFs waiting to be stored: %d", len(by_submission))
+    logger.info("Scroll PDFs stored on retry: %d", stored)
+    logger.info("Scroll PDF store retries that failed (bytes kept): %d", failed)
+    return len(by_submission), stored, failed
+
+
+async def process_unstored_scroll_pdfs_once(limit: int = 20) -> int:
+    """One retry pass in its own session, for the boot step and the outbox loop."""
+    from app.core.database import async_session
+
+    async with async_session() as db:
+        _pending, stored, _failed = await retry_unstored_scroll_pdfs(db, limit)
+        await db.rollback()
+    return stored

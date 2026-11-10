@@ -540,7 +540,8 @@ async def get_waiver(
         photo_id_reused_from=_str_or_none(data.get("photo_id_reused_from")),
         signature_adopted_from=_str_or_none(data.get("signature_adopted_from")),
         photo_id_url=signed_id_url(data.get("photo_id_url") or data.get("photo_id"), _ID_VIEW_SECONDS),
-        signature_url=data.get("signature_url"),
+        # Signature images are private in R2 like the ID: a short-lived signed link only.
+        signature_url=signed_id_url(data.get("signature_url"), _ID_VIEW_SECONDS),
         artist_signed_at=inst.artist_signed_at,
         artist_reviewed_by=await _resolve_artist_name(db, inst.artist_id_reviewed),
         notes=inst.notes,
@@ -627,7 +628,9 @@ async def countersign_waiver(
         )
 
     now = datetime.now(UTC)
-    inst.artist_signature = body.signature_data
+    # The app may send back the signed link of the artist's saved signature; store the stable reference.
+    signature_ref = canonical_id_reference(body.signature_data) or body.signature_data
+    inst.artist_signature = signature_ref
     inst.artist_signed_at = now
     inst.artist_id_reviewed = current_user.id
     inst.status = DocStatus.APPROVED
@@ -643,7 +646,7 @@ async def countersign_waiver(
         existing_data["artist_notes"] = body.notes
     existing_data["countersigned_by"] = current_user.name
     existing_data["countersigned_at"] = now.isoformat()
-    existing_data["artist_countersignature"] = body.signature_data
+    existing_data["artist_countersignature"] = signature_ref
     inst.data_json = json.dumps(existing_data)
 
     # ── Notify client if they have an account ──
@@ -868,16 +871,13 @@ async def export_waiver_pdf(
     elements.append(Paragraph("Client Signature", heading_style))
     # Signature images are fetched only from this install's own storage: the public form
     # copies client-supplied fields, so a foreign URL here is never requested by the server.
-    sig_url = data.get("signature_url")
-    if sig_url and is_own_storage_url(sig_url):
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(sig_url)
-                if resp.status_code == 200:
-                    img_buf = io.BytesIO(resp.content)
-                    elements.append(Image(img_buf, width=2.5 * inch, height=0.8 * inch, kind="proportional"))
-        except Exception:
-            pass
+    # Signature images are private objects, so the bytes are fetched through a signed link; an inline
+    # data URI (signature not yet uploaded) is decoded instead. Either way the image is embedded.
+    client_sig_png = await _signature_image_bytes(
+        data.get("signature_url") or data.get("signature_data") or data.get("client_signature")
+    )
+    if client_sig_png:
+        elements.append(Image(io.BytesIO(client_sig_png), width=2.5 * inch, height=0.8 * inch, kind="proportional"))
     elements.append(Paragraph(f"Signed: {signed_date_text}", small))
     if data.get("signature_adopted_from"):
         elements.append(Paragraph("Client confirmed their saved signature from a prior waiver at check-in.", small))
@@ -902,16 +902,9 @@ async def export_waiver_pdf(
     elements.append(t)
 
     # Artist signature image
-    artist_sig = data.get("artist_countersignature") or inst.artist_signature
-    if artist_sig and is_own_storage_url(artist_sig):
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(artist_sig)
-                if resp.status_code == 200:
-                    img_buf = io.BytesIO(resp.content)
-                    elements.append(Image(img_buf, width=2.5 * inch, height=0.8 * inch, kind="proportional"))
-        except Exception:
-            pass
+    artist_sig_png = await _signature_image_bytes(data.get("artist_countersignature") or inst.artist_signature)
+    if artist_sig_png:
+        elements.append(Image(io.BytesIO(artist_sig_png), width=2.5 * inch, height=0.8 * inch, kind="proportional"))
     elements.append(Spacer(1, 10))
 
     # Page 2: Terms & Conditions
@@ -969,6 +962,42 @@ async def _resolve_artist_name(db: AsyncSession, artist_id: uuid_mod.UUID | None
 
 def _str_or_none(value: object) -> str | None:
     return str(value) if value not in (None, "") else None
+
+
+async def _signature_image_bytes(reference: str | None) -> bytes | None:
+    """
+    The PNG bytes of a stored signature, for embedding in the waiver PDF. Never raises.
+
+    A reference on this install's own storage is fetched through a short-lived signed link (signature
+    objects are private). An inline data URI or bare base64 PNG is decoded. Anything else, including a
+    client-supplied foreign URL, is never requested by the server.
+    """
+    import httpx
+
+    if not reference or not isinstance(reference, str):
+        return None
+    ref = reference.strip()
+    if ref.startswith(("http://", "https://")):
+        if not is_own_storage_url(ref):
+            return None
+        fetch_url = signed_id_url(ref) if private_id_key(ref) else ref
+        if not fetch_url or not fetch_url.startswith("http"):
+            return None
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(fetch_url)
+            if resp.status_code != 200:
+                return None
+            return normalize_embed_image(resp.content)
+        except Exception:
+            logger.warning("A waiver signature image could not be fetched for the PDF")
+            return None
+    raw = ref.split(",", 1)[1] if ref.startswith("data:") and "," in ref else ref
+    try:
+        decoded = base64.b64decode(raw, validate=True)
+    except (ValueError, TypeError):
+        return None
+    return normalize_embed_image(decoded)
 
 
 def _parse_data_json(raw: str | None) -> dict:

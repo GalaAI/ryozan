@@ -17,8 +17,8 @@ decide). The app treats these R2 keys as private:
 
 | Key pattern | What it holds | Written by |
 | --- | --- | --- |
-| `waivers/pending-ids/*` | Walk-in waiver ID photo | `POST /waiver/upload-id` |
-| `waivers/**/*.pdf` | Printable waiver packet, embeds the client ID image | `POST /waiver/{id}/export-pdf` |
+| `waivers/**` (everything) | Walk-in waiver ID photos (`waivers/pending-ids/`), printable waiver packets that embed the client ID (`waivers/<month>/<name>_<ref>/<name>_<ref>.pdf`) and the client's signature image (`.../signature.png`) | `POST /waiver/upload-id`, `POST /waiver/{id}/export-pdf`, the waiver and check-in signature uploads |
+| `signatures/**` (everything) | Artists' saved signatures, used to countersign waivers | `POST /users/me/signature` |
 | `scrolls/**` (everything) | Every Artist Scroll and scroll category object written before this change (government IDs, generated scroll PDFs, certificates, signatures, category uploads), plus every new file that is or embeds an ID | `POST /documents/scroll/submit`, `POST /scrolls/{slug}/upload` |
 
 Older scroll files were never inspected, so any of them may hold an ID; all of them are private by key
@@ -30,7 +30,8 @@ and served through signed links. New files are routed by content:
 | Generated scroll PDF that embeds the ID image | `scrolls/<user>/<submission>/artist-scroll.id.pdf` (private) |
 | Scroll category upload marked "This file is an ID" | `scrolls/<slug>/<user>/<random>.id.<ext>` (private, never sent to the Gala AI digest) |
 | Generated scroll PDF without an embedded ID (no ID supplied, or an ID uploaded as a PDF, which cannot be embedded) | `scrolls-public/<user>/<submission>/artist-scroll.noid.pdf` (public) |
-| Certificates and signature PNGs from the scroll form | `scrolls-public/<user>/<submission>/` (public) |
+| Signature PNGs from the scroll form (artist and owner) | `scrolls/<user>/<submission>/` (private) |
+| Certificates from the scroll form | `scrolls-public/<user>/<submission>/` (public) |
 | Unmarked scroll category upload | `scrolls-public/<slug>/<user>/<random>.<ext>` (public) |
 
 The server knows at generation time whether it embedded the government ID image
@@ -43,8 +44,12 @@ Every read point turns the stored reference into a short-lived SigV4 signed GET 
 `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com/<R2_BUCKET_NAME>/<key>` (`storage.signed_id_url`):
 
 - `POST /waiver/upload-id` (preview, 10 minutes)
-- `GET /waiver/{id}` photo ID, and the `pdf_url` returned by `POST /waiver/{id}/export-pdf` (15 minutes)
-- `POST /documents/checkin/verify` returning client "ID on file" (15 minutes)
+- `GET /waiver/{id}` photo ID and client signature, and the `pdf_url` returned by
+  `POST /waiver/{id}/export-pdf` (15 minutes)
+- `POST /documents/checkin/verify` returning client "ID on file" and the signature on file (15 minutes)
+- `GET /users/me/signature` and `POST /users/me/signature` (the artist's saved signature, 1 hour, for
+  the countersign screen); `POST /waiver/{id}/countersign` stores the stable reference even when the
+  app sends that signed link back
 - `GET /documents/scroll/my`, `GET /documents/scroll/user/{id}` (`govt_id_url`, `artist_signature`,
   the certificate and signature URLs, and every private reference in `fields`)
 - `POST /documents/scroll/submit` response `scroll_pdf_url` (15 minutes)
@@ -53,7 +58,8 @@ Every read point turns the stored reference into a short-lived SigV4 signed GET 
   and nested `fields`
 - `GET /scrolls/{slug}` list and `POST /scrolls/{slug}/upload` response `file_url` (15 minutes), which
   is where the owner opens the Artist Scrolls archive PDF (category uploads come back unchanged)
-- `GET /archive/{id}/detail` (`data`, including nested `fields` of an owner archive copy)
+- `GET /archive/{id}/detail` (`data`: the photo ID, `signature_url`, `artist_countersignature` and
+  every other private reference, including nested `fields` of an owner archive copy)
 
 Only references on this install's own hosts resolve (the configured assets domain, this account's
 `r2.dev` host, or this account's S3 endpoint with the configured bucket). Anything else passes through
@@ -62,15 +68,28 @@ unchanged and is never fetched by the server.
 Write points normalize an echoed signed link back to the stored reference (`storage.canonical_id_reference`),
 so a browser that submits the preview link it was shown never persists an expiring URL.
 
-Waiver PDFs embed the ID image bytes at generation time, fetched through a signed link, and never print
-the URL. Every export rebuilds the packet from the stored reference, so re-exporting an older waiver
-embeds its ID the same way. When the reference is not one of our own ID objects, or the fetch fails,
-the Photo ID section still prints with a note that the ID is on file.
+Access to records does not change. A founder or admin (and an assigned artist, as before) opens,
+downloads and prints any waiver from the app. The waiver PDF prints the client's filled form values as
+text and embeds the ID image, the client's signature and the artist's countersignature as images. The
+images are fetched only from this install's own storage, through a short-lived signed link
+(`is_own_storage_url` guards every fetch, so a client-supplied foreign URL is never requested); a
+signature still held inline as a data URI is decoded instead. No URL is printed. Every export rebuilds
+the packet from the stored references, so re-exporting an older waiver embeds them the same way. When
+the ID reference is not one of our own objects, or the fetch fails, the Photo ID section still prints
+with a note that the ID is on file. `tests/waiver_record_access_tests.py` proves this for a founder
+and an admin.
 
 Artist Scroll PDFs embed the government ID image bytes at generation time (the upload itself, not a
 re-download). The PDF never prints a government ID link, whatever its key, and never contains its own
 URL: the ID page reads "Private (staff open it through the app)". The server alone sets
 `scroll_pdf_url`; a value sent in the submitted fields is dropped.
+
+The scroll PDF's bytes are kept in the database only when storing it fails. The owner email row then
+holds them (never attached), and a retry (`scroll_archive.retry_unstored_scroll_pdfs`, at boot and on
+every outbox loop) uploads them under the submission's prefix (`artist-scroll.id.pdf` under
+`scrolls/`, or `artist-scroll.noid.pdf` under `scrolls-public/`; a legacy row of unknown content goes
+to the private name), records the URL on the owner archive copies and the artist's scroll record, and
+clears the bytes. A failed retry keeps them. It logs only counts (waiting, stored, failed).
 
 Owner emails queued before this change kept the PDF bytes in the outbox table. A boot step
 (`scroll_archive.clear_sent_owner_email_attachments`, run from `main.py`'s startup seeds) clears
@@ -102,21 +121,27 @@ its Cloudflare zone.
 
    ```
    (http.host eq "<assets-domain>" and (
-     starts_with(http.request.uri.path, "/waivers/pending-ids/")
-     or (starts_with(http.request.uri.path, "/waivers/") and ends_with(lower(http.request.uri.path), ".pdf"))
+     starts_with(http.request.uri.path, "/waivers/")
+     or starts_with(http.request.uri.path, "/signatures/")
      or starts_with(http.request.uri.path, "/scrolls/")
    ))
    ```
 
-   `/scrolls/` is blocked wholesale; `/scrolls-public/` stays open (it does not match: the prefix
-   test includes the slash). Keep URL normalization on (Rules, Settings, Normalize incoming URLs) so encoded paths cannot slip
+   Exactly what it covers: every object under `/waivers/` (ID photos, waiver packets, client signature
+   images), every object under `/signatures/` (artists' saved signatures) and every object under
+   `/scrolls/` (scroll IDs, ID-bearing and legacy scroll PDFs, scroll signatures, and every older
+   scroll certificate or category upload). Nothing else is blocked: `/scrolls-public/` stays open (the
+   prefix test includes the slash), as do avatars, portfolios, flash, references and bookings uploads. Keep URL normalization on (Rules, Settings, Normalize incoming URLs) so encoded paths cannot slip
    past the match. WAF rules run before cache, so cached copies are blocked too.
 2. R2, bucket `<R2_BUCKET_NAME>`, Settings, Public access: if the `r2.dev` subdomain is enabled, disable
    it. The custom domain stays connected for public assets.
-3. Verify: legacy `https://<assets-domain>/waivers/pending-ids/<id>.jpg` and
+3. Verify: legacy `https://<assets-domain>/waivers/pending-ids/<id>.jpg`,
+   `https://<assets-domain>/waivers/<month>/<name>_<ref>/signature.png`,
+   `https://<assets-domain>/signatures/<user>/<file>.png` and
    `https://<assets-domain>/scrolls/<user>/<submission>/artist-scroll.pdf` links return 403, while staff
-   can still open a waiver in Countersign, export the PDF with the ID on it, a returning client still
-   sees "ID on file" after the check-in code, and the owner can open a scroll PDF from Artist Scrolls.
+   can still open a waiver in Countersign (client signature shown), countersign with a saved signature,
+   export the PDF with the ID and both signatures on it, a returning client still sees "ID on file"
+   after the check-in code, and the owner can open a scroll PDF from Artist Scrolls.
    Any older `/scrolls/...` certificate or category upload link also returns 403, while new
    `/scrolls-public/...` links (an `artist-scroll.noid.pdf`, a certificate, an unmarked category
    upload) still open publicly.

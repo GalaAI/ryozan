@@ -280,17 +280,19 @@ def _r2_public_url(object_key: str) -> str:
 #  Private government ID objects (signed GET links)
 # ═══════════════════════════════════════════════════════
 
-# Waiver ID photos uploaded by the public walk-in flow.
-PRIVATE_ID_PREFIXES = ("waivers/pending-ids/",)
-# Printable waiver packets (waivers/<month>/<name>_<ref>/<name>_<ref>.pdf) embed the client's ID image.
-_WAIVER_ROOT = "waivers/"
+# Everything under "waivers/" is a client record: ID photos (waivers/pending-ids/), printable
+# packets that embed the ID (waivers/<month>/<name>_<ref>/<name>_<ref>.pdf) and the client's
+# signature image (.../signature.png). Artists' saved signatures live under "signatures/".
+# Both prefixes are private by key; staff open them through short-lived signed links.
+PRIVATE_ID_PREFIXES = ("waivers/", "signatures/")
 # Everything under "scrolls/" is private by key: Artist Scroll government IDs (govt-id.*), the
 # generated scroll PDF (artist-scroll.id.pdf, or the legacy artist-scroll.pdf), and every older
 # certificate, signature and category upload, which was never inspected and may hold an ID.
-# New files that are safe to serve publicly (unmarked category uploads, certificates, signatures,
+# New files that are safe to serve publicly (unmarked category uploads, certificates,
 # a generated artist-scroll.noid.pdf) are written under the separate "scrolls-public/" prefix
 # (public_scroll_prefix). A new file that is, or embeds, an ID stays under "scrolls/" and keeps the
-# ".id.<ext>" marker name (scroll_id_filename) so it reads as an ID wherever it is listed.
+# ".id.<ext>" marker name (scroll_id_filename) so it reads as an ID wherever it is listed. New
+# signature images stay under "scrolls/" too.
 _SCROLL_ID_ROOT = "scrolls/"
 SCROLL_PUBLIC_ROOT = "scrolls-public/"
 SCROLL_ID_PDF_FILENAME = "artist-scroll.id.pdf"
@@ -301,14 +303,10 @@ _MAX_PRESIGN_SECONDS = 7 * 24 * 3600
 
 
 def is_private_id_key(object_key: str) -> bool:
-    """True when an R2 key holds, or may hold, a government ID and must never be served publicly."""
+    """True when an R2 key holds, or may hold, a government ID or a signature and must never be public."""
     if not object_key or ".." in object_key.split("/"):
         return False
-    if object_key.startswith(PRIVATE_ID_PREFIXES):
-        return True
-    if object_key.startswith(_WAIVER_ROOT) and object_key.lower().endswith(".pdf"):
-        return True
-    return object_key.startswith(_SCROLL_ID_ROOT)
+    return object_key.startswith((*PRIVATE_ID_PREFIXES, _SCROLL_ID_ROOT))
 
 
 def public_scroll_prefix(private_prefix: str) -> str:
@@ -468,7 +466,7 @@ def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | No
 # or a PDF that may embed one (the Artist Scroll PDF; signed_id_url signs it only when its key is private).
 ID_REFERENCE_KEYS = ("photo_id_url", "photo_id", "govt_id_url", "scroll_pdf_url")
 # Substrings that tell a raw data_json may hold a private reference (cheap prefilter).
-PRIVATE_REFERENCE_HINTS = (*ID_REFERENCE_KEYS, _SCROLL_ID_ROOT)
+PRIVATE_REFERENCE_HINTS = (*ID_REFERENCE_KEYS, *PRIVATE_ID_PREFIXES, _SCROLL_ID_ROOT)
 # The owner archive copy nests the artist's scroll data under "fields"; one level is all it uses.
 _MAX_NESTED_FIELDS_DEPTH = 2
 

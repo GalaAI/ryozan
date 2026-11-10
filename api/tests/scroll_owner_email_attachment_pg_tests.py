@@ -13,6 +13,7 @@ import json
 import logging
 import unittest
 from datetime import UTC, datetime
+from unittest.mock import patch
 from uuid import uuid4
 
 from sqlalchemy import select, text
@@ -23,10 +24,12 @@ from app.core.database import Base
 from app.models.document import DocumentInstance
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
 from app.models.user import User  # noqa: F401 - registers the founder foreign key target
+from app.services import storage
 from app.services.scroll_archive import (
     OWNER_ARCHIVE_CATEGORY,
     clear_sent_owner_email_attachments,
     count_legacy_scroll_references,
+    retry_unstored_scroll_pdfs,
 )
 
 TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "")
@@ -131,8 +134,9 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
             data_json=json.dumps(
                 {
                     "submission_id": submission_id,
+                    "storage_prefix": f"scrolls/artist-1/{submission_id}",
                     "scroll_pdf_url": scroll_pdf_url,
-                    "fields": {"legal_name": "Synthetic"},
+                    "fields": {"legal_name": "Synthetic", "scroll_pdf_url": scroll_pdf_url},
                 }
             ),
             file_url=file_url,
@@ -209,6 +213,64 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
         self._assert_counts_only(first_logs + second_logs)
+
+    async def test_a_failed_pdf_store_is_retried_recorded_and_cleared(self):
+        succeed_for = self.rows["sent_missing"].submission_id
+        uploaded: list[tuple[str, str]] = []
+
+        async def _upload(*, file_bytes, filename, mime_type, folder_path):
+            self.assertEqual(file_bytes, SYNTHETIC_PDF)
+            if succeed_for not in folder_path:
+                return None  # storage still failing for this submission
+            uploaded.append((folder_path, filename))
+            return f"{ASSETS}/{folder_path}/{filename}"
+
+        async def _retry():
+            async with self.sessions() as db:
+                return await retry_unstored_scroll_pdfs(db)
+
+        with patch.object(storage, "upload_file", _upload):
+            with self.assertLogs("ryozan.scroll_archive", level=logging.INFO) as captured:
+                first = await _retry()
+            # Unconfirmed rows with bytes: sent_missing (stored now), exhausted_missing (upload fails),
+            # sent_no_record (no archive record, so no storage prefix).
+            self.assertEqual(first, (3, 1, 2))
+            with self.assertLogs("ryozan.scroll_archive", level=logging.INFO) as again:
+                second = await _retry()
+            self.assertEqual(second, (2, 0, 2))
+
+        # Stored under the private prefix with the ID marker name (content unknown, so private).
+        self.assertEqual(uploaded, [(f"scrolls/artist-1/{succeed_for}", "artist-scroll.id.pdf")])
+        after = await self._bytes()
+        self.assertIsNone(after["sent_missing"])
+        self.assertEqual(after["exhausted_missing"], SYNTHETIC_PDF)
+        self.assertEqual(after["sent_no_record"], SYNTHETIC_PDF)
+        self.assertEqual(after["queued_stored"], SYNTHETIC_PDF)  # confirmed archive: not a retry case
+
+        stored_url = f"{ASSETS}/scrolls/artist-1/{succeed_for}/artist-scroll.id.pdf"
+        async with self.sessions() as db:
+            docs = (await db.execute(select(DocumentInstance))).scalars().all()
+        doc = next(d for d in docs if d.data_json and succeed_for in d.data_json)
+        self.assertEqual(doc.file_url, stored_url)
+        data = json.loads(doc.data_json)
+        self.assertEqual(data["scroll_pdf_url"], stored_url)
+        self.assertEqual(data["fields"]["scroll_pdf_url"], stored_url)
+
+        messages = [r.getMessage() for r in captured.records + again.records]
+        self.assertEqual(
+            messages[:3],
+            [
+                "Scroll PDFs waiting to be stored: 3",
+                "Scroll PDFs stored on retry: 1",
+                "Scroll PDF store retries that failed (bytes kept): 2",
+            ],
+        )
+        self._assert_counts_only(messages)
+
+        # The guarded clear step afterwards: finished rows with bytes are the 3 confirmed ones from
+        # setup plus the 2 still unstored; the 3 confirmed are cleared, the 2 unstored kept.
+        (found, cleared, kept), _logs = await self._run(clear_sent_owner_email_attachments)
+        self.assertEqual((found, cleared, kept), (5, 3, 2))
 
     async def test_legacy_scroll_references_are_counted_and_nothing_changes(self):
         async with self.sessions() as db:

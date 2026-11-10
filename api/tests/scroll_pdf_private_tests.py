@@ -476,11 +476,17 @@ def _acceptances() -> dict:
     }
 
 
-async def _submit(test: unittest.TestCase, govt_id) -> tuple[dict, dict[str, bytes], _QueueSession]:
+async def _submit(
+    test: unittest.TestCase, govt_id, *, fail_pdf: bool = False, folders: dict | None = None
+) -> tuple[dict, dict[str, bytes], _QueueSession]:
     uploads: dict[str, bytes] = {}
 
     async def _fake_upload(*, file_bytes, filename, mime_type, folder_path):
+        if fail_pdf and filename.endswith(".pdf"):
+            return None
         uploads[filename] = file_bytes
+        if folders is not None:
+            folders[filename] = folder_path
         return f"https://{ASSETS_HOST}/{folder_path}/{filename}"
 
     artist = SimpleNamespace(
@@ -583,6 +589,68 @@ class SubmitScrollTests(unittest.IsolatedAsyncioTestCase):
                     self.assertTrue(stored_id.endswith("/govt-id.pdf"))
                     with _settings_patch():
                         self.assertIn("X-Amz-Signature=", storage.signed_id_url(stored_id))
+
+    async def test_signatures_and_ids_stay_private_and_certificates_go_public(self):
+        govt_id = SimpleNamespace(
+            filename="id.png", content_type="image/png", read=AsyncMock(return_value=_synthetic_id_png())
+        )
+        bbp = SimpleNamespace(filename="bbp.png", content_type="image/png", read=AsyncMock(return_value=_png(3, 3)))
+        folders: dict[str, str] = {}
+        uploads: dict[str, bytes] = {}
+
+        async def _fake_upload(*, file_bytes, filename, mime_type, folder_path):
+            uploads[filename] = file_bytes
+            folders[filename] = folder_path
+            return f"https://{ASSETS_HOST}/{folder_path}/{filename}"
+
+        with (
+            _settings_patch(),
+            patch.object(documents, "upload_to_blob", _fake_upload),
+            patch.object(documents, "resolve_founders", AsyncMock(return_value=[])),
+        ):
+            await documents.submit_scroll(
+                request=SimpleNamespace(headers={"user-agent": "unit-test"}),
+                artist_signature=base64.b64encode(_png(11, 3)).decode(),
+                fields_json=json.dumps(
+                    {
+                        "terms_version": documents.ARTIST_SCROLL_TERMS_VERSION,
+                        "section_acceptances": _acceptances(),
+                    }
+                ),
+                bbp_cert=bbp,
+                first_aid_cert=None,
+                cpr_cert=None,
+                govt_id=govt_id,
+                db=_QueueSession([], None),
+                current_user=SimpleNamespace(
+                    id=uuid.uuid4(),
+                    name="Synthetic Artist",
+                    email="a@example.test",
+                    role="artist",
+                    bttcoin_balance=0,
+                    quest_points=0,
+                ),
+            )
+        self.assertTrue(folders["artist-sig.png"].startswith("scrolls/"))
+        self.assertTrue(folders["govt-id.png"].startswith("scrolls/"))
+        self.assertTrue(folders["artist-scroll.id.pdf"].startswith("scrolls/"))
+        self.assertTrue(folders["bbp-cert.png"].startswith("scrolls-public/"))
+
+    async def test_a_pdf_that_fails_to_store_keeps_its_bytes_for_retry_never_attached(self):
+        govt_id = SimpleNamespace(
+            filename="id.png", content_type="image/png", read=AsyncMock(return_value=_synthetic_id_png())
+        )
+        response, uploads, session = await _submit(self, govt_id, fail_pdf=True)
+        self.assertIsNone(response["scroll_pdf_url"])
+        self.assertNotIn("artist-scroll.id.pdf", uploads)
+        outbox = [obj for obj in session.added if type(obj).__name__ == "ScrollOwnerEmailOutbox"]
+        self.assertEqual(len(outbox), 1)
+        # The bytes are kept with the private target name, only so the store can be retried.
+        self.assertTrue(outbox[0].attachment_content.startswith(b"%PDF"))
+        self.assertEqual(outbox[0].attachment_filename, "artist-scroll.id.pdf")
+        self.assertIn("the archive has no PDF", outbox[0].html_body)
+        for doc in _docs(session):
+            self.assertIsNone(doc.file_url)
 
     async def test_owner_email_is_link_only(self):
         govt_id = SimpleNamespace(

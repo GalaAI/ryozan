@@ -371,6 +371,9 @@ def _signature_block(
     flowable = _fitted_image(normalized, 2.6 * inch, 0.9 * inch) if normalized else None
     if flowable is not None:
         body = flowable
+    elif url and private_id_key(url):
+        # Signature images are private objects: never printed as a link.
+        body = Paragraph("Signature image stored privately (staff open it through the app).", styles["small"])
     elif url:
         body = Paragraph(f"Signature image stored at: {_escape(url)}", styles["small"])
     else:
