@@ -70,11 +70,29 @@ def _sign(key: bytes, message: str) -> bytes:
     return hmac.new(key, message.encode(), hashlib.sha256).digest()
 
 
+def object_path(bucket: str, key: str) -> str:
+    """The URI-encoded request path for one object, used both to sign and to send.
+
+    SigV4 encodes every byte outside A-Z a-z 0-9 - . _ ~ (and the / separators of the key), so the
+    @ of @<scope> is sent and signed as %40, the same way api/app/services/storage.py encodes keys.
+    """
+    return f"/{quote(bucket, safe='')}/{quote(key, safe='/-._~')}"
+
+
 def signed_put_headers(
-    account_id: str, access_key: str, secret_key: str, canonical_path: str, content_type: str, payload_sha256: str
+    account_id: str,
+    access_key: str,
+    secret_key: str,
+    canonical_path: str,
+    content_type: str,
+    payload_sha256: str,
+    now: datetime | None = None,
 ) -> dict[str, str]:
-    """AWS Signature V4 headers for one R2 PUT (S3-compatible, region auto)."""
-    now = datetime.now(UTC)
+    """AWS Signature V4 headers for one R2 PUT (S3-compatible, region auto).
+
+    canonical_path must already be URI-encoded (object_path); it is signed exactly as it is sent.
+    """
+    now = now or datetime.now(UTC)
     datestamp, amz_date = now.strftime("%Y%m%d"), now.strftime("%Y%m%dT%H%M%SZ")
     headers = {
         "content-type": content_type,
@@ -117,7 +135,7 @@ def upload(files: list[tuple[str, Path, int, str]], bucket: str, prefix: str) ->
     with httpx.Client(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
         for pack_path, path, _size, digest in files:
             key = object_key(prefix, pack_path)
-            canonical_path = f"/{quote(bucket, safe='')}/{quote(key, safe='/@-._~')}"
+            canonical_path = object_path(bucket, key)
             content_type = PACK_CONTENT_TYPES[Path(pack_path).suffix.lower()]
             headers = signed_put_headers(account_id, access_key, secret_key, canonical_path, content_type, digest)
             response = client.put(f"{endpoint}{canonical_path}", content=path.read_bytes(), headers=headers)
