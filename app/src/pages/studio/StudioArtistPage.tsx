@@ -13,6 +13,7 @@ import { Link, useParams } from 'react-router-dom'
 import StudioSiteShell from '../../components/studio-site/StudioSiteShell'
 import { useStudioSettings } from '../../hooks/useStudioSettings'
 import { artists as artistsApi, type ArtistDetail, type StudioSettings } from '../../lib/api'
+import { artistBookingPath } from '../../lib/public-booking'
 import { artistLinks, artistPortfolio, artistSpecialties, paragraphs, studioName } from '../../lib/studio-site'
 
 export type ArtistLoad = { status: 'loading' } | { status: 'ready'; artist: ArtistDetail } | { status: 'missing' }
@@ -64,7 +65,7 @@ export function StudioArtistView({ settings, load }: { settings: StudioSettings;
           <div className="calendar-purpose-copy">
             {bio.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
             <div className="calendar-purpose-actions">
-              <Link to="/dashboard/book" className="btn btn-primary">Book with {artist.name}</Link>
+              <Link to={artistBookingPath(artist.slug)} className="btn btn-primary">Book with {artist.name}</Link>
               {links.map((link) => (
                 <a key={link.url} className="calendar-purpose-link" href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a>
               ))}
