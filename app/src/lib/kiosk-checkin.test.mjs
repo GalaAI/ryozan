@@ -140,3 +140,13 @@ test('the waiver payload carries what the server requires', () => {
   assert.equal(reused.allergies, 'Latex')
   assert.equal(reused.health_same_as_last_visit, true)
 })
+
+test('kiosk and gift card pages use @ryozan/ui status parts, never a local status component', async () => {
+  for (const page of ['../pages/CheckinPage.tsx', '../pages/GiftCardsPage.tsx']) {
+    const source = await readFile(new URL(page, import.meta.url), 'utf8')
+    assert.doesNotMatch(source, /function Note\b|<Note\b/, `${page} must not author its own status component`)
+    for (const tag of source.match(/<StatusText\b[^>]*>/g) ?? []) {
+      assert.match(tag, /\bwrap\b/, `${page}: a status sentence wraps inside its panel (${tag})`)
+    }
+  }
+})

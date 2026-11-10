@@ -8,12 +8,11 @@
  * Server contract: api/app/api/v1/endpoints/gift_cards.py.
  */
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import {
   Button, Chip, ChipGroup, MetaList, PageTitle, Panel, SectionLabel, StatusText, TextField,
-  type BadgeTone,
 } from '@ryozan/ui'
 import {
   artists as artistsApi,
@@ -33,15 +32,6 @@ const column = { width: '100%', display: 'grid', gap: 'var(--space-5)' } as cons
 const panelBody = { padding: 'var(--space-5)', gap: 'var(--space-4)' } as const
 const twoUp = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12rem), 1fr))', gap: 'var(--space-4)' } as const
 
-/** A short status word (StatusText does not wrap) over the sentence that explains it (SectionLabel wraps). */
-function Note({ tone, word, alert = false, children }: { tone: BadgeTone; word: string; alert?: boolean; children?: ReactNode }) {
-  return (
-    <div role={alert ? 'alert' : undefined} style={{ display: 'grid', gap: 'var(--space-1)' }}>
-      <StatusText tone={tone}>{word}</StatusText>
-      {children && <SectionLabel>{children}</SectionLabel>}
-    </div>
-  )
-}
 
 function messageOf(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
@@ -118,14 +108,14 @@ function GiftCardConfirmation({ sessionId, studioName }: { sessionId: string; st
             { label: 'Sent to', value: status.recipient_email_hint },
           ]} />
         )}
-        {phase === 'confirming' && !error && <Note tone="pending" word="Confirming">Waiting on the payment. This page updates on its own.</Note>}
-        {phase === 'delivering' && <Note tone="pending" word="Paid">Payment confirmed. Sending the email now.</Note>}
-        {phase === 'delivered' && <Note tone="ok" word="Delivered">The code is in that inbox.</Note>}
-        {phase === 'not_created' && <Note tone="danger" word="Not created">The payment did not complete. No gift card was issued.</Note>}
+        {phase === 'confirming' && !error && <StatusText tone="pending" wrap>Confirming. Waiting on the payment. This page updates on its own.</StatusText>}
+        {phase === 'delivering' && <StatusText tone="pending" wrap>Payment confirmed. Sending the email now.</StatusText>}
+        {phase === 'delivered' && <StatusText tone="ok" wrap>Delivered. The code is in that inbox.</StatusText>}
+        {phase === 'not_created' && <StatusText tone="danger" wrap>The payment did not complete. No gift card was issued.</StatusText>}
         {gaveUp && phase !== 'delivered' && phase !== 'not_created' && (
           <SectionLabel>Still confirming. Refresh this page in a minute; your receipt email has the details.</SectionLabel>
         )}
-        {error && <Note tone="danger" word="Not found" alert>{error}</Note>}
+        {error && <StatusText tone="danger" wrap role="alert">{error}</StatusText>}
         <div><Button variant="outline" onClick={() => navigate('/')}>Back to {studioName || 'the shop'}</Button></div>
       </Panel>
     </>
@@ -210,8 +200,8 @@ function GiftCardPurchase({ studioName, cancelled }: { studioName: string; cance
         Give their next tattoo
       </PageTitle>
 
-      {cancelled && <Note tone="pending" word="Cancelled">Checkout was cancelled. Nothing was charged.</Note>}
-      {loadError && <Note tone="danger" word="Unavailable" alert>{loadError}</Note>}
+      {cancelled && <StatusText tone="pending" wrap>Checkout was cancelled. Nothing was charged.</StatusText>}
+      {loadError && <StatusText tone="danger" wrap role="alert">{loadError}</StatusText>}
 
       <form noValidate onSubmit={(e) => void submit(e)} aria-label="Buy a gift card" style={column}>
         <Panel surface="raised" style={panelBody}>
@@ -269,7 +259,7 @@ function GiftCardPurchase({ studioName, cancelled }: { studioName: string; cance
           {terms && terms.price_adjustment_bps > 0 && (
             <SectionLabel tone="ghost">Checkout total includes the {adjustmentLabel(terms.price_adjustment_bps)} card price adjustment.</SectionLabel>
           )}
-          {error && <Note tone="danger" word="Check this" alert>{error}</Note>}
+          {error && <StatusText tone="danger" wrap role="alert">{error}</StatusText>}
           <Button type="submit" size="lg" fullWidth disabled={submitting || !terms || artists.length === 0}>
             {submitting ? 'Starting checkout…' : 'Continue to secure checkout'}
           </Button>

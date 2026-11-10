@@ -10,13 +10,12 @@
  * SignaturePad, the public form shell). Server contract: api/app/api/v1/endpoints/documents.py.
  */
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import DOMPurify from 'dompurify'
 import {
   Badge, Button, Chip, ChipGroup, MetaList, PageTitle, Panel, SectionLabel, StatusText, TextField,
-  type BadgeTone,
 } from '@ryozan/ui'
 import {
   artists as artistsApi,
@@ -74,15 +73,6 @@ function monthYear(iso: string | null | undefined): string {
   return iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ''
 }
 
-/** A short status word (StatusText does not wrap) over the sentence that explains it (SectionLabel wraps). */
-function Note({ tone, word, alert = false, children }: { tone: BadgeTone; word: string; alert?: boolean; children?: ReactNode }) {
-  return (
-    <div role={alert ? 'alert' : undefined} style={{ display: 'grid', gap: 'var(--space-1)' }}>
-      <StatusText tone={tone}>{word}</StatusText>
-      {children && <SectionLabel>{children}</SectionLabel>}
-    </div>
-  )
-}
 
 function messageOf(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback
@@ -514,7 +504,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
                     ))}
                   </ChipGroup>
                   {crew.length === 0 && <SectionLabel tone="ghost">Ask the front desk which artist to pick.</SectionLabel>}
-                  {errors.artist && <Note tone="danger" word="Required">{errors.artist}</Note>}
+                  {errors.artist && <StatusText tone="danger" wrap>{errors.artist}</StatusText>}
                 </Panel>
               )}
 
@@ -574,13 +564,13 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
                 {reusePhotoId ? (
                   <>
                     <SectionLabel>Photo ID</SectionLabel>
-                    <Note tone="ok" word="ID on file">From your last visit.</Note>
+                    <StatusText tone="ok" wrap>ID on file from your last visit.</StatusText>
                     <div><Button variant="ghost" size="sm" onClick={() => setReusePhotoId(false)}>Use a new photo</Button></div>
                   </>
                 ) : (
                   <FormFieldRenderer field={ID_FIELD} value={photoIdUrl} onChange={(_, v) => setPhotoIdUrl(String(v))} />
                 )}
-                {errors.photoId && <Note tone="danger" word="Required">{errors.photoId}</Note>}
+                {errors.photoId && <StatusText tone="danger" wrap>{errors.photoId}</StatusText>}
                 <SectionLabel tone="ghost">18 and up, verified by photo ID. Keep it flat and in focus.</SectionLabel>
               </Panel>
             </>
@@ -602,10 +592,10 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
                   onChange={(e) => setHealth((h) => ({ ...h, medications: e.target.value }))} />
               )}
               {healthNeedsReview(health) && (
-                <Note tone="pending" word="Heads up">Your artist will go over this with you before you start.</Note>
+                <StatusText tone="pending" wrap>Heads up. Your artist will go over this with you before you start.</StatusText>
               )}
               {health.answers.intoxicated === 'Yes' && (
-                <Note tone="danger" word="Not today" alert>We cannot tattoo anyone under the influence. Let us reschedule.</Note>
+                <StatusText tone="danger" wrap role="alert">Not today. We cannot tattoo anyone under the influence. Let us reschedule.</StatusText>
               )}
             </Panel>
           )}
@@ -630,7 +620,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
                     value={Boolean(consents[c.name])}
                     onChange={(name, value) => setConsents((cur) => ({ ...cur, [name]: Boolean(value) }))}
                   />
-                  {errors[c.name] && <StatusText tone="danger">{errors[c.name]}</StatusText>}
+                  {errors[c.name] && <StatusText tone="danger" wrap>{errors[c.name]}</StatusText>}
                 </div>
               ))}
               <SectionLabel>Signature</SectionLabel>
@@ -650,7 +640,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
                   )}
                 </>
               )}
-              {errors.signature && <Note tone="danger" word="Required">{errors.signature}</Note>}
+              {errors.signature && <StatusText tone="danger" wrap>{errors.signature}</StatusText>}
             </Panel>
           )}
 
@@ -684,7 +674,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
             </Panel>
           )}
 
-          {notice && <Note tone="danger" word="Check this" alert>{notice}</Note>}
+          {notice && <StatusText tone="danger" wrap role="alert">{notice}</StatusText>}
 
           {stage === 1 && detailsOpen && (
             <Button size="lg" fullWidth disabled={busy} onClick={() => void stepOne()}>{busy ? 'One moment…' : 'Next'}</Button>
