@@ -30,6 +30,7 @@ import {
   type EconLedgerSummary,
 } from '../../lib/api'
 import ArtistDepositActivity from '../../components/ArtistDepositActivity'
+import { archivePhotoIdUrl } from '../../lib/archive-photo-id'
 
 const STRIPE_CONNECT_PLATFORM_PROFILE_URL = 'https://dashboard.stripe.com/connect/set-up/profile'
 
@@ -413,6 +414,7 @@ function ArchiveRow({ record, expanded, onToggle }: {
   const typeIcon = TYPE_ICONS[record.record_type] || Icons.waiver
   const typeLabel = record.record_type.charAt(0).toUpperCase() + record.record_type.slice(1)
   const [detail, setDetail] = useState<ArchiveDetail | null>(null)
+  const photoIdUrl = archivePhotoIdUrl(detail?.data)
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
 
@@ -496,10 +498,10 @@ function ArchiveRow({ record, expanded, onToggle }: {
                 )}
 
                 {/* Photo ID */}
-                {detail.data.photo_id && (
+                {photoIdUrl && (
                   <div className="archive-record-section">
                     <h4 className="archive-record-heading">Photo ID</h4>
-                    <img src={detail.data.photo_id} alt="Client ID" className="archive-id-photo" />
+                    <img src={photoIdUrl} alt="Client ID" className="archive-id-photo" />
                   </div>
                 )}
 
