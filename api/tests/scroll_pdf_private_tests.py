@@ -477,7 +477,12 @@ def _acceptances() -> dict:
 
 
 async def _submit(
-    test: unittest.TestCase, govt_id, *, fail_pdf: bool = False, folders: dict | None = None
+    test: unittest.TestCase,
+    govt_id,
+    *,
+    fail_pdf: bool = False,
+    folders: dict | None = None,
+    extra_fields: dict | None = None,
 ) -> tuple[dict, dict[str, bytes], _QueueSession]:
     uploads: dict[str, bytes] = {}
 
@@ -505,6 +510,7 @@ async def _submit(
             "section_acceptances": _acceptances(),
             # Client-sent values the server alone owns must never be stored.
             "scroll_pdf_url": "https://evil.example.test/old.pdf",
+            **(extra_fields or {}),
         }
     )
     session = _QueueSession([], None)
@@ -678,6 +684,101 @@ class SubmitScrollTests(unittest.IsolatedAsyncioTestCase):
             for seconds in (documents.ID_VIEW_SECONDS, scrolls.SCROLL_FILE_VIEW_SECONDS, 10**9):
                 query = parse_qs(urlsplit(storage.signed_id_url(ID_PDF_URL, seconds)).query)
                 self.assertLessEqual(int(query["X-Amz-Expires"][0]), 7 * 24 * 3600)
+
+
+# Synthetic references to objects the artist does not own: another client's waiver ID, a stored
+# signature, another artist's scroll, and an echoed signed link to one of them.
+FOREIGN_WAIVER_ID = f"https://{ASSETS_HOST}/waivers/other-client/{'c' * 32}.jpg"
+FOREIGN_SIGNATURE = f"https://{ASSETS_HOST}/signatures/other-client/sig.png"
+FOREIGN_SCROLL_ID = f"https://{ASSETS_HOST}/scrolls/other-artist/20261101T000000-ffff0000/govt-id.png"
+FOREIGN_SIGNED = (
+    f"https://account-id.r2.cloudflarestorage.com/{BUCKET}/waivers/other-client/x.jpg?X-Amz-Signature=" + "0" * 64
+)
+FOREIGN_REFS = (FOREIGN_WAIVER_ID, FOREIGN_SIGNATURE, FOREIGN_SCROLL_ID, FOREIGN_SIGNED)
+
+
+class ClientSuppliedReferenceTests(unittest.IsolatedAsyncioTestCase):
+    """The scroll record never stores a browser-supplied reference into our own storage."""
+
+    def setUp(self):
+        _uncompressed_pdfs(self)
+
+    def _assert_no_foreign_refs(self, session, result):
+        blobs = [d.data_json for d in _docs(session)] + [json.dumps(result)]
+        for blob in blobs:
+            for ref in FOREIGN_REFS:
+                self.assertNotIn(ref, blob)
+            for needle in ("other-client", "other-artist"):
+                self.assertNotIn(needle, blob)
+
+    async def test_bare_private_key_urls_without_an_upload_are_ignored(self):
+        smuggled = {
+            "govt_id_url": FOREIGN_WAIVER_ID,
+            "photo_id_url": FOREIGN_WAIVER_ID,
+            "owner_sig_url": FOREIGN_SIGNATURE,
+            "artist_sig_url": FOREIGN_SIGNATURE,
+            "scroll_pdf_url": FOREIGN_SCROLL_ID,
+            "first_aid_cert_url": FOREIGN_SCROLL_ID,
+            "certs_stored": {"govt_id": {"provided": True, "stored": True, "url": FOREIGN_WAIVER_ID}},
+        }
+        result, uploads, session = await _submit(self, None, extra_fields=smuggled)
+        self._assert_no_foreign_refs(session, result)
+        self.assertFalse(any(name.startswith("govt-id") for name in uploads))
+        for doc in _docs(session):
+            data = json.loads(doc.data_json)
+            fields = data.get("fields", data)
+            self.assertNotIn("govt_id_url", fields)
+            self.assertNotIn("photo_id_url", fields)
+            self.assertEqual(fields["legal_name"], "Synthetic Artist")
+            self.assertFalse(fields["certs_stored"]["govt_id"]["provided"])
+
+    async def test_references_to_other_keys_anywhere_in_the_fields_are_dropped(self):
+        smuggled = {
+            "notes": FOREIGN_SIGNED,
+            "references": [FOREIGN_SCROLL_ID, "Synthetic Reference"],
+            "emergency": {"name": "Synthetic Contact", "doc": FOREIGN_WAIVER_ID},
+        }
+        result, _uploads, session = await _submit(self, None, extra_fields=smuggled)
+        self._assert_no_foreign_refs(session, result)
+        row = next(d for d in _docs(session) if d.category == "scroll")
+        data = json.loads(row.data_json)
+        self.assertNotIn("notes", data)
+        self.assertEqual(data["references"], ["Synthetic Reference"])
+        self.assertEqual(data["emergency"], {"name": "Synthetic Contact"})
+
+        # Reading the record back signs nothing pointing at the foreign keys.
+        row.created_at = FROZEN
+        with _settings_patch():
+            view = await documents.get_my_scroll(db=_QueueSession(row), current_user=SimpleNamespace(id=row.user_id))
+        self.assertIsNone(view["scroll"]["govt_id_url"])
+        for needle in ("other-client", "other-artist"):
+            self.assertNotIn(needle, json.dumps(view))
+
+    async def test_a_real_upload_still_wins_over_a_smuggled_reference(self):
+        govt_id = SimpleNamespace(
+            filename="id.png", content_type="image/png", read=AsyncMock(return_value=_synthetic_id_png())
+        )
+        folders: dict[str, str] = {}
+        result, uploads, session = await _submit(
+            self, govt_id, folders=folders, extra_fields={"govt_id_url": FOREIGN_WAIVER_ID}
+        )
+        self._assert_no_foreign_refs(session, result)
+        self.assertTrue(folders["govt-id.png"].startswith("scrolls/"))
+        self.assertRegex(uploads["artist-scroll.id.pdf"], rb"/Width 7\b")
+        row = next(d for d in _docs(session) if d.category == "scroll")
+        data = json.loads(row.data_json)
+        self.assertEqual(data["govt_id_url"], f"https://{ASSETS_HOST}/{folders['govt-id.png']}/govt-id.png")
+        self.assertTrue(data["certs_stored"]["govt_id"]["stored"])
+
+    def test_plain_form_values_and_foreign_hosts_pass_through(self):
+        fields = {
+            "name": "Synthetic Artist",
+            "portfolio": "https://portfolio.example.test/work",
+            "section_acceptances": {"fire": {"accepted": True, "legal_name": "Synthetic Artist"}},
+        }
+        with _settings_patch():
+            cleaned, dropped = documents._scrub_client_storage_refs(fields)
+        self.assertEqual((cleaned, dropped), (fields, 0))
 
 
 if __name__ == "__main__":

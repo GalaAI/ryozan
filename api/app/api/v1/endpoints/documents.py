@@ -87,6 +87,7 @@ from app.services.storage import (
     SCROLL_ID_PDF_FILENAME,
     SCROLL_NOID_PDF_FILENAME,
     canonical_id_reference,
+    is_own_storage_url,
     public_scroll_prefix,
     signed_id_fields,
     signed_id_url,
@@ -102,6 +103,69 @@ MAX_SCROLL_SIGNATURE_BYTES = 2 * 1024 * 1024
 MAX_SCROLL_TOTAL_BYTES = 25 * 1024 * 1024
 ARTIST_SCROLL_TERMS_VERSION = "artist-scroll-2026-08-10-v1"
 REQUIRED_SCROLL_ACCEPTANCE_SECTIONS = ("application", "agreement", "bloodborne", "fire", "dhec")
+# Keys of the stored scroll record that only the server writes: the references to objects it
+# stored for this submission and the bookkeeping around them. A browser-supplied value for any of
+# them is discarded, so an artist can never point the record (and the signed links handed back for
+# it) at another object in our bucket.
+SERVER_OWNED_SCROLL_KEYS = frozenset(
+    {
+        "bbp_cert_url",
+        "first_aid_cert_url",
+        "cpr_cert_url",
+        "govt_id_url",
+        "govt_id",
+        "photo_id_url",
+        "photo_id",
+        "owner_sig_url",
+        "artist_sig_url",
+        "artist_signature",
+        "signature_url",
+        "scroll_pdf_url",
+        "file_url",
+        "certs_stored",
+        "submission_id",
+        "storage_prefix",
+        "public_storage_prefix",
+        "acceptance_record",
+    }
+)
+
+
+def _scrub_client_storage_refs(value, *, top_level: bool = True):
+    """Copy of browser-supplied scroll fields with no reference into our own storage.
+
+    Drops the server-owned keys at the top level, and anywhere in the payload drops any string that
+    resolves to an object on our R2 bucket (a bare key URL or an echoed signed link). Those values are
+    never typed by an artist; keeping one would let the read endpoints sign a link to someone else's
+    waiver, signature or scroll. Returns (scrubbed, dropped_count). Never logs values.
+    """
+    dropped = 0
+    if isinstance(value, dict):
+        out = {}
+        for key, item in value.items():
+            if top_level and key in SERVER_OWNED_SCROLL_KEYS:
+                dropped += 1
+                continue
+            if isinstance(item, str) and is_own_storage_url(item):
+                dropped += 1
+                continue
+            cleaned, n = _scrub_client_storage_refs(item, top_level=False)
+            dropped += n
+            out[key] = cleaned
+        return out, dropped
+    if isinstance(value, list):
+        out_list = []
+        for item in value:
+            if isinstance(item, str) and is_own_storage_url(item):
+                dropped += 1
+                continue
+            cleaned, n = _scrub_client_storage_refs(item, top_level=False)
+            dropped += n
+            out_list.append(cleaned)
+        return out_list, dropped
+    return value, 0
+
+
 WAIVER_CONTACT_PREFILL_FIELDS = (
     "full_name",
     "date_of_birth",
@@ -741,6 +805,16 @@ async def submit_scroll(
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be valid JSON") from None
     if not isinstance(fields, dict):
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be an object")
+    # Never trust a browser-supplied storage reference: the ID, certificates and signatures are
+    # only ever the files uploaded in this request, stored by the server under its own keys below.
+    fields, dropped_refs = _scrub_client_storage_refs(fields)
+    if dropped_refs:
+        logger.warning(
+            "Scroll %s: discarded %d client-supplied storage reference(s) for user %s",
+            submission_id,
+            dropped_refs,
+            current_user.id,
+        )
 
     terms_version = fields.get("terms_version")
     section_acceptances = fields.get("section_acceptances")
@@ -762,9 +836,6 @@ async def submit_scroll(
         "sections": section_acceptances,
     }
     fields["acceptance_record"] = acceptance_record
-    # Only the server sets the scroll PDF reference; a client-sent value (for example an echoed
-    # signed link) is never stored.
-    fields.pop("scroll_pdf_url", None)
 
     # Upsert: delete existing scroll for this user. Only touches category='scroll',
     # so founders' `scroll_owner-archive` rows are never affected.
