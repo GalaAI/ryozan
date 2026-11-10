@@ -199,3 +199,15 @@ test('the profile sign-up is handed to the client phone, never opened on the sha
   assert.match(source, /useKioskIdleReset\(reset, \{ enabled: dirty \}\)/)
   assert.match(source, /onDirtyChange\(stage !== 1 \|\|/, 'the done screen (stage 4) keeps the idle reset armed')
 })
+
+test('a verified booking decides the artist, even on another artist link', async () => {
+  assert.deepEqual(checkin.visitArtist('artist-a', 'artist-b'), { slug: 'artist-b', switched: true })
+  assert.deepEqual(checkin.visitArtist('artist-a', 'artist-a'), { slug: 'artist-a', switched: false })
+  assert.deepEqual(checkin.visitArtist('artist-a', null), { slug: 'artist-a', switched: false })
+  assert.deepEqual(checkin.visitArtist(null, 'artist-b'), { slug: 'artist-b', switched: false })
+  assert.deepEqual(checkin.visitArtist('', ''), { slug: '', switched: false })
+
+  const source = await readFile(new URL('../pages/CheckinPage.tsx', import.meta.url), 'utf8')
+  assert.match(source, /artistSlug: booking\?\.artist_slug \|\| v\.artistSlug/, 'the booking artist replaces the route artist')
+  assert.match(source, /Your booking is with \{artistSwitched\}/)
+})

@@ -232,3 +232,15 @@ export function profileHandoffUrl(origin: string, details: Pick<CheckinDetails, 
   if (details.fullName.trim()) query.set('name', details.fullName.trim())
   return `${origin.replace(/\/+$/, '')}/portal?${query}`
 }
+
+/**
+ * The artist a check-in files under. A verified booking decides it: the server assigns the waiver to the
+ * booking's artist (documents._resolve_waiver_artist), so the kiosk shows that artist even when the tablet
+ * was opened on another artist's link. `switched` is true when the booking overrode the route artist.
+ */
+export function visitArtist(routeArtist: string | null | undefined, bookingArtist: string | null | undefined): { slug: string; switched: boolean } {
+  const route = String(routeArtist ?? '').trim()
+  const booked = String(bookingArtist ?? '').trim()
+  if (booked) return { slug: booked, switched: Boolean(route) && route !== booked }
+  return { slug: route, switched: false }
+}

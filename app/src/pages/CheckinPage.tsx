@@ -27,7 +27,7 @@ import {
 } from '../lib/api'
 import {
   buildWaiverData, contactOk, detailsErrors, digits, healthMissing, healthNeedsReview,
-  isoDate, profileHandoffUrl, questionsToAsk, sameAsLast, splitEmergency, visitErrors,
+  isoDate, profileHandoffUrl, questionsToAsk, sameAsLast, splitEmergency, visitArtist, visitErrors,
   type CheckinDetails, type CheckinVisit, type HealthState, type YesNo,
 } from '../lib/checkin'
 import { useKioskIdleReset } from '../hooks/useKioskIdleReset'
@@ -135,6 +135,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
   // 01 details
   const [crew, setCrew] = useState<ArtistSummary[]>([])
   const [artistLocked, setArtistLocked] = useState(Boolean(routeArtist))
+  const [artistSwitched, setArtistSwitched] = useState('')
   const [visit, setVisit] = useState<CheckinVisit>({ artistSlug: routeArtist ?? '', description: '', placement: '', price: '', date: '' })
   const [details, setDetails] = useState<CheckinDetails>(EMPTY_DETAILS)
   const [detailsCollapsed, setDetailsCollapsed] = useState(false)
@@ -182,12 +183,15 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
       else base.phone = typed
     }
     const booking = res?.booking
+    // A verified booking decides the artist, even on another artist's /checkin link.
+    const artist = visitArtist(routeArtist, booking?.artist_slug)
+    setArtistSwitched(artist.switched ? (booking?.artist_name || artist.slug) : '')
     setVisit((v) => ({
       ...v,
       description: v.description || booking?.description || '',
       placement: v.placement || booking?.placement || '',
       date: v.date || booking?.date?.slice(0, 10) || isoDate(),
-      artistSlug: v.artistSlug || booking?.artist_slug || '',
+      artistSlug: booking?.artist_slug || v.artistSlug || '',
     }))
     if (booking?.artist_slug) setArtistLocked(true)
     const onFile = res?.on_file
@@ -221,7 +225,8 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
       }
       setDetails(merged)
       if (v.artist_name) {
-        setVisit((cur) => (cur.artistSlug ? cur : { ...cur, artistSlug: v.artist_name }))
+        // The token's artist was set by the server (the booking's artist); it wins over the route.
+        setVisit((cur) => (booking?.artist_slug || !cur.artistSlug ? { ...cur, artistSlug: booking?.artist_slug || v.artist_name } : cur))
         setArtistLocked(true)
       }
       const filled = [v.full_name, v.email, v.phone, v.date_of_birth, v.street_address].some(Boolean)
@@ -239,7 +244,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
       }
       setNotice(messageOf(err, 'Your check-in could not be loaded. Ask the front desk.'))
     }
-  }, [])
+  }, [routeArtist])
 
   // A link (?t=) skips the finder: the staff already know who this is.
   useEffect(() => {
@@ -490,6 +495,9 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
                       { label: 'Where', value: booking.placement || '' },
                       { label: 'When', value: prettyDate(booking.date, booking.time) },
                     ].filter((r) => r.value)} />
+                  )}
+                  {artistSwitched && (
+                    <StatusText tone="pending" wrap role="status">Your booking is with {artistSwitched}, so this waiver goes to them.</StatusText>
                   )}
                 </Panel>
               )}

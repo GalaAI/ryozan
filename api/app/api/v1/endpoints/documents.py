@@ -1740,6 +1740,29 @@ async def get_public_form(
     }
 
 
+async def _resolve_waiver_artist(db: AsyncSession, data: dict) -> User | None:
+    """
+    The artist a filed waiver is assigned to and notifies. A waiver linked to a booking (a server-set
+    booking_id from a verified check-in) always goes to that booking's artist; the artist the browser sent is
+    ignored. Otherwise the client's pick is matched by slug, then by name.
+    """
+    booking_id = data.get("booking_id")
+    if booking_id:
+        with contextlib.suppress(ValueError, TypeError, AttributeError):
+            booking = await db.get(Booking, uuid.UUID(str(booking_id)))
+            if booking and booking.artist_id:
+                artist = await db.get(User, booking.artist_id)
+                if artist:
+                    return artist
+    picked = str(data.get("artist_name") or "").strip()
+    if not picked:
+        return None
+    artist = (await db.execute(select(User).where(User.slug == picked))).scalar_one_or_none()
+    if not artist:
+        artist = (await db.execute(select(User).where(User.name == picked))).scalar_one_or_none()
+    return artist
+
+
 @router.post("/public/{token}/complete")
 async def complete_public_form(
     token: str,
@@ -1829,9 +1852,16 @@ async def complete_public_form(
     if not signature_raw and data.get("client_signature"):
         signature_raw = data["client_signature"]
 
+    waiver_artist: User | None = None
     if is_waiver:
         data["photo_id_url"] = _require_waiver_photo_id(data)
         _require_waiver_intake_answers(data)
+        # Assignment is server side: the booking's artist when the token carries a booking, never a client id.
+        data.pop("artist_id", None)
+        waiver_artist = await _resolve_waiver_artist(db, data)
+        if waiver_artist:
+            data["artist_name"] = waiver_artist.slug or waiver_artist.name or data.get("artist_name")
+            data["artist_id"] = str(waiver_artist.id)
         if adopted_signature_url and not signature_raw:
             # Adopted signature: already stored as an image, nothing to upload.
             data.pop("signature_data", None)
@@ -1862,28 +1892,20 @@ async def complete_public_form(
 
     # ── Notify the assigned artist ──
     artist_display = ""
-    if is_waiver:
-        artist_slug = data.get("artist_name")
-        if artist_slug:
-            # Try slug match first, fall back to name match
-            artist_result = await db.execute(select(User).where(User.slug == artist_slug))
-            artist = artist_result.scalar_one_or_none()
-            if not artist:
-                artist_result = await db.execute(select(User).where(User.name == artist_slug))
-                artist = artist_result.scalar_one_or_none()
-            if artist:
-                artist_display = artist.name or ""
-                guest = instance.guest_name or instance.recipient_name or "A client"
-                db.add(
-                    Notification(
-                        user_id=artist.id,
-                        title="Waiver Ready for Review",
-                        body=f"{guest} completed their consent waiver. Review and countersign.",
-                        notification_type="info",
-                        action_url=ROUTES.WAIVERS,
-                    )
-                )
-                await db.flush()
+    if is_waiver and waiver_artist:
+        artist = waiver_artist
+        artist_display = artist.name or ""
+        guest = instance.guest_name or instance.recipient_name or "A client"
+        db.add(
+            Notification(
+                user_id=artist.id,
+                title="Waiver Ready for Review",
+                body=f"{guest} completed their consent waiver. Review and countersign.",
+                notification_type="info",
+                action_url=ROUTES.WAIVERS,
+            )
+        )
+        await db.flush()
 
     # ── Quest: a signed-in client's "waiver-signed" quest, same as the legacy /waiver/submit path ──
     if is_waiver:
