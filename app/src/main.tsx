@@ -19,11 +19,14 @@ function getJamSurface(pathname: string): 'dashboard' | 'portal' | 'public' {
   return 'public'
 }
 
-jam.metadata(() => {
+// The install's own Jam workspace. Unset: no Jam metadata is attached.
+const jamWorkspaceId = import.meta.env.VITE_JAM_WORKSPACE_ID?.trim()
+
+if (jamWorkspaceId) jam.metadata(() => {
   const { user, isAuthenticated, effectiveRole } = useAuthStore.getState()
 
   return {
-    workspaceId: 'blind-tiger-tattoo-co',
+    workspaceId: jamWorkspaceId,
     userId: user?.id ?? null,
     authenticated: isAuthenticated,
     role: user?.role ?? 'anonymous',
