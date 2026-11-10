@@ -506,8 +506,10 @@ class UploadAndSubmitTests(unittest.IsolatedAsyncioTestCase):
         ):
             response = await waiver.upload_photo_id(file=upload)
             signed = response["photo_id_url"]
-            stored = documents._require_waiver_photo_id({"photo_id_url": signed})
-            from_waiver_body = storage.canonical_id_reference(signed)
+            data = {"photo_id_url": signed}
+            documents._verify_public_id_fields(data)
+            stored = documents._require_waiver_photo_id(data)
+            from_waiver_body = waiver.require_uploaded_id(signed)
 
         self.assertEqual(captured["folder_path"], "waivers/pending-ids")
         key = urlsplit(stored).path.lstrip("/")
@@ -516,6 +518,362 @@ class UploadAndSubmitTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(query["X-Amz-Expires"], [str(waiver._ID_PREVIEW_SECONDS)])
         self.assertEqual(stored, f"https://{ASSETS_HOST}/{key}")
         self.assertEqual(from_waiver_body, stored)
+
+
+# ── Upload capability: a public caller files only an ID it uploaded itself ──
+
+VICTIM_KEY = "waivers/pending-ids/7c2d9e40-aaaa-4bbb-8ccc-9ddddeeeefff.jpg"
+VICTIM_PUBLIC_URL = f"https://{ASSETS_HOST}/{VICTIM_KEY}"
+
+
+def _frozen_clock(at: datetime):
+    """Freeze storage's clock: links are signed and checked at `at`, never the real time."""
+
+    class _Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return at if tz else at.replace(tzinfo=None)
+
+    return patch.object(storage, "datetime", _Clock)
+
+
+class _ScriptedResult:
+    def __init__(self, first=None, scalar=None, scalars_first=None):
+        self._first, self._scalar, self._scalars_first = first, scalar, scalars_first
+
+    def first(self):
+        return self._first
+
+    def scalar_one_or_none(self):
+        return self._scalar
+
+    def scalars(self):
+        return SimpleNamespace(first=lambda: self._scalars_first)
+
+
+class _FakeDb:
+    """Answers queries in order and records writes. A query past the scripted ones fails the test."""
+
+    def __init__(self, *results):
+        self.results = list(results)
+        self.added: list = []
+
+    async def execute(self, _query):
+        if not self.results:
+            raise AssertionError("unexpected database query")
+        return self.results.pop(0)
+
+    def add(self, obj):
+        self.added.append(obj)
+
+    async def flush(self):
+        return None
+
+    async def refresh(self, obj):
+        obj.id = obj.id or uuid.uuid4()
+        obj.created_at = obj.created_at or FROZEN
+
+
+def _discard(coro):
+    coro.close()
+
+
+def _waiver_body(photo_id_url: str):
+    from app.schemas.waiver import WaiverSubmit
+
+    # model_construct: EmailStr rejects the reserved example.test domain these synthetic records use.
+    return WaiverSubmit.model_construct(
+        full_name="Alex Attacker",
+        date_of_birth="1990-01-01",
+        phone="5555550199",
+        email="alex@example.test",
+        emergency_contact="Sam 5555550198",
+        emergency_contact_address="1 Example Way",
+        artist_slug="test-artist",
+        tattoo_description="Small star",
+        tattoo_placement="Wrist",
+        pregnant="No",
+        blood_disorder="No",
+        skin_condition="No",
+        photo_id_url=photo_id_url,
+        health_and_eligibility=True,
+        risks_and_consent=True,
+        accept_terms=True,
+        signature_data="data:image/png;base64,AAAA",
+    )
+
+
+def _magic_link_instance(email: str = "alex@example.test", data: dict | None = None):
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        category="waiver",
+        status="sent",
+        send_token="token-1",
+        expires_at=None,
+        guest_name="Alex Attacker",
+        guest_email=email,
+        recipient_name=None,
+        recipient_email=email,
+        guest_social=None,
+        data_json=json.dumps(data or {"checkin_verified": True, "checkin_source": "lookup:email"}),
+        signed_at=None,
+        updated_at=None,
+        reminder_sent=False,
+    )
+
+
+def _public_waiver_data(**extra) -> dict:
+    return {
+        "full_name": "Alex Attacker",
+        "email": "alex@example.test",
+        "tattoo_description": "Small star",
+        "tattoo_placement": "Wrist",
+        "quoted_price": "120",
+        "intoxicated": "No",
+        "health_and_eligibility": True,
+        "risks_and_consent": True,
+        "accept_terms": True,
+        **extra,
+    }
+
+
+class VerifiedUploadKeyTests(unittest.TestCase):
+    def setUp(self):
+        patcher = patch.object(storage, "get_settings", return_value=_settings())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _link(self, key: str = ID_KEY, expires: int = 600, **settings) -> str:
+        with patch.object(storage, "get_settings", return_value=_settings(**settings)):
+            return storage.presign_get_url(key, expires, now=FROZEN)
+
+    def test_an_unexpired_link_this_server_signed_resolves_to_its_key(self):
+        link = self._link()
+        self.assertEqual(storage.verified_upload_key(link, now=FROZEN), ID_KEY)
+        self.assertEqual(storage.verified_upload_key(link, now=FROZEN.replace(minute=9, second=59)), ID_KEY)
+        self.assertEqual(storage.uploaded_id_reference(link, now=FROZEN), PUBLIC_ID_URL)
+
+    def test_a_bare_url_to_a_private_id_key_is_refused(self):
+        for reference in (
+            VICTIM_PUBLIC_URL,
+            f"https://pub-account-id.r2.dev/{BUCKET}/{VICTIM_KEY}",
+            f"https://account-id.r2.cloudflarestorage.com/{BUCKET}/{VICTIM_KEY}",
+        ):
+            with self.subTest(reference=reference):
+                self.assertIsNone(storage.verified_upload_key(reference, now=FROZEN))
+
+    def test_an_expired_link_is_refused(self):
+        link = self._link(expires=600)
+        self.assertIsNone(storage.verified_upload_key(link, now=FROZEN.replace(minute=10)))
+        self.assertIsNone(storage.verified_upload_key(link, now=datetime(2026, 11, 11, tzinfo=UTC)))
+
+    def test_a_signature_for_a_different_key_is_refused(self):
+        link = self._link(ID_KEY)
+        swapped = link.replace(f"/{ID_KEY}?", f"/{VICTIM_KEY}?")
+        self.assertNotEqual(swapped, link)
+        self.assertIsNone(storage.verified_upload_key(swapped, now=FROZEN))
+
+    def test_a_signature_made_with_a_different_secret_is_refused(self):
+        foreign = self._link(VICTIM_KEY, R2_SECRET_ACCESS_KEY="another-secret")
+        self.assertIsNone(storage.verified_upload_key(foreign, now=FROZEN))
+        other_key_id = self._link(VICTIM_KEY, R2_ACCESS_KEY_ID="another-access-key")
+        self.assertIsNone(storage.verified_upload_key(other_key_id, now=FROZEN))
+
+    def test_tampered_expiry_date_host_or_extra_parameters_are_refused(self):
+        link = self._link()
+        for tampered in (
+            link.replace("X-Amz-Expires=600", "X-Amz-Expires=604800"),
+            link.replace("X-Amz-Date=20261110T120000Z", "X-Amz-Date=20261110T130000Z"),
+            link.replace("account-id.r2.cloudflarestorage.com", "evil.example.test"),
+            link.replace(f"/{BUCKET}/", "/other-bucket/"),
+            link.replace("https://", "http://"),
+            link + "&X-Amz-Expires=600",
+            link + "&extra=1",
+            link[:-1] + ("0" if link[-1] != "0" else "1"),
+            link.split("&X-Amz-Signature=")[0],
+        ):
+            with self.subTest(tampered=tampered):
+                self.assertIsNone(storage.verified_upload_key(tampered, now=FROZEN))
+
+    def test_a_correctly_signed_link_outside_pending_ids_is_refused(self):
+        packet = "waivers/2026-11/Jane_Client_WVR-TEST01/Jane_Client_WVR-TEST01.pdf"
+        for key in (packet, SCROLL_ID_KEY, "portfolios/artist/image.webp", "waivers/pending-ids/../2026-11/x.pdf"):
+            with self.subTest(key=key):
+                link = storage._presign(
+                    host="account-id.r2.cloudflarestorage.com",
+                    canonical_uri=f"/{BUCKET}/{key}",
+                    region="auto",
+                    access_key="access-key",
+                    secret_key="secret-key",
+                    now=FROZEN,
+                    expires_seconds=600,
+                )
+                self.assertIsNone(storage.verified_upload_key(link, now=FROZEN))
+
+    def test_nothing_resolves_without_signing_credentials(self):
+        link = self._link()
+        with patch.object(storage, "get_settings", return_value=_settings(R2_SECRET_ACCESS_KEY="")):
+            self.assertIsNone(storage.verified_upload_key(link, now=FROZEN))
+        for reference in ("", None, "not a url", "https://[bad", 42):
+            with self.subTest(reference=reference):
+                self.assertIsNone(storage.verified_upload_key(reference, now=FROZEN))
+
+
+class PublicIdWriteTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        for patcher in (
+            patch.object(storage, "get_settings", return_value=_settings()),
+            _frozen_clock(FROZEN),
+            patch.object(waiver, "spawn_background", _discard),
+            patch.object(documents, "spawn_background", _discard),
+            patch.object(waiver, "_upload_waiver_files", AsyncMock()),
+            patch.object(documents, "_upload_magic_link_files", AsyncMock()),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    async def _upload(self) -> str:
+        upload = SimpleNamespace(content_type="image/jpeg", read=AsyncMock(return_value=b"\xff\xd8jpeg"))
+
+        async def _fake_upload(*, file_bytes, filename, mime_type, folder_path):
+            return f"https://{ASSETS_HOST}/{folder_path}/{filename}"
+
+        with patch.object(waiver, "upload_to_drive", _fake_upload):
+            return (await waiver.upload_photo_id(file=upload))["photo_id_url"]
+
+    async def test_upload_then_waiver_submit_stores_the_uploaded_reference(self):
+        signed = await self._upload()
+        key = urlsplit(signed).path.split(f"/{BUCKET}/", 1)[1]
+        db = _FakeDb(
+            _ScriptedResult(first=(uuid.uuid4(), "Test Artist")),
+            _ScriptedResult(scalar=None),
+            _ScriptedResult(scalars_first=None),
+        )
+        response = await waiver.submit_waiver(_waiver_body(signed), db=db)
+        instance = next(obj for obj in db.added if isinstance(obj, waiver.DocumentInstance))
+        self.assertEqual(json.loads(instance.data_json)["photo_id_url"], f"https://{ASSETS_HOST}/{key}")
+        self.assertEqual(response.reference_code, json.loads(instance.data_json)["reference_code"])
+        waiver._upload_waiver_files.assert_called_once()
+        self.assertEqual(waiver._upload_waiver_files.call_args.kwargs["photo_id_url"], f"https://{ASSETS_HOST}/{key}")
+
+    async def test_waiver_submit_refuses_bare_expired_and_foreign_links_and_stores_nothing(self):
+        signed = await self._upload()
+        foreign = storage._presign(
+            host="account-id.r2.cloudflarestorage.com",
+            canonical_uri=f"/{BUCKET}/{VICTIM_KEY}",
+            region="auto",
+            access_key="access-key",
+            secret_key="another-secret",
+            now=FROZEN,
+            expires_seconds=600,
+        )
+        for reference, clock in (
+            (VICTIM_PUBLIC_URL, FROZEN),
+            (signed, FROZEN.replace(hour=13)),
+            (foreign, FROZEN),
+            ("https://evil.example.test/id.jpg", FROZEN),
+        ):
+            with self.subTest(reference=reference), _frozen_clock(clock):
+                db = _FakeDb()
+                with self.assertRaises(waiver.HTTPException) as caught:
+                    await waiver.submit_waiver(_waiver_body(reference), db=db)
+                self.assertEqual(caught.exception.status_code, 422)
+                self.assertEqual(caught.exception.detail, "Upload the ID again")
+                self.assertEqual(db.added, [])
+
+    async def test_magic_link_complete_stores_the_uploaded_reference(self):
+        signed = await self._upload()
+        key = urlsplit(signed).path.split(f"/{BUCKET}/", 1)[1]
+        instance = _magic_link_instance()
+        db = _FakeDb(_ScriptedResult(scalar=instance), _ScriptedResult(scalars_first=None))
+        body = documents.DocumentPublicSubmit(
+            data=_public_waiver_data(photo_id_url=signed), signature_data="data:image/png;base64,AAAA"
+        )
+        response = await documents.complete_public_form("token-1", body, db=db)
+        self.assertEqual(response["status"], "ok")
+        self.assertEqual(json.loads(instance.data_json)["photo_id_url"], f"https://{ASSETS_HOST}/{key}")
+
+    async def test_checkin_attack_cannot_file_or_resign_the_victims_id(self):
+        # The attacker verified their own contact, then tries to file the victim's ID object (bare, or an
+        # old link that has since expired) so a later check-in lookup would sign it as theirs.
+        with _frozen_clock(FROZEN.replace(hour=8)):
+            stale_link = storage.presign_get_url(VICTIM_KEY, 600)
+        before = _magic_link_instance().data_json
+        for reference in (VICTIM_PUBLIC_URL, stale_link):
+            for field in ("photo_id_url", "photo_id", "govt_id_url"):
+                with self.subTest(reference=reference, field=field):
+                    instance = _magic_link_instance()
+                    db = _FakeDb(_ScriptedResult(scalar=instance))
+                    body = documents.DocumentPublicSubmit(
+                        data=_public_waiver_data(**{field: reference}), signature_data="data:image/png;base64,AAAA"
+                    )
+                    with self.assertRaises(documents.HTTPException) as caught:
+                        await documents.complete_public_form("token-1", body, db=db)
+                    self.assertEqual(caught.exception.status_code, 422)
+                    self.assertEqual(caught.exception.detail, "Upload the ID again")
+                    self.assertEqual(instance.data_json, before)
+                    self.assertEqual(instance.status, "sent")
+                    self.assertEqual(db.added, [])
+        with self.assertRaises(waiver.HTTPException):
+            await waiver.submit_waiver(_waiver_body(stale_link), db=_FakeDb())
+
+        # Nothing was filed, so the attacker's check-in has no ID on file to sign.
+        lookup_db = _FakeDb(_ScriptedResult(scalar=None))
+        self.assertIsNone(await documents._latest_prior_waiver(lookup_db, {"alex@example.test"}))
+
+    async def test_public_form_drops_a_client_supplied_certs_stored(self):
+        signed = await self._upload()
+        instance = _magic_link_instance()
+        db = _FakeDb(_ScriptedResult(scalar=instance), _ScriptedResult(scalars_first=None))
+        body = documents.DocumentPublicSubmit(
+            data=_public_waiver_data(photo_id_url=signed, certs_stored={"govt_id": {"url": VICTIM_PUBLIC_URL}}),
+            signature_data="data:image/png;base64,AAAA",
+        )
+        await documents.complete_public_form("token-1", body, db=db)
+        self.assertNotIn("certs_stored", json.loads(instance.data_json))
+        self.assertNotIn(VICTIM_KEY, instance.data_json)
+
+    async def test_verified_reuse_copies_the_id_on_file_server_side(self):
+        prior = {"id": str(uuid.uuid4()), "signed_at": FROZEN, "data": {"photo_id_url": PUBLIC_ID_URL}}
+        instance = _magic_link_instance()
+        db = _FakeDb(_ScriptedResult(scalar=instance), _ScriptedResult(scalars_first=None))
+        body = documents.DocumentPublicSubmit(
+            data=_public_waiver_data(reuse_photo_id=True), signature_data="data:image/png;base64,AAAA"
+        )
+        with patch.object(documents, "_latest_prior_waiver", AsyncMock(return_value=prior)):
+            await documents.complete_public_form("token-1", body, db=db)
+        stored = json.loads(instance.data_json)
+        self.assertEqual(stored["photo_id_url"], PUBLIC_ID_URL)
+        self.assertEqual(stored["photo_id_reused_from"], prior["id"])
+
+    async def test_a_client_account_cannot_store_another_persons_id_reference(self):
+        from app.schemas.document import DocumentInstanceCreate
+
+        body = DocumentInstanceCreate(
+            category="waiver", title="Waiver", data_json=json.dumps({"photo_id_url": VICTIM_PUBLIC_URL})
+        )
+        collector = SimpleNamespace(id=uuid.uuid4(), role="collector", name="Alex Attacker")
+        db = _FakeDb()
+        with self.assertRaises(documents.HTTPException) as caught:
+            await documents.submit_document(body, db=db, current_user=collector)
+        self.assertEqual(caught.exception.status_code, 422)
+        self.assertEqual(db.added, [])
+
+        plain = DocumentInstanceCreate(category="form", title="Intake", data_json='{"note": "hello"}')
+        db = _FakeDb()
+        await documents.submit_document(plain, db=db, current_user=collector)
+        self.assertEqual(db.added[0].data_json, '{"note": "hello"}')
+
+    async def test_staff_document_submit_keeps_current_behavior(self):
+        from app.schemas.document import DocumentInstanceCreate
+
+        raw = json.dumps({"photo_id_url": PUBLIC_ID_URL})
+        artist = SimpleNamespace(id=uuid.uuid4(), role="artist", name="Test Artist")
+        db = _FakeDb()
+        await documents.submit_document(
+            DocumentInstanceCreate(category="waiver", title="Waiver", data_json=raw), db=db, current_user=artist
+        )
+        self.assertEqual(db.added[0].data_json, raw)
 
 
 if __name__ == "__main__":

@@ -37,13 +37,19 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query
 from sqlalchemy import and_, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.waiver import _artist_can_access_waiver, _send_aftercare_email, spawn_background
+from app.api.v1.endpoints.waiver import (
+    UPLOAD_ID_AGAIN,
+    _artist_can_access_waiver,
+    _send_aftercare_email,
+    require_uploaded_id,
+    spawn_background,
+)
 from app.constants.status import DocStatus
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.routes import ROUTES
-from app.core.security import get_current_user, require_role
+from app.core.security import ROLE_RANK, get_current_user, require_role
 from app.models.booking import Booking
 from app.models.document import DocumentInstance, DocumentTemplate
 from app.models.notification import Notification
@@ -82,7 +88,7 @@ from app.services.scroll_archive import (
 )
 from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf
 from app.services.sms import send_sms
-from app.services.storage import ID_REFERENCE_KEYS, canonical_id_reference, signed_id_fields, signed_id_url
+from app.services.storage import ID_REFERENCE_KEYS, signed_id_fields, signed_id_url
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.documents")
@@ -181,11 +187,48 @@ def _require_waiver_placement(data: dict) -> str:
 
 
 def _require_waiver_photo_id(data: dict) -> str:
+    """The waiver's ID reference, already verified by _verify_public_id_fields or copied server side."""
     photo_id = str(data.get("photo_id_url") or data.get("photo_id") or "").strip()
     if not photo_id:
         raise HTTPException(status_code=422, detail="Photo ID is required")
-    # The browser may echo back the signed preview link; store the stable reference instead.
-    return canonical_id_reference(photo_id) or photo_id
+    return photo_id
+
+
+def _verify_public_id_fields(data: dict) -> None:
+    """
+    Accept a client-supplied government ID only as the signed upload link this server issued for it.
+
+    Every ID key a public form can carry is checked and rewritten to the stored reference, or the request
+    is refused with 422 and nothing is stored. certs_stored is written only by the authenticated Scroll
+    submit, so a public form never sets it.
+    """
+    for key in ID_REFERENCE_KEYS:
+        value = data.get(key)
+        if value in (None, ""):
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise HTTPException(status_code=422, detail=UPLOAD_ID_AGAIN)
+        data[key] = require_uploaded_id(value)
+    data.pop("certs_stored", None)
+
+
+def _verified_client_data_json(raw: str | None) -> str | None:
+    """
+    data_json from an account below staff, with any ID reference held to the public upload rule.
+
+    Document views sign stored ID references, so a client account must not be able to store someone
+    else's. JSON without ID keys, and text that is not a JSON object, is kept byte for byte.
+    """
+    if not raw:
+        return raw
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return raw
+    if not isinstance(data, dict) or not any(key in data for key in (*ID_REFERENCE_KEYS, "certs_stored")):
+        return raw
+    _verify_public_id_fields(data)
+    return json.dumps(data)
 
 
 def _require_waiver_intake_answers(data: dict) -> None:
@@ -483,13 +526,16 @@ async def submit_document(
 ):
     """Submit a filled form or create a document instance."""
     _require_owner_archive_access(current_user, body.category)
+    data_json = body.data_json
+    if ROLE_RANK.get(current_user.role, -1) < ROLE_RANK["assistant"]:
+        data_json = _verified_client_data_json(data_json)
     instance = DocumentInstance(
         template_id=body.template_id,
         user_id=current_user.id,
         category=body.category,
         title=body.title,
         status="submitted",
-        data_json=body.data_json,
+        data_json=data_json,
         file_url=body.file_url,
         notes=body.notes,
     )
@@ -1794,6 +1840,8 @@ async def complete_public_form(
 
     # Build data payload with form data
     data = body.data.copy()
+    # A public caller may only file an ID it uploaded itself; reuse below copies one server side.
+    _verify_public_id_fields(data)
 
     # For waiver documents, generate a reference code and ensure guest fields are set
     is_waiver = instance.category == "waiver"

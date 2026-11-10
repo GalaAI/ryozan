@@ -53,7 +53,7 @@ from app.services.email import FROM_SHOP, send_email
 from app.services.email_foundry_waiver import render_aftercare_instructions
 from app.services.quest_hooks import check_and_complete_quest
 from app.services.scroll_pdf import normalize_embed_image
-from app.services.storage import canonical_id_reference, is_own_storage_url, private_id_key, signed_id_url
+from app.services.storage import is_own_storage_url, private_id_key, signed_id_url, uploaded_id_reference
 from app.services.storage import upload_file as upload_to_drive
 
 logger = logging.getLogger("ryozan.waiver")
@@ -67,6 +67,22 @@ _ALLOWED_ID_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "ima
 # long enough to load the preview right after upload, or a staff review session.
 _ID_PREVIEW_SECONDS = 600
 _ID_VIEW_SECONDS = 900
+UPLOAD_ID_AGAIN = "Upload the ID again"
+
+
+def require_uploaded_id(reference: str | None) -> str:
+    """
+    The stored reference for an ID a public caller just uploaded, or 422.
+
+    Public write paths accept a private ID only as the unexpired signed link /waiver/upload-id issued for
+    that exact key. A bare URL, an expired, tampered or foreign-signed link, or any other key is refused and
+    never stored, so nobody can file someone else's ID under their own contact and have it re-signed later.
+    """
+    stored = uploaded_id_reference(reference)
+    if not stored:
+        raise HTTPException(status_code=422, detail=UPLOAD_ID_AGAIN)
+    return stored
+
 
 # Shop-local time. The waiver is signed in person at the studio, and the printed
 # record is read there, so dates on the page are rendered in shop time rather than UTC.
@@ -158,7 +174,8 @@ async def upload_photo_id(
     HEIC/HEIF is converted to JPEG so the artist dashboard can render it.
     Uploads to Cloudflare R2 under waivers/pending-ids/, a private prefix.
     Returns a short-lived signed link: the browser shows it as the preview and
-    sends it back on submit, where it is normalized to the stored reference.
+    sends it back on submit. That unexpired link is the caller's proof of upload;
+    submit verifies its signature and stores the stable reference instead.
     """
     # Validate content type
     if file.content_type not in _ALLOWED_ID_TYPES:
@@ -250,6 +267,9 @@ async def submit_waiver(
     if not body.signature_data:
         raise HTTPException(status_code=422, detail="Signature is required")
 
+    # The ID must be the one this caller uploaded, proven by the signed link upload-id returned.
+    photo_id_reference = require_uploaded_id(body.photo_id_url)
+
     # ── Resolve artist slug → name ──
     result = await db.execute(
         select(User.id, User.name)
@@ -291,7 +311,7 @@ async def submit_waiver(
         "skin_condition": body.skin_condition,
         "allergies": body.allergies,
         "medical_conditions": body.medical_conditions,
-        "photo_id_url": canonical_id_reference(body.photo_id_url),
+        "photo_id_url": photo_id_reference,
         "health_and_eligibility": body.health_and_eligibility,
         "risks_and_consent": body.risks_and_consent,
         "accept_terms": body.accept_terms,
@@ -354,7 +374,7 @@ async def submit_waiver(
             ref_code=ref_code,
             client_name=body.full_name,
             signature_data=body.signature_data,
-            photo_id_url=canonical_id_reference(body.photo_id_url),
+            photo_id_url=photo_id_reference,
         )
     )
 

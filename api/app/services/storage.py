@@ -13,7 +13,7 @@ import hmac
 import logging
 import secrets
 from datetime import UTC, datetime
-from urllib.parse import quote, unquote, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 import httpx
 
@@ -424,6 +424,88 @@ def presign_get_url(object_key: str, expires_seconds: int = 300, *, now: datetim
         now=now or datetime.now(UTC),
         expires_seconds=expires,
     )
+
+
+# Only the public walk-in upload writes here, so only these keys can come back as an upload capability.
+UPLOAD_ID_PREFIX = "waivers/pending-ids/"
+_PRESIGN_PARAMS = frozenset(
+    ("X-Amz-Algorithm", "X-Amz-Credential", "X-Amz-Date", "X-Amz-Expires", "X-Amz-SignedHeaders", "X-Amz-Signature")
+)
+# Tolerated clock drift for a link dated slightly ahead of this server's clock.
+_PRESIGN_SKEW = 300
+
+
+def verified_upload_key(reference: str | None, *, now: datetime | None = None) -> str | None:
+    """
+    The upload key when `reference` is an unexpired signed link this server issued for it, else None.
+
+    A public caller proves it uploaded an ID by handing back the signed preview link /waiver/upload-id
+    returned. The SigV4 signature is recomputed for the same host, bucket, key, date and expiry with this
+    install's R2 credentials and compared in constant time, so a bare URL, an expired, tampered or
+    foreign-signed link, or a link to any key outside waivers/pending-ids/ never resolves. Never raises
+    and never logs, because the reference names a person's ID.
+    """
+    if not reference or not isinstance(reference, str):
+        return None
+    settings = get_settings()
+    bucket = (settings.R2_BUCKET_NAME or "").strip()
+    account_id = (settings.R2_ACCOUNT_ID or "").strip()
+    access_key = settings.R2_ACCESS_KEY_ID or ""
+    secret_key = settings.R2_SECRET_ACCESS_KEY or ""
+    if not (bucket and account_id and access_key and secret_key):
+        return None
+    host = f"{account_id}.r2.cloudflarestorage.com"
+    try:
+        parsed = urlsplit(reference.strip())
+        hostname = (parsed.hostname or "").lower()
+        port = parsed.port
+        params = parse_qs(parsed.query, keep_blank_values=True, strict_parsing=True)
+    except ValueError:
+        return None
+    if parsed.scheme != "https" or hostname != host.lower() or port is not None or parsed.fragment:
+        return None
+    if set(params) != _PRESIGN_PARAMS or any(len(values) != 1 for values in params.values()):
+        return None
+    query = {name: values[0] for name, values in params.items()}
+    path = unquote(parsed.path)
+    if not path.startswith(f"/{bucket}/"):
+        return None
+    key = path[len(bucket) + 2 :]
+    if not key.startswith(UPLOAD_ID_PREFIX) or len(key) == len(UPLOAD_ID_PREFIX) or ".." in key.split("/"):
+        return None
+    try:
+        signed_at = datetime.strptime(query["X-Amz-Date"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
+        expires = int(query["X-Amz-Expires"])
+    except ValueError:
+        return None
+    if not 1 <= expires <= _MAX_PRESIGN_SECONDS or not query["X-Amz-Expires"].isdigit():
+        return None
+    if query["X-Amz-Credential"] != f"{access_key}/{signed_at:%Y%m%d}/auto/s3/aws4_request":
+        return None
+    expected = _presign(
+        host=host,
+        canonical_uri=f"/{quote(bucket, safe='-_.~')}/{quote(key, safe='/-_.~')}",
+        region="auto",
+        access_key=access_key,
+        secret_key=secret_key,
+        now=signed_at,
+        expires_seconds=expires,
+    )
+    expected_signature = parse_qs(urlsplit(expected).query)["X-Amz-Signature"][0]
+    if not hmac.compare_digest(expected_signature.encode(), query["X-Amz-Signature"].encode()):
+        return None
+    current = now or datetime.now(UTC)
+    if signed_at.timestamp() - _PRESIGN_SKEW > current.timestamp():
+        return None
+    if current.timestamp() >= signed_at.timestamp() + expires:
+        return None
+    return key
+
+
+def uploaded_id_reference(reference: str | None, *, now: datetime | None = None) -> str | None:
+    """The stored reference for an ID the caller proved it uploaded (see verified_upload_key), else None."""
+    key = verified_upload_key(reference, now=now)
+    return _r2_public_url(key) if key else None
 
 
 def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | None:
