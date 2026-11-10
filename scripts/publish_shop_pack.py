@@ -10,7 +10,7 @@ Usage (from the repo root, with the API virtualenv, which has httpx):
     python scripts/publish_shop_pack.py PACK_DIR --scope SCOPE --bucket BUCKET [--prefix PREFIX] [--apply]
 
     PACK_DIR   the folder that holds @SCOPE/, for example a checkout with
-               @bttco/email-foundry/1.0.0/...
+               @exampleshop/email-foundry/1.0.0/...
     --scope    the pack's @scope without the @ (the install's SHOP_PACK_SCOPE)
     --bucket   the R2 bucket to upload to
     --prefix   optional key prefix inside the bucket, for example shops/example

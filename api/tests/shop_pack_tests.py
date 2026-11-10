@@ -18,7 +18,7 @@ from app.services.shop_pack import PACK_MAX_BYTES, pack_file_path, pack_upstream
 
 BASE = "https://pack.example.test/shops/example"
 _REAL_ASYNC_CLIENT = httpx.AsyncClient
-SCOPE = "bttco"
+SCOPE = "exampleshop"
 
 
 class _RecordingTransport(httpx.AsyncBaseTransport):
@@ -39,7 +39,7 @@ class ShopPackSettingsTests(unittest.TestCase):
         self.assertFalse(settings.shop_pack_enabled)
 
     def test_valid_pack_is_normalized(self):
-        settings = Settings(_env_file=None, SHOP_PACK_BASE_URL=f"{BASE}/", SHOP_PACK_SCOPE="@bttco")
+        settings = Settings(_env_file=None, SHOP_PACK_BASE_URL=f"{BASE}/", SHOP_PACK_SCOPE="@exampleshop")
         self.assertTrue(settings.shop_pack_enabled)
         self.assertEqual(settings.SHOP_PACK_BASE_URL, BASE)
         self.assertEqual(settings.SHOP_PACK_SCOPE, SCOPE)
@@ -51,7 +51,7 @@ class ShopPackSettingsTests(unittest.TestCase):
             {"SHOP_PACK_BASE_URL": "//pack.example.test", "SHOP_PACK_SCOPE": SCOPE},
             {"SHOP_PACK_BASE_URL": BASE, "SHOP_PACK_SCOPE": "BTTCO"},
             {"SHOP_PACK_BASE_URL": BASE, "SHOP_PACK_SCOPE": "bt/tco"},
-            {"SHOP_PACK_BASE_URL": BASE, "SHOP_PACK_SCOPE": "-bttco"},
+            {"SHOP_PACK_BASE_URL": BASE, "SHOP_PACK_SCOPE": "-exampleshop"},
             {"SHOP_PACK_BASE_URL": BASE, "SHOP_PACK_SCOPE": ""},
             {"SHOP_PACK_BASE_URL": "", "SHOP_PACK_SCOPE": SCOPE},
         ]
@@ -69,10 +69,10 @@ class ShopPackSettingsTests(unittest.TestCase):
 class ShopPackPathTests(unittest.TestCase):
     def test_accepts_files_under_the_scope(self):
         for path in (
-            "@bttco/email-foundry/1.0.0/adapter.js",
-            "@bttco/email-foundry/1.0.0/Email Foundry.dc.html",
-            "@bttco/booking-flow/1.0.0/assets/thumbs/flash-crane.PNG",
-            "@bttco/booking-flow/1.0.0/vendor/fonts/display.woff2",
+            "@exampleshop/email-foundry/1.0.0/adapter.js",
+            "@exampleshop/email-foundry/1.0.0/Email Foundry.dc.html",
+            "@exampleshop/booking-flow/1.0.0/assets/thumbs/flash-crane.PNG",
+            "@exampleshop/booking-flow/1.0.0/vendor/fonts/display.woff2",
         ):
             with self.subTest(path=path):
                 self.assertEqual(pack_file_path(path, SCOPE), path)
@@ -81,37 +81,37 @@ class ShopPackPathTests(unittest.TestCase):
         for path in (
             "",
             "@other/email-foundry/1.0.0/adapter.js",
-            "@bttco-evil/email-foundry/1.0.0/adapter.js",
-            "bttco/email-foundry/1.0.0/adapter.js",
-            "/@bttco/email-foundry/1.0.0/adapter.js",
-            "@bttco/../other/adapter.js",
-            "@bttco/email-foundry/../../secret.js",
-            "@bttco/email-foundry/./adapter.js",
-            "@bttco//adapter.js",
-            "@bttco/email-foundry\\..\\adapter.js",
-            "@bttco/.env",
-            "@bttco/email-foundry/1.0.0/.hidden.js",
-            "@bttco/email-foundry/1.0.0/README.md",
-            "@bttco/email-foundry/1.0.0/package.tgz",
-            "@bttco/email-foundry/1.0.0/adapter",
-            "@bttco/email-foundry/1.0.0/a\x00.js",
-            "@bttco",
-            "@bttco/",
+            "@exampleshop-evil/email-foundry/1.0.0/adapter.js",
+            "exampleshop/email-foundry/1.0.0/adapter.js",
+            "/@exampleshop/email-foundry/1.0.0/adapter.js",
+            "@exampleshop/../other/adapter.js",
+            "@exampleshop/email-foundry/../../secret.js",
+            "@exampleshop/email-foundry/./adapter.js",
+            "@exampleshop//adapter.js",
+            "@exampleshop/email-foundry\\..\\adapter.js",
+            "@exampleshop/.env",
+            "@exampleshop/email-foundry/1.0.0/.hidden.js",
+            "@exampleshop/email-foundry/1.0.0/README.md",
+            "@exampleshop/email-foundry/1.0.0/package.tgz",
+            "@exampleshop/email-foundry/1.0.0/adapter",
+            "@exampleshop/email-foundry/1.0.0/a\x00.js",
+            "@exampleshop",
+            "@exampleshop/",
         ):
             with self.subTest(path=path):
                 self.assertIsNone(pack_file_path(path, SCOPE))
 
     def test_no_scope_serves_nothing(self):
-        self.assertIsNone(pack_file_path("@bttco/a/b.js", ""))
+        self.assertIsNone(pack_file_path("@exampleshop/a/b.js", ""))
 
     def test_upstream_url_preserves_the_path(self):
         self.assertEqual(
-            pack_upstream_url("@bttco/email-foundry/1.0.0/Email Foundry.dc.html", f"{BASE}/"),
-            f"{BASE}/@bttco/email-foundry/1.0.0/Email%20Foundry.dc.html",
+            pack_upstream_url("@exampleshop/email-foundry/1.0.0/Email Foundry.dc.html", f"{BASE}/"),
+            f"{BASE}/@exampleshop/email-foundry/1.0.0/Email%20Foundry.dc.html",
         )
         self.assertEqual(
-            pack_upstream_url("@bttco/a/b%2e%2e.js", BASE),
-            f"{BASE}/@bttco/a/b%252e%252e.js",
+            pack_upstream_url("@exampleshop/a/b%2e%2e.js", BASE),
+            f"{BASE}/@exampleshop/a/b%252e%252e.js",
         )
 
 
@@ -142,7 +142,7 @@ class ShopPackRouteTests(unittest.TestCase):
     def test_no_pack_is_404_without_an_upstream_call(self):
         self._configure(base="", scope="")
         transport = self._upstream(lambda request: httpx.Response(200, content=b"x"))
-        response = self.client.get("/dependencies/@bttco/email-foundry/1.0.0/adapter.js")
+        response = self.client.get("/dependencies/@exampleshop/email-foundry/1.0.0/adapter.js")
         self.assertEqual(response.status_code, 404)
         self.assertEqual(transport.requests, [])
 
@@ -151,9 +151,9 @@ class ShopPackRouteTests(unittest.TestCase):
         transport = self._upstream(lambda request: httpx.Response(200, content=b"x"))
         for path in (
             "/dependencies/@other/email-foundry/1.0.0/adapter.js",
-            "/dependencies/@bttco/%2e%2e/secret.js",
-            "/dependencies/@bttco/email-foundry/..%2F..%2Fsecret.js",
-            "/dependencies/@bttco/email-foundry/1.0.0/README.md",
+            "/dependencies/@exampleshop/%2e%2e/secret.js",
+            "/dependencies/@exampleshop/email-foundry/..%2F..%2Fsecret.js",
+            "/dependencies/@exampleshop/email-foundry/1.0.0/README.md",
             "/dependencies/%2F%2Fevil.example.test/a.js",
         ):
             with self.subTest(path=path):
@@ -169,20 +169,22 @@ class ShopPackRouteTests(unittest.TestCase):
                 headers={"content-type": "application/octet-stream", "etag": '"v1"', "set-cookie": "a=b"},
             )
         )
-        response = self.client.get("/dependencies/@bttco/email-foundry/1.0.0/Email%20Foundry.dc.html")
+        response = self.client.get("/dependencies/@exampleshop/email-foundry/1.0.0/Email%20Foundry.dc.html")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b"<html><head></head></html>")
         self.assertEqual(response.headers["content-type"], "text/html; charset=utf-8")
         self.assertEqual(response.headers["cache-control"], "public, max-age=300")
         self.assertEqual(response.headers["etag"], '"v1"')
         self.assertNotIn("set-cookie", response.headers)
-        self.assertEqual(str(transport.requests[0].url), f"{BASE}/@bttco/email-foundry/1.0.0/Email%20Foundry.dc.html")
+        self.assertEqual(
+            str(transport.requests[0].url), f"{BASE}/@exampleshop/email-foundry/1.0.0/Email%20Foundry.dc.html"
+        )
 
     def test_revalidation_reaches_the_upstream_and_304_passes_back(self):
         self._configure()
         transport = self._upstream(lambda request: httpx.Response(304, headers={"etag": '"v1"'}))
         response = self.client.get(
-            "/dependencies/@bttco/email-foundry/1.0.0/adapter.js", headers={"If-None-Match": '"v1"'}
+            "/dependencies/@exampleshop/email-foundry/1.0.0/adapter.js", headers={"If-None-Match": '"v1"'}
         )
         self.assertEqual(response.status_code, 304)
         self.assertEqual(transport.requests[0].headers["if-none-match"], '"v1"')
@@ -192,7 +194,7 @@ class ShopPackRouteTests(unittest.TestCase):
         for status, expected in ((404, 404), (403, 404), (500, 502), (302, 502)):
             with self.subTest(status=status):
                 self._upstream(lambda request, status=status: httpx.Response(status, headers={"location": "https://x"}))
-                response = self.client.get("/dependencies/@bttco/email-foundry/1.0.0/adapter.js")
+                response = self.client.get("/dependencies/@exampleshop/email-foundry/1.0.0/adapter.js")
                 self.assertEqual(response.status_code, expected)
 
     def test_unreachable_upstream_is_502(self):
@@ -202,7 +204,7 @@ class ShopPackRouteTests(unittest.TestCase):
             raise httpx.ConnectTimeout("timed out", request=request)
 
         self._upstream(fail)
-        response = self.client.get("/dependencies/@bttco/email-foundry/1.0.0/adapter.js")
+        response = self.client.get("/dependencies/@exampleshop/email-foundry/1.0.0/adapter.js")
         self.assertEqual(response.status_code, 502)
 
     def test_declared_size_past_the_cap_is_refused(self):
@@ -210,7 +212,7 @@ class ShopPackRouteTests(unittest.TestCase):
         self._upstream(
             lambda request: httpx.Response(200, content=b"x", headers={"content-length": str(PACK_MAX_BYTES + 1)})
         )
-        response = self.client.get("/dependencies/@bttco/booking-flow/1.0.0/assets/big.png")
+        response = self.client.get("/dependencies/@exampleshop/booking-flow/1.0.0/assets/big.png")
         self.assertEqual(response.status_code, 502)
 
     def test_undeclared_size_is_cut_at_the_cap(self):
@@ -222,14 +224,14 @@ class ShopPackRouteTests(unittest.TestCase):
 
         self._upstream(lambda request: httpx.Response(200, content=chunks()))
         with patch.object(shop_pack, "PACK_MAX_BYTES", PACK_MAX_BYTES):
-            response = self.client.get("/dependencies/@bttco/booking-flow/1.0.0/assets/big.png")
+            response = self.client.get("/dependencies/@exampleshop/booking-flow/1.0.0/assets/big.png")
         self.assertEqual(response.status_code, 200)
         self.assertLessEqual(len(response.content), PACK_MAX_BYTES)
 
     def test_svg_is_sandboxed(self):
         self._configure()
         self._upstream(lambda request: httpx.Response(200, content=b"<svg/>"))
-        response = self.client.get("/dependencies/@bttco/email-foundry/1.0.0/assets/mark.svg")
+        response = self.client.get("/dependencies/@exampleshop/email-foundry/1.0.0/assets/mark.svg")
         self.assertEqual(response.headers["content-type"], "image/svg+xml")
         self.assertEqual(response.headers["content-security-policy"], "sandbox")
 
