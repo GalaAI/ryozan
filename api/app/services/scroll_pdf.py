@@ -394,7 +394,9 @@ def _signature_block(
     elements.append(Spacer(1, 10))
 
 
-def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> None:
+def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> set[str]:
+    """Append one page per provided asset; return the keys whose image bytes were embedded."""
+    embedded: set[str] = set()
     for asset in assets:
         if not asset.provided:
             continue
@@ -406,7 +408,8 @@ def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> Non
         if asset.content_type:
             meta.append(("Content type", asset.content_type))
         meta.append(("Stored", "Yes" if asset.stored else "No"))
-        private_id = bool(asset.url and private_id_key(asset.url))
+        # The government ID never prints a link, whatever its key; other private keys neither.
+        private_id = bool(asset.url and (asset.key == GOVT_ID_ASSET_KEY or private_id_key(asset.url)))
         if asset.url and private_id:
             # Government IDs are private objects: the bytes are embedded below, never a link.
             meta.append(("Storage", "Private (staff open it through the app)"))
@@ -429,6 +432,7 @@ def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> Non
         flowable = _fitted_image(normalized, _CONTENT_WIDTH, _CONTENT_HEIGHT) if normalized else None
         if flowable is not None:
             elements.append(flowable)
+            embedded.add(asset.key)
         else:
             elements.append(
                 Paragraph(
@@ -441,10 +445,37 @@ def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> Non
                     styles["normal"],
                 )
             )
+    return embedded
+
+
+# The ScrollAsset key of the artist's government ID.
+GOVT_ID_ASSET_KEY = "govt_id"
+
+
+@dataclass(frozen=True)
+class ScrollPdfResult:
+    """The rendered PDF and which uploads it embeds as images.
+
+    `embeds_government_id` is decided from what was actually drawn, not from what was uploaded:
+    an ID uploaded as a PDF (or an undecodable image) is not embedded, so the scroll PDF does not
+    contain it.
+    """
+
+    pdf: bytes
+    embedded_asset_keys: frozenset[str]
+
+    @property
+    def embeds_government_id(self) -> bool:
+        return GOVT_ID_ASSET_KEY in self.embedded_asset_keys
 
 
 def build_scroll_pdf(data: ScrollPdfInput) -> bytes:
-    """Render a complete Artist Scroll archive PDF and return its bytes.
+    """Render a complete Artist Scroll archive PDF and return its bytes (see build_scroll_pdf_report)."""
+    return build_scroll_pdf_report(data).pdf
+
+
+def build_scroll_pdf_report(data: ScrollPdfInput) -> ScrollPdfResult:
+    """Render a complete Artist Scroll archive PDF, with which uploads it embeds.
 
     Never raises for content reasons: an undecodable image, a missing signature, or a
     failed upload each degrade to an explicit statement in the document. The archive is
@@ -537,7 +568,7 @@ def build_scroll_pdf(data: ScrollPdfInput) -> bytes:
     if data.owner_signature_png or data.owner_signature_url:
         _signature_block("Owner Countersignature", data.owner_signature_png, data.owner_signature_url, styles, elements)
 
-    _asset_pages(data.assets, styles, elements)
+    embedded = _asset_pages(data.assets, styles, elements)
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -551,4 +582,4 @@ def build_scroll_pdf(data: ScrollPdfInput) -> bytes:
         author=_studio_name(),
     )
     doc.build(elements, onFirstPage=_draw_page_chrome, onLaterPages=_draw_page_chrome)
-    return buf.getvalue()
+    return ScrollPdfResult(pdf=buf.getvalue(), embedded_asset_keys=frozenset(embedded))

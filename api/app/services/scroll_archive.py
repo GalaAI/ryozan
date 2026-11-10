@@ -2,8 +2,9 @@
 Owner archive for submitted Artist Scrolls.
 
 When an artist submits their scroll the shop owner (founder) gets a durable copy filed
-into their own account: a generated PDF, an in-app notification, and an email with the
-PDF attached.
+into their own account: a generated PDF, an in-app notification, and an email that links
+to the Artist Scrolls page in the app. The email never carries the PDF or a storage link:
+the PDF can embed the artist's government ID, and an ID must never land in an inbox.
 
 Two decisions here are load-bearing.
 
@@ -40,7 +41,7 @@ from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
 from app.models.user import User
-from app.services.email import FROM_ADMIN, EmailAttachment, send_email
+from app.services.email import FROM_ADMIN, send_email
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -207,16 +208,15 @@ def build_owner_archive_email_html(
     submitted_at: datetime,
     assets: list[ScrollAsset],
     *,
-    pdf_attached: bool,
+    pdf_filed: bool,
 ) -> str:
-    """Owner notice that a scroll arrived, in Email Foundry's language, listing exactly what is attached.
+    """Owner notice that a scroll arrived, in Email Foundry's language, listing what was stored.
 
     Reuses the waiver renderers' Foundry shell (starseed ground, tiger mark, spec well, coral
     pill) so the owner copy reads like every other shop email. Every value is escaped.
 
-    The scroll PDF embeds the artist's government ID and is a private R2 object, so this email
-    never links it: the PDF travels as an attachment and the only link is the authenticated
-    Artist Scrolls page in the app.
+    The scroll PDF can embed the artist's government ID, so this email neither attaches nor links
+    it. The only link is the authenticated Artist Scrolls page in the app.
     """
     from app.core.config import get_settings
     from app.services.email_foundry_waiver import _MONO_FONT, _copy, _cta, _label, _shell, _tiger_header
@@ -254,9 +254,10 @@ def build_owner_archive_email_html(
     local = submitted_at.astimezone(shop_timezone())
     ts = f"{local.strftime('%B')} {local.day}, {local.year} at {local.strftime('%I:%M %p').lstrip('0')} {local.strftime('%Z')}"
     archive_message = (
-        "A complete PDF copy is attached and has been filed to your Artist Scrolls archive."
-        if pdf_attached
-        else "The archive entry was filed, but PDF generation or storage failed, so no PDF is attached."
+        "A complete PDF copy has been filed to your Artist Scrolls archive. For privacy it is not "
+        "attached to this email; open it in the app."
+        if pdf_filed
+        else "The archive entry was filed, but PDF generation or storage failed, so the archive has no PDF."
     )
     frontend = get_settings().public_site_url
     archive_url = f"{frontend}/dashboard?portal=hub&panel=codex&category={OWNER_ARCHIVE_SLUG}"
@@ -287,17 +288,16 @@ def queue_owner_emails(
     founders: list[User],
     submitted_at: datetime,
     assets: list[ScrollAsset],
-    pdf_bytes: bytes | None,
+    pdf_filed: bool,
     submission_id: str,
 ) -> int:
-    """Persist owner email obligations in the archive transaction."""
+    """Persist owner email obligations in the archive transaction. Link only, never an attachment."""
     html = build_owner_archive_email_html(
         artist.name or "An artist",
         submitted_at,
         assets,
-        pdf_attached=bool(pdf_bytes),
+        pdf_filed=pdf_filed,
     )
-    safe = "".join(c if c.isalnum() else "_" for c in (artist.name or "artist"))
     queued = 0
     for founder in founders:
         if not founder.email:
@@ -314,8 +314,8 @@ def queue_owner_emails(
                 to_email=founder.email,
                 subject=f"Artist Scroll Submitted: {artist.name}",
                 html_body=html,
-                attachment_filename=f"artist-scroll-{safe}.pdf" if pdf_bytes else None,
-                attachment_content=pdf_bytes,
+                attachment_filename=None,
+                attachment_content=None,
                 status="queued",
                 attempts=0,
                 next_attempt_at=submitted_at,
@@ -362,15 +362,10 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
 
         delivered = 0
         for row in rows:
-            attachments = None
-            if row.attachment_content and row.attachment_filename:
-                attachments = [
-                    EmailAttachment(
-                        filename=row.attachment_filename,
-                        content=row.attachment_content,
-                        content_type="application/pdf",
-                    )
-                ]
+            # Rows queued before the link-only rule may still hold the PDF bytes. They are never
+            # sent and are cleared, so a scroll PDF (and the ID it may embed) never reaches an inbox.
+            row.attachment_filename = None
+            row.attachment_content = None
             try:
                 ok = await send_email(
                     to=row.to_email,
@@ -378,7 +373,6 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
                     html_body=row.html_body,
                     tags=["scroll_submitted"],
                     from_alias=FROM_ADMIN,
-                    attachments=attachments,
                 )
                 if ok:
                     row.status = "sent"

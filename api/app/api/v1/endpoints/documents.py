@@ -80,9 +80,16 @@ from app.services.scroll_archive import (
     queue_owner_emails,
     resolve_founders,
 )
-from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf
+from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf_report
 from app.services.sms import send_sms
-from app.services.storage import ID_REFERENCE_KEYS, canonical_id_reference, signed_id_fields, signed_id_url
+from app.services.storage import (
+    ID_REFERENCE_KEYS,
+    SCROLL_ID_PDF_FILENAME,
+    SCROLL_NOID_PDF_FILENAME,
+    canonical_id_reference,
+    signed_id_fields,
+    signed_id_url,
+)
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.documents")
@@ -312,7 +319,7 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
         "status": inst.status,
         "data_json": _signed_data_json(inst.data_json),
         "signed_at": inst.signed_at,
-        # Artist Scroll PDFs (and other private ID objects) reach clients as short-lived signed links only.
+        # Private ID objects, and scroll PDFs that embed the ID, reach clients as short-lived signed links only.
         "file_url": signed_id_url(inst.file_url, ID_VIEW_SECONDS),
         "notes": inst.notes,
         # Send / lifecycle fields
@@ -889,7 +896,7 @@ async def submit_scroll(
     scroll_pdf_url: str | None = None
     pdf_bytes: bytes | None = None
     try:
-        pdf_bytes = build_scroll_pdf(
+        report = build_scroll_pdf_report(
             ScrollPdfInput(
                 artist_name=current_user.name or "Unknown Artist",
                 artist_email=current_user.email,
@@ -906,9 +913,12 @@ async def submit_scroll(
                 assets=assets,
             )
         )
+        pdf_bytes = report.pdf
+        # Named by content: a PDF that actually embeds the government ID image is the private
+        # "artist-scroll.id.pdf"; without an embedded ID it is the public "artist-scroll.noid.pdf".
         scroll_pdf_url = await upload_to_blob(
             file_bytes=pdf_bytes,
-            filename="artist-scroll.pdf",
+            filename=SCROLL_ID_PDF_FILENAME if report.embeds_government_id else SCROLL_NOID_PDF_FILENAME,
             mime_type="application/pdf",
             folder_path=storage_prefix,
         )
@@ -970,7 +980,7 @@ async def submit_scroll(
             founders,
             submitted_at,
             assets,
-            pdf_bytes,
+            bool(scroll_pdf_url),
             submission_id,
         )
     except Exception:
@@ -1009,7 +1019,7 @@ async def submit_scroll(
         "artist_sig_url": artist_sig_url,
         "owner_sig_url": owner_sig_url,
         "bbp_cert_url": bbp_cert_url,
-        # The scroll PDF embeds the artist's government ID: a short-lived signed link, never the public URL.
+        # A scroll PDF that embeds the artist's government ID: a short-lived signed link, never the public URL.
         "scroll_pdf_url": signed_id_url(scroll_pdf_url, ID_VIEW_SECONDS),
         "submission_id": submission_id,
         "owner_copies_filed": len(archive_rows),

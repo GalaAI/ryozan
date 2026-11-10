@@ -1,10 +1,10 @@
-"""Artist Scroll PDFs are private in R2 and reach clients only as short-lived signed links.
+"""Only Artist Scroll PDFs that contain the artist's government ID image are private in R2.
 
-The scroll PDF (scrolls/<user>/<submission>/artist-scroll.pdf) embeds the artist's government ID
-image, so it is as sensitive as the ID itself. It is stored as scroll_pdf_url on the artist's record,
-as the file_url of that record and of every owner archive copy, and inside the archive copy's data.
-Every read point now signs a fresh GET link; the owner email attaches the PDF bytes and links only to
-the authenticated app page.
+Generated scroll PDFs are named by content: one that embeds the ID image is
+scrolls/<user>/<submission>/artist-scroll.id.pdf (private, signed links only), one without an embedded
+ID is artist-scroll.noid.pdf (public). Legacy artist-scroll.pdf objects stay private by key, because the
+app form requires a government ID. PDFs uploaded to scroll categories stay public, except an upload
+that is itself an ID (govt-id.*). The owner email is link only: no attachment and no storage link.
 
 Every install names its own bucket and assets domain in settings, so these tests use a fake bucket and
 neutral example.test hosts. All image data is generated; no real client or artist data is used.
@@ -41,9 +41,14 @@ from app.services import scroll_archive, storage  # noqa: E402
 
 FROZEN = datetime(2026, 11, 10, 12, 0, 0, tzinfo=UTC)
 SUBMISSION_PREFIX = "scrolls/artist-1/20261110T120000-abcd1234"
-SCROLL_PDF_KEY = f"{SUBMISSION_PREFIX}/artist-scroll.pdf"
-SCROLL_PDF_URL = f"https://{ASSETS_HOST}/{SCROLL_PDF_KEY}"
+ID_PDF_KEY = f"{SUBMISSION_PREFIX}/artist-scroll.id.pdf"
+ID_PDF_URL = f"https://{ASSETS_HOST}/{ID_PDF_KEY}"
+LEGACY_PDF_KEY = f"{SUBMISSION_PREFIX}/artist-scroll.pdf"
+LEGACY_PDF_URL = f"https://{ASSETS_HOST}/{LEGACY_PDF_KEY}"
+NOID_PDF_URL = f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/artist-scroll.noid.pdf"
+CATEGORY_PDF_URL = f"https://{ASSETS_HOST}/scrolls/shop/00000000-0000-4000-8000-000000000001/abc123.pdf"
 SCROLL_ID_URL = f"https://{ASSETS_HOST}/{SCROLL_ID_KEY}"
+ID_AS_PDF_KEY = f"{SUBMISSION_PREFIX}/govt-id.pdf"
 BBP_CERT_URL = f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/bbp-cert.png"
 ARTIST_SIG_URL = f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/artist-sig.png"
 
@@ -60,23 +65,42 @@ def _settings_patch():
     return patch.object(storage, "get_settings", return_value=_settings())
 
 
-def _scroll_fields() -> dict:
-    return {
+def _scroll_fields(pdf_url: str = ID_PDF_URL, *, with_id: bool = True) -> dict:
+    fields = {
         "legal_name": "Synthetic Artist",
         "tax_opt_in": "false",
-        "govt_id_url": SCROLL_ID_URL,
         "bbp_cert_url": BBP_CERT_URL,
         "artist_sig_url": ARTIST_SIG_URL,
-        "scroll_pdf_url": SCROLL_PDF_URL,
+        "scroll_pdf_url": pdf_url,
         "storage_prefix": SUBMISSION_PREFIX,
         "certs_stored": {
-            "govt_id": {"provided": True, "stored": True, "url": SCROLL_ID_URL, "error": None},
+            "govt_id": (
+                {"provided": True, "stored": True, "url": SCROLL_ID_URL, "error": None}
+                if with_id
+                else {"provided": False, "stored": False, "url": None, "error": None}
+            ),
             "bbp_cert": {"provided": True, "stored": True, "url": BBP_CERT_URL, "error": None},
         },
     }
+    if with_id:
+        fields["govt_id_url"] = SCROLL_ID_URL
+    return fields
 
 
-def _scroll_instance(*, category: str = "scroll", data: dict | None = None, file_url: str | None = SCROLL_PDF_URL):
+def _owner_archive_data(fields: dict | None = None) -> dict:
+    fields = fields or _scroll_fields()
+    return {
+        "source": "artist_scroll_submission",
+        "artist_name": "Synthetic Artist",
+        "submission_id": "sub-1",
+        "storage_prefix": SUBMISSION_PREFIX,
+        "scroll_pdf_url": fields["scroll_pdf_url"],
+        "certs_stored": fields["certs_stored"],
+        "fields": fields,
+    }
+
+
+def _instance(*, category: str = "scroll", data: dict | None = None, file_url: str | None = ID_PDF_URL):
     return SimpleNamespace(
         id=uuid.uuid4(),
         template_id=None,
@@ -105,19 +129,6 @@ def _scroll_instance(*, category: str = "scroll", data: dict | None = None, file
         created_at=FROZEN,
         updated_at=FROZEN,
     )
-
-
-def _owner_archive_data() -> dict:
-    fields = _scroll_fields()
-    return {
-        "source": "artist_scroll_submission",
-        "artist_name": "Synthetic Artist",
-        "submission_id": "sub-1",
-        "storage_prefix": SUBMISSION_PREFIX,
-        "scroll_pdf_url": SCROLL_PDF_URL,
-        "certs_stored": fields["certs_stored"],
-        "fields": fields,
-    }
 
 
 class _Result:
@@ -172,117 +183,149 @@ class StorageRuleTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_every_own_host_form_of_a_scroll_pdf_is_signed(self):
-        for reference in (
-            SCROLL_PDF_URL,
-            f"https://pub-account-id.r2.dev/{BUCKET}/{SCROLL_PDF_KEY}",
-            f"https://account-id.r2.cloudflarestorage.com/{BUCKET}/{SCROLL_PDF_KEY}",
-        ):
-            with self.subTest(reference=reference):
-                self.assertTrue(storage.private_id_key(reference))
-                _assert_signed(self, storage.signed_id_url(reference), SCROLL_PDF_KEY)
+    def test_every_own_host_form_of_an_id_bearing_scroll_pdf_is_signed(self):
+        for key in (ID_PDF_KEY, LEGACY_PDF_KEY):
+            for reference in (
+                f"https://{ASSETS_HOST}/{key}",
+                f"https://pub-account-id.r2.dev/{BUCKET}/{key}",
+                f"https://account-id.r2.cloudflarestorage.com/{BUCKET}/{key}",
+            ):
+                with self.subTest(reference=reference):
+                    self.assertTrue(storage.private_id_key(reference))
+                    _assert_signed(self, storage.signed_id_url(reference), key)
 
-    def test_any_pdf_under_scrolls_is_private_whatever_its_case(self):
+    def test_marker_legacy_and_id_upload_keys_are_private_whatever_the_case(self):
         for key in (
-            "scrolls/artist-1/20261110T120000-abcd1234/ARTIST-SCROLL.PDF",
-            "scrolls/shop/00000000-0000-4000-8000-000000000001/abc123.pdf",
+            f"{SUBMISSION_PREFIX}/ARTIST-SCROLL.ID.PDF",
+            f"{SUBMISSION_PREFIX}/Artist-Scroll.pdf",
+            ID_AS_PDF_KEY,
         ):
             with self.subTest(key=key):
                 self.assertTrue(storage.is_private_id_key(key))
                 _assert_signed(self, storage.signed_id_url(f"https://{ASSETS_HOST}/{key}"), key)
 
-    def test_non_id_scroll_assets_and_foreign_scroll_pdfs_pass_through(self):
+    def test_noid_pdf_category_pdfs_and_other_scroll_assets_stay_public(self):
         for reference in (
+            NOID_PDF_URL,
+            CATEGORY_PDF_URL,
             BBP_CERT_URL,
             ARTIST_SIG_URL,
-            f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/cpr-cert.jpg",
             f"https://{ASSETS_HOST}/scrolls/shop/u-1/notes.docx",
-            f"https://{ASSETS_HOST}/scrolls/shop/u-1/pdf-guide.txt",
-            f"https://evil.example.test/{SCROLL_PDF_KEY}",
-            f"https://pub-account-id.r2.dev/other-bucket/{SCROLL_PDF_KEY}",
-            f"https://{ASSETS_HOST}/scrolls/../waivers/x.png",
+            f"https://{ASSETS_HOST}/scrolls/shop/u-1/my-artist-scroll.pdf",
+            f"https://evil.example.test/{ID_PDF_KEY}",
+            f"https://pub-account-id.r2.dev/other-bucket/{ID_PDF_KEY}",
+            f"https://{ASSETS_HOST}/scrolls/../waivers/x.id.pdf",
             None,
         ):
             with self.subTest(reference=reference):
                 self.assertEqual(storage.signed_id_url(reference), reference)
 
-    def test_a_signed_scroll_pdf_link_normalizes_to_the_stored_reference(self):
-        signed = storage.signed_id_url(SCROLL_PDF_URL)
-        self.assertEqual(storage.canonical_id_reference(signed), SCROLL_PDF_URL)
+    def test_signed_links_echoed_back_normalize_to_the_stored_reference(self):
+        for reference in (ID_PDF_URL, LEGACY_PDF_URL):
+            with self.subTest(reference=reference):
+                signed = storage.signed_id_url(reference)
+                self.assertIn("X-Amz-Signature=", signed)
+                self.assertEqual(storage.canonical_id_reference(signed), reference)
+        self.assertEqual(storage.canonical_id_reference(CATEGORY_PDF_URL), CATEGORY_PDF_URL)
 
-    def test_signed_id_fields_signs_scroll_pdf_and_nested_archive_fields_without_mutating(self):
+    def test_signed_id_fields_follow_the_pdf_key(self):
         data = _owner_archive_data()
         snapshot = json.loads(json.dumps(data))
         view = storage.signed_id_fields(data, 900)
-        _assert_signed(self, view["scroll_pdf_url"], SCROLL_PDF_KEY)
+        _assert_signed(self, view["scroll_pdf_url"], ID_PDF_KEY)
         _assert_signed(self, view["certs_stored"]["govt_id"]["url"], SCROLL_ID_KEY)
-        _assert_signed(self, view["fields"]["scroll_pdf_url"], SCROLL_PDF_KEY)
+        _assert_signed(self, view["fields"]["scroll_pdf_url"], ID_PDF_KEY)
         _assert_signed(self, view["fields"]["govt_id_url"], SCROLL_ID_KEY)
-        _assert_signed(self, view["fields"]["certs_stored"]["govt_id"]["url"], SCROLL_ID_KEY)
         self.assertEqual(view["certs_stored"]["bbp_cert"]["url"], BBP_CERT_URL)
-        self.assertEqual(view["fields"]["bbp_cert_url"], BBP_CERT_URL)
         self.assertEqual(view["fields"]["artist_sig_url"], ARTIST_SIG_URL)
         self.assertEqual(data, snapshot, "stored data must not be mutated")
 
+        no_id = _owner_archive_data(_scroll_fields(NOID_PDF_URL, with_id=False))
+        self.assertEqual(storage.signed_id_fields(no_id, 900), no_id)
+
+        legacy_view = storage.signed_id_fields(_owner_archive_data(_scroll_fields(LEGACY_PDF_URL)), 900)
+        _assert_signed(self, legacy_view["scroll_pdf_url"], LEGACY_PDF_KEY)
+        _assert_signed(self, legacy_view["fields"]["scroll_pdf_url"], LEGACY_PDF_KEY)
+
 
 class ScrollReadPointTests(unittest.IsolatedAsyncioTestCase):
-    def test_document_response_signs_file_url_and_data_json_scroll_pdf(self):
-        for inst in (
-            _scroll_instance(),
-            _scroll_instance(category=scroll_archive.OWNER_ARCHIVE_CATEGORY, data=_owner_archive_data()),
+    def test_document_response_signs_id_bearing_pdfs(self):
+        for inst, key in (
+            (_instance(), ID_PDF_KEY),
+            (_instance(file_url=LEGACY_PDF_URL, data=_scroll_fields(LEGACY_PDF_URL)), LEGACY_PDF_KEY),
+            (
+                _instance(
+                    category=scroll_archive.OWNER_ARCHIVE_CATEGORY,
+                    data=_owner_archive_data(_scroll_fields(LEGACY_PDF_URL)),
+                    file_url=LEGACY_PDF_URL,
+                ),
+                LEGACY_PDF_KEY,
+            ),
         ):
-            with self.subTest(category=inst.category), _settings_patch():
+            with self.subTest(key=key, category=inst.category), _settings_patch():
                 response = documents._instance_to_response(inst, None, "Synthetic Artist")
-            query = _assert_signed(self, response["file_url"], SCROLL_PDF_KEY)
-            self.assertEqual(query["X-Amz-Expires"], [str(documents.ID_VIEW_SECONDS)])
-            view = json.loads(response["data_json"])
-            _assert_signed(self, view["scroll_pdf_url"], SCROLL_PDF_KEY)
-            self.assertNotIn(SCROLL_PDF_URL, response["data_json"])
-            self.assertNotIn(SCROLL_ID_URL, response["data_json"])
-            self.assertEqual(inst.file_url, SCROLL_PDF_URL, "stored reference must not change")
+                query = _assert_signed(self, response["file_url"], key)
+                self.assertEqual(query["X-Amz-Expires"], [str(documents.ID_VIEW_SECONDS)])
+                _assert_signed(self, json.loads(response["data_json"])["scroll_pdf_url"], key)
+                self.assertNotIn(SCROLL_ID_URL, response["data_json"])
+                self.assertNotIn(inst.file_url, response["data_json"])
 
-    def test_document_response_passes_a_non_id_file_through(self):
-        cert = _scroll_instance(file_url=BBP_CERT_URL, data={"note": "synthetic"})
-        with _settings_patch():
-            response = documents._instance_to_response(cert, None, None)
-        self.assertEqual(response["file_url"], BBP_CERT_URL)
+    def test_document_response_passes_pdfs_without_an_id_through(self):
+        no_id = _scroll_fields(NOID_PDF_URL, with_id=False)
+        for inst in (
+            _instance(file_url=NOID_PDF_URL, data=no_id),
+            _instance(category="scroll_shop", file_url=CATEGORY_PDF_URL, data={"note": "synthetic"}),
+            _instance(file_url=BBP_CERT_URL, data={}),
+        ):
+            with self.subTest(file_url=inst.file_url), _settings_patch():
+                response = documents._instance_to_response(inst, None, None)
+                self.assertEqual(response["file_url"], inst.file_url)
+                self.assertEqual(response["data_json"], inst.data_json)
 
     async def test_my_scroll_and_user_scroll_sign_the_pdf_in_fields(self):
-        inst = _scroll_instance()
-        user_id = inst.user_id
+        inst = _instance()
         with _settings_patch():
-            mine = await documents.get_my_scroll(db=_QueueSession(inst), current_user=SimpleNamespace(id=user_id))
+            mine = await documents.get_my_scroll(db=_QueueSession(inst), current_user=SimpleNamespace(id=inst.user_id))
             theirs = await documents.get_user_scroll(
-                user_id=user_id,
+                user_id=inst.user_id,
                 db=_QueueSession((inst, "Synthetic Artist")),
                 caller=SimpleNamespace(id=uuid.uuid4(), role="founder"),
             )
         for scroll in (mine["scroll"], theirs["scroll"]):
-            _assert_signed(self, scroll["fields"]["scroll_pdf_url"], SCROLL_PDF_KEY)
+            _assert_signed(self, scroll["fields"]["scroll_pdf_url"], ID_PDF_KEY)
             _assert_signed(self, scroll["govt_id_url"], SCROLL_ID_KEY)
-            self.assertNotIn(SCROLL_PDF_URL, json.dumps(scroll))
+            self.assertNotIn(ID_PDF_URL, json.dumps(scroll))
 
-    async def test_scroll_category_list_signs_the_pdf_file_url(self):
+    async def test_scroll_category_list_signs_only_id_bearing_pdfs(self):
         category = SimpleNamespace(
             slug="owner-archive", label="Artist Scrolls", icon="archive", ai_digest_enabled=False
         )
-        archive_row = _scroll_instance(category=scroll_archive.OWNER_ARCHIVE_CATEGORY, data=_owner_archive_data())
-        cert_row = _scroll_instance(file_url=BBP_CERT_URL, data={})
-        session = _QueueSession(category, [(archive_row, "Owner"), (cert_row, "Owner")])
+        rows = [
+            (_instance(category=scroll_archive.OWNER_ARCHIVE_CATEGORY, data=_owner_archive_data()), "Owner"),
+            (
+                _instance(
+                    category=scroll_archive.OWNER_ARCHIVE_CATEGORY,
+                    data=_owner_archive_data(_scroll_fields(NOID_PDF_URL, with_id=False)),
+                    file_url=NOID_PDF_URL,
+                ),
+                "Owner",
+            ),
+            (_instance(file_url=CATEGORY_PDF_URL, data={}), "Owner"),
+        ]
         with _settings_patch():
             listing = await scrolls.list_category_docs(
                 category_slug="owner-archive",
                 user_id=None,
-                db=session,
+                db=_QueueSession(category, rows),
                 current_user=SimpleNamespace(id=uuid.uuid4(), role="founder"),
             )
-        query = _assert_signed(self, listing["docs"][0]["file_url"], SCROLL_PDF_KEY)
+        query = _assert_signed(self, listing["docs"][0]["file_url"], ID_PDF_KEY)
         self.assertEqual(query["X-Amz-Expires"], [str(scrolls.SCROLL_FILE_VIEW_SECONDS)])
-        self.assertEqual(listing["docs"][1]["file_url"], BBP_CERT_URL)
+        self.assertEqual(listing["docs"][1]["file_url"], NOID_PDF_URL)
+        self.assertEqual(listing["docs"][2]["file_url"], CATEGORY_PDF_URL)
 
-    async def test_scroll_category_upload_returns_a_signed_link_and_stores_the_reference(self):
-        category = SimpleNamespace(slug="shop", ai_digest_enabled=False, ai_digest_prompt=None)
-        session = _QueueSession(category)
+    async def test_scroll_category_pdf_upload_keeps_its_public_link(self):
+        session = _QueueSession(SimpleNamespace(slug="shop", ai_digest_enabled=False, ai_digest_prompt=None))
         upload = SimpleNamespace(
             filename="synthetic.pdf", content_type="application/pdf", read=AsyncMock(return_value=b"%PDF-1.4 test")
         )
@@ -301,22 +344,20 @@ class ScrollReadPointTests(unittest.IsolatedAsyncioTestCase):
                 current_user=SimpleNamespace(id=uuid.uuid4(), role="artist"),
             )
         stored = session.added[0].file_url
-        key = urlsplit(stored).path.lstrip("/")
-        self.assertTrue(key.startswith("scrolls/shop/") and key.endswith(".pdf"))
-        _assert_signed(self, response["file_url"], key)
-        self.assertEqual(stored, f"https://{ASSETS_HOST}/{key}")
+        self.assertTrue(urlsplit(stored).path.startswith("/scrolls/shop/") and stored.endswith(".pdf"))
+        self.assertEqual(response["file_url"], stored)
 
     async def test_archive_detail_signs_the_owner_copy_pdf_and_nested_ids(self):
-        inst = _scroll_instance(category=scroll_archive.OWNER_ARCHIVE_CATEGORY, data=_owner_archive_data())
+        inst = _instance(category=scroll_archive.OWNER_ARCHIVE_CATEGORY, data=_owner_archive_data())
         with _settings_patch():
             detail = await archive.get_archive_detail(
                 record_id=inst.id, current_user=SimpleNamespace(role="founder"), db=_QueueSession(inst)
             )
         data = detail["data"]
-        _assert_signed(self, data["scroll_pdf_url"], SCROLL_PDF_KEY)
-        _assert_signed(self, data["fields"]["scroll_pdf_url"], SCROLL_PDF_KEY)
+        _assert_signed(self, data["scroll_pdf_url"], ID_PDF_KEY)
+        _assert_signed(self, data["fields"]["scroll_pdf_url"], ID_PDF_KEY)
         _assert_signed(self, data["fields"]["govt_id_url"], SCROLL_ID_KEY)
-        self.assertNotIn(SCROLL_PDF_URL, json.dumps(detail))
+        self.assertNotIn(ID_PDF_URL, json.dumps(detail))
         self.assertNotIn(SCROLL_ID_URL, json.dumps(detail))
 
 
@@ -327,97 +368,139 @@ def _acceptances() -> dict:
     }
 
 
+async def _submit(test: unittest.TestCase, govt_id) -> tuple[dict, dict[str, bytes], _QueueSession]:
+    uploads: dict[str, bytes] = {}
+
+    async def _fake_upload(*, file_bytes, filename, mime_type, folder_path):
+        uploads[filename] = file_bytes
+        return f"https://{ASSETS_HOST}/{folder_path}/{filename}"
+
+    artist = SimpleNamespace(
+        id=uuid.uuid4(),
+        name="Synthetic Artist",
+        email="artist@example.test",
+        role="artist",
+        bttcoin_balance=0,
+        quest_points=0,
+    )
+    founder = SimpleNamespace(id=uuid.uuid4(), name="Synthetic Owner", email="owner@example.test")
+    fields_json = json.dumps(
+        {
+            "legal_name": "Synthetic Artist",
+            "terms_version": documents.ARTIST_SCROLL_TERMS_VERSION,
+            "section_acceptances": _acceptances(),
+            # Client-sent values the server alone owns must never be stored.
+            "scroll_pdf_url": "https://evil.example.test/old.pdf",
+        }
+    )
+    session = _QueueSession([], None)
+    with (
+        _settings_patch(),
+        patch.object(documents, "upload_to_blob", _fake_upload),
+        patch.object(documents, "resolve_founders", AsyncMock(return_value=[founder])),
+    ):
+        response = await documents.submit_scroll(
+            request=SimpleNamespace(headers={"user-agent": "unit-test"}),
+            artist_signature=base64.b64encode(_png(11, 3)).decode(),
+            fields_json=fields_json,
+            bbp_cert=None,
+            first_aid_cert=None,
+            cpr_cert=None,
+            govt_id=govt_id,
+            db=session,
+            current_user=artist,
+        )
+    return response, uploads, session
+
+
+def _docs(session: _QueueSession) -> list:
+    return [obj for obj in session.added if type(obj).__name__ == "DocumentInstance"]
+
+
 class SubmitScrollTests(unittest.IsolatedAsyncioTestCase):
-    async def test_submit_embeds_the_id_returns_signed_links_and_emails_no_url(self):
+    async def test_an_embedded_id_gets_the_private_marker_name_and_a_signed_link(self):
         _uncompressed_pdfs(self)
-        uploads: dict[str, bytes] = {}
-
-        async def _fake_upload(*, file_bytes, filename, mime_type, folder_path):
-            uploads[filename] = file_bytes
-            return f"https://{ASSETS_HOST}/{folder_path}/{filename}"
-
         govt_id = SimpleNamespace(
             filename="id.png", content_type="image/png", read=AsyncMock(return_value=_synthetic_id_png())
         )
-        artist = SimpleNamespace(
-            id=uuid.uuid4(),
-            name="Synthetic Artist",
-            email="artist@example.test",
-            role="artist",
-            bttcoin_balance=0,
-            quest_points=0,
-        )
-        founder = SimpleNamespace(id=uuid.uuid4(), name="Synthetic Owner", email="owner@example.test")
-        fields_json = json.dumps(
-            {
-                "legal_name": "Synthetic Artist",
-                "terms_version": documents.ARTIST_SCROLL_TERMS_VERSION,
-                "section_acceptances": _acceptances(),
-                # A client echoing an older value must never be stored.
-                "scroll_pdf_url": "https://evil.example.test/old.pdf",
-            }
-        )
-        session = _QueueSession([], None)
-        with (
-            _settings_patch(),
-            patch.object(documents, "upload_to_blob", _fake_upload),
-            patch.object(documents, "resolve_founders", AsyncMock(return_value=[founder])),
-        ):
-            response = await documents.submit_scroll(
-                request=SimpleNamespace(headers={"user-agent": "unit-test"}),
-                artist_signature=base64.b64encode(_png(11, 3)).decode(),
-                fields_json=fields_json,
-                bbp_cert=None,
-                first_aid_cert=None,
-                cpr_cert=None,
-                govt_id=govt_id,
-                db=session,
-                current_user=artist,
-            )
+        response, uploads, session = await _submit(self, govt_id)
 
-        # The generated PDF embeds the synthetic 7x5 ID image and carries no ID or PDF URL.
-        pdf = uploads["artist-scroll.pdf"]
+        self.assertEqual(set(uploads) & {"artist-scroll.pdf", "artist-scroll.noid.pdf"}, set())
+        pdf = uploads["artist-scroll.id.pdf"]
+        # The PDF embeds the synthetic 7x5 ID image and carries no ID or PDF URL.
         self.assertRegex(pdf, rb"/Width 7\b")
         self.assertRegex(pdf, rb"/Height 5\b")
-        for needle in (b"govt-id", b"artist-scroll.pdf", b"scrolls/", ASSETS_HOST.encode(), BUCKET.encode()):
+        for needle in (b"govt-id", b"artist-scroll.", b"scrolls/", ASSETS_HOST.encode(), BUCKET.encode()):
             self.assertNotIn(needle, pdf)
         self.assertNotIn(b"r2.cloudflarestorage.com", pdf)
         self.assertNotIn(b"/URI", pdf)
         self.assertNotIn("evil.example.test", extract_pdf_text(pdf))
 
-        # The response hands back a signed link; the records keep the stable reference.
-        signed_key = urlsplit(response["scroll_pdf_url"]).path.removeprefix(f"/{BUCKET}/")
-        self.assertTrue(signed_key.startswith(f"scrolls/{artist.id}/") and signed_key.endswith("/artist-scroll.pdf"))
-        _assert_signed(self, response["scroll_pdf_url"], signed_key)
-        stored_reference = f"https://{ASSETS_HOST}/{signed_key}"
-        docs = [obj for obj in session.added if type(obj).__name__ == "DocumentInstance"]
+        key = urlsplit(response["scroll_pdf_url"]).path.removeprefix(f"/{BUCKET}/")
+        self.assertTrue(key.endswith("/artist-scroll.id.pdf"))
+        _assert_signed(self, response["scroll_pdf_url"], key)
+        stored = f"https://{ASSETS_HOST}/{key}"
+        docs = _docs(session)
         self.assertEqual({d.category for d in docs}, {"scroll", scroll_archive.OWNER_ARCHIVE_CATEGORY})
         for doc in docs:
-            self.assertEqual(doc.file_url, stored_reference)
-            self.assertEqual(json.loads(doc.data_json)["scroll_pdf_url"], stored_reference)
+            data = json.loads(doc.data_json)
+            self.assertEqual(doc.file_url, stored)
+            self.assertEqual(data["scroll_pdf_url"], stored)
             self.assertNotIn("X-Amz-Signature", doc.data_json)
+            self.assertNotIn("evil.example.test", doc.data_json)
 
-        # The owner email attaches the PDF bytes and links only to the authenticated app page.
+    async def test_without_an_embedded_id_the_pdf_is_the_public_noid_name(self):
+        id_as_pdf = SimpleNamespace(
+            filename="id.pdf", content_type="application/pdf", read=AsyncMock(return_value=b"%PDF-1.4 synthetic")
+        )
+        for label, govt_id in (("id uploaded as a pdf", id_as_pdf), ("no id", None)):
+            with self.subTest(case=label):
+                response, uploads, session = await _submit(self, govt_id)
+                self.assertEqual(set(uploads) & {"artist-scroll.pdf", "artist-scroll.id.pdf"}, set())
+                pdf = uploads["artist-scroll.noid.pdf"]
+                self.assertNotIn(b"/Width 7", pdf)
+                self.assertNotIn(b"govt-id", pdf)
+                public = response["scroll_pdf_url"]
+                self.assertNotIn("X-Amz-Signature", public)
+                self.assertEqual(urlsplit(public).hostname, ASSETS_HOST)
+                for doc in _docs(session):
+                    data = json.loads(doc.data_json)
+                    self.assertEqual(doc.file_url, public)
+                    self.assertEqual(data["scroll_pdf_url"], public)
+                    with _settings_patch():
+                        self.assertEqual(documents._instance_to_response(doc, None, None)["file_url"], public)
+                if govt_id is not None:
+                    # The ID upload itself (govt-id.pdf) stays private.
+                    stored_id = json.loads(_docs(session)[0].data_json)["govt_id_url"]
+                    self.assertTrue(stored_id.endswith("/govt-id.pdf"))
+                    with _settings_patch():
+                        self.assertIn("X-Amz-Signature=", storage.signed_id_url(stored_id))
+
+    async def test_owner_email_is_link_only(self):
+        govt_id = SimpleNamespace(
+            filename="id.png", content_type="image/png", read=AsyncMock(return_value=_synthetic_id_png())
+        )
+        _response, _uploads, session = await _submit(self, govt_id)
         outbox = [obj for obj in session.added if type(obj).__name__ == "ScrollOwnerEmailOutbox"]
         self.assertEqual(len(outbox), 1)
-        self.assertEqual(outbox[0].attachment_content, pdf)
+        self.assertIsNone(outbox[0].attachment_content)
+        self.assertIsNone(outbox[0].attachment_filename)
         html = outbox[0].html_body
-        for needle in (ASSETS_HOST, BUCKET, "r2.cloudflarestorage.com", "r2.dev", "scrolls/", '.pdf"'):
+        for needle in (ASSETS_HOST, BUCKET, "r2.cloudflarestorage.com", "r2.dev", "scrolls/", ".pdf", "X-Amz"):
             self.assertNotIn(needle, html)
         links = [link for link in re.findall(r'href="([^"]+)"', html) if "fonts.googleapis.com" not in link]
         self.assertEqual(len(links), 1)
         self.assertIn("/dashboard?portal=hub", links[0])
         self.assertIn(f"category={scroll_archive.OWNER_ARCHIVE_SLUG}", links[0])
-        notices = [obj for obj in session.added if type(obj).__name__ == "Notification"]
-        self.assertTrue(notices)
-        for notice in notices:
+        self.assertIn("not attached to this email", html)
+        for notice in (obj for obj in session.added if type(obj).__name__ == "Notification"):
             self.assertNotIn(ASSETS_HOST, notice.body)
             self.assertTrue(notice.action_url.startswith("/dashboard"))
 
     def test_signed_links_expire_within_the_sigv4_cap(self):
         with _settings_patch():
             for seconds in (documents.ID_VIEW_SECONDS, scrolls.SCROLL_FILE_VIEW_SECONDS, 10**9):
-                query = parse_qs(urlsplit(storage.signed_id_url(SCROLL_PDF_URL, seconds)).query)
+                query = parse_qs(urlsplit(storage.signed_id_url(ID_PDF_URL, seconds)).query)
                 self.assertLessEqual(int(query["X-Amz-Expires"][0]), 7 * 24 * 3600)
 
 

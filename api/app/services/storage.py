@@ -285,11 +285,20 @@ PRIVATE_ID_PREFIXES = ("waivers/pending-ids/",)
 # Printable waiver packets (waivers/<month>/<name>_<ref>/<name>_<ref>.pdf) embed the client's ID image.
 _WAIVER_ROOT = "waivers/"
 # Artist Scroll government IDs live beside public-safe certificates under
-# scrolls/<user>/<submission>/, so they are matched by file stem instead.
-# Artist Scroll PDFs (scrolls/<user>/<submission>/artist-scroll.pdf) embed that ID image,
-# so every PDF under scrolls/ is private too. Other scroll assets (cert images) stay public.
+# scrolls/<user>/<submission>/, so they are matched by file stem instead (this also covers an
+# ID uploaded as a PDF, govt-id.pdf).
 _SCROLL_ID_ROOT = "scrolls/"
 _SCROLL_ID_STEM = "govt-id"
+# Generated Artist Scroll PDFs are named by content, so storage, signing and the WAF rule all
+# match them by key: one that embeds the artist's government ID image is "artist-scroll.id.pdf"
+# (private), one without an embedded ID is "artist-scroll.noid.pdf" (public). Legacy
+# "artist-scroll.pdf" objects predate the marker and stay private by key: the app form requires a
+# government ID, so a legacy generated PDF is assumed to carry it. PDFs uploaded to scroll
+# categories are public unless the key marks an ID (govt-id*).
+SCROLL_ID_PDF_FILENAME = "artist-scroll.id.pdf"
+SCROLL_NOID_PDF_FILENAME = "artist-scroll.noid.pdf"
+_LEGACY_SCROLL_PDF_FILENAME = "artist-scroll.pdf"
+_SCROLL_ID_PDF_SUFFIX = ".id.pdf"
 # S3 caps a SigV4 query-string signature at seven days.
 _MAX_PRESIGN_SECONDS = 7 * 24 * 3600
 
@@ -300,9 +309,17 @@ def is_private_id_key(object_key: str) -> bool:
         return False
     if object_key.startswith(PRIVATE_ID_PREFIXES):
         return True
-    if object_key.startswith((_WAIVER_ROOT, _SCROLL_ID_ROOT)) and object_key.lower().endswith(".pdf"):
+    if object_key.startswith(_WAIVER_ROOT) and object_key.lower().endswith(".pdf"):
         return True
-    return object_key.startswith(_SCROLL_ID_ROOT) and object_key.rsplit("/", 1)[-1].startswith(_SCROLL_ID_STEM)
+    if not object_key.startswith(_SCROLL_ID_ROOT):
+        return False
+    name = object_key.rsplit("/", 1)[-1]
+    lowered = name.lower()
+    return (
+        name.startswith(_SCROLL_ID_STEM)
+        or lowered.endswith(_SCROLL_ID_PDF_SUFFIX)
+        or lowered == _LEGACY_SCROLL_PDF_FILENAME
+    )
 
 
 def _r2_key_from_reference(reference: str) -> str | None:
@@ -443,7 +460,7 @@ def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | No
 
 
 # Document data keys that can hold a government ID reference (waiver photo ID, Artist Scroll ID),
-# or a PDF that embeds one (the Artist Scroll PDF).
+# or a PDF that may embed one (the Artist Scroll PDF; signed_id_url signs it only when its key is private).
 ID_REFERENCE_KEYS = ("photo_id_url", "photo_id", "govt_id_url", "scroll_pdf_url")
 # The owner archive copy nests the artist's scroll data under "fields"; one level is all it uses.
 _MAX_NESTED_FIELDS_DEPTH = 2
@@ -455,8 +472,8 @@ def signed_id_fields(data: dict, expires_seconds: int = 300, *, _depth: int = 0)
 
     Covers the waiver photo ID keys, the Scroll govt_id_url and scroll_pdf_url, every
     certs_stored.<doc>.url, and the same keys inside a nested "fields" dict (owner archive copies).
-    Non-private references pass through unchanged (signed_id_url decides). The input is never
-    mutated, so the stored record keeps its stable references.
+    Non-private references (an artist-scroll.noid.pdf, certificates) pass through unchanged. The
+    input is never mutated, so the stored record keeps its stable references.
     """
     view = dict(data)
     for key in ID_REFERENCE_KEYS:

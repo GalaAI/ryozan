@@ -487,7 +487,7 @@ class OwnerArchiveInputAndAccessTests(unittest.IsolatedAsyncioTestCase):
 
         artist_row = next(r for r in session.added if isinstance(r, DocumentInstance) and r.user_id == artist.id)
         self.assertTrue(
-            artist_row.file_url.endswith("artist-scroll.pdf"),
+            artist_row.file_url.endswith(("/artist-scroll.id.pdf", "/artist-scroll.noid.pdf")),
             f"artist file_url should be the generated scroll PDF, got {artist_row.file_url}",
         )
         self.assertNotIn("bbp-cert", artist_row.file_url)
@@ -660,7 +660,9 @@ class ScrollPdfContentTests(unittest.TestCase):
     def test_non_image_upload_is_referenced_not_silently_dropped(self):
         text = self._build().decode("latin-1")
         self.assertIn("not an embeddable image", text)
-        self.assertIn("https://cdn.test/id.pdf", text)
+        # The government ID never prints a link in the PDF, whatever its storage key.
+        self.assertNotIn("https://cdn.test/id.pdf", text)
+        self.assertIn("stored privately", text)
 
     def test_artist_only_submission_does_not_report_a_missing_owner_signature(self):
         pdf = build_scroll_pdf(
@@ -737,13 +739,13 @@ class ScrollPdfContentTests(unittest.TestCase):
                     stored=False,
                 )
             ],
-            pdf_attached=False,
+            pdf_filed=False,
         )
 
         self.assertNotIn("<script>", html)
         self.assertNotIn("<img src=x", html)
         self.assertIn("&lt;script&gt;", html)
-        self.assertIn("no PDF is attached", html)
+        self.assertIn("the archive has no PDF", html)
 
 
 class OwnerNotificationTests(unittest.IsolatedAsyncioTestCase):
@@ -768,7 +770,7 @@ class OwnerNotificationTests(unittest.IsolatedAsyncioTestCase):
             "/dashboard?portal=hub&panel=codex&category=owner-archive",
         )
 
-    async def test_email_is_durably_queued_with_the_pdf_attached(self):
+    async def test_email_is_durably_queued_link_only_without_the_pdf(self):
         artist = _user("artist", "Rae Vance", "rae@ryozan.test")
         founder = _user("founder", "Justin", "justin@ryozan.test")
         session = _ArtistScrollSession([founder], caller=artist)
@@ -779,7 +781,11 @@ class OwnerNotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0].to_email, "justin@ryozan.test")
         self.assertIn("Rae Vance", rows[0].subject)
-        self.assertTrue(rows[0].attachment_content.startswith(b"%PDF"))
+        # The scroll PDF can embed the artist's government ID: never attached, never linked.
+        self.assertIsNone(rows[0].attachment_content)
+        self.assertIsNone(rows[0].attachment_filename)
+        self.assertNotIn(".pdf", rows[0].html_body)
+        self.assertIn("category=owner-archive", rows[0].html_body)
         self.assertEqual(rows[0].status, "queued")
         self.assertEqual(result["owner_emails_queued"], 1)
         self.assertEqual(result["owner_emails_sent"], 0)
@@ -832,7 +838,7 @@ class OwnerEmailOutboxProcessorTests(unittest.IsolatedAsyncioTestCase):
         row.id = uuid.uuid4()
         return row
 
-    async def test_processor_marks_claimed_email_sent(self):
+    async def test_processor_marks_claimed_email_sent_without_a_legacy_attachment(self):
         row = self._row()
         session = _OutboxSession([row])
         calls = []
@@ -851,7 +857,10 @@ class OwnerEmailOutboxProcessorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(row.status, "sent")
         self.assertEqual(row.attempts, 1)
         self.assertEqual(len(calls), 1)
-        self.assertTrue(calls[0]["attachments"][0].content.startswith(b"%PDF"))
+        # A row queued before the link-only rule still held PDF bytes: they are dropped, never sent.
+        self.assertNotIn("attachments", calls[0])
+        self.assertIsNone(row.attachment_content)
+        self.assertIsNone(row.attachment_filename)
 
     async def test_processor_retains_failed_email_for_retry(self):
         row = self._row()
