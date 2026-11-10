@@ -23,10 +23,23 @@ from app.models.booking import Booking
 from app.models.document import DocumentInstance
 from app.models.user import User
 from app.schemas.archive import ArchiveListResponse, ArchiveRecord
+from app.services.scroll_archive import OWNER_ARCHIVE_CATEGORY
 
 logger = logging.getLogger("ryozan.archive")
 
 router = APIRouter(prefix="/archive", tags=["archive"])
+
+
+def _is_manager(user: User) -> bool:
+    """Admins and founders see every archived record."""
+    return ROLE_RANK.get(user.role, 0) >= ROLE_RANK.get("admin", 3)
+
+
+def _artist_assigned_to_waiver(doc: DocumentInstance, user: User) -> bool:
+    """Same rule as waiver detail (waiver._artist_can_access_waiver): managers see all, artists their own."""
+    from app.api.v1.endpoints.waiver import _artist_can_access_waiver
+
+    return _artist_can_access_waiver(doc, user)
 
 
 def _require_staff(user: User):
@@ -75,8 +88,17 @@ async def list_archive(
                     DocumentInstance.recipient_email.ilike(f"%{search}%"),
                 )
             )
+        if not _is_manager(current_user):
+            # Artists only see waivers assigned to them. The SQL filter narrows the scan; the
+            # exact check below is the same rule waiver detail enforces.
+            waiver_q = waiver_q.where(
+                or_(
+                    DocumentInstance.artist_id_reviewed == current_user.id,
+                    DocumentInstance.data_json.contains(str(current_user.id)),
+                )
+            )
         result = await db.execute(waiver_q)
-        waivers = result.scalars().all()
+        waivers = [w for w in result.scalars().all() if _artist_assigned_to_waiver(w, current_user)]
 
         # Batch-fetch user names for user_id lookups
         user_ids = {w.user_id for w in waivers if w.user_id}
@@ -111,6 +133,9 @@ async def list_archive(
             DocumentInstance.status == DocStatus.ARCHIVED,
             DocumentInstance.category != "waiver",
         )
+        if current_user.role != "founder":
+            # Owner archive copies of Artist Scrolls are founder only, as in GET /documents/.
+            doc_q = doc_q.where(DocumentInstance.category != OWNER_ARCHIVE_CATEGORY)
         if search:
             doc_q = doc_q.where(
                 or_(
@@ -304,6 +329,10 @@ async def get_archive_detail(
     result = await db.execute(select(DocumentInstance).where(DocumentInstance.id == record_id))
     doc = result.scalar_one_or_none()
     if doc:
+        if doc.category == "waiver" and not _artist_assigned_to_waiver(doc, current_user):
+            raise HTTPException(status_code=403, detail="Waiver is not assigned to this artist")
+        if doc.category == OWNER_ARCHIVE_CATEGORY and current_user.role != "founder":
+            raise HTTPException(status_code=403, detail="Owner archive copies are founder only")
         data = json.loads(doc.data_json) if doc.data_json else {}
         artist_name = None
         if doc.artist_id_reviewed:
