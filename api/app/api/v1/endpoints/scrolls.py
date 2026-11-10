@@ -44,7 +44,7 @@ from app.services.email import (
     send_email,
 )
 from app.services.push import send_push_notification
-from app.services.storage import signed_id_url
+from app.services.storage import scroll_id_filename, signed_id_url
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.scrolls")
@@ -375,11 +375,15 @@ async def upload_scroll_doc(
     title: str = Form(""),
     notes: str = Form(""),
     ai_digest_enabled: bool = Form(False),
+    is_id: bool = Form(False),
     db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
     Upload a document to a scroll category.
+    When the uploader marks the file as a government ID (is_id), it is stored under the private
+    ".id.<ext>" marker name, only ever served through short-lived signed links, and never sent to
+    the Gala AI digest.
     Any authenticated user can upload to their own category.
     If the category has ai_digest_enabled OR the caller passes ai_digest_enabled=true,
     Gala extracts structured intel and enriches current_user.nexus_profile.
@@ -410,7 +414,8 @@ async def upload_scroll_doc(
     doc_title = title.strip() or (file.filename or "Untitled Scroll")
     doc_category = "scroll" if category_slug == "artist" else f"scroll_{category_slug}"
     ext = Path(file.filename or "doc").suffix or ""
-    filename = f"{uuid.uuid4().hex}{ext}"
+    token = uuid.uuid4().hex
+    filename = scroll_id_filename(token, ext) if is_id else f"{token}{ext}"
 
     content = await file.read()
 
@@ -425,7 +430,8 @@ async def upload_scroll_doc(
 
     # Gala AI digest (optional, async, non-blocking)
     ai_digest_result: dict | None = None
-    should_digest = ai_digest_enabled or cat.ai_digest_enabled
+    # An ID never goes to the AI digest, whatever the category or caller asks for.
+    should_digest = (ai_digest_enabled or cat.ai_digest_enabled) and not is_id
     if should_digest and cat.ai_digest_prompt:
         try:
             ai_digest_result = await _run_gala_digest(
@@ -460,7 +466,7 @@ async def upload_scroll_doc(
     return {
         "id": str(instance.id),
         "title": instance.title,
-        # Category uploads stay public unless the key marks a government ID.
+        # Category uploads stay public unless marked as an ID (the ".id.<ext>" key).
         "file_url": signed_id_url(blob_url, SCROLL_FILE_VIEW_SECONDS),
         "status": "submitted",
         "ai_digest": ai_digest_result,

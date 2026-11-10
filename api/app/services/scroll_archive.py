@@ -34,7 +34,7 @@ from datetime import UTC, datetime, timedelta
 from html import escape
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, text
 
 from app.constants.timezones import shop_timezone
 from app.models.document import DocumentInstance
@@ -44,7 +44,7 @@ from app.models.user import User
 from app.services.email import FROM_ADMIN, send_email
 
 if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession
 
     from app.services.scroll_pdf import ScrollAsset
 
@@ -253,12 +253,7 @@ def build_owner_archive_email_html(
 
     local = submitted_at.astimezone(shop_timezone())
     ts = f"{local.strftime('%B')} {local.day}, {local.year} at {local.strftime('%I:%M %p').lstrip('0')} {local.strftime('%Z')}"
-    archive_message = (
-        "A complete PDF copy has been filed to your Artist Scrolls archive. For privacy it is not "
-        "attached to this email; open it in the app."
-        if pdf_filed
-        else "The archive entry was filed, but PDF generation or storage failed, so the archive has no PDF."
-    )
+    archive_message = _LINK_ONLY_FILED if pdf_filed else _LINK_ONLY_NOT_FILED
     frontend = get_settings().public_site_url
     archive_url = f"{frontend}/dashboard?portal=hub&panel=codex&category={OWNER_ARCHIVE_SLUG}"
 
@@ -280,6 +275,26 @@ def build_owner_archive_email_html(
         header=_tiger_header("Artist Scroll // Filed"),
         rows=rows,
     )
+
+
+# Owner email copy: link only. The scroll PDF can embed the artist's government ID.
+_LINK_ONLY_FILED = (
+    "A complete PDF copy has been filed to your Artist Scrolls archive. For privacy it is not "
+    "attached to this email; open it in the app."
+)
+_LINK_ONLY_NOT_FILED = "The archive entry was filed, but PDF generation or storage failed, so the archive has no PDF."
+# Wording stored in rows queued before the link-only rule, mapped to the link-only wording.
+_ATTACHED_WORDING = {
+    "A complete PDF copy is attached and has been filed to your Artist Scrolls archive.": _LINK_ONLY_FILED,
+    "The archive entry was filed, but PDF generation or storage failed, so no PDF is attached.": (_LINK_ONLY_NOT_FILED),
+}
+
+
+def link_only_html(html_body: str) -> str:
+    """A stored owner email body with any old "PDF is attached" wording rewritten to link-only."""
+    for old, new in _ATTACHED_WORDING.items():
+        html_body = html_body.replace(escape(old), escape(new))
+    return html_body
 
 
 def queue_owner_emails(
@@ -366,6 +381,8 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
             # sent and are cleared, so a scroll PDF (and the ID it may embed) never reaches an inbox.
             row.attachment_filename = None
             row.attachment_content = None
+            # Their stored body may still say the PDF is attached; it is sent with the link-only wording.
+            row.html_body = link_only_html(row.html_body)
             try:
                 ok = await send_email(
                     to=row.to_email,
@@ -389,3 +406,28 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
             row.updated_at = datetime.now(UTC)
             await db.commit()
         return delivered
+
+
+async def clear_sent_owner_email_attachments(conn: AsyncConnection) -> tuple[int, int]:
+    """Drop the stored PDF bytes from owner emails that were already sent. Idempotent.
+
+    Rows queued before the link-only rule kept the scroll PDF (which can embed the artist's
+    government ID) after delivery. Pending rows are left alone: the outbox processor clears
+    their bytes when it claims them. Returns (found, cleared). Logs counts only, never row data.
+    """
+    table = ScrollOwnerEmailOutbox.__tablename__
+    found = (
+        await conn.execute(
+            text(f"SELECT count(*) FROM {table} WHERE status = 'sent' AND attachment_content IS NOT NULL")
+        )
+    ).scalar_one()
+    logger.info("Sent owner emails still holding PDF bytes: %d", found)
+    result = await conn.execute(
+        text(
+            f"UPDATE {table} SET attachment_content = NULL, attachment_filename = NULL "
+            "WHERE status = 'sent' AND attachment_content IS NOT NULL"
+        )
+    )
+    cleared = int(result.rowcount or 0)
+    logger.info("Cleared PDF bytes from sent owner emails: %d", cleared)
+    return int(found), cleared

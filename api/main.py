@@ -277,8 +277,17 @@ async def _run_startup_seeds() -> None:
                 )
             )
 
+    async def sent_owner_email_attachments() -> None:
+        # Sent owner emails must not keep the scroll PDF (it can embed the artist's government ID).
+        from app.services.scroll_archive import clear_sent_owner_email_attachments
+
+        async with engine.begin() as conn:
+            found, cleared = await clear_sent_owner_email_attachments(conn)
+        print(f"[Ryozan] Sent owner emails holding PDF bytes: {found}; cleared: {cleared}", flush=True)
+
     await _seed_step("default session types", default_session_types)
     await _seed_step("POS commission base", pos_commission_base)
+    await _seed_step("sent owner email attachments", sent_owner_email_attachments)
 
     # Convert SQLAlchemy URL to asyncpg format
     db_url = settings.DATABASE_URL

@@ -293,12 +293,13 @@ _SCROLL_ID_STEM = "govt-id"
 # match them by key: one that embeds the artist's government ID image is "artist-scroll.id.pdf"
 # (private), one without an embedded ID is "artist-scroll.noid.pdf" (public). Legacy
 # "artist-scroll.pdf" objects predate the marker and stay private by key: the app form requires a
-# government ID, so a legacy generated PDF is assumed to carry it. PDFs uploaded to scroll
-# categories are public unless the key marks an ID (govt-id*).
+# government ID, so a legacy generated PDF is assumed to carry it. Files uploaded to scroll
+# categories are public unless the uploader marks them as an ID, which stores them under the same
+# ".id.<ext>" marker (scroll_id_filename).
 SCROLL_ID_PDF_FILENAME = "artist-scroll.id.pdf"
 SCROLL_NOID_PDF_FILENAME = "artist-scroll.noid.pdf"
 _LEGACY_SCROLL_PDF_FILENAME = "artist-scroll.pdf"
-_SCROLL_ID_PDF_SUFFIX = ".id.pdf"
+_SCROLL_ID_MARKER = ".id"
 # S3 caps a SigV4 query-string signature at seven days.
 _MAX_PRESIGN_SECONDS = 7 * 24 * 3600
 
@@ -315,11 +316,16 @@ def is_private_id_key(object_key: str) -> bool:
         return False
     name = object_key.rsplit("/", 1)[-1]
     lowered = name.lower()
+    stem = lowered.rsplit(".", 1)[0] if "." in lowered else lowered
     return (
-        name.startswith(_SCROLL_ID_STEM)
-        or lowered.endswith(_SCROLL_ID_PDF_SUFFIX)
-        or lowered == _LEGACY_SCROLL_PDF_FILENAME
+        name.startswith(_SCROLL_ID_STEM) or stem.endswith(_SCROLL_ID_MARKER) or lowered == _LEGACY_SCROLL_PDF_FILENAME
     )
+
+
+def scroll_id_filename(stem: str, extension: str) -> str:
+    """The ".id.<ext>" marker name for a scroll file that is (or embeds) a government ID."""
+    ext = (extension or "").lstrip(".").lower() or "bin"
+    return f"{stem}{_SCROLL_ID_MARKER}.{ext}"
 
 
 def _r2_key_from_reference(reference: str) -> str | None:

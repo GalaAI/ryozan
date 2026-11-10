@@ -204,6 +204,26 @@ class StorageRuleTests(unittest.TestCase):
                 self.assertTrue(storage.is_private_id_key(key))
                 _assert_signed(self, storage.signed_id_url(f"https://{ASSETS_HOST}/{key}"), key)
 
+    def test_the_id_marker_covers_any_extension_and_nothing_else(self):
+        self.assertEqual(storage.scroll_id_filename("abc123", ".PNG"), "abc123.id.png")
+        for key in (
+            "scrolls/shop/u-1/abc123.id.pdf",
+            "scrolls/shop/u-1/abc123.id.jpg",
+            "scrolls/shop/u-1/ABC123.ID.WEBP",
+        ):
+            with self.subTest(key=key):
+                self.assertTrue(storage.is_private_id_key(key))
+        for key in (
+            "scrolls/shop/u-1/abc123.pdf",
+            "scrolls/shop/u-1/abc123.jpg",
+            "scrolls/shop/u-1/void.pdf",
+            f"{SUBMISSION_PREFIX}/artist-scroll.noid.pdf",
+            "scrolls/shop/u-1/abc.id",
+            "portfolios/a/abc123.id.jpg",
+        ):
+            with self.subTest(key=key):
+                self.assertFalse(storage.is_private_id_key(key))
+
     def test_noid_pdf_category_pdfs_and_other_scroll_assets_stay_public(self):
         for reference in (
             NOID_PDF_URL,
@@ -324,28 +344,65 @@ class ScrollReadPointTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(listing["docs"][1]["file_url"], NOID_PDF_URL)
         self.assertEqual(listing["docs"][2]["file_url"], CATEGORY_PDF_URL)
 
-    async def test_scroll_category_pdf_upload_keeps_its_public_link(self):
-        session = _QueueSession(SimpleNamespace(slug="shop", ai_digest_enabled=False, ai_digest_prompt=None))
+    async def _upload(self, *, is_id: bool, filename: str, content_type: str, ai_digest: bool = False):
+        category = SimpleNamespace(slug="shop", ai_digest_enabled=ai_digest, ai_digest_prompt="Extract intel")
+        session = _QueueSession(category)
         upload = SimpleNamespace(
-            filename="synthetic.pdf", content_type="application/pdf", read=AsyncMock(return_value=b"%PDF-1.4 test")
+            filename=filename, content_type=content_type, read=AsyncMock(return_value=b"synthetic")
         )
+        digest = AsyncMock(return_value={"summary": "synthetic"})
 
         async def _fake_upload(*, file_bytes, filename, mime_type, folder_path):
             return f"https://{ASSETS_HOST}/{folder_path}/{filename}"
 
-        with _settings_patch(), patch.object(scrolls, "upload_to_blob", _fake_upload):
+        with (
+            _settings_patch(),
+            patch.object(scrolls, "upload_to_blob", _fake_upload),
+            patch.object(scrolls, "_run_gala_digest", digest),
+        ):
             response = await scrolls.upload_scroll_doc(
                 category_slug="shop",
                 file=upload,
                 title="",
                 notes="",
-                ai_digest_enabled=False,
+                ai_digest_enabled=ai_digest,
+                is_id=is_id,
                 db=session,
                 current_user=SimpleNamespace(id=uuid.uuid4(), role="artist"),
             )
-        stored = session.added[0].file_url
-        self.assertTrue(urlsplit(stored).path.startswith("/scrolls/shop/") and stored.endswith(".pdf"))
+        return response, session.added[0].file_url, digest
+
+    async def test_scroll_category_pdf_upload_keeps_its_public_link(self):
+        response, stored, _digest = await self._upload(
+            is_id=False, filename="synthetic.pdf", content_type="application/pdf"
+        )
+        key = urlsplit(stored).path.lstrip("/")
+        self.assertTrue(key.startswith("scrolls/shop/") and key.endswith(".pdf"))
+        self.assertNotIn(".id.", key)
         self.assertEqual(response["file_url"], stored)
+
+    async def test_an_upload_marked_as_an_id_is_private_and_skips_the_ai_digest(self):
+        for filename, content_type, ext in (
+            ("synthetic.pdf", "application/pdf", "pdf"),
+            ("synthetic.JPG", "image/jpeg", "jpg"),
+        ):
+            with self.subTest(filename=filename):
+                response, stored, digest = await self._upload(
+                    is_id=True, filename=filename, content_type=content_type, ai_digest=True
+                )
+                key = urlsplit(stored).path.lstrip("/")
+                self.assertTrue(key.startswith("scrolls/shop/") and key.endswith(f".id.{ext}"), key)
+                self.assertEqual(stored, f"https://{ASSETS_HOST}/{key}", "the stored reference stays stable")
+                _assert_signed(self, response["file_url"], key)
+                digest.assert_not_called()
+                self.assertIsNone(response["ai_digest"])
+
+    async def test_an_unmarked_upload_still_gets_the_ai_digest(self):
+        response, _stored, digest = await self._upload(
+            is_id=False, filename="synthetic.pdf", content_type="application/pdf", ai_digest=True
+        )
+        digest.assert_awaited_once()
+        self.assertEqual(response["ai_digest"], {"summary": "synthetic"})
 
     async def test_archive_detail_signs_the_owner_copy_pdf_and_nested_ids(self):
         inst = _instance(category=scroll_archive.OWNER_ARCHIVE_CATEGORY, data=_owner_archive_data())

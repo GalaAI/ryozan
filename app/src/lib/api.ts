@@ -4815,12 +4815,15 @@ export async function uploadScrollDoc(params: {
   title?: string
   notes?: string
   aiDigestEnabled?: boolean
+  /** The file is a government ID: stored privately, served only through short-lived signed links. */
+  isId?: boolean
 }): Promise<{ id: string; title: string; file_url: string; status: string; ai_digest: unknown; created_at: string }> {
   const fd = new FormData()
   fd.append('file', params.file)
   fd.append('title', params.title ?? params.file.name)
   fd.append('notes', params.notes ?? '')
-  fd.append('ai_digest_enabled', params.aiDigestEnabled ? 'true' : 'false')
+  fd.append('ai_digest_enabled', params.aiDigestEnabled && !params.isId ? 'true' : 'false')
+  fd.append('is_id', params.isId ? 'true' : 'false')
   const res = await fetch(`${API_BASE}/scrolls/${params.categorySlug}/upload`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${getToken()}` },

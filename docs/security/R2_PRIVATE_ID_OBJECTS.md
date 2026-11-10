@@ -19,7 +19,7 @@ Stored references are unchanged (no migration). The app treats these R2 keys as 
 | `waivers/pending-ids/*` | Walk-in waiver ID photo | `POST /waiver/upload-id` |
 | `waivers/**/*.pdf` | Printable waiver packet, embeds the client ID image | `POST /waiver/{id}/export-pdf` |
 | `scrolls/**/govt-id*` | Artist Scroll government ID (image, or an ID uploaded as a PDF) | `POST /documents/scroll/submit` |
-| `scrolls/**/*.id.pdf` | Generated Artist Scroll PDF that embeds the artist government ID image (`artist-scroll.id.pdf`) | `POST /documents/scroll/submit` |
+| `scrolls/**/*.id.<ext>` | Generated Artist Scroll PDF that embeds the artist government ID image (`artist-scroll.id.pdf`), and any scroll category upload marked "This file is an ID" (`<random>.id.<ext>`) | `POST /documents/scroll/submit`, `POST /scrolls/{slug}/upload` with `is_id=true` |
 | `scrolls/**/artist-scroll.pdf` | Legacy generated Artist Scroll PDF, stored before the marker names | earlier `POST /documents/scroll/submit` |
 
 Generated scroll PDFs are named by content. The server knows at generation time whether it embedded the
@@ -29,8 +29,10 @@ which cannot be embedded) as `artist-scroll.noid.pdf` (public). Legacy `artist-s
 private by key: the app form requires a government ID, so a legacy generated PDF is taken to carry it,
 and the plain name is never written again.
 
-Public, unchanged: `artist-scroll.noid.pdf`, PDFs and other files uploaded to scroll categories
-(`scrolls/<slug>/<user>/<random>.<ext>`), certificate images and signature PNGs.
+Public, unchanged: `artist-scroll.noid.pdf`, files uploaded to scroll categories without the ID mark
+(`scrolls/<slug>/<user>/<random>.<ext>`), certificate images and signature PNGs. An upload marked as an
+ID is also never sent to the Gala AI digest. Scroll certificate uploads need no mark: the one ID upload
+on the scroll form is already stored as `govt-id.<ext>`.
 
 Every read point turns the stored reference into a short-lived SigV4 signed GET link on
 `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com/<R2_BUCKET_NAME>/<key>` (`storage.signed_id_url`):
@@ -65,11 +67,17 @@ re-download). The PDF never prints a government ID link, whatever its key, and n
 URL: the ID page reads "Private (staff open it through the app)". The server alone sets
 `scroll_pdf_url`; a value sent in the submitted fields is dropped.
 
+Owner emails that were already sent before this change kept the PDF bytes in the outbox table. A boot
+step (`scroll_archive.clear_sent_owner_email_attachments`, run from `main.py`'s startup seeds) clears
+`attachment_content` on every `sent` row that still holds it, logging only the count found and the
+count cleared. It is idempotent: the next boot clears 0.
+
 The owner email for a new scroll is link only: no attachment and no storage link (public or signed).
 Its one link is the authenticated Artist Scrolls page in the app, so an ID never lands in an inbox. A
 signed link in an email would stop working after the SigV4 seven-day cap and would open the ID for
 anyone the mail was forwarded to until then. Outbox rows queued before this change are sent without
-their attachment, and their stored PDF bytes are cleared when the row is claimed. The in-app
+their attachment, their stored PDF bytes are cleared when the row is claimed, and a stored body that
+still says the PDF is attached is rewritten to the link-only wording before it is sent. The in-app
 notification links to the same app page.
 
 Signed links keep working whether or not the assets domain serves the object, so the app keeps working
@@ -88,7 +96,7 @@ its Cloudflare zone.
      starts_with(http.request.uri.path, "/waivers/pending-ids/")
      or (starts_with(http.request.uri.path, "/waivers/") and ends_with(lower(http.request.uri.path), ".pdf"))
      or (starts_with(http.request.uri.path, "/scrolls/") and http.request.uri.path contains "/govt-id")
-     or (starts_with(http.request.uri.path, "/scrolls/") and ends_with(lower(http.request.uri.path), ".id.pdf"))
+     or (starts_with(http.request.uri.path, "/scrolls/") and lower(http.request.uri.path) contains ".id.")
      or (starts_with(http.request.uri.path, "/scrolls/") and ends_with(lower(http.request.uri.path), "/artist-scroll.pdf"))
    ))
    ```
@@ -111,5 +119,7 @@ After the rule, legacy public links stop working; the app keeps working through 
 - Owner emails sent before this change carried the scroll PDF as an attachment, so those inboxes may
   already hold an artist's ID. Sent mail cannot be recalled by the app; the owner decides whether to
   delete those messages.
-- Scroll category uploads are public by design. A file a user uploads there that happens to be an ID
-  (not named `govt-id*`) is not detected and stays public.
+- Scroll category uploads are public unless the uploader ticks "This file is an ID". An ID uploaded
+  without the mark is not detected and stays public. Earlier category uploads have no mark at all.
+- Outbox rows that reached `exhausted` (never delivered) keep their stored bytes: they are neither sent
+  nor claimed again, and the boot step clears only `sent` rows.

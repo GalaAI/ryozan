@@ -22,7 +22,7 @@ import unittest
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 os.environ["ENABLE_API_DOCS"] = "false"
 os.environ["ENABLE_CONFIG_HEALTH"] = "false"
@@ -861,6 +861,41 @@ class OwnerEmailOutboxProcessorTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("attachments", calls[0])
         self.assertIsNone(row.attachment_content)
         self.assertIsNone(row.attachment_filename)
+
+    async def test_queued_body_saying_the_pdf_is_attached_is_sent_with_link_only_wording(self):
+        # A synthetic row queued before the link-only rule, with the old builder's wording.
+        for old, new in (
+            (
+                "A complete PDF copy is attached and has been filed to your Artist Scrolls archive.",
+                "For privacy it is not attached to this email; open it in the app.",
+            ),
+            (
+                "The archive entry was filed, but PDF generation or storage failed, so no PDF is attached.",
+                "so the archive has no PDF.",
+            ),
+        ):
+            with self.subTest(old=old):
+                row = self._row()
+                row.html_body = (
+                    f'<td><strong>Rae Vance</strong> signed. {old}</td><a href="https://studio.example/x">Open</a>'
+                )
+                session = _OutboxSession([row])
+                sender = AsyncMock(return_value=True)
+
+                with (
+                    patch("app.core.database.async_session", _OutboxSessionFactory(session)),
+                    patch("app.services.scroll_archive.send_email", sender),
+                ):
+                    await process_owner_email_outbox_once()
+
+                calls = [call.kwargs for call in sender.await_args_list]
+                sent = calls[0]["html_body"]
+                self.assertNotIn(old, sent)
+                self.assertNotIn("is attached", sent)
+                self.assertIn(new, sent)
+                self.assertIn("<strong>Rae Vance</strong> signed.", sent)
+                self.assertNotIn("attachments", calls[0])
+                self.assertEqual(row.html_body, sent)
 
     async def test_processor_retains_failed_email_for_retry(self):
         row = self._row()
