@@ -164,6 +164,14 @@ def _prior_prefill_allowed(instance: DocumentInstance, current_data: dict) -> bo
     return bool(instance.sent_by) or current_data.get("checkin_verified") is True
 
 
+# Yes/no health answers every check-in waiver files. Keys match HEALTH_QUESTIONS in app/src/lib/checkin.ts.
+WAIVER_HEALTH_YES_NO_KEYS = ("pregnant", "blood_thinners", "blood_disorder", "skin_condition")
+
+# Health answers a returning client may confirm as unchanged. Sobriety is never carried over: it is asked
+# fresh on every visit (SC Reg. 60-111 801.C).
+WAIVER_HEALTH_KEYS = (*WAIVER_HEALTH_YES_NO_KEYS, "allergies", "medical_conditions")
+
+
 # Server-set waiver facts the public form never sends back; kept when the client submits.
 WAIVER_SERVER_KEYS = ("booking_id", "booking_reference", "checkin_verified", "checkin_source")
 
@@ -247,6 +255,14 @@ def _require_waiver_intake_answers(data: dict) -> None:
     for key in ("health_and_eligibility", "risks_and_consent", "accept_terms"):
         if data.get(key) is not True:
             raise HTTPException(status_code=422, detail="Confirm all three statements before you sign")
+    # A check-in waiver files every yes/no health answer explicitly. A missing one (an older waiver that never
+    # asked it, carried over as "same as last time") is rejected, never stored or printed as No.
+    if "health_same_as_last_visit" in data or data.get("checkin_verified") is True:
+        for key in WAIVER_HEALTH_YES_NO_KEYS:
+            answer = str(data.get(key) or "").strip().capitalize()
+            if answer not in ("Yes", "No"):
+                raise HTTPException(status_code=422, detail="Answer every health question before you sign")
+            data[key] = answer
 
 
 def _require_waiver_signature(signature: str | None) -> str:
@@ -1203,7 +1219,7 @@ async def send_document(
 
     public_url = f"{settings.FRONTEND_URL}{ROUTES.FORM.format(token=token)}"
 
-    # Send the email (non-blocking, never raises). Waivers use the Email Foundry waiver link into /checkin.
+    # Send the email (non-blocking, never raises). Waivers use the Email Foundry waiver link into /form/<token>.
     if template.category == "waiver":
         public_url = _waiver_form_url(settings, token)
         rendered = render_waiver_link(
@@ -1462,18 +1478,6 @@ async def _latest_prior_waiver(db: AsyncSession, emails: set[str], exclude_id: u
     return {"id": str(instance.id), "signed_at": instance.signed_at, "data": data}
 
 
-# Health answers a returning client may confirm as unchanged. Sobriety is never carried over: it is asked
-# fresh on every visit (SC Reg. 60-111 801.C).
-WAIVER_HEALTH_KEYS = (
-    "pregnant",
-    "blood_thinners",
-    "blood_disorder",
-    "skin_condition",
-    "allergies",
-    "medical_conditions",
-)
-
-
 def _stored_signature_url(data: dict) -> str | None:
     url = str(data.get("signature_url") or "").strip()
     return url if url.startswith("https://") else None
@@ -1540,8 +1544,8 @@ async def _send_checkin_code_email(to: str, code: str) -> bool:
 
 
 def _waiver_form_url(settings, token: str) -> str:
-    """Waivers open in the check-in flow; the same token carries over."""
-    return f"{settings.FRONTEND_URL.rstrip('/')}/checkin?t={token}"
+    """Emailed waiver links open the public form page for that token (the kiosk also accepts ?t= links)."""
+    return f"{settings.FRONTEND_URL.rstrip('/')}{ROUTES.FORM.format(token=token)}"
 
 
 async def _send_document_reminder(settings, instance: DocumentInstance, hours_remaining: int) -> bool:
@@ -1812,6 +1816,29 @@ async def get_public_form(
     }
 
 
+async def _resolve_waiver_artist(db: AsyncSession, data: dict) -> User | None:
+    """
+    The artist a filed waiver is assigned to and notifies. A waiver linked to a booking (a server-set
+    booking_id from a verified check-in) always goes to that booking's artist; the artist the browser sent is
+    ignored. Otherwise the client's pick is matched by slug, then by name.
+    """
+    booking_id = data.get("booking_id")
+    if booking_id:
+        with contextlib.suppress(ValueError, TypeError, AttributeError):
+            booking = await db.get(Booking, uuid.UUID(str(booking_id)))
+            if booking and booking.artist_id:
+                artist = await db.get(User, booking.artist_id)
+                if artist:
+                    return artist
+    picked = str(data.get("artist_name") or "").strip()
+    if not picked:
+        return None
+    artist = (await db.execute(select(User).where(User.slug == picked))).scalar_one_or_none()
+    if not artist:
+        artist = (await db.execute(select(User).where(User.name == picked))).scalar_one_or_none()
+    return artist
+
+
 @router.post("/public/{token}/complete")
 async def complete_public_form(
     token: str,
@@ -1903,9 +1930,16 @@ async def complete_public_form(
     if not signature_raw and data.get("client_signature"):
         signature_raw = data["client_signature"]
 
+    waiver_artist: User | None = None
     if is_waiver:
         data["photo_id_url"] = _require_waiver_photo_id(data)
         _require_waiver_intake_answers(data)
+        # Assignment is server side: the booking's artist when the token carries a booking, never a client id.
+        data.pop("artist_id", None)
+        waiver_artist = await _resolve_waiver_artist(db, data)
+        if waiver_artist:
+            data["artist_name"] = waiver_artist.slug or waiver_artist.name or data.get("artist_name")
+            data["artist_id"] = str(waiver_artist.id)
         if adopted_signature_url and not signature_raw:
             # Adopted signature: already stored as an image, nothing to upload.
             data.pop("signature_data", None)
@@ -1936,28 +1970,20 @@ async def complete_public_form(
 
     # ── Notify the assigned artist ──
     artist_display = ""
-    if is_waiver:
-        artist_slug = data.get("artist_name")
-        if artist_slug:
-            # Try slug match first, fall back to name match
-            artist_result = await db.execute(select(User).where(User.slug == artist_slug))
-            artist = artist_result.scalar_one_or_none()
-            if not artist:
-                artist_result = await db.execute(select(User).where(User.name == artist_slug))
-                artist = artist_result.scalar_one_or_none()
-            if artist:
-                artist_display = artist.name or ""
-                guest = instance.guest_name or instance.recipient_name or "A client"
-                db.add(
-                    Notification(
-                        user_id=artist.id,
-                        title="Waiver Ready for Review",
-                        body=f"{guest} completed their consent waiver. Review and countersign.",
-                        notification_type="info",
-                        action_url=ROUTES.WAIVERS,
-                    )
-                )
-                await db.flush()
+    if is_waiver and waiver_artist:
+        artist = waiver_artist
+        artist_display = artist.name or ""
+        guest = instance.guest_name or instance.recipient_name or "A client"
+        db.add(
+            Notification(
+                user_id=artist.id,
+                title="Waiver Ready for Review",
+                body=f"{guest} completed their consent waiver. Review and countersign.",
+                notification_type="info",
+                action_url=ROUTES.WAIVERS,
+            )
+        )
+        await db.flush()
 
     # ── Quest: a signed-in client's "waiver-signed" quest, same as the legacy /waiver/submit path ──
     if is_waiver:

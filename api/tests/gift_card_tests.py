@@ -9,8 +9,20 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.api.v1.endpoints.gift_cards import GiftCardCheckoutRequest, activate_paid_gift_card, create_gift_card_checkout
+from app.api.v1.endpoints.gift_cards import (
+    MAX_AMOUNT_CENTS,
+    MIN_AMOUNT_CENTS,
+    GiftCardCheckoutRequest,
+    activate_paid_gift_card,
+    create_gift_card_checkout,
+    get_gift_card_status,
+    get_gift_card_terms,
+    get_gift_cards_summary,
+    void_refunded_gift_card,
+    void_unpaid_gift_card,
+)
 from app.services.email_foundry import render_gift_card_receipt
+from app.services.payments import CUSTOMER_PRICE_INCREASE_BPS, customer_price_cents
 
 
 class _ScalarResult:
@@ -99,7 +111,7 @@ class GiftCardCheckoutTests(unittest.IsolatedAsyncioTestCase):
         stripe_client = SimpleNamespace(
             v1=SimpleNamespace(checkout=SimpleNamespace(sessions=SimpleNamespace(create=create)))
         )
-        settings = SimpleNamespace(FRONTEND_URL="https://ryozan.app")
+        settings = SimpleNamespace(FRONTEND_URL="https://ryozan.app", GIFT_CARD_CODE_PREFIX="GC")
         with (
             patch("app.api.v1.endpoints.gift_cards.get_stripe_client", return_value=stripe_client),
             patch("app.api.v1.endpoints.gift_cards.get_settings", return_value=settings),
@@ -252,6 +264,75 @@ class GiftCardCheckoutTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNotNone(card.delivered_at)
 
 
+class GiftCardPublicPageContractTests(unittest.IsolatedAsyncioTestCase):
+    """The public /gift-cards page reads these: the amount range up front, then the status after Stripe."""
+
+    async def test_terms_match_the_checkout_validation_and_price_adjustment(self):
+        terms = await get_gift_card_terms()
+        self.assertEqual(terms.currency, "usd")
+        self.assertEqual((terms.min_amount_cents, terms.max_amount_cents), (MIN_AMOUNT_CENTS, MAX_AMOUNT_CENTS))
+        self.assertEqual(terms.price_adjustment_bps, CUSTOMER_PRICE_INCREASE_BPS)
+        common = {
+            "artist_id": uuid.uuid4(),
+            "purchaser_name": "Buyer",
+            "purchaser_email": "buyer@example.com",
+            "recipient_name": "Recipient",
+            "send_to_recipient": False,
+        }
+        GiftCardCheckoutRequest(amount_cents=terms.min_amount_cents, **common)
+        GiftCardCheckoutRequest(amount_cents=terms.max_amount_cents, **common)
+        for amount in (terms.min_amount_cents - 1, terms.max_amount_cents + 1):
+            with self.assertRaises(ValidationError):
+                GiftCardCheckoutRequest(amount_cents=amount, **common)
+        # The page shows face value * (1 + bps); the server charges the same figure.
+        self.assertEqual(customer_price_cents(10_000), 10_000 + 10_000 * terms.price_adjustment_bps // 10_000)
+
+    async def test_stripe_returns_buyers_to_the_public_gift_card_page(self):
+        artist = _artist(name="Jade", rate=100, account="acct_jade", ready=True)
+        db = _Db(artist)
+        create = unittest.mock.Mock(
+            return_value=SimpleNamespace(id="cs_test_gift", url="https://checkout.stripe.test/g")
+        )
+        stripe_client = SimpleNamespace(
+            v1=SimpleNamespace(checkout=SimpleNamespace(sessions=SimpleNamespace(create=create)))
+        )
+        with (
+            patch("app.api.v1.endpoints.gift_cards.get_stripe_client", return_value=stripe_client),
+            patch(
+                "app.api.v1.endpoints.gift_cards.get_settings",
+                return_value=SimpleNamespace(FRONTEND_URL="https://shop.example.test", GIFT_CARD_CODE_PREFIX="GC"),
+            ),
+        ):
+            await create_gift_card_checkout(_body(artist.id), db)
+        params, _options = create.call_args.args
+        self.assertEqual(params["success_url"], "https://shop.example.test/gift-cards?session_id={CHECKOUT_SESSION_ID}")
+        self.assertEqual(params["cancel_url"], "https://shop.example.test/gift-cards?cancelled=1")
+
+    async def test_status_masks_the_delivery_email(self):
+        card = SimpleNamespace(
+            status="active",
+            original_amount_cents=5_000,
+            send_to_recipient=True,
+            recipient_name="Recipient",
+            recipient_email="recipient@example.com",
+            purchaser_name="Buyer",
+            purchaser_email="buyer@example.com",
+            delivered_at=datetime.now(UTC),
+        )
+        db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: card)))
+        status = await get_gift_card_status("cs_test_fake", db)
+        self.assertEqual(status.status, "active")
+        self.assertEqual(status.face_value_cents, 5_000)
+        self.assertEqual(status.recipient_email_hint, "r***@example.com")
+        self.assertTrue(status.delivered)
+
+    async def test_status_for_an_unknown_session_is_not_found(self):
+        db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: None)))
+        with self.assertRaises(HTTPException) as caught:
+            await get_gift_card_status("cs_test_missing", db)
+        self.assertEqual(caught.exception.status_code, 404)
+
+
 class GiftCardReceiptTests(unittest.TestCase):
     def test_foundry_receipt_uses_portal_design_and_escapes_customer_content(self):
         receipt = render_gift_card_receipt(
@@ -287,3 +368,77 @@ class GiftCardReceiptTests(unittest.TestCase):
         self.assertIn("Hey Buyer", receipt.html_body)
         self.assertIn("gift for <strong", receipt.html_body)
         self.assertIn("Recipient", receipt.html_body)
+
+
+def _card(*, status: str, balance: int = 10_000, owed: int = 7_000, artist_id=None, delivered: bool = True):
+    return SimpleNamespace(
+        id=uuid.uuid4(),
+        code="RYO-TEST",
+        artist_id=artist_id or uuid.uuid4(),
+        status=status,
+        original_amount_cents=10_000,
+        balance_cents=balance,
+        payout_owed_cents=owed,
+        routing_destination="artist",
+        delivered_at=datetime.now(UTC) if delivered else None,
+        created_at=datetime.now(UTC),
+    )
+
+
+class GiftCardVoidTests(unittest.IsolatedAsyncioTestCase):
+    async def test_expired_checkout_voids_card_and_clears_payout_owed(self):
+        card = _card(status="pending")
+        db = _ActivationDb(card, None)
+        with patch("app.core.database.async_session", return_value=db):
+            await void_unpaid_gift_card({"metadata": {"gift_card_id": str(card.id)}})
+        self.assertEqual((card.status, card.balance_cents, card.payout_owed_cents), ("voided", 0, 0))
+        self.assertEqual(db.commits, 1)
+
+    async def test_refund_voids_card_and_clears_payout_owed(self):
+        card = _card(status="active")
+        db = _ActivationDb(card, None)
+        with patch("app.core.database.async_session", return_value=db):
+            await void_refunded_gift_card("pi_test_refund")
+        self.assertEqual((card.status, card.balance_cents, card.payout_owed_cents), ("voided", 0, 0))
+        self.assertEqual(db.commits, 1)
+
+
+class _SummaryDb:
+    def __init__(self, rows):
+        self.rows = rows
+        self.statements = []
+
+    async def execute(self, statement):
+        self.statements.append(statement)
+        rows = self.rows
+        return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: rows))
+
+
+class GiftCardSummaryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_summary_counts_and_owes_nothing_on_voided_cards(self):
+        rows = [
+            _card(status="active", balance=6_000, owed=7_000, delivered=False),
+            _card(status="redeemed", balance=0, owed=3_500),
+            _card(status="voided", balance=0, owed=9_999),
+            _card(status="pending", balance=10_000, owed=7_000),
+        ]
+        owner = SimpleNamespace(id=uuid.uuid4(), role="owner")
+        result = await get_gift_cards_summary(None, None, 25, _SummaryDb(rows), owner)
+
+        self.assertEqual(result["total_count"], 4)
+        self.assertEqual(
+            (result["active_count"], result["redeemed_count"], result["pending_count"], result["voided_count"]),
+            (1, 1, 1, 1),
+        )
+        self.assertEqual(result["active_balance_cents"], 6_000)
+        self.assertEqual(result["payout_owed_cents"], 10_500)
+        self.assertEqual(result["undelivered_active_count"], 1)
+        voided = next(card for card in result["cards"] if card["status"] == "voided")
+        self.assertEqual(voided["payout_owed_cents"], 0)
+
+    async def test_artist_summary_is_scoped_to_their_own_cards(self):
+        artist = SimpleNamespace(id=uuid.uuid4(), role="artist")
+        db = _SummaryDb([])
+        await get_gift_cards_summary(uuid.uuid4(), None, 25, db, artist)
+        compiled = str(db.statements[0].compile(compile_kwargs={"literal_binds": True}))
+        self.assertIn(artist.id.hex, compiled.replace("-", ""))

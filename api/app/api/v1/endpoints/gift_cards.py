@@ -18,16 +18,23 @@ from app.models.gift_card import GiftCard, GiftCardRedemption
 from app.models.user import User
 from app.services.email import FROM_SERVICE, send_email
 from app.services.email_foundry import render_gift_card_receipt
-from app.services.payments import apply_customer_receipt, customer_price_cents, resolve_charge_routing
+from app.services.payments import (
+    CUSTOMER_PRICE_INCREASE_BPS,
+    apply_customer_receipt,
+    customer_price_cents,
+    resolve_charge_routing,
+)
 from app.services.stripe_client import get_stripe_client
 
 router = APIRouter(prefix="/gift-cards", tags=["gift-cards"])
 ARTIST_ROLES = {"artist", "founder"}
+MIN_AMOUNT_CENTS = 2500
+MAX_AMOUNT_CENTS = 100000
 
 
 class GiftCardCheckoutRequest(BaseModel):
     artist_id: UUID
-    amount_cents: int = Field(ge=2500, le=100000)
+    amount_cents: int = Field(ge=MIN_AMOUNT_CENTS, le=MAX_AMOUNT_CENTS)
     purchaser_name: str = Field(min_length=1, max_length=255)
     purchaser_email: EmailStr
     recipient_name: str = Field(min_length=1, max_length=255)
@@ -71,6 +78,13 @@ class GiftCardStatusResponse(BaseModel):
     delivered: bool
 
 
+class GiftCardTermsResponse(BaseModel):
+    currency: str
+    min_amount_cents: int
+    max_amount_cents: int
+    price_adjustment_bps: int
+
+
 class GiftCardRedeemRequest(BaseModel):
     code: str = Field(min_length=8, max_length=32)
     amount_cents: int = Field(gt=0)
@@ -88,7 +102,8 @@ class GiftCardRedeemResponse(BaseModel):
 
 def _new_code() -> str:
     token = secrets.token_hex(6).upper()
-    return f"BT-{token[:4]}-{token[4:8]}-{token[8:]}"
+    prefix = get_settings().GIFT_CARD_CODE_PREFIX
+    return f"{prefix}-{token[:4]}-{token[4:8]}-{token[8:]}"
 
 
 def _email_hint(value: str) -> str:
@@ -167,6 +182,7 @@ async def void_unpaid_gift_card(session: dict) -> None:
         if card and card.status == "pending":
             card.status = "voided"
             card.balance_cents = 0
+            card.payout_owed_cents = 0
             await db.commit()
 
 
@@ -184,7 +200,19 @@ async def void_refunded_gift_card(payment_intent_id: str | None) -> None:
         if card and card.status in {"active", "redeemed"}:
             card.status = "voided"
             card.balance_cents = 0
+            card.payout_owed_cents = 0
             await db.commit()
+
+
+@router.get("/terms", response_model=GiftCardTermsResponse)
+async def get_gift_card_terms() -> GiftCardTermsResponse:
+    """[NO AUTH] What the public purchase page needs to show before checkout: the amount range and price adjustment."""
+    return GiftCardTermsResponse(
+        currency="usd",
+        min_amount_cents=MIN_AMOUNT_CENTS,
+        max_amount_cents=MAX_AMOUNT_CENTS,
+        price_adjustment_bps=CUSTOMER_PRICE_INCREASE_BPS,
+    )
 
 
 @router.post("/checkout", response_model=GiftCardCheckoutResponse)
@@ -328,3 +356,59 @@ async def redeem_gift_card(
         balance_cents=card.balance_cents,
         status=card.status,
     )
+
+
+@router.get("/summary")
+async def get_gift_cards_summary(
+    artist_id: UUID | None = None,
+    status: str | None = None,
+    limit: int = 25,
+    db: AsyncSession = Depends(get_db, scope="function"),
+    current_user: User = Depends(require_role("assistant")),
+):
+    """Gift card counts, open balance and artist payout owed, newest cards first.
+
+    Artists see only their own cards. Voided, refunded and disputed cards owe nothing.
+    """
+    stmt = select(GiftCard)
+    if current_user.role == "artist":
+        stmt = stmt.where(GiftCard.artist_id == current_user.id)
+    elif artist_id is not None:
+        stmt = stmt.where(GiftCard.artist_id == artist_id)
+
+    if status:
+        stmt = stmt.where(GiftCard.status == status.strip().lower())
+
+    all_rows = (await db.execute(stmt.order_by(GiftCard.created_at.desc()))).scalars().all()
+
+    def owed(row: GiftCard) -> int:
+        return int(row.payout_owed_cents or 0) if row.status in {"active", "redeemed"} else 0
+
+    bounded_limit = max(1, min(limit, 100))
+    cards = [
+        {
+            "id": str(row.id),
+            "code": row.code,
+            "artist_id": str(row.artist_id),
+            "status": row.status,
+            "original_amount_cents": int(row.original_amount_cents or 0),
+            "balance_cents": int(row.balance_cents or 0),
+            "payout_owed_cents": owed(row),
+            "routing_destination": row.routing_destination,
+            "delivered": row.delivered_at is not None,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in all_rows[:bounded_limit]
+    ]
+
+    return {
+        "total_count": len(all_rows),
+        "active_count": sum(1 for row in all_rows if row.status == "active"),
+        "pending_count": sum(1 for row in all_rows if row.status == "pending"),
+        "redeemed_count": sum(1 for row in all_rows if row.status == "redeemed"),
+        "voided_count": sum(1 for row in all_rows if row.status in {"voided", "refunded", "disputed"}),
+        "active_balance_cents": sum(int(row.balance_cents or 0) for row in all_rows if row.status == "active"),
+        "payout_owed_cents": sum(max(owed(row), 0) for row in all_rows),
+        "undelivered_active_count": sum(1 for row in all_rows if row.status == "active" and row.delivered_at is None),
+        "cards": cards,
+    }

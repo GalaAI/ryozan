@@ -148,14 +148,22 @@ def _waiver_signed_date_text(instance: DocumentInstance) -> str:
 
 
 def _yes_no_answer(value: object) -> str:
-    """Render stored waiver answers without treating the string 'No' as truthy."""
+    """Render a stored waiver answer without treating the string 'No' as truthy, or a missing one as No."""
+    if value is None:
+        return "Not recorded"
     if isinstance(value, str):
         normalized = value.strip().lower()
         if normalized in {"yes", "true", "1", "on"}:
             return "Yes"
-        if normalized in {"no", "false", "0", "off", ""}:
+        if normalized in {"no", "false", "0", "off"}:
             return "No"
-    return "Yes" if value is True else "No"
+        if not normalized:
+            return "Not recorded"
+    if value is True:
+        return "Yes"
+    if value is False:
+        return "No"
+    return "Not recorded"
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -307,6 +315,7 @@ async def submit_waiver(
         "tattoo_description": body.tattoo_description,
         "tattoo_placement": body.tattoo_placement,
         "pregnant": body.pregnant,
+        "blood_thinners": body.blood_thinners,
         "blood_disorder": body.blood_disorder,
         "skin_condition": body.skin_condition,
         "allergies": body.allergies,

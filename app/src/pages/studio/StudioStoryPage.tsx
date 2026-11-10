@@ -34,7 +34,7 @@ export function StudioStoryView({ settings }: { settings: StudioSettings }) {
               ? story.map((paragraph, index) => <p key={index}>{paragraph}</p>)
               : <p>This studio has not published its story yet.</p>}
             <div className="calendar-purpose-actions">
-              <Link to="/dashboard/book" className="btn btn-primary">Book a session</Link>
+              <Link to="/book" className="btn btn-primary">Book a session</Link>
               <Link to="/" className="calendar-purpose-link">Back to the studio <span aria-hidden="true">&rarr;</span></Link>
             </div>
           </div>

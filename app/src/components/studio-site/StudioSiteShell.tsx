@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { StudioSettings } from '../../lib/api'
+import { BOOK_ROUTE } from '../../lib/public-booking'
 import { hasContact, studioContact, studioName } from '../../lib/studio-site'
 
 type StudioSiteShellProps = {
@@ -22,7 +23,7 @@ type StudioSiteShellProps = {
   showArtists?: boolean
 }
 
-const BOOK_PATH = '/dashboard/book'
+const BOOK_PATH = BOOK_ROUTE.artist
 
 export default function StudioSiteShell({ settings, children, onHome = false, showArtists = false }: StudioSiteShellProps) {
   const [scrolled, setScrolled] = useState(false)

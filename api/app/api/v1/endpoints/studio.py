@@ -99,6 +99,8 @@ class StudioSettingsResponse(BaseModel):
     sample_flash_urls: list[str]
     # COURIER_REPLY_DOMAIN: where studio email handles live. Empty: handles are off.
     email_domain: str
+    # SHOP_PACK_SCOPE when this install serves a shop brand pack at /dependencies/@<scope>/. Empty: no pack.
+    shop_pack_scope: str
     site: StudioSiteSettings
 
 
@@ -127,6 +129,7 @@ def build_studio_settings(settings: Settings) -> StudioSettingsResponse:
         waiver_template_id=settings.WAIVER_TEMPLATE_ID,
         sample_flash_urls=settings.sample_flash_urls,
         email_domain=settings.COURIER_REPLY_DOMAIN,
+        shop_pack_scope=settings.SHOP_PACK_SCOPE if settings.shop_pack_enabled else "",
         site=StudioSiteSettings(
             mode=settings.public_site_mode,
             studio_hosts=settings.studio_site_hosts,
