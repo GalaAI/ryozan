@@ -65,7 +65,7 @@ _MAX_ID_SIZE = 10 * 1024 * 1024
 _ALLOWED_ID_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"}
 # Government ID images are private in R2. Clients only ever see short-lived signed links:
 # long enough to load the preview right after upload, or a staff review session.
-_ID_PREVIEW_SECONDS = 600
+_ID_PREVIEW_SECONDS = 3600
 _ID_VIEW_SECONDS = 900
 UPLOAD_ID_AGAIN = "Upload the ID again"
 
