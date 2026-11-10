@@ -1127,7 +1127,7 @@ async def send_document(
 
     public_url = f"{settings.FRONTEND_URL}{ROUTES.FORM.format(token=token)}"
 
-    # Send the email (non-blocking, never raises). Waivers use the Email Foundry waiver link into /checkin.
+    # Send the email (non-blocking, never raises). Waivers use the Email Foundry waiver link into /form/<token>.
     if template.category == "waiver":
         public_url = _waiver_form_url(settings, token)
         rendered = render_waiver_link(
@@ -1464,8 +1464,8 @@ async def _send_checkin_code_email(to: str, code: str) -> bool:
 
 
 def _waiver_form_url(settings, token: str) -> str:
-    """Waivers open in the check-in flow; the same token carries over."""
-    return f"{settings.FRONTEND_URL.rstrip('/')}/checkin?t={token}"
+    """Emailed waiver links open the public form page for that token (the kiosk also accepts ?t= links)."""
+    return f"{settings.FRONTEND_URL.rstrip('/')}{ROUTES.FORM.format(token=token)}"
 
 
 async def _send_document_reminder(settings, instance: DocumentInstance, hours_remaining: int) -> bool:

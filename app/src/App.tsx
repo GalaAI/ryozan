@@ -8,7 +8,7 @@
  * On mount, if a token exists in memory, attempt to restore session via /auth/me.
  */
 
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { Suspense, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Analytics } from '@vercel/analytics/react'
@@ -29,6 +29,8 @@ import PublicSiteSwitch from './components/studio-site/PublicSiteSwitch'
 
 // Public pages: lazy loaded so portal/dashboard entry does not pay for every public surface.
 const PublicFormPage = lazyRetry(() => import('./pages/PublicFormPage'))
+const CheckinPage = lazyRetry(() => import('./pages/CheckinPage'))
+const GiftCardsPage = lazyRetry(() => import('./pages/GiftCardsPage'))
 const AppLandingPage = lazyRetry(() => import('./pages/AppLandingPage'))
 const AppPrivacyPage = lazyRetry(() => import('./pages/AppPrivacyPage'))
 const AppTermsPage = lazyRetry(() => import('./pages/AppTermsPage'))
@@ -82,6 +84,11 @@ function RedirectWithSearch({ to }: { to: string }) {
 
   const query = params.toString()
   return <Navigate to={`${path}${query ? `?${query}` : ''}${location.hash}`} replace />
+}
+
+function WaiverArtistRedirect() {
+  const { artistSlug = '' } = useParams<{ artistSlug: string }>()
+  return <RedirectWithSearch to={`/checkin/${encodeURIComponent(artistSlug)}`} />
 }
 
 type AppRole = 'collector' | 'assistant' | 'artist' | 'admin' | 'founder'
@@ -200,12 +207,19 @@ export default function App() {
         {['legal/privacy', 'legal/sms', 'privacy-policy', 'privacy/policy', 'sms-terms', 'sms'].map(path => (
           <Route key={path} path={path} element={<Navigate to="/privacy" replace />} />
         ))}
-        {['checkin/*', 'waiver', 'waiver/:artistSlug'].map(path => (
-          <Route key={path} path={path} element={<Navigate to="/portal" replace />} />
-        ))}
+        {/* Old waiver URLs land on the check-in kiosk, keeping the artist. */}
+        <Route path="waiver" element={<RedirectWithSearch to="/checkin" />} />
+        <Route path="waiver/:artistSlug" element={<WaiverArtistRedirect />} />
         <Route path="privacy" element={<Suspended><PublicPrivacy /></Suspended>} />
         <Route path="register" element={<Navigate to="/portal" replace />} />
       </Route>
+
+      {/* ── Check-in kiosk for a shared tablet (no nav chrome, no auth) ── */}
+      <Route path="checkin" element={<Suspended><CheckinPage /></Suspended>} />
+      <Route path="checkin/:artistSlug" element={<Suspended><CheckinPage /></Suspended>} />
+
+      {/* ── Gift card purchase and Stripe return (no nav chrome, no auth) ── */}
+      <Route path="gift-cards" element={<Suspended><GiftCardsPage /></Suspended>} />
 
       {/* ── Public form (magic link, no nav chrome) ── */}
       <Route path="form/:token" element={<Suspended><PublicFormPage /></Suspended>} />

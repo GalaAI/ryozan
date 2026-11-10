@@ -9,8 +9,17 @@ from unittest.mock import AsyncMock, patch
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.api.v1.endpoints.gift_cards import GiftCardCheckoutRequest, activate_paid_gift_card, create_gift_card_checkout
+from app.api.v1.endpoints.gift_cards import (
+    MAX_AMOUNT_CENTS,
+    MIN_AMOUNT_CENTS,
+    GiftCardCheckoutRequest,
+    activate_paid_gift_card,
+    create_gift_card_checkout,
+    get_gift_card_status,
+    get_gift_card_terms,
+)
 from app.services.email_foundry import render_gift_card_receipt
+from app.services.payments import CUSTOMER_PRICE_INCREASE_BPS, customer_price_cents
 
 
 class _ScalarResult:
@@ -250,6 +259,75 @@ class GiftCardCheckoutTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("gift for <strong", sender.await_args.kwargs["html_body"])
         self.assertIn("Recipient", sender.await_args.kwargs["html_body"])
         self.assertIsNotNone(card.delivered_at)
+
+
+class GiftCardPublicPageContractTests(unittest.IsolatedAsyncioTestCase):
+    """The public /gift-cards page reads these: the amount range up front, then the status after Stripe."""
+
+    async def test_terms_match_the_checkout_validation_and_price_adjustment(self):
+        terms = await get_gift_card_terms()
+        self.assertEqual(terms.currency, "usd")
+        self.assertEqual((terms.min_amount_cents, terms.max_amount_cents), (MIN_AMOUNT_CENTS, MAX_AMOUNT_CENTS))
+        self.assertEqual(terms.price_adjustment_bps, CUSTOMER_PRICE_INCREASE_BPS)
+        common = {
+            "artist_id": uuid.uuid4(),
+            "purchaser_name": "Buyer",
+            "purchaser_email": "buyer@example.com",
+            "recipient_name": "Recipient",
+            "send_to_recipient": False,
+        }
+        GiftCardCheckoutRequest(amount_cents=terms.min_amount_cents, **common)
+        GiftCardCheckoutRequest(amount_cents=terms.max_amount_cents, **common)
+        for amount in (terms.min_amount_cents - 1, terms.max_amount_cents + 1):
+            with self.assertRaises(ValidationError):
+                GiftCardCheckoutRequest(amount_cents=amount, **common)
+        # The page shows face value * (1 + bps); the server charges the same figure.
+        self.assertEqual(customer_price_cents(10_000), 10_000 + 10_000 * terms.price_adjustment_bps // 10_000)
+
+    async def test_stripe_returns_buyers_to_the_public_gift_card_page(self):
+        artist = _artist(name="Jade", rate=100, account="acct_jade", ready=True)
+        db = _Db(artist)
+        create = unittest.mock.Mock(
+            return_value=SimpleNamespace(id="cs_test_gift", url="https://checkout.stripe.test/g")
+        )
+        stripe_client = SimpleNamespace(
+            v1=SimpleNamespace(checkout=SimpleNamespace(sessions=SimpleNamespace(create=create)))
+        )
+        with (
+            patch("app.api.v1.endpoints.gift_cards.get_stripe_client", return_value=stripe_client),
+            patch(
+                "app.api.v1.endpoints.gift_cards.get_settings",
+                return_value=SimpleNamespace(FRONTEND_URL="https://shop.example.test"),
+            ),
+        ):
+            await create_gift_card_checkout(_body(artist.id), db)
+        params, _options = create.call_args.args
+        self.assertEqual(params["success_url"], "https://shop.example.test/gift-cards?session_id={CHECKOUT_SESSION_ID}")
+        self.assertEqual(params["cancel_url"], "https://shop.example.test/gift-cards?cancelled=1")
+
+    async def test_status_masks_the_delivery_email(self):
+        card = SimpleNamespace(
+            status="active",
+            original_amount_cents=5_000,
+            send_to_recipient=True,
+            recipient_name="Recipient",
+            recipient_email="recipient@example.com",
+            purchaser_name="Buyer",
+            purchaser_email="buyer@example.com",
+            delivered_at=datetime.now(UTC),
+        )
+        db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: card)))
+        status = await get_gift_card_status("cs_test_fake", db)
+        self.assertEqual(status.status, "active")
+        self.assertEqual(status.face_value_cents, 5_000)
+        self.assertEqual(status.recipient_email_hint, "r***@example.com")
+        self.assertTrue(status.delivered)
+
+    async def test_status_for_an_unknown_session_is_not_found(self):
+        db = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(scalar_one_or_none=lambda: None)))
+        with self.assertRaises(HTTPException) as caught:
+            await get_gift_card_status("cs_test_missing", db)
+        self.assertEqual(caught.exception.status_code, 404)
 
 
 class GiftCardReceiptTests(unittest.TestCase):

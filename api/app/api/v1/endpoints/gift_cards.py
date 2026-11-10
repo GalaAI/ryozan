@@ -18,16 +18,23 @@ from app.models.gift_card import GiftCard, GiftCardRedemption
 from app.models.user import User
 from app.services.email import FROM_SERVICE, send_email
 from app.services.email_foundry import render_gift_card_receipt
-from app.services.payments import apply_customer_receipt, customer_price_cents, resolve_charge_routing
+from app.services.payments import (
+    CUSTOMER_PRICE_INCREASE_BPS,
+    apply_customer_receipt,
+    customer_price_cents,
+    resolve_charge_routing,
+)
 from app.services.stripe_client import get_stripe_client
 
 router = APIRouter(prefix="/gift-cards", tags=["gift-cards"])
 ARTIST_ROLES = {"artist", "founder"}
+MIN_AMOUNT_CENTS = 2500
+MAX_AMOUNT_CENTS = 100000
 
 
 class GiftCardCheckoutRequest(BaseModel):
     artist_id: UUID
-    amount_cents: int = Field(ge=2500, le=100000)
+    amount_cents: int = Field(ge=MIN_AMOUNT_CENTS, le=MAX_AMOUNT_CENTS)
     purchaser_name: str = Field(min_length=1, max_length=255)
     purchaser_email: EmailStr
     recipient_name: str = Field(min_length=1, max_length=255)
@@ -69,6 +76,13 @@ class GiftCardStatusResponse(BaseModel):
     face_value_cents: int
     recipient_email_hint: str
     delivered: bool
+
+
+class GiftCardTermsResponse(BaseModel):
+    currency: str
+    min_amount_cents: int
+    max_amount_cents: int
+    price_adjustment_bps: int
 
 
 class GiftCardRedeemRequest(BaseModel):
@@ -185,6 +199,17 @@ async def void_refunded_gift_card(payment_intent_id: str | None) -> None:
             card.status = "voided"
             card.balance_cents = 0
             await db.commit()
+
+
+@router.get("/terms", response_model=GiftCardTermsResponse)
+async def get_gift_card_terms() -> GiftCardTermsResponse:
+    """[NO AUTH] What the public purchase page needs to show before checkout: the amount range and price adjustment."""
+    return GiftCardTermsResponse(
+        currency="usd",
+        min_amount_cents=MIN_AMOUNT_CENTS,
+        max_amount_cents=MAX_AMOUNT_CENTS,
+        price_adjustment_bps=CUSTOMER_PRICE_INCREASE_BPS,
+    )
 
 
 @router.post("/checkout", response_model=GiftCardCheckoutResponse)

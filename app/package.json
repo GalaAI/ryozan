@@ -8,7 +8,7 @@
     "dev:prod": "vite --mode prod-proxy",
     "build": "tsc -b && vite build",
     "check:ui-tarball": "node ../scripts/check-ui-tarball.mjs",
-    "lint": "node --test booking-conversion.test.mjs booking-approval.test.mjs analytics-privacy.test.mjs src/lib/studio-settings.test.mjs src/pages/studio/studio-site.test.mjs && eslint .",
+    "lint": "node --test booking-conversion.test.mjs booking-approval.test.mjs analytics-privacy.test.mjs src/lib/studio-settings.test.mjs src/pages/studio/studio-site.test.mjs src/lib/kiosk-checkin.test.mjs src/lib/gift-cards.test.mjs && eslint .",
     "lint:adherence": "oxlint --config node_modules/@ryozan/ui/.oxlintrc.json src",
     "lint:adherence:src": "oxlint --config ../packages/ui/.oxlintrc.json src",
     "lint:ui": "oxlint --config node_modules/@ryozan/ui/.oxlintrc.json node_modules/@ryozan/ui/src",
