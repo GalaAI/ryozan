@@ -50,6 +50,27 @@ class VercelRoutingTests(unittest.TestCase):
         self.assertIsNone(rewrite_pattern.match("/debug/status"))
         self.assertIsNotNone(rewrite_pattern.match("/dashboard"))
 
+    def test_every_local_rewrite_target_exists_and_public_booking_uses_the_spa(self):
+        repo_root = Path(__file__).resolve().parents[2]
+        root_config = json.loads((repo_root / "app" / "vercel.json").read_text())
+        rewrites = root_config.get("rewrites", [])
+        for entry in rewrites:
+            destination = entry["destination"]
+            if destination.startswith("/") and destination != "/index.html":
+                self.assertTrue(
+                    (repo_root / "app" / "public" / destination.lstrip("/")).is_file(),
+                    f"{entry['source']} rewrites to {destination}, which the build does not ship",
+                )
+        explicit = {entry["source"] for entry in rewrites}
+        spa_source = next(
+            entry["source"] for entry in rewrites if entry["destination"] == "/index.html" and not entry.get("has")
+        )
+        spa = re.compile("^" + spa_source + "$")
+        # /book, /ask and /checkin are SPA routes now; the catch-all serves them.
+        for path in ("/book", "/book/test-artist", "/book/sesh", "/book/confirm", "/ask", "/checkin"):
+            self.assertNotIn(path, explicit)
+            self.assertIsNotNone(spa.match(path), path)
+
     def test_app_subdomain_privacy_uses_product_policy(self):
         repo_root = Path(__file__).resolve().parents[2]
         root_config = json.loads((repo_root / "app" / "vercel.json").read_text())

@@ -29,6 +29,7 @@ import PublicSiteSwitch from './components/studio-site/PublicSiteSwitch'
 
 // Public pages: lazy loaded so portal/dashboard entry does not pay for every public surface.
 const PublicFormPage = lazyRetry(() => import('./pages/PublicFormPage'))
+const PublicBookingPage = lazyRetry(() => import('./pages/PublicBookingPage'))
 const AppLandingPage = lazyRetry(() => import('./pages/AppLandingPage'))
 const AppPrivacyPage = lazyRetry(() => import('./pages/AppPrivacyPage'))
 const AppTermsPage = lazyRetry(() => import('./pages/AppTermsPage'))
@@ -183,11 +184,17 @@ export default function App() {
         <Route index element={<Suspended><PublicHome /></Suspended>} />
         <Route path="our-story" element={<Suspended><StudioOnly><StudioStoryPage /></StudioOnly></Suspended>} />
         <Route path="artist/:slug" element={<Suspended><StudioOnly><StudioArtistPage /></StudioOnly></Suspended>} />
-        {/* Booking requests use the signed-in booking page. The inherited standalone
-            booking canon belonged to the legacy studio app and is not part of Ryozan. */}
-        {['book/*', 'ask', 'booking', 'bookings', 'appointment', 'appointments', 'consultation', 'inquiry'].map(path => (
-          <Route key={path} path={path} element={<Navigate to="/dashboard/book" replace />} />
+        {/* Public booking, no sign-in: /book/<artist> keeps the slug and preselects that artist;
+            Stripe returns buyers to /book/confirm. */}
+        <Route path="book" element={<Suspended><PublicBookingPage step="artist" /></Suspended>} />
+        <Route path="book/sesh" element={<Suspended><PublicBookingPage step="sesh" /></Suspended>} />
+        <Route path="book/confirm" element={<Suspended><PublicBookingPage step="confirm" /></Suspended>} />
+        <Route path="book/:artistSlug" element={<Suspended><PublicBookingPage step="artist" /></Suspended>} />
+        <Route path="ask" element={<Suspended><PublicBookingPage step="ask" /></Suspended>} />
+        {['booking', 'bookings', 'appointment', 'appointments', 'consultation'].map(path => (
+          <Route key={path} path={path} element={<Navigate to="/book" replace />} />
         ))}
+        <Route path="inquiry" element={<Navigate to="/ask" replace />} />
         <Route path="portal" element={<PortalSuspended><PortalPage /></PortalSuspended>} />
         <Route path="login" element={<Navigate to="/portal" replace />} />
         <Route path="account" element={<Navigate to="/portal" replace />} />
