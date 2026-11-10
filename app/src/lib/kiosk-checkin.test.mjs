@@ -183,3 +183,19 @@ test('a fresh waiver never files an unanswered health question', () => {
   assert.deepEqual(checkin.healthMissing(health), ['blood_thinners'])
   assert.throws(() => checkin.buildWaiverData({ details, visit, health, photoIdUrl: 'https://files.example.test/id', reusePhotoId: false, reuseSignature: false }))
 })
+
+test('the profile sign-up is handed to the client phone, never opened on the shared tablet', async () => {
+  const url = new URL(checkin.profileHandoffUrl('https://shop.example.test/', { email: ' test@example.test ', fullName: 'Test Client' }))
+  assert.equal(url.origin, 'https://shop.example.test')
+  assert.equal(url.pathname, '/portal')
+  assert.equal(url.searchParams.get('from'), 'waiver')
+  assert.equal(url.searchParams.get('email'), 'test@example.test')
+  assert.equal(url.searchParams.get('name'), 'Test Client')
+  assert.equal(new URL(checkin.profileHandoffUrl('https://shop.example.test', { email: '', fullName: '' })).search, '?from=waiver')
+
+  const source = await readFile(new URL('../pages/CheckinPage.tsx', import.meta.url), 'utf8')
+  assert.doesNotMatch(source, /navigate\(\s*[`'"]\/portal/, 'the kiosk never navigates the tablet to the portal')
+  assert.match(source, /QRCodeSVG value=\{profileHandoffUrl\(/)
+  assert.match(source, /useKioskIdleReset\(reset, \{ enabled: dirty \}\)/)
+  assert.match(source, /onDirtyChange\(stage !== 1 \|\|/, 'the done screen (stage 4) keeps the idle reset armed')
+})

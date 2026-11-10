@@ -221,3 +221,14 @@ export function buildWaiverData(input: {
   if (input.reuseSignature) data.reuse_signature = true
   return data
 }
+
+/**
+ * The profile sign-up link the kiosk hands to the client's own phone (a QR on the done screen). The shared
+ * tablet never opens the portal itself: it stays in the idle-protected kiosk flow and resets to a blank start.
+ */
+export function profileHandoffUrl(origin: string, details: Pick<CheckinDetails, 'email' | 'fullName'>): string {
+  const query = new URLSearchParams({ from: 'waiver' })
+  if (details.email.trim()) query.set('email', details.email.trim())
+  if (details.fullName.trim()) query.set('name', details.fullName.trim())
+  return `${origin.replace(/\/+$/, '')}/portal?${query}`
+}

@@ -15,8 +15,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import DOMPurify from 'dompurify'
 import {
-  Badge, Button, Chip, ChipGroup, MetaList, PageTitle, Panel, SectionLabel, StatusText, TextField,
+  Badge, Button, Chip, ChipGroup, MetaList, PageTitle, Panel, SectionLabel, StatusText, TextField, token as ds,
 } from '@ryozan/ui'
+import { QRCodeSVG } from 'qrcode.react'
 import {
   artists as artistsApi,
   documents,
@@ -26,7 +27,7 @@ import {
 } from '../lib/api'
 import {
   buildWaiverData, contactOk, detailsErrors, digits, healthMissing, healthNeedsReview,
-  isoDate, questionsToAsk, sameAsLast, splitEmergency, visitErrors,
+  isoDate, profileHandoffUrl, questionsToAsk, sameAsLast, splitEmergency, visitErrors,
   type CheckinDetails, type CheckinVisit, type HealthState, type YesNo,
 } from '../lib/checkin'
 import { useKioskIdleReset } from '../hooks/useKioskIdleReset'
@@ -113,7 +114,6 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
   onDirtyChange: (dirty: boolean) => void
   onStartOver: () => void
 }) {
-  const navigate = useNavigate()
   const { settings } = useStudioSettings()
   const studioName = settings.studio_name
 
@@ -150,6 +150,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
   const [signature, setSignature] = useState('')
   const [reuseSignature, setReuseSignature] = useState(false)
   const [reference, setReference] = useState('')
+  const [profileQr, setProfileQr] = useState(false)
 
   useEffect(() => {
     onDirtyChange(stage !== 1 || detailsOpen || contact !== '' || challenge !== null)
@@ -654,11 +655,20 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
                 <>
                   <SectionLabel tone="gold">Next time, skip the paperwork</SectionLabel>
                   <SectionLabel>Make a free profile and we keep your details, ID and signature for your next visit.</SectionLabel>
-                  <div style={actions}>
-                    <Button onClick={() => navigate(`/portal?${new URLSearchParams({ email: details.email.trim(), name: details.fullName.trim(), from: 'waiver' })}`)}>
-                      Create my profile
-                    </Button>
-                  </div>
+                  {/* Hand-off to the client's own phone: the shared tablet stays in the kiosk, so the idle reset
+                      still clears this screen. */}
+                  {profileQr ? (
+                    <div style={{ display: 'grid', gap: ds.space.s3, justifyItems: 'start' }}>
+                      <QRCodeSVG value={profileHandoffUrl(window.location.origin, details)} size={200} level="M"
+                        marginSize={2} bgColor={ds.color.text} fgColor={ds.color.bg}
+                        aria-label="QR code to make your profile on your phone" />
+                      <SectionLabel>Scan with your phone camera to finish your profile there.</SectionLabel>
+                    </div>
+                  ) : (
+                    <div style={actions}>
+                      <Button onClick={() => setProfileQr(true)}>Create my profile</Button>
+                    </div>
+                  )}
                 </>
               )}
               <div><Button variant="outline" onClick={onStartOver}>Done</Button></div>
