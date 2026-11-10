@@ -21,6 +21,7 @@ os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 from app.api.v1.endpoints import documents  # noqa: E402
 from app.models.document import DocumentInstance  # noqa: E402
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox  # noqa: E402
+from app.models.scroll_public_pdf_deletion import ScrollPublicPdfDeletion  # noqa: E402
 from app.services import scroll_archive, storage  # noqa: E402
 from app.services.scroll_archive import OWNER_ARCHIVE_CATEGORY  # noqa: E402
 
@@ -75,8 +76,9 @@ def _like_needle(stmt) -> str:
 class _Db:
     """Session stand-in: scroll records, outbox rows, and reference counts computed from them."""
 
-    def __init__(self, docs, *, outbox=(), memory_refs=0):
+    def __init__(self, docs, *, outbox=(), memory_refs=0, deletions=()):
         self.docs, self.outbox, self.memory_refs = list(docs), list(outbox), memory_refs
+        self.deletions = list(deletions)
         self.added: list = []
         self.commits = 0
         self.committed_at_delete: list[int] = []
@@ -102,6 +104,12 @@ class _Db:
                 for d in self.docs
             )
             return _Result(count=hits)
+        if "ryozan_scroll_public_pdf_deletions" in sql.split("WHERE")[0]:
+            rows = self.deletions + [a for a in self.added if isinstance(a, ScrollPublicPdfDeletion)]
+            if "SELECT ryozan_scroll_public_pdf_deletions.object_key" in sql:
+                return _Result([r.object_key for r in rows])
+            due = [r for r in rows if r.status == "pending" and r.next_attempt_at <= datetime.now(UTC)]
+            return _Result(due)
         if "ryozan_scroll_owner_email_outbox" in sql.split("WHERE")[0]:
             return _Result([r for r in self.outbox if r.attachment_content is not None])
         return _Result(self.docs)
@@ -217,7 +225,7 @@ class MovePublicScrollPdfTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertIn("X-Amz-Signature", parse_qs(parts.query))
         joined = "\n".join(logs)
-        self.assertIn("1 pdfs, 1 moved, 0 failed, 1 public deleted, 0 public kept", joined)
+        self.assertIn("1 pdfs, 1 moved, 0 failed, 1 public deleted, 0 public pending delete, 0 public kept", joined)
         for secret in (SID, str(ARTIST), HOST, "scrolls"):
             self.assertNotIn(secret, joined)
 
@@ -298,6 +306,73 @@ class RetryPrivateFolderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(r2.objects, {NEW_KEY: PDF_BYTES})
         self.assertEqual((archive.file_url, artist.file_url), (NEW_URL, NEW_URL))
         self.assertIsNone(row.attachment_content)
+
+
+class PendingPublicDeleteTests(unittest.IsolatedAsyncioTestCase):
+    """A public scroll PDF the move could not confirm deleted is recorded and retried until R2 confirms."""
+
+    async def test_an_unconfirmed_delete_is_recorded_in_the_rewrite_commit_and_retried(self):
+        docs = [_doc("scroll"), _doc(OWNER_ARCHIVE_CATEGORY)]
+        db, r2 = _Db(docs), _R2({OLD_KEY: PDF_BYTES}, fail_delete=True)
+        counts, logs = await _run(self, db, r2)
+        self.assertEqual((counts["moved"], counts["public deleted"], counts["public pending delete"]), (1, 0, 1))
+        (pending,) = [a for a in db.added if isinstance(a, ScrollPublicPdfDeletion)]
+        self.assertEqual((pending.object_key, pending.status, pending.attempts), (OLD_KEY, "pending", 1))
+        self.assertEqual(db.committed_at_delete, [1], "the pending row landed with the rewrite, before the delete")
+        self.assertIn(OLD_KEY, r2.objects)
+        self.assertNotIn(OLD_KEY, "\n".join(logs))
+        self.assertNotIn(pending.reference, "\n".join(logs))
+
+        # Later, R2 confirms: the outbox-loop worker deletes it once it is due.
+        r2.fail_delete = False
+        pending.next_attempt_at = FROZEN
+        p1, p2, p3, p4 = _r2_patches(r2)
+        with p1, p2, p3, p4, patch("app.core.database.async_session", lambda: db):
+            deleted = await scroll_archive.retry_public_scroll_pdf_deletions_once()
+        self.assertEqual(deleted, 1)
+        self.assertEqual(pending.status, "deleted")
+        self.assertIsNotNone(pending.finished_at)
+        self.assertNotIn(OLD_KEY, r2.objects)
+
+    async def test_a_delete_left_by_a_stopped_process_is_finished_by_the_next_boot(self):
+        # The rewrite committed but the process stopped before the delete: only the pending row remains.
+        docs = [_doc("scroll", NEW_URL)]
+        row = ScrollPublicPdfDeletion(
+            id=uuid.uuid4(),
+            object_key=OLD_KEY,
+            reference=OLD_URL,
+            ignore_document_ids="[]",
+            status="pending",
+            attempts=0,
+            next_attempt_at=FROZEN,
+            created_at=FROZEN,
+            updated_at=FROZEN,
+        )
+        db, r2 = _Db(docs, deletions=[row]), _R2({OLD_KEY: PDF_BYTES})
+        counts, _logs = await _run(self, db, r2)
+        self.assertEqual((counts["pdfs"], counts["public deleted"]), (0, 1))
+        self.assertEqual(row.status, "deleted")
+        self.assertNotIn(OLD_KEY, r2.objects)
+
+    async def test_an_object_still_referenced_is_marked_kept_not_retried(self):
+        docs = [_doc("scroll")]
+        row = ScrollPublicPdfDeletion(
+            id=uuid.uuid4(),
+            object_key=OLD_KEY,
+            reference=OLD_URL,
+            ignore_document_ids=None,
+            status="pending",
+            attempts=0,
+            next_attempt_at=FROZEN,
+            created_at=FROZEN,
+            updated_at=FROZEN,
+        )
+        db, r2 = _Db(docs, deletions=[row]), _R2({OLD_KEY: PDF_BYTES})
+        p1, p2, p3, p4 = _r2_patches(r2)
+        with p1, p2, p3, p4, patch("app.core.database.async_session", lambda: db):
+            self.assertEqual(await scroll_archive.retry_public_scroll_pdf_deletions_once(), 0)
+        self.assertEqual(row.status, "kept")
+        self.assertIn(OLD_KEY, r2.objects)
 
 
 if __name__ == "__main__":

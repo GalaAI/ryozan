@@ -46,8 +46,14 @@ lifespan, so R2 never holds up startup): read the public object, write the same 
 twin key (same folder and file name), read the copy back and compare SHA-256, repoint every referencing
 artist scroll and owner archive record, commit, and only then delete the public object, and only when no
 document or Gala memory still mentions it. Any storage failure keeps the original reference and the
-public object ("failed"); the next boot tries again. It logs one line of counts (pdfs, moved, failed,
-public deleted, public kept, unproven records skipped) and nothing else. Idempotent: a moved record no longer references a
+public object ("failed"); the next boot tries again. The reference rewrite and a pending row in
+`ryozan_scroll_public_pdf_deletions` (Alembic revision `20261110_scroll_public_pdf_del`) land in one
+commit, before any delete. The row is marked `deleted` only once R2 confirms; otherwise it stays
+`pending` and backs off (up to an hour, never giving up), retried by the next boot and by the outbox
+loop (`scroll_archive.retry_public_scroll_pdf_deletions_once`). An object another record still mentions
+is marked `kept`, not retried. So a delete R2 did not confirm, or one a stopped process never ran, never
+leaves a signature-bearing PDF public with nothing able to find it again. It logs one line of counts (pdfs, moved, failed,
+public deleted, public pending delete, public kept, unproven records skipped) and nothing else. Idempotent: a moved record no longer references a
 public PDF. A boot step
 (`scroll_archive.count_legacy_scroll_references`) counts document rows that still reference
 `scrolls/` objects and logs only that number; it changes nothing.

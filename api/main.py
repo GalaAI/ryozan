@@ -39,7 +39,11 @@ from app.core.rate_limit import limiter
 from app.services.email import process_booky_courier_outbox_once
 from app.services.gallery_storage import process_gallery_deletion_outbox_once
 from app.services.pack_bridge import process_pack_bridge_outbox_once, queue_recent_learning_captures_once
-from app.services.scroll_archive import process_owner_email_outbox_once, process_unstored_scroll_pdfs_once
+from app.services.scroll_archive import (
+    process_owner_email_outbox_once,
+    process_unstored_scroll_pdfs_once,
+    retry_public_scroll_pdf_deletions_once,
+)
 from app.services.session_type_defaults import seed_default_session_types
 from app.services.studio_config import load_saved_settings, setup_code, setup_is_open
 
@@ -52,6 +56,8 @@ async def _run_owner_email_outbox() -> None:
         workers = (
             ("owner email", process_owner_email_outbox_once),
             ("unstored scroll PDF", process_unstored_scroll_pdfs_once),
+            # Public scroll PDFs the boot move could not confirm deleted. Backs off per row.
+            ("public scroll PDF delete", retry_public_scroll_pdf_deletions_once),
             ("booking email", process_booking_email_outbox_once),
             ("BYOF deposit review", process_byof_deposit_reviews_once),
             ("Booky Courier", process_booky_courier_outbox_once),

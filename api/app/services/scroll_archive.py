@@ -43,6 +43,7 @@ from app.constants.timezones import shop_timezone
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
+from app.models.scroll_public_pdf_deletion import ScrollPublicPdfDeletion
 from app.models.user import User
 from app.services import storage
 from app.services.email import FROM_ADMIN, send_email
@@ -784,6 +785,76 @@ async def _remaining_references(db: AsyncSession, object_key: str, ignore_ids: f
     return int(documents.scalar_one() or 0) + int(memories.scalar_one() or 0)
 
 
+PUBLIC_DELETE_MAX_BACKOFF_MINUTES = 60
+
+
+async def _process_public_pdf_deletions(db: AsyncSession, limit: int = 50) -> dict[str, int]:
+    """
+    Delete due public scroll PDFs recorded as pending, in `db`, and commit.
+
+    A row is deleted only when no stored record (other than ones proven foreign) still mentions its key;
+    otherwise it is marked kept and not retried. A delete R2 does not confirm stays pending and backs off,
+    never giving up: the object prints a signature. Returns counts only.
+    """
+    now = datetime.now(UTC)
+    result = await db.execute(
+        select(ScrollPublicPdfDeletion)
+        .where(ScrollPublicPdfDeletion.status == "pending", ScrollPublicPdfDeletion.next_attempt_at <= now)
+        .order_by(ScrollPublicPdfDeletion.created_at)
+        .with_for_update(skip_locked=True)
+        .limit(limit)
+    )
+    counts = {"deleted": 0, "pending": 0, "kept": 0}
+    rows = list(result.scalars().all())
+    for row in rows:
+        row.updated_at = now
+        ignore = frozenset(_parse_ids(row.ignore_document_ids) or ())
+        if await _remaining_references(db, row.object_key, ignore) > 0:
+            row.status = "kept"
+            row.finished_at = now
+            counts["kept"] += 1
+            continue
+        deleted, error = False, None
+        try:
+            deleted = await storage.delete_file(row.reference, allowed_prefix=storage.SCROLL_PUBLIC_ROOT)
+        except Exception as exc:  # noqa: BLE001 - recorded on the row, retried later
+            error = type(exc).__name__
+        if deleted:
+            row.status = "deleted"
+            row.finished_at = now
+            row.last_error = None
+            counts["deleted"] += 1
+        else:
+            row.attempts += 1
+            row.last_error = error or "R2 did not confirm the delete"
+            row.next_attempt_at = now + timedelta(minutes=min(2**row.attempts, PUBLIC_DELETE_MAX_BACKOFF_MINUTES))
+            counts["pending"] += 1
+    if rows:
+        await db.commit()
+    return counts
+
+
+async def retry_public_scroll_pdf_deletions_once(limit: int = 50) -> int:
+    """
+    Outbox-loop worker: retry public scroll PDF deletes left pending by the boot move. Logs counts only.
+
+    Covers a delete R2 did not confirm and a process that stopped after the move committed but before the
+    delete ran: the pending row was written in the same transaction as the reference rewrite.
+    """
+    from app.core.database import async_session
+
+    async with async_session() as db:
+        counts = await _process_public_pdf_deletions(db, limit=limit)
+    if any(counts.values()):
+        logger.info(
+            "Public scroll PDF deletes: %d deleted, %d pending delete, %d kept",
+            counts["deleted"],
+            counts["pending"],
+            counts["kept"],
+        )
+    return counts["deleted"]
+
+
 async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
     """
     Boot step: move generated scroll PDFs written under scrolls-public/ to the private scrolls/ prefix.
@@ -794,8 +865,11 @@ async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
     the .id/.noid marker is kept), read the copy back and compare, then point every record at the private
     copy and commit. Only records the server created for the PDF are repointed (an owner archive record,
     or the artist scroll owned by the artist whose folder holds it); any other record naming it is skipped
-    and counted, and never keeps the public object alive. Only after that commit, and only when no other
-    stored record still mentions the old key, is the public object deleted; otherwise it is kept and counted. On any storage failure the record
+    and counted, and never keeps the public object alive. The rewrite and a pending-deletion row for the
+    public object land in one commit. Only after that commit, and only when no other stored record still
+    mentions the old key, is the public object deleted; otherwise it is kept and counted. A delete R2 does
+    not confirm, or one a stopped process never ran, stays pending and is retried here and by the outbox
+    loop (retry_public_scroll_pdf_deletions_once) until confirmed. On any storage failure the record
     keeps its original reference. Idempotent: a moved record no longer references a public PDF.
     Logs counts only.
     """
@@ -804,6 +878,7 @@ async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
         "moved": 0,
         "failed": 0,
         "public deleted": 0,
+        "public pending delete": 0,
         "public kept": 0,
         "unproven records skipped": 0,
     }
@@ -871,13 +946,37 @@ async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
                 inst.data_json = json.dumps(_replace_pdf_ref(data, old_key, new_url))
         moved.append(old_key)
     counts["moved"] = len(moved)
+
+    # Recorded before any delete and in the same commit as the rewrite: once the references point at the
+    # private copy nothing would rediscover the public object, so a lost delete must leave this row.
+    if moved:
+        existing = await db.execute(
+            select(ScrollPublicPdfDeletion.object_key).where(ScrollPublicPdfDeletion.object_key.in_(moved))
+        )
+        recorded = {key for key in existing.scalars().all() if isinstance(key, str)}
+        now = datetime.now(UTC)
+        for old_key in moved:
+            if old_key in recorded:
+                continue
+            db.add(
+                ScrollPublicPdfDeletion(
+                    object_key=old_key,
+                    reference=old_refs[old_key],
+                    ignore_document_ids=json.dumps(sorted(str(i) for i in foreign.get(old_key, ()))),
+                    status="pending",
+                    attempts=0,
+                    next_attempt_at=now,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
     await db.commit()
 
-    for old_key in moved:
-        deleted = False
-        if await _remaining_references(db, old_key, frozenset(foreign.get(old_key, ()))) == 0:
-            deleted = await storage.delete_file(old_refs[old_key], allowed_prefix=storage.SCROLL_PUBLIC_ROOT)
-        counts["public deleted" if deleted else "public kept"] += 1
+    # Deletes this pass's objects and any an earlier pass left pending.
+    deletes = await _process_public_pdf_deletions(db)
+    counts["public deleted"] = deletes["deleted"]
+    counts["public pending delete"] = deletes["pending"]
+    counts["public kept"] = deletes["kept"]
 
     logger.info("Public scroll PDFs moved to private storage: %s", ", ".join(f"{n} {k}" for k, n in counts.items()))
     return counts
