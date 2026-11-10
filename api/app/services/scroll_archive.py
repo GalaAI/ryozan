@@ -213,6 +213,10 @@ def build_owner_archive_email_html(
 
     Reuses the waiver renderers' Foundry shell (starseed ground, tiger mark, spec well, coral
     pill) so the owner copy reads like every other shop email. Every value is escaped.
+
+    The scroll PDF embeds the artist's government ID and is a private R2 object, so this email
+    never links it: the PDF travels as an attachment and the only link is the authenticated
+    Artist Scrolls page in the app.
     """
     from app.core.config import get_settings
     from app.services.email_foundry_waiver import _MONO_FONT, _copy, _cta, _label, _shell, _tiger_header

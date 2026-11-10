@@ -44,10 +44,15 @@ from app.services.email import (
     send_email,
 )
 from app.services.push import send_push_notification
+from app.services.storage import signed_id_url
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.scrolls")
 router = APIRouter(prefix="/scrolls", tags=["scrolls"])
+
+# Scroll PDFs are private in R2 (they embed the artist's government ID); list and upload
+# responses carry signed links valid for one review session.
+SCROLL_FILE_VIEW_SECONDS = 900
 
 SLUG_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789_-")
 OWNER_ARCHIVE_SLUG = "owner-archive"
@@ -342,7 +347,8 @@ async def list_category_docs(
                 "user_name": user_name,
                 "title": inst.title,
                 "status": inst.status,
-                "file_url": inst.file_url,
+                # Scroll PDFs embed the artist's government ID: short-lived signed links only.
+                "file_url": signed_id_url(inst.file_url, SCROLL_FILE_VIEW_SECONDS),
                 "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
                 "created_at": inst.created_at.isoformat(),
                 "ai_digest": data.get("ai_digest"),
@@ -454,7 +460,7 @@ async def upload_scroll_doc(
     return {
         "id": str(instance.id),
         "title": instance.title,
-        "file_url": blob_url,
+        "file_url": signed_id_url(blob_url, SCROLL_FILE_VIEW_SECONDS),
         "status": "submitted",
         "ai_digest": ai_digest_result,
         "created_at": instance.created_at.isoformat(),

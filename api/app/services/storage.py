@@ -286,6 +286,8 @@ PRIVATE_ID_PREFIXES = ("waivers/pending-ids/",)
 _WAIVER_ROOT = "waivers/"
 # Artist Scroll government IDs live beside public-safe certificates under
 # scrolls/<user>/<submission>/, so they are matched by file stem instead.
+# Artist Scroll PDFs (scrolls/<user>/<submission>/artist-scroll.pdf) embed that ID image,
+# so every PDF under scrolls/ is private too. Other scroll assets (cert images) stay public.
 _SCROLL_ID_ROOT = "scrolls/"
 _SCROLL_ID_STEM = "govt-id"
 # S3 caps a SigV4 query-string signature at seven days.
@@ -298,7 +300,7 @@ def is_private_id_key(object_key: str) -> bool:
         return False
     if object_key.startswith(PRIVATE_ID_PREFIXES):
         return True
-    if object_key.startswith(_WAIVER_ROOT) and object_key.lower().endswith(".pdf"):
+    if object_key.startswith((_WAIVER_ROOT, _SCROLL_ID_ROOT)) and object_key.lower().endswith(".pdf"):
         return True
     return object_key.startswith(_SCROLL_ID_ROOT) and object_key.rsplit("/", 1)[-1].startswith(_SCROLL_ID_STEM)
 
@@ -440,27 +442,39 @@ def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | No
     return presign_get_url(key, expires_seconds) or reference
 
 
-# Document data keys that can hold a government ID reference (waiver photo ID, Artist Scroll ID).
-ID_REFERENCE_KEYS = ("photo_id_url", "photo_id", "govt_id_url")
+# Document data keys that can hold a government ID reference (waiver photo ID, Artist Scroll ID),
+# or a PDF that embeds one (the Artist Scroll PDF).
+ID_REFERENCE_KEYS = ("photo_id_url", "photo_id", "govt_id_url", "scroll_pdf_url")
+# The owner archive copy nests the artist's scroll data under "fields"; one level is all it uses.
+_MAX_NESTED_FIELDS_DEPTH = 2
 
 
-def signed_id_fields(data: dict, expires_seconds: int = 300) -> dict:
+def signed_id_fields(data: dict, expires_seconds: int = 300, *, _depth: int = 0) -> dict:
     """
-    A shallow copy of stored document data with every government ID reference signed.
+    A copy of stored document data with every government ID reference signed.
 
-    Covers the waiver photo ID keys, the Scroll govt_id_url and certs_stored.govt_id.url.
-    The input is never mutated, so the stored record keeps its stable references.
+    Covers the waiver photo ID keys, the Scroll govt_id_url and scroll_pdf_url, every
+    certs_stored.<doc>.url, and the same keys inside a nested "fields" dict (owner archive copies).
+    Non-private references pass through unchanged (signed_id_url decides). The input is never
+    mutated, so the stored record keeps its stable references.
     """
     view = dict(data)
     for key in ID_REFERENCE_KEYS:
         if isinstance(view.get(key), str) and view[key]:
             view[key] = signed_id_url(view[key], expires_seconds)
     certs = view.get("certs_stored")
-    if isinstance(certs, dict) and isinstance(certs.get("govt_id"), dict) and certs["govt_id"].get("url"):
+    if isinstance(certs, dict):
         view["certs_stored"] = {
-            **certs,
-            "govt_id": {**certs["govt_id"], "url": signed_id_url(certs["govt_id"]["url"], expires_seconds)},
+            name: (
+                {**entry, "url": signed_id_url(entry["url"], expires_seconds)}
+                if isinstance(entry, dict) and isinstance(entry.get("url"), str) and entry["url"]
+                else entry
+            )
+            for name, entry in certs.items()
         }
+    nested = view.get("fields")
+    if isinstance(nested, dict) and _depth < _MAX_NESTED_FIELDS_DEPTH:
+        view["fields"] = signed_id_fields(nested, expires_seconds, _depth=_depth + 1)
     return view
 
 

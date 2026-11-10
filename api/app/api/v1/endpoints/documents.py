@@ -312,7 +312,8 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
         "status": inst.status,
         "data_json": _signed_data_json(inst.data_json),
         "signed_at": inst.signed_at,
-        "file_url": inst.file_url,
+        # Artist Scroll PDFs (and other private ID objects) reach clients as short-lived signed links only.
+        "file_url": signed_id_url(inst.file_url, ID_VIEW_SECONDS),
         "notes": inst.notes,
         # Send / lifecycle fields
         "send_token": inst.send_token,
@@ -490,7 +491,8 @@ async def submit_document(
         title=body.title,
         status="submitted",
         data_json=body.data_json,
-        file_url=body.file_url,
+        # A client echoing a signed private link back stores the stable reference, never an expiring URL.
+        file_url=canonical_id_reference(body.file_url),
         notes=body.notes,
     )
     db.add(instance)
@@ -748,6 +750,9 @@ async def submit_scroll(
         "sections": section_acceptances,
     }
     fields["acceptance_record"] = acceptance_record
+    # Only the server sets the scroll PDF reference; a client-sent value (for example an echoed
+    # signed link) is never stored.
+    fields.pop("scroll_pdf_url", None)
 
     # Upsert: delete existing scroll for this user. Only touches category='scroll',
     # so founders' `scroll_owner-archive` rows are never affected.
@@ -1004,7 +1009,8 @@ async def submit_scroll(
         "artist_sig_url": artist_sig_url,
         "owner_sig_url": owner_sig_url,
         "bbp_cert_url": bbp_cert_url,
-        "scroll_pdf_url": scroll_pdf_url,
+        # The scroll PDF embeds the artist's government ID: a short-lived signed link, never the public URL.
+        "scroll_pdf_url": signed_id_url(scroll_pdf_url, ID_VIEW_SECONDS),
         "submission_id": submission_id,
         "owner_copies_filed": len(archive_rows),
         "owner_emails_queued": owner_emails_queued,
