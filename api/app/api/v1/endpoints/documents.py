@@ -83,10 +83,11 @@ from app.services.scroll_archive import (
 from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf_report
 from app.services.sms import send_sms
 from app.services.storage import (
-    ID_REFERENCE_KEYS,
+    PRIVATE_REFERENCE_HINTS,
     SCROLL_ID_PDF_FILENAME,
     SCROLL_NOID_PDF_FILENAME,
     canonical_id_reference,
+    public_scroll_prefix,
     signed_id_fields,
     signed_id_url,
 )
@@ -294,7 +295,7 @@ def _signed_data_json(raw: str | None) -> str | None:
     Documents with no private ID reference come back byte for byte unchanged. Stored data is
     never mutated; this only shapes the response.
     """
-    if not raw or not any(key in raw for key in ID_REFERENCE_KEYS):
+    if not raw or not any(hint in raw for hint in PRIVATE_REFERENCE_HINTS):
         return raw
     try:
         data = json.loads(raw)
@@ -697,6 +698,10 @@ async def submit_scroll(
     # certificate objects in place and silently rewrote what earlier archive copies
     # pointed at.
     storage_prefix = build_submission_prefix(str(current_user.id))
+    # Files that are, or embed, the government ID stay under the private "scrolls/" prefix; every
+    # other file of the submission (signatures, certificates, a PDF without the ID) goes under the
+    # public "scrolls-public/" twin, since everything under "scrolls/" is private by key.
+    public_prefix = public_scroll_prefix(storage_prefix)
 
     def _decode_signature(raw_b64: str, label: str) -> bytes:
         try:
@@ -780,7 +785,7 @@ async def submit_scroll(
                 file_bytes=sig_bytes,
                 filename=name,
                 mime_type="image/png",
-                folder_path=storage_prefix,
+                folder_path=public_prefix,
             )
         except Exception:
             logger.error(
@@ -829,7 +834,7 @@ async def submit_scroll(
                 file_bytes=content,
                 filename=f"{stem}{ext}",
                 mime_type=upload.content_type or "image/jpeg",
-                folder_path=storage_prefix,
+                folder_path=storage_prefix if key == "govt_id" else public_prefix,
             )
             if url:
                 asset.url = url
@@ -920,7 +925,7 @@ async def submit_scroll(
             file_bytes=pdf_bytes,
             filename=SCROLL_ID_PDF_FILENAME if report.embeds_government_id else SCROLL_NOID_PDF_FILENAME,
             mime_type="application/pdf",
-            folder_path=storage_prefix,
+            folder_path=storage_prefix if report.embeds_government_id else public_prefix,
         )
         if not scroll_pdf_url:
             logger.error(
@@ -1064,12 +1069,12 @@ async def get_my_scroll(
             "id": str(inst.id),
             "status": inst.status,
             "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
-            "artist_signature": inst.artist_signature,
-            "bbp_cert_url": data.get("bbp_cert_url"),
-            "first_aid_cert_url": data.get("first_aid_cert_url"),
-            "cpr_cert_url": data.get("cpr_cert_url"),
+            "artist_signature": signed_id_url(inst.artist_signature, ID_VIEW_SECONDS),
+            "bbp_cert_url": signed_id_url(data.get("bbp_cert_url"), ID_VIEW_SECONDS),
+            "first_aid_cert_url": signed_id_url(data.get("first_aid_cert_url"), ID_VIEW_SECONDS),
+            "cpr_cert_url": signed_id_url(data.get("cpr_cert_url"), ID_VIEW_SECONDS),
             "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
-            "owner_sig_url": data.get("owner_sig_url"),
+            "owner_sig_url": signed_id_url(data.get("owner_sig_url"), ID_VIEW_SECONDS),
             "tax_opt_in": data.get("tax_opt_in"),
             "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
@@ -1113,12 +1118,12 @@ async def get_user_scroll(
             "user_id": str(user_id),
             "status": inst.status,
             "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
-            "artist_signature": inst.artist_signature,
-            "bbp_cert_url": data.get("bbp_cert_url"),
-            "first_aid_cert_url": data.get("first_aid_cert_url"),
-            "cpr_cert_url": data.get("cpr_cert_url"),
+            "artist_signature": signed_id_url(inst.artist_signature, ID_VIEW_SECONDS),
+            "bbp_cert_url": signed_id_url(data.get("bbp_cert_url"), ID_VIEW_SECONDS),
+            "first_aid_cert_url": signed_id_url(data.get("first_aid_cert_url"), ID_VIEW_SECONDS),
+            "cpr_cert_url": signed_id_url(data.get("cpr_cert_url"), ID_VIEW_SECONDS),
             "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
-            "owner_sig_url": data.get("owner_sig_url"),
+            "owner_sig_url": signed_id_url(data.get("owner_sig_url"), ID_VIEW_SECONDS),
             "tax_opt_in": data.get("tax_opt_in"),
             "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),

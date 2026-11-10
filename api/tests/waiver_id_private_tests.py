@@ -179,7 +179,7 @@ class SignedIdUrlTests(unittest.TestCase):
     def test_non_id_and_foreign_references_pass_through_unchanged(self):
         for reference in (
             f"https://{ASSETS_HOST}/portfolios/artist/image.webp",
-            f"https://{ASSETS_HOST}/scrolls/artist-1/20261110T120000-abcd1234/bbp-cert.png",
+            f"https://{ASSETS_HOST}/scrolls-public/artist-1/20261110T120000-abcd1234/bbp-cert.png",
             f"https://{ASSETS_HOST}/waivers/2026-11/Jane_WVR/signature.png",
             f"https://evil.example.test/{ID_KEY}",
             f"https://pub-account-id.r2.dev/other-bucket/{ID_KEY}",
@@ -426,7 +426,7 @@ class StaffReadPathTests(unittest.IsolatedAsyncioTestCase):
         stored = f"https://{ASSETS_HOST}/{SCROLL_ID_KEY}"
         data = {
             "govt_id_url": stored,
-            "bbp_cert_url": f"https://{ASSETS_HOST}/scrolls/a/b/bbp-cert.png",
+            "bbp_cert_url": f"https://{ASSETS_HOST}/scrolls-public/a/b/bbp-cert.png",
             "certs_stored": {"govt_id": {"provided": True, "stored": True, "url": stored, "error": None}},
         }
         with patch.object(storage, "get_settings", return_value=_settings()):

@@ -44,7 +44,7 @@ from app.services.email import (
     send_email,
 )
 from app.services.push import send_push_notification
-from app.services.storage import scroll_id_filename, signed_id_url
+from app.services.storage import public_scroll_prefix, scroll_id_filename, signed_id_url
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.scrolls")
@@ -423,7 +423,13 @@ async def upload_scroll_doc(
         file_bytes=content,
         filename=filename,
         mime_type=file.content_type or "application/octet-stream",
-        folder_path=f"scrolls/{category_slug}/{current_user.id}",
+        # A file marked as an ID stays under the private "scrolls/" prefix; anything else goes under
+        # the public "scrolls-public/" twin (everything under "scrolls/" is private by key).
+        folder_path=(
+            f"scrolls/{category_slug}/{current_user.id}"
+            if is_id
+            else public_scroll_prefix(f"scrolls/{category_slug}/{current_user.id}")
+        ),
     )
     if not blob_url:
         raise HTTPException(500, "File storage unavailable — upload failed")
@@ -466,7 +472,7 @@ async def upload_scroll_doc(
     return {
         "id": str(instance.id),
         "title": instance.title,
-        # Category uploads stay public unless marked as an ID (the ".id.<ext>" key).
+        # New unmarked uploads (scrolls-public/) pass through; ID uploads and older scrolls/ files are signed.
         "file_url": signed_id_url(blob_url, SCROLL_FILE_VIEW_SECONDS),
         "status": "submitted",
         "ai_digest": ai_digest_result,

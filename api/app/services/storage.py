@@ -284,42 +284,41 @@ def _r2_public_url(object_key: str) -> str:
 PRIVATE_ID_PREFIXES = ("waivers/pending-ids/",)
 # Printable waiver packets (waivers/<month>/<name>_<ref>/<name>_<ref>.pdf) embed the client's ID image.
 _WAIVER_ROOT = "waivers/"
-# Artist Scroll government IDs live beside public-safe certificates under
-# scrolls/<user>/<submission>/, so they are matched by file stem instead (this also covers an
-# ID uploaded as a PDF, govt-id.pdf).
+# Everything under "scrolls/" is private by key: Artist Scroll government IDs (govt-id.*), the
+# generated scroll PDF (artist-scroll.id.pdf, or the legacy artist-scroll.pdf), and every older
+# certificate, signature and category upload, which was never inspected and may hold an ID.
+# New files that are safe to serve publicly (unmarked category uploads, certificates, signatures,
+# a generated artist-scroll.noid.pdf) are written under the separate "scrolls-public/" prefix
+# (public_scroll_prefix). A new file that is, or embeds, an ID stays under "scrolls/" and keeps the
+# ".id.<ext>" marker name (scroll_id_filename) so it reads as an ID wherever it is listed.
 _SCROLL_ID_ROOT = "scrolls/"
-_SCROLL_ID_STEM = "govt-id"
-# Generated Artist Scroll PDFs are named by content, so storage, signing and the WAF rule all
-# match them by key: one that embeds the artist's government ID image is "artist-scroll.id.pdf"
-# (private), one without an embedded ID is "artist-scroll.noid.pdf" (public). Legacy
-# "artist-scroll.pdf" objects predate the marker and stay private by key: the app form requires a
-# government ID, so a legacy generated PDF is assumed to carry it. Files uploaded to scroll
-# categories are public unless the uploader marks them as an ID, which stores them under the same
-# ".id.<ext>" marker (scroll_id_filename).
+SCROLL_PUBLIC_ROOT = "scrolls-public/"
 SCROLL_ID_PDF_FILENAME = "artist-scroll.id.pdf"
 SCROLL_NOID_PDF_FILENAME = "artist-scroll.noid.pdf"
-_LEGACY_SCROLL_PDF_FILENAME = "artist-scroll.pdf"
 _SCROLL_ID_MARKER = ".id"
 # S3 caps a SigV4 query-string signature at seven days.
 _MAX_PRESIGN_SECONDS = 7 * 24 * 3600
 
 
 def is_private_id_key(object_key: str) -> bool:
-    """True when an R2 key holds a government ID (image, or a PDF embedding one) that must never be public."""
+    """True when an R2 key holds, or may hold, a government ID and must never be served publicly."""
     if not object_key or ".." in object_key.split("/"):
         return False
     if object_key.startswith(PRIVATE_ID_PREFIXES):
         return True
     if object_key.startswith(_WAIVER_ROOT) and object_key.lower().endswith(".pdf"):
         return True
-    if not object_key.startswith(_SCROLL_ID_ROOT):
-        return False
-    name = object_key.rsplit("/", 1)[-1]
-    lowered = name.lower()
-    stem = lowered.rsplit(".", 1)[0] if "." in lowered else lowered
-    return (
-        name.startswith(_SCROLL_ID_STEM) or stem.endswith(_SCROLL_ID_MARKER) or lowered == _LEGACY_SCROLL_PDF_FILENAME
-    )
+    return object_key.startswith(_SCROLL_ID_ROOT)
+
+
+def public_scroll_prefix(private_prefix: str) -> str:
+    """The "scrolls-public/" twin of a "scrolls/..." folder, for new files that are safe to serve publicly."""
+    prefix = private_prefix.strip("/")
+    if prefix.startswith(_SCROLL_ID_ROOT):
+        return SCROLL_PUBLIC_ROOT + prefix[len(_SCROLL_ID_ROOT) :]
+    if prefix == _SCROLL_ID_ROOT.rstrip("/"):
+        return SCROLL_PUBLIC_ROOT.rstrip("/")
+    return prefix
 
 
 def scroll_id_filename(stem: str, extension: str) -> str:
@@ -468,23 +467,27 @@ def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | No
 # Document data keys that can hold a government ID reference (waiver photo ID, Artist Scroll ID),
 # or a PDF that may embed one (the Artist Scroll PDF; signed_id_url signs it only when its key is private).
 ID_REFERENCE_KEYS = ("photo_id_url", "photo_id", "govt_id_url", "scroll_pdf_url")
+# Substrings that tell a raw data_json may hold a private reference (cheap prefilter).
+PRIVATE_REFERENCE_HINTS = (*ID_REFERENCE_KEYS, _SCROLL_ID_ROOT)
 # The owner archive copy nests the artist's scroll data under "fields"; one level is all it uses.
 _MAX_NESTED_FIELDS_DEPTH = 2
 
 
 def signed_id_fields(data: dict, expires_seconds: int = 300, *, _depth: int = 0) -> dict:
     """
-    A copy of stored document data with every government ID reference signed.
+    A copy of stored document data with every private storage reference signed.
 
-    Covers the waiver photo ID keys, the Scroll govt_id_url and scroll_pdf_url, every
-    certs_stored.<doc>.url, and the same keys inside a nested "fields" dict (owner archive copies).
-    Non-private references (an artist-scroll.noid.pdf, certificates) pass through unchanged. The
-    input is never mutated, so the stored record keeps its stable references.
+    Every top-level string that is a private key on our own bucket gets a signed link (waiver photo
+    IDs, the Scroll govt_id_url and scroll_pdf_url, and every scroll certificate, signature or file
+    under "scrolls/"), as does every certs_stored.<doc>.url and the same inside a nested "fields"
+    dict (owner archive copies). Everything else (text, "scrolls-public/" files, foreign URLs)
+    passes through unchanged. The input is never mutated, so the stored record keeps its stable
+    references.
     """
     view = dict(data)
-    for key in ID_REFERENCE_KEYS:
-        if isinstance(view.get(key), str) and view[key]:
-            view[key] = signed_id_url(view[key], expires_seconds)
+    for key, value in data.items():
+        if isinstance(value, str) and value:
+            view[key] = signed_id_url(value, expires_seconds)
     certs = view.get("certs_stored")
     if isinstance(certs, dict):
         view["certs_stored"] = {

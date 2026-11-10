@@ -12,27 +12,32 @@ stored there and handed out as permanent public URLs, so anyone holding a link c
 
 ## What the app does now
 
-Stored references are unchanged (no migration). The app treats these R2 keys as private:
+Stored references are unchanged (no migration, nothing moved, nothing deleted, no file opened to
+decide). The app treats these R2 keys as private:
 
 | Key pattern | What it holds | Written by |
 | --- | --- | --- |
 | `waivers/pending-ids/*` | Walk-in waiver ID photo | `POST /waiver/upload-id` |
 | `waivers/**/*.pdf` | Printable waiver packet, embeds the client ID image | `POST /waiver/{id}/export-pdf` |
-| `scrolls/**/govt-id*` | Artist Scroll government ID (image, or an ID uploaded as a PDF) | `POST /documents/scroll/submit` |
-| `scrolls/**/*.id.<ext>` | Generated Artist Scroll PDF that embeds the artist government ID image (`artist-scroll.id.pdf`), and any scroll category upload marked "This file is an ID" (`<random>.id.<ext>`) | `POST /documents/scroll/submit`, `POST /scrolls/{slug}/upload` with `is_id=true` |
-| `scrolls/**/artist-scroll.pdf` | Legacy generated Artist Scroll PDF, stored before the marker names | earlier `POST /documents/scroll/submit` |
+| `scrolls/**` (everything) | Every Artist Scroll and scroll category object written before this change (government IDs, generated scroll PDFs, certificates, signatures, category uploads), plus every new file that is or embeds an ID | `POST /documents/scroll/submit`, `POST /scrolls/{slug}/upload` |
 
-Generated scroll PDFs are named by content. The server knows at generation time whether it embedded the
-government ID image (`scroll_pdf.build_scroll_pdf_report`, `embeds_government_id`): with the ID the PDF
-is stored as `artist-scroll.id.pdf` (private), without it (no ID supplied, or an ID uploaded as a PDF,
-which cannot be embedded) as `artist-scroll.noid.pdf` (public). Legacy `artist-scroll.pdf` objects stay
-private by key: the app form requires a government ID, so a legacy generated PDF is taken to carry it,
-and the plain name is never written again.
+Older scroll files were never inspected, so any of them may hold an ID; all of them are private by key
+and served through signed links. New files are routed by content:
 
-Public, unchanged: `artist-scroll.noid.pdf`, files uploaded to scroll categories without the ID mark
-(`scrolls/<slug>/<user>/<random>.<ext>`), certificate images and signature PNGs. An upload marked as an
-ID is also never sent to the Gala AI digest. Scroll certificate uploads need no mark: the one ID upload
-on the scroll form is already stored as `govt-id.<ext>`.
+| New file | Stored under |
+| --- | --- |
+| Government ID upload on the scroll form | `scrolls/<user>/<submission>/govt-id.<ext>` (private) |
+| Generated scroll PDF that embeds the ID image | `scrolls/<user>/<submission>/artist-scroll.id.pdf` (private) |
+| Scroll category upload marked "This file is an ID" | `scrolls/<slug>/<user>/<random>.id.<ext>` (private, never sent to the Gala AI digest) |
+| Generated scroll PDF without an embedded ID (no ID supplied, or an ID uploaded as a PDF, which cannot be embedded) | `scrolls-public/<user>/<submission>/artist-scroll.noid.pdf` (public) |
+| Certificates and signature PNGs from the scroll form | `scrolls-public/<user>/<submission>/` (public) |
+| Unmarked scroll category upload | `scrolls-public/<slug>/<user>/<random>.<ext>` (public) |
+
+The server knows at generation time whether it embedded the government ID image
+(`scroll_pdf.build_scroll_pdf_report`, `embeds_government_id`). The `.id.<ext>` marker is kept on new
+private files so they read as IDs wherever they are listed. A boot step
+(`scroll_archive.count_legacy_scroll_references`) counts document rows that still reference
+`scrolls/` objects and logs only that number; it changes nothing.
 
 Every read point turns the stored reference into a short-lived SigV4 signed GET link on
 `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com/<R2_BUCKET_NAME>/<key>` (`storage.signed_id_url`):
@@ -40,8 +45,8 @@ Every read point turns the stored reference into a short-lived SigV4 signed GET 
 - `POST /waiver/upload-id` (preview, 10 minutes)
 - `GET /waiver/{id}` photo ID, and the `pdf_url` returned by `POST /waiver/{id}/export-pdf` (15 minutes)
 - `POST /documents/checkin/verify` returning client "ID on file" (15 minutes)
-- `GET /documents/scroll/my`, `GET /documents/scroll/user/{id}` (`govt_id_url`, `fields`, including
-  `fields.scroll_pdf_url`)
+- `GET /documents/scroll/my`, `GET /documents/scroll/user/{id}` (`govt_id_url`, `artist_signature`,
+  the certificate and signature URLs, and every private reference in `fields`)
 - `POST /documents/scroll/submit` response `scroll_pdf_url` (15 minutes)
 - Document responses (`GET /documents/`, and the sign, status, upload and remind responses): `file_url`
   and raw `data_json`, including the owner archive copy's top-level `scroll_pdf_url`, `certs_stored`
@@ -67,17 +72,21 @@ re-download). The PDF never prints a government ID link, whatever its key, and n
 URL: the ID page reads "Private (staff open it through the app)". The server alone sets
 `scroll_pdf_url`; a value sent in the submitted fields is dropped.
 
-Owner emails that were already sent before this change kept the PDF bytes in the outbox table. A boot
-step (`scroll_archive.clear_sent_owner_email_attachments`, run from `main.py`'s startup seeds) clears
-`attachment_content` on every `sent` row that still holds it, logging only the count found and the
-count cleared. It is idempotent: the next boot clears 0.
+Owner emails queued before this change kept the PDF bytes in the outbox table. A boot step
+(`scroll_archive.clear_sent_owner_email_attachments`, run from `main.py`'s startup seeds) clears
+`attachment_content` on finished rows (`sent`, or `exhausted` past the retry limit) only when the
+submission's archive PDF is confirmed stored per the DB record: an owner archive copy or the artist's
+scroll record for the same `submission_id` with a non-empty http(s) `file_url` or `scroll_pdf_url`.
+Nothing is fetched from R2. When generating the PDF succeeded but storing it failed, the email's bytes
+may be the only copy, so those rows are left untouched. Pending rows are never touched by the step. It
+logs only three counts (found, cleared, kept) and is idempotent: the next boot clears 0.
 
 The owner email for a new scroll is link only: no attachment and no storage link (public or signed).
 Its one link is the authenticated Artist Scrolls page in the app, so an ID never lands in an inbox. A
 signed link in an email would stop working after the SigV4 seven-day cap and would open the ID for
 anyone the mail was forwarded to until then. Outbox rows queued before this change are sent without
-their attachment, their stored PDF bytes are cleared when the row is claimed, and a stored body that
-still says the PDF is attached is rewritten to the link-only wording before it is sent. The in-app
+their attachment (the stored bytes stay until the boot step above may clear them), and a stored body
+that still says the PDF is attached is rewritten to the link-only wording before it is sent. The in-app
 notification links to the same app page.
 
 Signed links keep working whether or not the assets domain serves the object, so the app keeps working
@@ -95,13 +104,12 @@ its Cloudflare zone.
    (http.host eq "<assets-domain>" and (
      starts_with(http.request.uri.path, "/waivers/pending-ids/")
      or (starts_with(http.request.uri.path, "/waivers/") and ends_with(lower(http.request.uri.path), ".pdf"))
-     or (starts_with(http.request.uri.path, "/scrolls/") and http.request.uri.path contains "/govt-id")
-     or (starts_with(http.request.uri.path, "/scrolls/") and lower(http.request.uri.path) contains ".id.")
-     or (starts_with(http.request.uri.path, "/scrolls/") and ends_with(lower(http.request.uri.path), "/artist-scroll.pdf"))
+     or starts_with(http.request.uri.path, "/scrolls/")
    ))
    ```
 
-   Keep URL normalization on (Rules, Settings, Normalize incoming URLs) so encoded paths cannot slip
+   `/scrolls/` is blocked wholesale; `/scrolls-public/` stays open (it does not match: the prefix
+   test includes the slash). Keep URL normalization on (Rules, Settings, Normalize incoming URLs) so encoded paths cannot slip
    past the match. WAF rules run before cache, so cached copies are blocked too.
 2. R2, bucket `<R2_BUCKET_NAME>`, Settings, Public access: if the `r2.dev` subdomain is enabled, disable
    it. The custom domain stays connected for public assets.
@@ -109,7 +117,9 @@ its Cloudflare zone.
    `https://<assets-domain>/scrolls/<user>/<submission>/artist-scroll.pdf` links return 403, while staff
    can still open a waiver in Countersign, export the PDF with the ID on it, a returning client still
    sees "ID on file" after the check-in code, and the owner can open a scroll PDF from Artist Scrolls.
-   An `artist-scroll.noid.pdf` link and a scroll category PDF link still open publicly.
+   Any older `/scrolls/...` certificate or category upload link also returns 403, while new
+   `/scrolls-public/...` links (an `artist-scroll.noid.pdf`, a certificate, an unmarked category
+   upload) still open publicly.
 
 After the rule, legacy public links stop working; the app keeps working through signed links.
 
@@ -119,7 +129,10 @@ After the rule, legacy public links stop working; the app keeps working through 
 - Owner emails sent before this change carried the scroll PDF as an attachment, so those inboxes may
   already hold an artist's ID. Sent mail cannot be recalled by the app; the owner decides whether to
   delete those messages.
-- Scroll category uploads are public unless the uploader ticks "This file is an ID". An ID uploaded
-  without the mark is not detected and stays public. Earlier category uploads have no mark at all.
-- Outbox rows that reached `exhausted` (never delivered) keep their stored bytes: they are neither sent
-  nor claimed again, and the boot step clears only `sent` rows.
+- New scroll category uploads are public unless the uploader ticks "This file is an ID". An ID uploaded
+  without the mark is not detected and stays public under `scrolls-public/`. Older uploads are all private.
+- Finished owner emails whose archive PDF is not confirmed stored keep their bytes (the boot step logs
+  how many), because they may be the only copy. The owner decides what to do with them.
+- Once the WAF rule is live, links to older `/scrolls/` objects that were copied outside the app (for
+  example pasted into a message, or printed as "Storage URL" for a certificate in an already generated
+  scroll PDF) stop opening. In the app every such file still opens through a signed link.

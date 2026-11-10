@@ -378,9 +378,10 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
         delivered = 0
         for row in rows:
             # Rows queued before the link-only rule may still hold the PDF bytes. They are never
-            # sent and are cleared, so a scroll PDF (and the ID it may embed) never reaches an inbox.
-            row.attachment_filename = None
-            row.attachment_content = None
+            # attached, so a scroll PDF (and the ID it may embed) never reaches an inbox. The bytes
+            # stay stored: if storing the archive PDF failed they may be its only copy. The boot step
+            # (clear_sent_owner_email_attachments) clears them once the row is sent or exhausted and
+            # the archive PDF is confirmed stored.
             # Their stored body may still say the PDF is attached; it is sent with the link-only wording.
             row.html_body = link_only_html(row.html_body)
             try:
@@ -408,26 +409,68 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
         return delivered
 
 
-async def clear_sent_owner_email_attachments(conn: AsyncConnection) -> tuple[int, int]:
-    """Drop the stored PDF bytes from owner emails that were already sent. Idempotent.
+def _archive_pdf_confirmed_sql(outbox_alias: str) -> str:
+    """SQL condition: the outbox row's submission has a stored archive PDF per the DB record.
+
+    Confirmed means an owner archive copy or the artist's scroll record for the same submission_id
+    carries a non-empty http(s) file_url or scroll_pdf_url. Nothing is fetched from R2. When PDF
+    generation succeeded but storing it failed, the queued email's bytes may be the only copy, so
+    such rows are never confirmed.
+    """
+    documents = DocumentInstance.__tablename__
+    return (
+        f"EXISTS (SELECT 1 FROM {documents} d "
+        f"WHERE d.category IN ('scroll', '{OWNER_ARCHIVE_CATEGORY}') "
+        f"AND position(('\"submission_id\": \"' || {outbox_alias}.submission_id || '\"') IN coalesce(d.data_json, '')) > 0 "
+        "AND (d.file_url ~* '^https?://[^[:space:]]+' "
+        "OR coalesce(d.data_json, '') ~* '\"scroll_pdf_url\": \"https?://[^\"[:space:]]+'))"
+    )
+
+
+async def clear_sent_owner_email_attachments(conn: AsyncConnection) -> tuple[int, int, int]:
+    """Drop stored PDF bytes from finished owner emails whose archive PDF is confirmed stored. Idempotent.
 
     Rows queued before the link-only rule kept the scroll PDF (which can embed the artist's
-    government ID) after delivery. Pending rows are left alone: the outbox processor clears
-    their bytes when it claims them. Returns (found, cleared). Logs counts only, never row data.
+    government ID). Finished rows are those sent, or exhausted (never delivered, past the retry
+    limit, so never picked up again). One is cleared only when its submission's archive PDF is
+    confirmed stored per the DB record (_archive_pdf_confirmed_sql); otherwise its bytes may be the
+    only copy and the row is left untouched. Pending rows are never touched here.
+    Returns (found, cleared, kept). Logs counts only, never row data.
     """
     table = ScrollOwnerEmailOutbox.__tablename__
-    found = (
-        await conn.execute(
-            text(f"SELECT count(*) FROM {table} WHERE status = 'sent' AND attachment_content IS NOT NULL")
-        )
-    ).scalar_one()
-    logger.info("Sent owner emails still holding PDF bytes: %d", found)
+    holding = f"{table}.status IN ('sent', 'exhausted') AND {table}.attachment_content IS NOT NULL"
+    confirmed = _archive_pdf_confirmed_sql(table)
+    found = (await conn.execute(text(f"SELECT count(*) FROM {table} WHERE {holding}"))).scalar_one()
+    logger.info("Finished owner emails still holding PDF bytes: %d", found)
     result = await conn.execute(
         text(
-            f"UPDATE {table} SET attachment_content = NULL, attachment_filename = NULL "
-            "WHERE status = 'sent' AND attachment_content IS NOT NULL"
+            f"UPDATE {table} SET attachment_content = NULL, attachment_filename = NULL WHERE {holding} AND {confirmed}"
         )
     )
     cleared = int(result.rowcount or 0)
-    logger.info("Cleared PDF bytes from sent owner emails: %d", cleared)
-    return int(found), cleared
+    logger.info("Cleared PDF bytes from finished owner emails with a stored archive PDF: %d", cleared)
+    kept = (await conn.execute(text(f"SELECT count(*) FROM {table} WHERE {holding}"))).scalar_one()
+    logger.info("Kept PDF bytes on finished owner emails with no confirmed archive PDF: %d", kept)
+    return int(found), cleared, int(kept)
+
+
+async def count_legacy_scroll_references(conn: AsyncConnection) -> int:
+    """Count document rows that reference a legacy "scrolls/" object. Read only; logs the count only.
+
+    Every object under "scrolls/" is private by key and served through signed links; new public
+    files go under "scrolls-public/". This only measures how many stored references still point at
+    the private prefix (file_url, artist_signature or data_json).
+    """
+    documents = DocumentInstance.__tablename__
+    count = (
+        await conn.execute(
+            text(
+                f"SELECT count(*) FROM {documents} "
+                "WHERE coalesce(file_url, '') LIKE '%/scrolls/%' "
+                "OR coalesce(artist_signature, '') LIKE '%/scrolls/%' "
+                "OR coalesce(data_json, '') LIKE '%/scrolls/%'"
+            )
+        )
+    ).scalar_one()
+    logger.info("Document rows referencing legacy scrolls/ objects (served signed): %d", count)
+    return int(count)

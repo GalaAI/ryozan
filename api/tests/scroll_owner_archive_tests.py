@@ -857,10 +857,10 @@ class OwnerEmailOutboxProcessorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(row.status, "sent")
         self.assertEqual(row.attempts, 1)
         self.assertEqual(len(calls), 1)
-        # A row queued before the link-only rule still held PDF bytes: they are dropped, never sent.
+        # A row queued before the link-only rule still held PDF bytes: never attached. The bytes stay
+        # stored (they may be the archive PDF's only copy); the guarded boot step clears them later.
         self.assertNotIn("attachments", calls[0])
-        self.assertIsNone(row.attachment_content)
-        self.assertIsNone(row.attachment_filename)
+        self.assertEqual(row.attachment_content, b"%PDF-1.4")
 
     async def test_queued_body_saying_the_pdf_is_attached_is_sent_with_link_only_wording(self):
         # A synthetic row queued before the link-only rule, with the old builder's wording.

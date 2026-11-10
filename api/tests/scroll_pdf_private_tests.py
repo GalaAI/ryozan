@@ -45,12 +45,19 @@ ID_PDF_KEY = f"{SUBMISSION_PREFIX}/artist-scroll.id.pdf"
 ID_PDF_URL = f"https://{ASSETS_HOST}/{ID_PDF_KEY}"
 LEGACY_PDF_KEY = f"{SUBMISSION_PREFIX}/artist-scroll.pdf"
 LEGACY_PDF_URL = f"https://{ASSETS_HOST}/{LEGACY_PDF_KEY}"
-NOID_PDF_URL = f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/artist-scroll.noid.pdf"
-CATEGORY_PDF_URL = f"https://{ASSETS_HOST}/scrolls/shop/00000000-0000-4000-8000-000000000001/abc123.pdf"
+# New files that are safe to serve publicly live under the separate scrolls-public/ prefix.
+PUBLIC_PREFIX = "scrolls-public/artist-1/20261110T120000-abcd1234"
+NOID_PDF_URL = f"https://{ASSETS_HOST}/{PUBLIC_PREFIX}/artist-scroll.noid.pdf"
+CATEGORY_PDF_URL = f"https://{ASSETS_HOST}/scrolls-public/shop/00000000-0000-4000-8000-000000000001/abc123.pdf"
 SCROLL_ID_URL = f"https://{ASSETS_HOST}/{SCROLL_ID_KEY}"
 ID_AS_PDF_KEY = f"{SUBMISSION_PREFIX}/govt-id.pdf"
-BBP_CERT_URL = f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/bbp-cert.png"
-ARTIST_SIG_URL = f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/artist-sig.png"
+BBP_CERT_URL = f"https://{ASSETS_HOST}/{PUBLIC_PREFIX}/bbp-cert.png"
+ARTIST_SIG_URL = f"https://{ASSETS_HOST}/{PUBLIC_PREFIX}/artist-sig.png"
+# Older files under scrolls/ were never inspected, so every one of them is private by key.
+LEGACY_CATEGORY_PDF_KEY = "scrolls/shop/00000000-0000-4000-8000-000000000001/abc123.pdf"
+LEGACY_CATEGORY_PDF_URL = f"https://{ASSETS_HOST}/{LEGACY_CATEGORY_PDF_KEY}"
+LEGACY_BBP_CERT_KEY = f"{SUBMISSION_PREFIX}/bbp-cert.png"
+LEGACY_BBP_CERT_URL = f"https://{ASSETS_HOST}/{LEGACY_BBP_CERT_KEY}"
 
 
 def _png(width: int, height: int, color=(30, 30, 200)) -> bytes:
@@ -204,25 +211,38 @@ class StorageRuleTests(unittest.TestCase):
                 self.assertTrue(storage.is_private_id_key(key))
                 _assert_signed(self, storage.signed_id_url(f"https://{ASSETS_HOST}/{key}"), key)
 
-    def test_the_id_marker_covers_any_extension_and_nothing_else(self):
+    def test_every_scrolls_key_is_private_and_scrolls_public_is_not(self):
         self.assertEqual(storage.scroll_id_filename("abc123", ".PNG"), "abc123.id.png")
         for key in (
             "scrolls/shop/u-1/abc123.id.pdf",
-            "scrolls/shop/u-1/abc123.id.jpg",
             "scrolls/shop/u-1/ABC123.ID.WEBP",
+            "scrolls/shop/u-1/abc123.pdf",
+            "scrolls/shop/u-1/abc123.jpg",
+            f"{SUBMISSION_PREFIX}/artist-scroll.noid.pdf",
+            LEGACY_BBP_CERT_KEY,
+            f"{SUBMISSION_PREFIX}/artist-sig.png",
         ):
             with self.subTest(key=key):
                 self.assertTrue(storage.is_private_id_key(key))
         for key in (
-            "scrolls/shop/u-1/abc123.pdf",
-            "scrolls/shop/u-1/abc123.jpg",
-            "scrolls/shop/u-1/void.pdf",
-            f"{SUBMISSION_PREFIX}/artist-scroll.noid.pdf",
-            "scrolls/shop/u-1/abc.id",
+            "scrolls-public/shop/u-1/abc123.pdf",
+            f"{PUBLIC_PREFIX}/artist-scroll.noid.pdf",
+            f"{PUBLIC_PREFIX}/bbp-cert.png",
+            "scrollsfoo/shop/abc.pdf",
             "portfolios/a/abc123.id.jpg",
         ):
             with self.subTest(key=key):
                 self.assertFalse(storage.is_private_id_key(key))
+
+    def test_public_scroll_prefix_maps_only_the_scrolls_root(self):
+        self.assertEqual(storage.public_scroll_prefix(SUBMISSION_PREFIX), PUBLIC_PREFIX)
+        self.assertEqual(storage.public_scroll_prefix("scrolls/shop/u-1/"), "scrolls-public/shop/u-1")
+        self.assertEqual(storage.public_scroll_prefix("documents/u-1"), "documents/u-1")
+
+    def test_legacy_scrolls_files_get_signed_links(self):
+        for key in (LEGACY_CATEGORY_PDF_KEY, LEGACY_BBP_CERT_KEY):
+            with self.subTest(key=key):
+                _assert_signed(self, storage.signed_id_url(f"https://{ASSETS_HOST}/{key}"), key)
 
     def test_noid_pdf_category_pdfs_and_other_scroll_assets_stay_public(self):
         for reference in (
@@ -230,8 +250,8 @@ class StorageRuleTests(unittest.TestCase):
             CATEGORY_PDF_URL,
             BBP_CERT_URL,
             ARTIST_SIG_URL,
-            f"https://{ASSETS_HOST}/scrolls/shop/u-1/notes.docx",
-            f"https://{ASSETS_HOST}/scrolls/shop/u-1/my-artist-scroll.pdf",
+            f"https://{ASSETS_HOST}/scrolls-public/shop/u-1/notes.docx",
+            f"https://{ASSETS_HOST}/scrolls-public/shop/u-1/my-artist-scroll.id.pdf",
             f"https://evil.example.test/{ID_PDF_KEY}",
             f"https://pub-account-id.r2.dev/other-bucket/{ID_PDF_KEY}",
             f"https://{ASSETS_HOST}/scrolls/../waivers/x.id.pdf",
@@ -316,6 +336,37 @@ class ScrollReadPointTests(unittest.IsolatedAsyncioTestCase):
             _assert_signed(self, scroll["govt_id_url"], SCROLL_ID_KEY)
             self.assertNotIn(ID_PDF_URL, json.dumps(scroll))
 
+    async def test_legacy_scrolls_files_are_signed_at_every_read_point(self):
+        legacy_fields = {
+            **_scroll_fields(LEGACY_PDF_URL),
+            "bbp_cert_url": LEGACY_BBP_CERT_URL,
+            "owner_sig_url": f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/owner-sig.png",
+        }
+        inst = _instance(file_url=LEGACY_PDF_URL, data=legacy_fields)
+        inst.artist_signature = f"https://{ASSETS_HOST}/{SUBMISSION_PREFIX}/artist-sig.png"
+        category_row = _instance(category="scroll_shop", file_url=LEGACY_CATEGORY_PDF_URL, data={})
+        with _settings_patch():
+            mine = (
+                await documents.get_my_scroll(db=_QueueSession(inst), current_user=SimpleNamespace(id=inst.user_id))
+            )["scroll"]
+            listing = await scrolls.list_category_docs(
+                category_slug="shop",
+                user_id=None,
+                db=_QueueSession(
+                    SimpleNamespace(slug="shop", label="Shop", icon="x", ai_digest_enabled=False), [(category_row, "A")]
+                ),
+                current_user=SimpleNamespace(id=uuid.uuid4(), role="founder"),
+            )
+            response = documents._instance_to_response(category_row, None, None)
+        _assert_signed(self, mine["bbp_cert_url"], LEGACY_BBP_CERT_KEY)
+        _assert_signed(self, mine["fields"]["bbp_cert_url"], LEGACY_BBP_CERT_KEY)
+        _assert_signed(self, mine["owner_sig_url"], f"{SUBMISSION_PREFIX}/owner-sig.png")
+        _assert_signed(self, mine["artist_signature"], f"{SUBMISSION_PREFIX}/artist-sig.png")
+        _assert_signed(self, mine["fields"]["certs_stored"]["govt_id"]["url"], SCROLL_ID_KEY)
+        _assert_signed(self, listing["docs"][0]["file_url"], LEGACY_CATEGORY_PDF_KEY)
+        _assert_signed(self, response["file_url"], LEGACY_CATEGORY_PDF_KEY)
+        self.assertNotIn(f"https://{ASSETS_HOST}/scrolls/", json.dumps(mine))
+
     async def test_scroll_category_list_signs_only_id_bearing_pdfs(self):
         category = SimpleNamespace(
             slug="owner-archive", label="Artist Scrolls", icon="archive", ai_digest_enabled=False
@@ -377,7 +428,7 @@ class ScrollReadPointTests(unittest.IsolatedAsyncioTestCase):
             is_id=False, filename="synthetic.pdf", content_type="application/pdf"
         )
         key = urlsplit(stored).path.lstrip("/")
-        self.assertTrue(key.startswith("scrolls/shop/") and key.endswith(".pdf"))
+        self.assertTrue(key.startswith("scrolls-public/shop/") and key.endswith(".pdf"), key)
         self.assertNotIn(".id.", key)
         self.assertEqual(response["file_url"], stored)
 

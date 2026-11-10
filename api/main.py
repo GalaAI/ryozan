@@ -278,16 +278,30 @@ async def _run_startup_seeds() -> None:
             )
 
     async def sent_owner_email_attachments() -> None:
-        # Sent owner emails must not keep the scroll PDF (it can embed the artist's government ID).
+        # Finished owner emails (sent or exhausted) must not keep the scroll PDF (it can embed the
+        # artist's government ID), unless it may be the only copy of the archive PDF.
         from app.services.scroll_archive import clear_sent_owner_email_attachments
 
         async with engine.begin() as conn:
-            found, cleared = await clear_sent_owner_email_attachments(conn)
-        print(f"[Ryozan] Sent owner emails holding PDF bytes: {found}; cleared: {cleared}", flush=True)
+            found, cleared, kept = await clear_sent_owner_email_attachments(conn)
+        print(
+            f"[Ryozan] Finished owner emails holding PDF bytes: {found}; cleared: {cleared}; "
+            f"kept (archive PDF not confirmed): {kept}",
+            flush=True,
+        )
+
+    async def legacy_scroll_references() -> None:
+        # Older scroll files stay under the private scrolls/ prefix and are served signed; count only.
+        from app.services.scroll_archive import count_legacy_scroll_references
+
+        async with engine.begin() as conn:
+            count = await count_legacy_scroll_references(conn)
+        print(f"[Ryozan] Document rows referencing legacy scrolls/ objects: {count}", flush=True)
 
     await _seed_step("default session types", default_session_types)
     await _seed_step("POS commission base", pos_commission_base)
     await _seed_step("sent owner email attachments", sent_owner_email_attachments)
+    await _seed_step("legacy scroll references", legacy_scroll_references)
 
     # Convert SQLAlchemy URL to asyncpg format
     db_url = settings.DATABASE_URL
