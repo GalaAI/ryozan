@@ -115,6 +115,15 @@ test('email_domain is the install receiving domain, empty when handles are off',
   assert.equal(normalizeStudioSettings({ email_domain: 42 }).email_domain, '')
 })
 
+test('shop_pack_scope is the brand pack @scope, empty without a pack or when malformed', () => {
+  assert.equal(NEUTRAL_STUDIO_SETTINGS.shop_pack_scope, '')
+  assert.equal(configured.shop_pack_scope, '')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: ' bttco ' }).shop_pack_scope, 'bttco')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: '../bttco' }).shop_pack_scope, '')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: 'BTTCO' }).shop_pack_scope, '')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: 7 }).shop_pack_scope, '')
+})
+
 test('loader reads once, and a failed read is neutral and retried', async () => {
   let calls = 0
   const loader = createStudioSettingsLoader(async () => { calls += 1; return { owner_name: 'Sam' } })

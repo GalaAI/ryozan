@@ -42,6 +42,7 @@ export const NEUTRAL_STUDIO_SETTINGS: StudioSettings = Object.freeze({
   waiver_template_id: '',
   sample_flash_urls: [],
   email_domain: '',
+  shop_pack_scope: '',
   site: NEUTRAL_STUDIO_SITE,
 }) as StudioSettings
 
@@ -86,9 +87,13 @@ export function normalizeStudioSettings(raw: unknown): StudioSettings {
     waiver_template_id: text(body.waiver_template_id),
     sample_flash_urls: textList(body.sample_flash_urls),
     email_domain: text(body.email_domain).toLowerCase(),
+    shop_pack_scope: SHOP_PACK_SCOPE.test(text(body.shop_pack_scope)) ? text(body.shop_pack_scope) : '',
     site: normalizeStudioSite(body.site),
   }
 }
+
+// A shop brand pack @scope without the @ (SHOP_PACK_SCOPE in the API settings).
+const SHOP_PACK_SCOPE = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/
 
 // Characters that would let a URL break out of an attribute or a CSS url().
 const URL_FORBIDDEN = /[\s"'()<>\\`]/

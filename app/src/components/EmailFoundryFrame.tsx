@@ -1,10 +1,27 @@
 import { useEffect, useState } from 'react'
 import { getToken } from '../lib/api'
+import { loadStudioSettings } from '../hooks/useStudioSettings'
 import './DependencyFrames.css'
 
 export type EmailFoundrySurface = 'mobile' | 'desktop'
 
-const FOUNDRY_BASE = '/dependencies/@bttco/email-foundry/1.0.0/'
+/**
+ * Email Foundry is a package of the install's shop brand pack (SHOP_PACK_SCOPE), served same-origin at
+ * /dependencies/@<scope>/email-foundry/<version>/ by the API (api/app/services/shop_pack.py). The pack is
+ * shop content and never lives in this repository.
+ */
+const FOUNDRY_PACKAGE = 'email-foundry'
+const FOUNDRY_VERSION = '1.0.0'
+
+function foundryBase(scope: string): string {
+  return `/dependencies/@${scope}/${FOUNDRY_PACKAGE}/${FOUNDRY_VERSION}/`
+}
+
+/** The pack does not carry Email Foundry, or this install has no pack. */
+class FoundryMissing extends Error {
+  name = 'FoundryMissing'
+}
+
 const FOUNDRY_DOCUMENTS: Record<EmailFoundrySurface, string> = {
   mobile: 'Email%20Foundry%20Mobile.dc.html',
   desktop: 'Email%20Foundry.dc.html',
@@ -21,7 +38,7 @@ function applySurfaceLayout(source: string, surface: EmailFoundrySurface): strin
     .replace(MOBILE_BRAND_MARK, '')
 }
 
-function mountFoundryHost(source: string, adapterSource: string, authToken: string | null, surface: EmailFoundrySurface): string {
+function mountFoundryHost(base: string, source: string, adapterSource: string, authToken: string | null, surface: EmailFoundrySurface): string {
   const classicAdapterSource = adapterSource
     .replace('export function installFoundryAdapter', 'function installFoundryAdapter')
     .replaceAll('</script>', '<\\/script>')
@@ -42,34 +59,41 @@ adapter.refresh().finally(() => {
 </script>`
 
   return applySurfaceLayout(source, surface)
-    .replace(/<head>/i, `<head><base href="${FOUNDRY_BASE}">`)
+    .replace(/<head>/i, `<head><base href="${base}">`)
     .replace('<script src="./support.js"></script>', adapterBoot)
 }
 
 /**
- * Exact host boundary for the locked @bttco/email-foundry dependency.
+ * Exact host boundary for the shop brand pack's locked email-foundry package.
  * The deck remains immutable; this wrapper only supplies its package-relative
  * base URL and official adapter before the design-component runtime boots.
  */
 export default function EmailFoundryFrame({ surface = 'mobile' }: { surface?: EmailFoundrySurface }) {
   const [documentSource, setDocumentSource] = useState<string | null>(null)
   const [error, setError] = useState(false)
+  const [missing, setMissing] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
 
-    Promise.all([
-      fetch(`${FOUNDRY_BASE}${FOUNDRY_DOCUMENTS[surface]}`, { signal: controller.signal }),
-      fetch(`${FOUNDRY_BASE}adapter.js`, { signal: controller.signal }),
-    ])
-      .then(async ([documentResponse, adapterResponse]) => {
+    loadStudioSettings()
+      .then(async ({ shop_pack_scope: scope }) => {
+        if (!scope) throw new FoundryMissing()
+        const base = foundryBase(scope)
+        const [documentResponse, adapterResponse] = await Promise.all([
+          fetch(`${base}${FOUNDRY_DOCUMENTS[surface]}`, { signal: controller.signal }),
+          fetch(`${base}adapter.js`, { signal: controller.signal }),
+        ])
+        if (documentResponse.status === 404 || adapterResponse.status === 404) throw new FoundryMissing()
         if (!documentResponse.ok) throw new Error(`Email Foundry dependency returned ${documentResponse.status}`)
         if (!adapterResponse.ok) throw new Error(`Email Foundry adapter returned ${adapterResponse.status}`)
-        return [await documentResponse.text(), await adapterResponse.text()] as const
+        return [base, await documentResponse.text(), await adapterResponse.text()] as const
       })
-      .then(([source, adapterSource]) => setDocumentSource(mountFoundryHost(source, adapterSource, getToken(), surface)))
+      .then(([base, source, adapterSource]) => setDocumentSource(mountFoundryHost(base, source, adapterSource, getToken(), surface)))
       .catch((caught) => {
-        if ((caught as Error).name !== 'AbortError') setError(true)
+        if (controller.signal.aborted || (caught as Error).name === 'AbortError') return
+        if (caught instanceof FoundryMissing) setMissing(true)
+        else setError(true)
       })
 
     return () => controller.abort()
@@ -77,7 +101,11 @@ export default function EmailFoundryFrame({ surface = 'mobile' }: { surface?: Em
 
   return (
     <section className="ryozan-email-foundry-frame" aria-label="Email Foundry">
-      {error ? (
+      {missing ? (
+        <div className="ryozan-email-foundry-frame__status" role="status">
+          Email Foundry is not set up for this studio.
+        </div>
+      ) : error ? (
         <div className="ryozan-email-foundry-frame__status" role="alert">
           Email Foundry could not be loaded. Close and reopen this panel.
         </div>
