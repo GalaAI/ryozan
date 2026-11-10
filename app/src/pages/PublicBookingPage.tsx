@@ -23,7 +23,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Button, Chip, ChipGroup, MetaList, PageTitle, Panel, SectionLabel, StatusText, TextField, token } from '@ryozan/ui'
+import { Button, Checkbox, Chip, ChipGroup, MetaList, PageTitle, Panel, SectionLabel, StatusText, TextArea, TextField, token } from '@ryozan/ui'
 import StudioSiteShell from '../components/studio-site/StudioSiteShell'
 import { useStudioSettings } from '../hooks/useStudioSettings'
 import {
@@ -141,13 +141,10 @@ function DraftSummary({ draft }: { draft: BookingDraft }) {
   return <MetaList rows={rows} />
 }
 
-/**
- * A form or load error. StatusText is a single-line status by design; an error
- * sentence has to wrap inside the panel, so whiteSpace is the one override.
- */
+/** A form or load error: a wrapping StatusText, so the sentence stays inside the panel. */
 function Problem({ message }: { message: string | null }) {
   if (!message) return null
-  return <StatusText tone="danger" role="alert" style={{ whiteSpace: 'normal' }}>{message}</StatusText>
+  return <StatusText tone="danger" role="alert" wrap>{message}</StatusText>
 }
 
 /* ── Step 1: artist ─────────────────────────────────────────────────── */
@@ -312,7 +309,7 @@ export function SeshStepView({ settings, draft, problem, onChange, onContinue }:
     >
       <form className="form-grid" onSubmit={(event) => { event.preventDefault(); onContinue() }} noValidate>
         <div className="full-width">
-          <TextField id="booking-description" label="The idea" value={draft.description} onChange={(e) => onChange({ description: e.currentTarget.value })} required />
+          <TextArea id="booking-description" label="The idea" value={draft.description} onChange={(e) => onChange({ description: e.currentTarget.value })} required />
         </div>
         <TextField id="booking-placement" label="Placement" value={draft.placement} onChange={(e) => onChange({ placement: e.currentTarget.value })} />
         <TextField id="booking-size" label="Size" value={draft.size} onChange={(e) => onChange({ size: e.currentTarget.value })} />
@@ -557,8 +554,14 @@ function ContactForm({ fields, onChange, sending, problem, submitLabel, onSubmit
       <TextField id="contact-phone" label="Phone (optional)" type="tel" autoComplete="tel" value={fields.phone} onChange={(e) => onChange({ phone: e.currentTarget.value })} />
       {fields.phone.trim() && (
         <div className="full-width calendar-purpose-copy">
-          <Chip selected={fields.smsOptIn} onClick={() => onChange({ smsOptIn: !fields.smsOptIn })}>Text me updates about this request.</Chip>
-          <p>Message and data rates may apply; reply STOP to opt out. <a href="/sms-terms">SMS terms</a> · <a href="/privacy">Privacy</a></p>
+          <Checkbox
+            id="contact-sms-opt-in"
+            label="Text me updates about this request."
+            checked={fields.smsOptIn}
+            onChange={(e) => onChange({ smsOptIn: e.currentTarget.checked })}
+            aria-describedby="contact-sms-terms"
+          />
+          <p id="contact-sms-terms">Message and data rates may apply; reply STOP to opt out. <a href="/sms-terms">SMS terms</a> · <a href="/privacy">Privacy</a></p>
         </div>
       )}
       <div className="full-width"><Problem message={problem} /></div>
@@ -623,7 +626,7 @@ function AskView({ settings, roster, sending, problem, asked, draft, onSubmit }:
           </ChipGroup>
         )}
         <div className="full-width">
-          <TextField id="ask-message" label="Your question" value={fields.message} onChange={(e) => setFields({ ...fields, message: e.currentTarget.value })} required />
+          <TextArea id="ask-message" label="Your question" value={fields.message} onChange={(e) => setFields({ ...fields, message: e.currentTarget.value })} required />
         </div>
       </ContactForm>
     </BookingFrame>

@@ -177,6 +177,7 @@ test('a second booking after a sent one starts a fresh form with a new idempoten
   assert.match(artistHtml, /disabled=""[^>]*>Continue/)
   const seshHtml = site.seshStep({ settings, draft: { ...next.draft, artistSlug: 'test-artist', artistName: 'Test Artist' } })
   assert.doesNotMatch(seshHtml, /synthetic line drawing|forearm|2030-01-02/i)
+  assert.match(seshHtml, /<textarea[^>]*id="booking-description"/, 'the idea is a multi-line @ryozan/ui TextArea, so line breaks survive')
 
   // Walking the steps again sends a different idempotency id.
   const second = flow.bookingPayload({ ...filled, inquiryId: next.draft.inquiryId })
