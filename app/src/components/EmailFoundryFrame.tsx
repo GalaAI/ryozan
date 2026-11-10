@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { Button, StatusText } from '@ryozan/ui'
 import { getToken } from '../lib/api'
-import { loadStudioSettings } from '../hooks/useStudioSettings'
+import { loadStudioSettingsResult } from '../hooks/useStudioSettings'
+import { shopPackScopeState } from '../lib/studio-settings'
 import './DependencyFrames.css'
 
 export type EmailFoundrySurface = 'mobile' | 'desktop'
@@ -20,6 +22,11 @@ function foundryBase(scope: string): string {
 /** The pack does not carry Email Foundry, or this install has no pack. */
 class FoundryMissing extends Error {
   name = 'FoundryMissing'
+}
+
+/** The studio settings read failed, so whether this install has a pack is unknown. */
+class FoundrySettingsUnavailable extends Error {
+  name = 'FoundrySettingsUnavailable'
 }
 
 const FOUNDRY_DOCUMENTS: Record<EmailFoundrySurface, string> = {
@@ -72,14 +79,17 @@ export default function EmailFoundryFrame({ surface = 'mobile' }: { surface?: Em
   const [documentSource, setDocumentSource] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const [missing, setMissing] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
 
-    loadStudioSettings()
-      .then(async ({ shop_pack_scope: scope }) => {
-        if (!scope) throw new FoundryMissing()
-        const base = foundryBase(scope)
+    loadStudioSettingsResult()
+      .then(async (result) => {
+        const pack = shopPackScopeState(result)
+        if (pack.state === 'error') throw new FoundrySettingsUnavailable()
+        if (pack.state === 'none') throw new FoundryMissing()
+        const base = foundryBase(pack.scope)
         const [documentResponse, adapterResponse] = await Promise.all([
           fetch(`${base}${FOUNDRY_DOCUMENTS[surface]}`, { signal: controller.signal }),
           fetch(`${base}adapter.js`, { signal: controller.signal }),
@@ -97,18 +107,28 @@ export default function EmailFoundryFrame({ surface = 'mobile' }: { surface?: Em
       })
 
     return () => controller.abort()
-  }, [surface])
+  }, [surface, attempt])
+
+  const retry = () => {
+    setError(false)
+    setMissing(false)
+    setDocumentSource(null)
+    setAttempt((value) => value + 1)
+  }
 
   return (
     <section className="ryozan-email-foundry-frame" aria-label="Email Foundry">
       {missing ? (
-        <div className="ryozan-email-foundry-frame__status" role="status">
+        <StatusText role="status" tone="neutral" dot={false}>
           Email Foundry is not set up for this studio.
-        </div>
+        </StatusText>
       ) : error ? (
-        <div className="ryozan-email-foundry-frame__status" role="alert">
-          Email Foundry could not be loaded. Close and reopen this panel.
-        </div>
+        <>
+          <StatusText role="alert" tone="danger">
+            Email Foundry could not be loaded.
+          </StatusText>
+          <Button variant="outline" size="sm" onClick={retry}>Try again</Button>
+        </>
       ) : documentSource ? (
         <iframe
           className="ryozan-email-foundry-frame__iframe"
@@ -117,7 +137,7 @@ export default function EmailFoundryFrame({ surface = 'mobile' }: { surface?: Em
           sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts"
         />
       ) : (
-        <div className="ryozan-email-foundry-frame__status" role="status">Loading Email Foundry</div>
+        <StatusText role="status" tone="neutral" dot={false}>Loading Email Foundry</StatusText>
       )}
     </section>
   )
