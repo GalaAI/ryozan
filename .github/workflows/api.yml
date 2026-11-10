@@ -1,9 +1,8 @@
 name: Backend CI
 
+# Called by gate.yml, which is the required check.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_call:
   workflow_dispatch: {}
 
 permissions:

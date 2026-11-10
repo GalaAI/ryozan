@@ -1,0 +1,5 @@
+{
+  "regenerate": [
+    { "files": ["app/package-lock.json"], "run": "cd app && npm install --package-lock-only --ignore-scripts" }
+  ]
+}

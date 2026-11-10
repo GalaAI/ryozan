@@ -1,0 +1,37 @@
+# Ryozan's required check. SolaTree grafts a PR once this passes, then runs it again
+# on main. It has no path filter, because a required check that never starts
+# leaves the PR waiting forever.
+name: gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    uses: ./.github/workflows/api.yml
+  frontend:
+    uses: ./.github/workflows/app.yml
+  gate:
+    name: gate
+    if: always()
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          BACKEND: ${{ needs.backend.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+        run: |
+          echo "backend: $BACKEND, frontend: $FRONTEND"
+          test "$BACKEND" = success
+          test "$FRONTEND" = success

@@ -1,0 +1,62 @@
+# Consumes SolaTree as a release of GalaAI/solatree, never as copied source.
+# Pinned to an exact release, as Ark is. The old moving v0 tag stopped at an early
+# release. Each job gets only the permissions it needs.
+name: solatree
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+  workflow_run:
+    workflows: [gate]
+    types: [completed]
+  schedule:
+    - cron: "11,41 * * * *"
+
+permissions: {}
+
+jobs:
+  lanes:
+    if: github.event_name == 'pull_request' && github.event.action != 'labeled' && github.event.action != 'unlabeled'
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: GalaAI/solatree/.github/workflows/lanes.yml@93246bc44f0bdf324ea411fa6705290c2dc5cde4
+  graft:
+    if: github.event_name == 'pull_request'
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    uses: GalaAI/solatree/.github/workflows/graft.yml@93246bc44f0bdf324ea411fa6705290c2dc5cde4
+  tend:
+    if: github.event_name == 'workflow_run'
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    uses: GalaAI/solatree/.github/workflows/tend.yml@93246bc44f0bdf324ea411fa6705290c2dc5cde4
+  # Cultivate, then Propagate, then Graft (operator, 2026-11-06). Once every check
+  # on its head passed, a draft SolaTree or the operator opened becomes ready with
+  # solatree:propagate, and on a later run a propagated PR gets solatree:graft and
+  # auto-merge with squash.
+  promote:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_run'
+    runs-on: ${{ vars.SOLATREE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    concurrency:
+      group: solatree-promote
+      cancel-in-progress: false
+    permissions:
+      actions: write
+      checks: read
+      # GitHub refuses to mark a draft ready, arm auto-merge or merge without contents: write.
+      contents: write
+      issues: write
+      pull-requests: write
+      statuses: read
+    steps:
+      - uses: GalaAI/solatree/actions/orchestra@93246bc44f0bdf324ea411fa6705290c2dc5cde4
+        with:
+          job: promote
+          github-token: ${{ github.token }}
+          trusted-authors: ${{ vars.SOLATREE_TRUSTED_AUTHORS || 'justinwalkertattoo' }}
