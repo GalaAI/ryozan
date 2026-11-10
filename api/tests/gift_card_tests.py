@@ -106,7 +106,7 @@ class GiftCardCheckoutTests(unittest.IsolatedAsyncioTestCase):
         stripe_client = SimpleNamespace(
             v1=SimpleNamespace(checkout=SimpleNamespace(sessions=SimpleNamespace(create=create)))
         )
-        settings = SimpleNamespace(FRONTEND_URL="https://ryozan.app")
+        settings = SimpleNamespace(FRONTEND_URL="https://ryozan.app", GIFT_CARD_CODE_PREFIX="GC")
         with (
             patch("app.api.v1.endpoints.gift_cards.get_stripe_client", return_value=stripe_client),
             patch("app.api.v1.endpoints.gift_cards.get_settings", return_value=settings),

@@ -88,7 +88,8 @@ class GiftCardRedeemResponse(BaseModel):
 
 def _new_code() -> str:
     token = secrets.token_hex(6).upper()
-    return f"BT-{token[:4]}-{token[4:8]}-{token[8:]}"
+    prefix = get_settings().GIFT_CARD_CODE_PREFIX
+    return f"{prefix}-{token[:4]}-{token[4:8]}-{token[8:]}"
 
 
 def _email_hint(value: str) -> str:
