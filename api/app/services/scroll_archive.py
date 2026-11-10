@@ -32,6 +32,7 @@ import hashlib
 import json
 import logging
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 from html import escape
 from typing import TYPE_CHECKING
@@ -150,6 +151,8 @@ def file_owner_archive(
     payload = _archive_data(artist, fields, assets, submission_id, storage_prefix, submitted_at, pdf_url)
     for founder in founders:
         instance = DocumentInstance(
+            # Set here so submit_scroll can record exactly which records it created for this submission.
+            id=uuid.uuid4(),
             user_id=founder.id,
             category=OWNER_ARCHIVE_CATEGORY,
             title=f"Artist Scroll: {artist.name}",
@@ -310,13 +313,16 @@ def queue_owner_emails(
     submission_id: str,
     *,
     unstored_pdf: tuple[bytes, str] | None = None,
+    document_ids: list[uuid.UUID | str] | None = None,
 ) -> int:
     """Persist owner email obligations in the archive transaction. Link only, never an attachment.
 
     `unstored_pdf` is (bytes, target filename) when the scroll PDF was generated but storing it
     failed. Those bytes are kept on the row only so retry_unstored_scroll_pdfs can store them later;
-    they are never attached to the email.
+    they are never attached to the email. `document_ids` are then the exact records the server created
+    for this submission (with the artist's id): the retry writes the PDF URL onto those and no others.
     """
+    held_ids = json.dumps([str(i) for i in document_ids]) if unstored_pdf and document_ids is not None else None
     html = build_owner_archive_email_html(
         artist.name or "An artist",
         submitted_at,
@@ -341,6 +347,8 @@ def queue_owner_emails(
                 html_body=html,
                 attachment_filename=unstored_pdf[1] if unstored_pdf else None,
                 attachment_content=unstored_pdf[0] if unstored_pdf else None,
+                document_ids=held_ids,
+                artist_user_id=str(artist.id) if unstored_pdf else None,
                 status="queued",
                 attempts=0,
                 next_attempt_at=submitted_at,
@@ -422,15 +430,17 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
 def _archive_pdf_confirmed_sql(outbox_alias: str) -> str:
     """SQL condition: the outbox row's submission has a stored archive PDF per the DB record.
 
-    Confirmed means an owner archive copy or the artist's scroll record for the same submission_id
-    carries a non-empty http(s) file_url or scroll_pdf_url. Nothing is fetched from R2. When PDF
-    generation succeeded but storing it failed, the queued email's bytes may be the only copy, so
-    such rows are never confirmed.
+    Confirmed means an owner archive copy for the same submission_id carries a non-empty http(s)
+    file_url or scroll_pdf_url. Only the owner archive category counts: it is created only by
+    submit_scroll (or a founder), while other categories, the artist scroll included, could once be
+    created through the generic document routes with any submission id written into data_json.
+    Nothing is fetched from R2. When PDF generation succeeded but storing it failed, the queued
+    email's bytes may be the only copy, so such rows are never confirmed.
     """
     documents = DocumentInstance.__tablename__
     return (
         f"EXISTS (SELECT 1 FROM {documents} d "
-        f"WHERE d.category IN ('scroll', '{OWNER_ARCHIVE_CATEGORY}') "
+        f"WHERE d.category = '{OWNER_ARCHIVE_CATEGORY}' "
         f"AND position(('\"submission_id\": \"' || {outbox_alias}.submission_id || '\"') IN coalesce(d.data_json, '')) > 0 "
         "AND (d.file_url ~* '^https?://[^[:space:]]+' "
         "OR coalesce(d.data_json, '') ~* '\"scroll_pdf_url\": \"https?://[^\"[:space:]]+'))"
@@ -504,6 +514,119 @@ def _set_scroll_pdf_reference(doc: DocumentInstance, url: str) -> None:
     doc.data_json = json.dumps(data)
 
 
+ARCHIVE_RECORD_CATEGORIES = (OWNER_ARCHIVE_CATEGORY, "scroll")
+
+
+def _safe_segment(value: object) -> bool:
+    return isinstance(value, str) and bool(value) and all(c.isalnum() or c in "-_" for c in value)
+
+
+def _parse_ids(raw: str | None) -> list[uuid.UUID] | None:
+    """The record ids an outbox row names, or None for a row queued before ids were recorded."""
+    if raw is None:
+        return None
+    try:
+        values = json.loads(raw)
+    except (TypeError, ValueError):
+        return []
+    ids = []
+    for value in values if isinstance(values, list) else []:
+        with contextlib.suppress(TypeError, ValueError, AttributeError):
+            ids.append(uuid.UUID(str(value)))
+    return ids
+
+
+def _artist_from_folder(folder_path: object) -> str | None:
+    """The artist id of a server-built submission folder scrolls[-public]/<artist>/<submission>."""
+    if not isinstance(folder_path, str):
+        return None
+    parts = folder_path.strip("/").split("/")
+    if len(parts) >= 3 and parts[0] in ("scrolls", "scrolls-public") and _safe_segment(parts[1]):
+        return parts[1]
+    return None
+
+
+async def _archive_records(
+    db: AsyncSession,
+    submission_id: str,
+    *,
+    document_ids: list[uuid.UUID] | None = None,
+    artist_user_id: str | None = None,
+) -> tuple[list[tuple[DocumentInstance, dict]], int]:
+    """
+    The records the server itself created for one submission, with their parsed data, and how many
+    candidate records were skipped because they could not be proven to be the submission's own.
+
+    data_json is client-writable, so a submission id inside it proves nothing. With `document_ids`
+    (recorded server-side at submit) only those records qualify. Without them (rows queued before ids
+    were recorded) a record qualifies only through a trusted relationship: an owner archive record
+    (created only by submit_scroll or a founder), or the artist scroll whose owner is the artist the
+    server recorded for the submission (`artist_user_id`, or the trusted archive records' artist).
+    Anything else is skipped and counted, never guessed.
+    """
+    if document_ids is not None:
+        if not document_ids:
+            return [], 0
+        stmt = select(DocumentInstance).where(DocumentInstance.id.in_(document_ids))
+    else:
+        stmt = select(DocumentInstance).where(
+            DocumentInstance.category.in_(ARCHIVE_RECORD_CATEGORIES),
+            DocumentInstance.data_json.contains(f'"submission_id": {json.dumps(submission_id)}', autoescape=True),
+        )
+    candidates = []
+    for inst in (await db.execute(stmt)).scalars().all():
+        if inst.category not in ARCHIVE_RECORD_CATEGORIES:
+            continue
+        try:
+            data = json.loads(inst.data_json or "{}")
+        except (TypeError, ValueError):
+            continue
+        if isinstance(data, dict) and data.get("submission_id") == submission_id:
+            candidates.append((inst, data))
+
+    if document_ids is not None:
+        wanted = {str(i) for i in document_ids}
+        trusted = [(inst, data) for inst, data in candidates if str(inst.id) in wanted]
+        return trusted, len(candidates) - len(trusted)
+
+    archives = [(inst, data) for inst, data in candidates if inst.category == OWNER_ARCHIVE_CATEGORY]
+    artists = {data["artist_user_id"] for _inst, data in archives if _safe_segment(data.get("artist_user_id"))}
+    if _safe_segment(artist_user_id):
+        artists.add(artist_user_id)
+    trusted = list(archives)
+    skipped = 0
+    for inst, data in candidates:
+        if inst.category != "scroll":
+            continue
+        if inst.user_id is not None and str(inst.user_id) in artists:
+            trusted.append((inst, data))
+        else:
+            skipped += 1
+    return trusted, skipped
+
+
+def _trusted_prefix(records: list[tuple[DocumentInstance, dict]], submission_id: str, artist: str | None) -> str | None:
+    """
+    The private folder a held PDF is stored under, taken from trusted records only.
+
+    The submission's own storage_prefix when it is a private scroll folder (an owner archive record's
+    first, being server-created), else scrolls/<artist>/<submission>. When the artist is known the
+    folder must be that artist's. None when nothing trusted names one.
+    """
+    ordered = sorted(records, key=lambda item: item[0].category != OWNER_ARCHIVE_CATEGORY)
+    for _inst, data in ordered:
+        prefix = data.get("storage_prefix")
+        if not (isinstance(prefix, str) and prefix.startswith("scrolls/") and ".." not in prefix.split("/")):
+            continue
+        folder = prefix.strip("/")
+        owner = _artist_from_folder(folder)
+        if owner and (artist is None or owner == artist):
+            return folder
+    if _safe_segment(artist) and _safe_segment(submission_id):
+        return f"scrolls/{artist}/{submission_id}"
+    return None
+
+
 async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple[int, int, int]:
     """Store scroll PDFs whose upload failed, from the bytes kept for that purpose. Idempotent.
 
@@ -511,9 +634,11 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     (never attached to an email). For each such submission this uploads the bytes under the
     submission's private "scrolls/" storage prefix (every generated PDF prints the artist signature,
     so none is ever stored under "scrolls-public/"; the ".noid" name is kept, a legacy row of unknown
-    content gets the ".id" name), records the URL on the archive copies and the artist's scroll
-    record, then clears the bytes. A failed upload keeps the bytes for the next run.
-    Returns (pending, stored, failed). Logs counts only.
+    content gets the ".id" name), records the URL on the records the server created for that
+    submission (the ids recorded on the row at submit; for older rows only trusted relationships, see
+    _archive_records), then clears the bytes. Records that cannot be proven the submission's own are
+    skipped and counted. With no trusted record at all, or a failed upload, the bytes are kept for the
+    next run. Returns (pending, stored, failed). Logs counts only.
     """
     table = ScrollOwnerEmailOutbox.__tablename__
     rows = (
@@ -536,29 +661,27 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     if not by_submission:
         return 0, 0, 0
 
-    stored = failed = 0
+    stored = failed = untrusted = 0
     for submission_id, group in list(by_submission.items())[:limit]:
-        docs = (
-            (
-                await db.execute(
-                    select(DocumentInstance).where(
-                        DocumentInstance.category.in_(("scroll", OWNER_ARCHIVE_CATEGORY)),
-                        DocumentInstance.data_json.contains(f'"submission_id": "{submission_id}"', autoescape=True),
-                    )
-                )
-            )
-            .scalars()
-            .all()
+        recorded = next((row for row in group if row.document_ids is not None), None)
+        artist = next((row.artist_user_id for row in group if _safe_segment(row.artist_user_id)), None)
+        records, skipped = await _archive_records(
+            db,
+            submission_id,
+            document_ids=_parse_ids(recorded.document_ids) if recorded else None,
+            artist_user_id=artist,
         )
-        prefix = None
-        for doc in docs:
-            try:
-                candidate = json.loads(doc.data_json or "{}").get("storage_prefix")
-            except (TypeError, ValueError, AttributeError):
-                candidate = None
-            if isinstance(candidate, str) and candidate.startswith("scrolls/") and ".." not in candidate.split("/"):
-                prefix = candidate
-                break
+        untrusted += skipped
+        if artist is None:
+            artist = next(
+                (
+                    d["artist_user_id"]
+                    for i, d in records
+                    if i.category == OWNER_ARCHIVE_CATEGORY and _safe_segment(d.get("artist_user_id"))
+                ),
+                None,
+            )
+        prefix = _trusted_prefix(records, submission_id, artist) if records else None
         if not prefix:
             failed += 1
             continue
@@ -577,7 +700,7 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
         if not url:
             failed += 1
             continue
-        for doc in docs:
+        for doc, _data in records:
             _set_scroll_pdf_reference(doc, url)
         for row in group:
             row.attachment_content = None
@@ -589,6 +712,7 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     logger.info("Scroll PDFs waiting to be stored: %d", len(by_submission))
     logger.info("Scroll PDFs stored on retry: %d", stored)
     logger.info("Scroll PDF store retries that failed (bytes kept): %d", failed)
+    logger.info("Scroll PDF records skipped as unproven: %d", untrusted)
     return len(by_submission), stored, failed
 
 
@@ -631,11 +755,16 @@ def _replace_pdf_ref(value: object, old_key: str, new_url: str) -> object:
     return value
 
 
-async def _remaining_references(db: AsyncSession, object_key: str) -> int:
-    """How many stored records still mention `object_key`, in any document or Gala memory."""
+async def _remaining_references(db: AsyncSession, object_key: str, ignore_ids: frozenset = frozenset()) -> int:
+    """
+    How many stored records still mention `object_key`, in any document or Gala memory.
+
+    `ignore_ids` are artist scroll records proven not to belong to the PDF's artist; their reference never
+    keeps a signature-bearing public object alive.
+    """
     from app.models.ai_memory import AIMemory
 
-    documents = await db.execute(
+    query = (
         select(func.count())
         .select_from(DocumentInstance)
         .where(
@@ -646,6 +775,9 @@ async def _remaining_references(db: AsyncSession, object_key: str) -> int:
             )
         )
     )
+    if ignore_ids:
+        query = query.where(DocumentInstance.id.not_in(list(ignore_ids)))
+    documents = await db.execute(query)
     memories = await db.execute(
         select(func.count()).select_from(AIMemory).where(AIMemory.value.contains(object_key, autoescape=True))
     )
@@ -660,12 +792,21 @@ async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
     details, so none may stay public. For each such PDF referenced by an artist scroll or owner archive
     record: read it, write the same bytes to the private twin key (same folder name and file name, so
     the .id/.noid marker is kept), read the copy back and compare, then point every record at the private
-    copy and commit. Only after that commit, and only when no stored record still mentions the old key,
-    is the public object deleted; otherwise it is kept and counted. On any storage failure the record
+    copy and commit. Only records the server created for the PDF are repointed (an owner archive record,
+    or the artist scroll owned by the artist whose folder holds it); any other record naming it is skipped
+    and counted, and never keeps the public object alive. Only after that commit, and only when no other
+    stored record still mentions the old key, is the public object deleted; otherwise it is kept and counted. On any storage failure the record
     keeps its original reference. Idempotent: a moved record no longer references a public PDF.
     Logs counts only.
     """
-    counts = {"pdfs": 0, "moved": 0, "failed": 0, "public deleted": 0, "public kept": 0}
+    counts = {
+        "pdfs": 0,
+        "moved": 0,
+        "failed": 0,
+        "public deleted": 0,
+        "public kept": 0,
+        "unproven records skipped": 0,
+    }
     result = await db.execute(
         select(DocumentInstance)
         .where(
@@ -683,15 +824,25 @@ async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
     )
     by_key: dict[str, list[DocumentInstance]] = {}
     old_refs: dict[str, str] = {}
+    foreign: dict[str, set] = {}
     for inst in result.scalars().all():
         found: dict[str, str] = {}
         _collect_public_pdf_refs(inst.file_url, found)
         with contextlib.suppress(TypeError, ValueError):
             _collect_public_pdf_refs(json.loads(inst.data_json or "null"), found)
         for key, ref in found.items():
-            by_key.setdefault(key, []).append(inst)
             old_refs.setdefault(key, ref)
-    counts["pdfs"] = len(by_key)
+            # Only records the server created for this PDF are repointed at the private copy: an owner
+            # archive record, or the artist scroll owned by the artist whose server-built folder holds
+            # the PDF. data_json is client-writable, so any other record naming the PDF is skipped.
+            if inst.category == OWNER_ARCHIVE_CATEGORY or (
+                inst.user_id is not None and str(inst.user_id) == _artist_from_folder(key)
+            ):
+                by_key.setdefault(key, []).append(inst)
+            else:
+                foreign.setdefault(key, set()).add(inst.id)
+                counts["unproven records skipped"] += 1
+    counts["pdfs"] = len(old_refs)
 
     moved: list[str] = []
     for old_key, records in by_key.items():
@@ -724,7 +875,7 @@ async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
 
     for old_key in moved:
         deleted = False
-        if await _remaining_references(db, old_key) == 0:
+        if await _remaining_references(db, old_key, frozenset(foreign.get(old_key, ()))) == 0:
             deleted = await storage.delete_file(old_refs[old_key], allowed_prefix=storage.SCROLL_PUBLIC_ROOT)
         counts["public deleted" if deleted else "public kept"] += 1
 

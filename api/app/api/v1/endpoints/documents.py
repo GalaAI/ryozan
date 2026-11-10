@@ -1166,6 +1166,8 @@ async def submit_scroll(
         fields["scroll_pdf_url"] = scroll_pdf_url
 
     instance = DocumentInstance(
+        # Set here so a held PDF can name exactly the records this submission created.
+        id=uuid.uuid4(),
         user_id=current_user.id,
         category="scroll",
         title=f"Artist Scroll — {current_user.name}",
@@ -1209,6 +1211,8 @@ async def submit_scroll(
             submission_id,
             # Storing the PDF failed: keep its bytes in the DB (never attached) so it can be retried.
             unstored_pdf=(pdf_bytes, pdf_filename) if pdf_bytes and pdf_filename and not scroll_pdf_url else None,
+            # The retry records the stored URL on exactly these server-created records.
+            document_ids=[instance.id, *(row.id for row in archive_rows)],
         )
     except Exception:
         logger.error(

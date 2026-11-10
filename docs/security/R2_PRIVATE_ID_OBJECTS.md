@@ -47,7 +47,7 @@ twin key (same folder and file name), read the copy back and compare SHA-256, re
 artist scroll and owner archive record, commit, and only then delete the public object, and only when no
 document or Gala memory still mentions it. Any storage failure keeps the original reference and the
 public object ("failed"); the next boot tries again. It logs one line of counts (pdfs, moved, failed,
-public deleted, public kept) and nothing else. Idempotent: a moved record no longer references a
+public deleted, public kept, unproven records skipped) and nothing else. Idempotent: a moved record no longer references a
 public PDF. A boot step
 (`scroll_archive.count_legacy_scroll_references`) counts document rows that still reference
 `scrolls/` objects and logs only that number; it changes nothing.
@@ -114,14 +114,30 @@ The scroll PDF's bytes are kept in the database only when storing it fails. The 
 holds them (never attached), and a retry (`scroll_archive.retry_unstored_scroll_pdfs`, at boot and on
 every outbox loop) uploads them under the submission's private `scrolls/` prefix
 (`artist-scroll.id.pdf`, or `artist-scroll.noid.pdf`; a legacy row of unknown content gets the `.id`
-name; never under `scrolls-public/`), records the URL on the owner archive copies and the artist's scroll record, and
-clears the bytes. A failed retry keeps them. It logs only counts (waiting, stored, failed).
+name; never under `scrolls-public/`), records the URL on the records the server created for that
+submission, and clears the bytes. A failed retry keeps them. It logs only counts (waiting, stored,
+failed, unproven records skipped).
+
+**Scroll PDF recovery trusts no client-writable field.** `data_json` could once be written by any
+caller, so a submission id inside it proves nothing. `submit_scroll` records the exact ids of the
+records it created (the artist scroll and every owner archive copy) and the artist id on the outbox
+rows that hold the bytes (`ryozan_scroll_owner_email_outbox.document_ids`, `artist_user_id`, Alembic
+revision `20261110_scroll_outbox_targets`), and the retry writes the URL onto those records only. For
+rows queued before that, a record qualifies only through a trusted relationship: an owner archive
+record (created only by `submit_scroll` or a founder), or the artist scroll owned by the artist the
+archive record names. The storage folder comes from those trusted records only and must be that
+artist's `scrolls/<artist>/...` folder. Anything else is skipped and counted, never guessed; with no
+trusted record at all the bytes stay for a later run. The boot move repoints only the same trusted
+records (an owner archive record, or the artist scroll owned by the artist whose
+`scrolls-public/<artist>/<submission>` folder holds the PDF), and a skipped record never keeps a
+public PDF alive.
 
 Owner emails queued before this change kept the PDF bytes in the outbox table. A boot step
 (`scroll_archive.clear_sent_owner_email_attachments`, run from `main.py`'s startup seeds) clears
 `attachment_content` on finished rows (`sent`, or `exhausted` past the retry limit) only when the
-submission's archive PDF is confirmed stored per the DB record: an owner archive copy or the artist's
-scroll record for the same `submission_id` with a non-empty http(s) `file_url` or `scroll_pdf_url`.
+submission's archive PDF is confirmed stored per the DB record: an owner archive copy for the same
+`submission_id` with a non-empty http(s) `file_url` or `scroll_pdf_url`. Only the owner archive
+category counts as proof; an artist scroll record never does.
 Nothing is fetched from R2. When generating the PDF succeeded but storing it failed, the email's bytes
 may be the only copy, so those rows are left untouched. Pending rows are never touched by the step. It
 logs only three counts (found, cleared, kept) and is idempotent: the next boot clears 0.

@@ -3,8 +3,10 @@
 Owner emails queued before the link-only rule stored the scroll PDF, which can embed the artist's
 government ID. The boot step clears those bytes from finished rows (sent, or exhausted past the retry
 limit) only when the submission's archive PDF is confirmed stored per the DB record; otherwise the
-bytes may be the only copy and stay. Pending rows are never touched. It is idempotent and logs counts
-only. A second boot step counts document rows that still reference legacy scrolls/ objects.
+bytes may be the only copy and stay. Only an owner archive record confirms: any caller could once
+create an artist scroll record naming another submission. Pending rows are never touched. It is
+idempotent and logs counts only. A second boot step counts document rows that still reference legacy
+scrolls/ objects.
 
 Runs in an isolated schema of RYOZAN_TEST_DATABASE_URL with synthetic rows only.
 """
@@ -42,7 +44,7 @@ ASSETS = "https://assets.example.test"
 
 # name: (status, has bytes, archive record for the submission)
 #   "archive": owner archive copy with a stored file_url
-#   "scroll": the artist's scroll record with scroll_pdf_url in data_json only
+#   "scroll": an artist scroll record with scroll_pdf_url in data_json only (never confirms: client-creatable)
 #   "missing": an archive copy whose PDF was generated but never stored (file_url and scroll_pdf_url empty)
 #   None: no document row at all
 ROWS = {
@@ -176,13 +178,15 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_only_finished_rows_with_a_stored_archive_pdf_are_cleared(self):
         first, first_logs = await self._run(clear_sent_owner_email_attachments)
-        # Finished rows holding bytes: 4 sent + 2 exhausted. Cleared: the 3 confirmed (2 sent, 1 exhausted).
-        self.assertEqual(first, (6, 3, 3))
+        # Finished rows holding bytes: 4 sent + 2 exhausted. Cleared: the 2 confirmed by an owner archive
+        # record (1 sent, 1 exhausted). An artist scroll record alone never confirms.
+        self.assertEqual(first, (6, 2, 4))
 
         after = await self._bytes()
-        for name in ("sent_stored", "sent_stored_via_scroll", "exhausted_stored", "sent_empty"):
+        for name in ("sent_stored", "exhausted_stored", "sent_empty"):
             self.assertIsNone(after[name], name)
         for name in (
+            "sent_stored_via_scroll",
             "sent_missing",
             "sent_no_record",
             "exhausted_missing",
@@ -193,23 +197,23 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(after[name], SYNTHETIC_PDF, name)
 
         second, second_logs = await self._run(clear_sent_owner_email_attachments)
-        self.assertEqual(second, (3, 0, 3))
+        self.assertEqual(second, (4, 0, 4))
         self.assertEqual(await self._bytes(), after)
 
         self.assertEqual(
             first_logs,
             [
                 "Finished owner emails still holding PDF bytes: 6",
-                "Cleared PDF bytes from finished owner emails with a stored archive PDF: 3",
-                "Kept PDF bytes on finished owner emails with no confirmed archive PDF: 3",
+                "Cleared PDF bytes from finished owner emails with a stored archive PDF: 2",
+                "Kept PDF bytes on finished owner emails with no confirmed archive PDF: 4",
             ],
         )
         self.assertEqual(
             second_logs,
             [
-                "Finished owner emails still holding PDF bytes: 3",
+                "Finished owner emails still holding PDF bytes: 4",
                 "Cleared PDF bytes from finished owner emails with a stored archive PDF: 0",
-                "Kept PDF bytes on finished owner emails with no confirmed archive PDF: 3",
+                "Kept PDF bytes on finished owner emails with no confirmed archive PDF: 4",
             ],
         )
         self._assert_counts_only(first_logs + second_logs)
@@ -233,11 +237,12 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
             with self.assertLogs("ryozan.scroll_archive", level=logging.INFO) as captured:
                 first = await _retry()
             # Unconfirmed rows with bytes: sent_missing (stored now), exhausted_missing (upload fails),
-            # sent_no_record (no archive record, so no storage prefix).
-            self.assertEqual(first, (3, 1, 2))
+            # sent_no_record (no archive record, so no storage prefix), sent_stored_via_scroll (only an
+            # artist scroll record that cannot be proven the submission's own: skipped, bytes kept).
+            self.assertEqual(first, (4, 1, 3))
             with self.assertLogs("ryozan.scroll_archive", level=logging.INFO) as again:
                 second = await _retry()
-            self.assertEqual(second, (2, 0, 2))
+            self.assertEqual(second, (3, 0, 3))
 
         # Stored under the private prefix with the ID marker name (content unknown, so private).
         self.assertEqual(uploaded, [(f"scrolls/artist-1/{succeed_for}", "artist-scroll.id.pdf")])
@@ -245,6 +250,7 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(after["sent_missing"])
         self.assertEqual(after["exhausted_missing"], SYNTHETIC_PDF)
         self.assertEqual(after["sent_no_record"], SYNTHETIC_PDF)
+        self.assertEqual(after["sent_stored_via_scroll"], SYNTHETIC_PDF)
         self.assertEqual(after["queued_stored"], SYNTHETIC_PDF)  # confirmed archive: not a retry case
 
         stored_url = f"{ASSETS}/scrolls/artist-1/{succeed_for}/artist-scroll.id.pdf"
@@ -258,19 +264,20 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
 
         messages = [r.getMessage() for r in captured.records + again.records]
         self.assertEqual(
-            messages[:3],
+            messages[:4],
             [
-                "Scroll PDFs waiting to be stored: 3",
+                "Scroll PDFs waiting to be stored: 4",
                 "Scroll PDFs stored on retry: 1",
-                "Scroll PDF store retries that failed (bytes kept): 2",
+                "Scroll PDF store retries that failed (bytes kept): 3",
+                "Scroll PDF records skipped as unproven: 1",
             ],
         )
         self._assert_counts_only(messages)
 
-        # The guarded clear step afterwards: finished rows with bytes are the 3 confirmed ones from
-        # setup plus the 2 still unstored; the 3 confirmed are cleared, the 2 unstored kept.
+        # The guarded clear step afterwards: finished rows with bytes are the 2 confirmed ones from
+        # setup plus the 3 still unstored; the 2 confirmed are cleared, the 3 unstored kept.
         (found, cleared, kept), _logs = await self._run(clear_sent_owner_email_attachments)
-        self.assertEqual((found, cleared, kept), (5, 3, 2))
+        self.assertEqual((found, cleared, kept), (5, 2, 3))
 
     async def test_legacy_scroll_references_are_counted_and_nothing_changes(self):
         async with self.sessions() as db:

@@ -93,8 +93,13 @@ class _Db:
             if "ryozan_ai_memories" in sql:
                 return _Result(count=self.memory_refs)
             needle = _like_needle(stmt)
+            ignored = set()
+            for value in stmt.compile().params.values():
+                if isinstance(value, list | tuple):
+                    ignored.update(value)
             hits = sum(
-                any(needle in (v or "") for v in (d.file_url, d.data_json, d.artist_signature)) for d in self.docs
+                d.id not in ignored and any(needle in (v or "") for v in (d.file_url, d.data_json, d.artist_signature))
+                for d in self.docs
             )
             return _Result(count=hits)
         if "ryozan_scroll_owner_email_outbox" in sql.split("WHERE")[0]:
