@@ -185,7 +185,7 @@ def _require_owner_archive_access(user: User, category: str | None) -> None:
         raise HTTPException(status_code=403, detail="Owner archive access requires founder role")
 
 
-# A caller below staff may only store a private reference it can prove it owns.
+# A caller below admin may only store a private reference it can prove it owns.
 CALLER_REUPLOAD_MESSAGE = "Upload the file again"
 
 # Categories only the server creates for a caller below admin: the artist scroll is created by
@@ -211,11 +211,6 @@ SERVER_CATEGORY_MESSAGE = "This document category is created by the server only"
 
 def _is_admin(user: User) -> bool:
     return ROLE_RANK.get(getattr(user, "role", None) or "", -1) >= ROLE_RANK["admin"]
-
-
-def _is_staff(user: User) -> bool:
-    """Assistant and above. Staff already read stored records, so their writes are not checked here."""
-    return ROLE_RANK.get(getattr(user, "role", None) or "", -1) >= ROLE_RANK["assistant"]
 
 
 def _require_caller_category(category: str | None) -> None:
@@ -275,7 +270,7 @@ def _is_callers_own_private_key(key: str, user_id: uuid.UUID) -> bool:
 
 def _caller_private_reference(value: str, user: User) -> str:
     """
-    The stored form of a reference a non-staff caller submits, or 422.
+    The stored form of a reference a caller below admin submits, or 422.
 
     Anything that is not a private key on our bucket passes through. A private key is accepted only when it
     lies under the caller's own upload folders; otherwise the caller could plant another person's ID, waiver
@@ -303,7 +298,7 @@ def _caller_private_references(value, user: User):
 
 def _caller_data_json(raw: str | None, user: User) -> str | None:
     """
-    data_json as a non-staff caller may store it. Unparseable JSON is kept as is: it is never signed on read
+    data_json as a caller below admin may store it. Unparseable JSON is kept as is: it is never signed on read
     (_signed_data_json returns it untouched). The raw text is kept unless a reference had to be rewritten.
     """
     if not raw:
@@ -692,12 +687,13 @@ async def submit_document(
         # No server-only category and no server-reserved scroll marker below admin (checked before any write).
         _require_caller_category(body.category)
         _require_no_reserved_markers(body.data_json)
-    if _is_staff(current_user):
+    if _is_admin(current_user):
         data_json = body.data_json
         # A client echoing a signed private link back stores the stable reference, never an expiring URL.
         file_url = canonical_id_reference(body.file_url)
     else:
-        # Below staff, a private reference is stored only with proof the caller owns it (checked before any write).
+        # Below admin (assistants and artists included), a private reference in file_url or anywhere in
+        # data_json is stored only with proof the caller owns it (checked before any write).
         data_json = _caller_data_json(body.data_json, current_user)
         file_url = _caller_private_reference(body.file_url, current_user) if body.file_url else body.file_url
     instance = DocumentInstance(

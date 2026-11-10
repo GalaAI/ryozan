@@ -1,8 +1,8 @@
 """
-POST /documents/ never lets a caller below staff store (and read back signed) a private object it does not own,
+POST /documents/ never lets a caller below admin store (and read back signed) a private object it does not own,
 and below admin never creates an artist scroll record or carries a key only submit_scroll writes.
 
-This install has no server-verified upload link check, so below staff a private reference is accepted only
+This install has no server-verified upload link check, so below admin a private reference is accepted only
 under the caller's own upload folders; every waivers/ key (including a pending ID upload) is refused.
 
 Synthetic fixtures only: no real client, ID or signature data.
@@ -159,8 +159,23 @@ class SubmitDocumentProvenanceTests(unittest.IsolatedAsyncioTestCase):
         await documents.submit_document(body=body, db=db, current_user=_user("collector"))
         self.assertEqual(db.added[0].data_json, "not json")
 
-    async def test_staff_behavior_is_unchanged(self):
-        for role in ("assistant", "artist", "admin", "founder"):
+    async def test_assistants_and_artists_are_held_to_ownership_too(self):
+        for role in ("assistant", "artist"):
+            for key in VICTIM_KEYS:
+                for where in ("file_url", "data_json"):
+                    with self.subTest(role=role, key=key, where=where), self.assertRaises(HTTPException) as raised:
+                        if where == "file_url":
+                            await self._submit(_user(role), file_url=_signed(key))
+                        else:
+                            await self._submit(_user(role), data={"nested": [{"doc": _public(key)}]})
+                    self.assertEqual(raised.exception.status_code, 422)
+        artist = _user("artist")
+        own = f"signatures/{artist.id}/sig.png"
+        _response, db = await self._submit(artist, file_url=_signed(own))
+        self.assertEqual(db.added[0].file_url, _public(own))
+
+    async def test_admin_and_founder_behavior_is_unchanged(self):
+        for role in ("admin", "founder"):
             key = VICTIM_KEYS[1]
             with self.subTest(role=role):
                 raw = json.dumps({"packet": _public(key)})

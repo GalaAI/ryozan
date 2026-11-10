@@ -86,12 +86,12 @@ unchanged and is never fetched by the server.
 Write points normalize an echoed signed link back to the stored reference (`storage.canonical_id_reference`),
 so a browser that submits the preview link it was shown never persists an expiring URL.
 
-`POST /documents/` holds callers below staff (below `assistant`) to ownership: a private key in
+`POST /documents/` holds every caller below admin (collectors, assistants and artists) to ownership: a private key in
 `file_url` or anywhere in `data_json` is stored only when it lies under the caller's own upload folders
 (`signatures/<user>/`, `scrolls/<user>/`, `scrolls/<category>/<user>/`); anything else is refused with
 "Upload the file again" and nothing is stored. This install has no server-verified upload link check, so
-below staff every `waivers/` key, a pending ID upload included, is refused on this route (no app screen
-sends one there). Staff writes are unchanged. Below admin, `POST /documents/` and
+below admin every `waivers/` key, a pending ID upload included, is refused on this route (no app screen
+sends one there). Admin and founder writes are unchanged. Below admin, `POST /documents/` and
 `POST /documents/upload` also refuse category `scroll` (the artist scroll, created only by
 `submit_scroll`) and any `data_json` carrying a key only `submit_scroll` writes (`submission_id`,
 `scroll_pdf_url`, `acceptance_record`, `storage_prefix`, `public_storage_prefix`, `certs_stored`,
