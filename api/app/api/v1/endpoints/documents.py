@@ -543,7 +543,9 @@ async def submit_document(
     """Submit a filled form or create a document instance."""
     _require_owner_archive_access(current_user, body.category)
     data_json = body.data_json
-    if ROLE_RANK.get(current_user.role, -1) < ROLE_RANK["assistant"]:
+    # Document views sign stored ID references, so only founder/admin (who can already open every record)
+    # may store one without proof of upload. Assistants and artists are limited to their own records.
+    if ROLE_RANK.get(current_user.role, -1) < ROLE_RANK["admin"]:
         data_json = _verified_client_data_json(data_json)
     instance = DocumentInstance(
         template_id=body.template_id,

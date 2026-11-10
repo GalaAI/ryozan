@@ -869,14 +869,31 @@ class PublicIdWriteTests(unittest.IsolatedAsyncioTestCase):
         await documents.submit_document(plain, db=db, current_user=collector)
         self.assertEqual(db.added[0].data_json, '{"note": "hello"}')
 
-    async def test_staff_document_submit_keeps_current_behavior(self):
+    async def test_assistants_and_artists_cannot_store_another_persons_id_reference(self):
+        from app.schemas.document import DocumentInstanceCreate
+
+        raw = json.dumps({"photo_id_url": VICTIM_PUBLIC_URL})
+        for role in ("assistant", "artist"):
+            with self.subTest(role=role):
+                user = SimpleNamespace(id=uuid.uuid4(), role=role, name="Test Staff")
+                db = _FakeDb()
+                with self.assertRaises(documents.HTTPException) as caught:
+                    await documents.submit_document(
+                        DocumentInstanceCreate(category="waiver", title="Waiver", data_json=raw),
+                        db=db,
+                        current_user=user,
+                    )
+                self.assertEqual(caught.exception.status_code, 422)
+                self.assertEqual(db.added, [])
+
+    async def test_admin_document_submit_keeps_current_behavior(self):
         from app.schemas.document import DocumentInstanceCreate
 
         raw = json.dumps({"photo_id_url": PUBLIC_ID_URL})
-        artist = SimpleNamespace(id=uuid.uuid4(), role="artist", name="Test Artist")
+        admin = SimpleNamespace(id=uuid.uuid4(), role="admin", name="Test Admin")
         db = _FakeDb()
         await documents.submit_document(
-            DocumentInstanceCreate(category="waiver", title="Waiver", data_json=raw), db=db, current_user=artist
+            DocumentInstanceCreate(category="waiver", title="Waiver", data_json=raw), db=db, current_user=admin
         )
         self.assertEqual(db.added[0].data_json, raw)
 
