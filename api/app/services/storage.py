@@ -193,10 +193,7 @@ async def _upload_r2(
                 return None
 
             # R2 public URL (requires custom domain or R2.dev subdomain)
-            if settings.R2_PUBLIC_DOMAIN:
-                public_url = f"https://{settings.R2_PUBLIC_DOMAIN}/{pathname}"
-            else:
-                public_url = f"https://pub-{account_id}.r2.dev/{bucket}/{pathname}"
+            public_url = _r2_public_url(pathname)
 
             logger.info("Uploaded to R2: %s -> %s", pathname, public_url)
             return public_url
@@ -268,6 +265,203 @@ def _r2_object_key(url: str) -> str | None:
         logger.warning("R2 delete URL did not contain an object key")
         return None
     return object_key
+
+
+def _r2_public_url(object_key: str) -> str:
+    """The reference upload_file has always returned for an object key."""
+    settings = get_settings()
+    if settings.R2_PUBLIC_DOMAIN:
+        return f"https://{settings.R2_PUBLIC_DOMAIN}/{object_key}"
+    bucket = (settings.R2_BUCKET_NAME or "").strip()
+    return f"https://pub-{settings.R2_ACCOUNT_ID}.r2.dev/{bucket}/{object_key}"
+
+
+# ═══════════════════════════════════════════════════════
+#  Private government ID objects (signed GET links)
+# ═══════════════════════════════════════════════════════
+
+# Waiver ID photos uploaded by the public walk-in flow.
+PRIVATE_ID_PREFIXES = ("waivers/pending-ids/",)
+# Printable waiver packets (waivers/<month>/<name>_<ref>/<name>_<ref>.pdf) embed the client's ID image.
+_WAIVER_ROOT = "waivers/"
+# Artist Scroll government IDs live beside public-safe certificates under
+# scrolls/<user>/<submission>/, so they are matched by file stem instead.
+_SCROLL_ID_ROOT = "scrolls/"
+_SCROLL_ID_STEM = "govt-id"
+# S3 caps a SigV4 query-string signature at seven days.
+_MAX_PRESIGN_SECONDS = 7 * 24 * 3600
+
+
+def is_private_id_key(object_key: str) -> bool:
+    """True when an R2 key holds a government ID (image, or a PDF embedding one) that must never be public."""
+    if not object_key or ".." in object_key.split("/"):
+        return False
+    if object_key.startswith(PRIVATE_ID_PREFIXES):
+        return True
+    if object_key.startswith(_WAIVER_ROOT) and object_key.lower().endswith(".pdf"):
+        return True
+    return object_key.startswith(_SCROLL_ID_ROOT) and object_key.rsplit("/", 1)[-1].startswith(_SCROLL_ID_STEM)
+
+
+def _r2_key_from_reference(reference: str) -> str | None:
+    """
+    Resolve a stored URL on this install's own R2 hosts to its object key.
+
+    Only the configured public domain, this account's r2.dev host and this account's S3 endpoint
+    (with the configured bucket) resolve. Foreign URLs, other buckets and an unconfigured bucket
+    return None. Never logs, because the reference names a person's ID.
+    """
+    settings = get_settings()
+    bucket = (settings.R2_BUCKET_NAME or "").strip()
+    account_id = (settings.R2_ACCOUNT_ID or "").strip().lower()
+    if not bucket:
+        return None
+    try:
+        parsed = urlsplit(reference)
+        hostname = (parsed.hostname or "").lower()
+    except ValueError:
+        return None
+    if parsed.scheme not in ("http", "https") or not hostname:
+        return None
+    path = unquote(parsed.path).lstrip("/")
+    if _is_r2_custom_domain(reference):
+        key = path
+    elif account_id and hostname in (f"pub-{account_id}.r2.dev", f"{account_id}.r2.cloudflarestorage.com"):
+        if not path.startswith(f"{bucket}/"):
+            return None
+        key = path[len(bucket) + 1 :]
+    else:
+        return None
+    if not key or ".." in key.split("/"):
+        return None
+    return key
+
+
+def is_own_storage_url(reference: str | None) -> bool:
+    """True when `reference` is an object on this install's own R2 bucket. The server only fetches these."""
+    if not reference or not isinstance(reference, str):
+        return False
+    return _r2_key_from_reference(reference.strip()) is not None
+
+
+def private_id_key(reference: str | None) -> str | None:
+    """The object key when `reference` points at a private government ID on our R2 bucket, else None."""
+    if not reference or not isinstance(reference, str):
+        return None
+    key = _r2_key_from_reference(reference.strip())
+    return key if key and is_private_id_key(key) else None
+
+
+def canonical_id_reference(reference: str | None) -> str | None:
+    """
+    Normalize a submitted ID reference to the stored format.
+
+    The browser may hand back the short-lived signed link it was shown. Storing that would persist an
+    expiring URL, so private ID keys are rewritten to the same reference upload_file returns. Anything
+    else is returned unchanged.
+    """
+    key = private_id_key(reference)
+    return _r2_public_url(key) if key else reference
+
+
+def _presign(
+    *,
+    host: str,
+    canonical_uri: str,
+    region: str,
+    access_key: str,
+    secret_key: str,
+    now: datetime,
+    expires_seconds: int,
+) -> str:
+    """SigV4 query-string signing for an unsigned-payload GET (AWS 'presigned URL')."""
+    datestamp = now.strftime("%Y%m%d")
+    amz_date = now.strftime("%Y%m%dT%H%M%SZ")
+    credential_scope = f"{datestamp}/{region}/s3/aws4_request"
+    params = {
+        "X-Amz-Algorithm": "AWS4-HMAC-SHA256",
+        "X-Amz-Credential": f"{access_key}/{credential_scope}",
+        "X-Amz-Date": amz_date,
+        "X-Amz-Expires": str(expires_seconds),
+        "X-Amz-SignedHeaders": "host",
+    }
+    canonical_query = "&".join(f"{quote(k, safe='-_.~')}={quote(v, safe='-_.~')}" for k, v in sorted(params.items()))
+    canonical_request = f"GET\n{canonical_uri}\n{canonical_query}\nhost:{host}\n\nhost\nUNSIGNED-PAYLOAD"
+    string_to_sign = (
+        f"AWS4-HMAC-SHA256\n{amz_date}\n{credential_scope}\n" + hashlib.sha256(canonical_request.encode()).hexdigest()
+    )
+
+    def _sign(key: bytes, msg: str) -> bytes:
+        return hmac.new(key, msg.encode(), hashlib.sha256).digest()
+
+    k_signing = _sign(_sign(_sign(_sign(f"AWS4{secret_key}".encode(), datestamp), region), "s3"), "aws4_request")
+    signature = hmac.new(k_signing, string_to_sign.encode(), hashlib.sha256).hexdigest()
+    return f"https://{host}{canonical_uri}?{canonical_query}&X-Amz-Signature={signature}"
+
+
+def presign_get_url(object_key: str, expires_seconds: int = 300, *, now: datetime | None = None) -> str | None:
+    """
+    Short-lived signed GET link for one R2 object, served from the S3 API host.
+
+    Works whether or not the object is publicly reachable, so private keys stay viewable by the app.
+    Returns None when R2 credentials or the bucket are missing, or the key is unsafe. Never raises.
+    """
+    settings = get_settings()
+    bucket = (settings.R2_BUCKET_NAME or "").strip()
+    if not (settings.R2_ACCOUNT_ID and settings.R2_ACCESS_KEY_ID and settings.R2_SECRET_ACCESS_KEY and bucket):
+        logger.warning("R2 presign unavailable because credentials or the bucket name are incomplete")
+        return None
+    key = (object_key or "").lstrip("/")
+    if not key or ".." in key.split("/"):
+        return None
+    expires = max(1, min(int(expires_seconds), _MAX_PRESIGN_SECONDS))
+    return _presign(
+        host=f"{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
+        canonical_uri=f"/{quote(bucket, safe='-_.~')}/{quote(key, safe='/-_.~')}",
+        region="auto",
+        access_key=settings.R2_ACCESS_KEY_ID,
+        secret_key=settings.R2_SECRET_ACCESS_KEY,
+        now=now or datetime.now(UTC),
+        expires_seconds=expires,
+    )
+
+
+def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | None:
+    """
+    Turn a stored ID reference into a link a client can open.
+
+    Private government ID keys on our R2 bucket get a fresh signed link. Anything else (foreign URLs,
+    non-ID keys, empty values) passes through unchanged, as does a private key when signing is not
+    configured, so local development keeps working.
+    """
+    key = private_id_key(reference)
+    if not key:
+        return reference
+    return presign_get_url(key, expires_seconds) or reference
+
+
+# Document data keys that can hold a government ID reference (waiver photo ID, Artist Scroll ID).
+ID_REFERENCE_KEYS = ("photo_id_url", "photo_id", "govt_id_url")
+
+
+def signed_id_fields(data: dict, expires_seconds: int = 300) -> dict:
+    """
+    A shallow copy of stored document data with every government ID reference signed.
+
+    Covers the waiver photo ID keys, the Scroll govt_id_url and certs_stored.govt_id.url.
+    The input is never mutated, so the stored record keeps its stable references.
+    """
+    view = dict(data)
+    for key in ID_REFERENCE_KEYS:
+        if isinstance(view.get(key), str) and view[key]:
+            view[key] = signed_id_url(view[key], expires_seconds)
+    certs = view.get("certs_stored")
+    if isinstance(certs, dict) and isinstance(certs.get("govt_id"), dict) and certs["govt_id"].get("url"):
+        view["certs_stored"] = {
+            **certs,
+            "govt_id": {**certs["govt_id"], "url": signed_id_url(certs["govt_id"]["url"], expires_seconds)},
+        }
+    return view
 
 
 # ── Backward compatibility alias ──

@@ -82,6 +82,7 @@ from app.services.scroll_archive import (
 )
 from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf
 from app.services.sms import send_sms
+from app.services.storage import ID_REFERENCE_KEYS, canonical_id_reference, signed_id_fields, signed_id_url
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.documents")
@@ -183,7 +184,8 @@ def _require_waiver_photo_id(data: dict) -> str:
     photo_id = str(data.get("photo_id_url") or data.get("photo_id") or "").strip()
     if not photo_id:
         raise HTTPException(status_code=422, detail="Photo ID is required")
-    return photo_id
+    # The browser may echo back the signed preview link; store the stable reference instead.
+    return canonical_id_reference(photo_id) or photo_id
 
 
 def _require_waiver_intake_answers(data: dict) -> None:
@@ -274,6 +276,29 @@ def _normalize_waiver_fields(fields: list[dict]) -> list[dict]:
 UPLOAD_DIR = Path(__file__).resolve().parents[4] / "uploads" / "documents"
 
 
+# Government ID images are private in R2; responses carry short-lived signed links only.
+ID_VIEW_SECONDS = 900
+
+
+def _signed_data_json(raw: str | None) -> str | None:
+    """
+    The stored data_json with any private government ID reference swapped for a signed link.
+
+    Documents with no private ID reference come back byte for byte unchanged. Stored data is
+    never mutated; this only shapes the response.
+    """
+    if not raw or not any(key in raw for key in ID_REFERENCE_KEYS):
+        return raw
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return raw
+    if not isinstance(data, dict):
+        return raw
+    view = signed_id_fields(data, ID_VIEW_SECONDS)
+    return raw if view == data else json.dumps(view)
+
+
 def _instance_to_response(inst: DocumentInstance, template_name: str | None, user_name: str | None) -> dict:
     """Convert a DocumentInstance row + joined names into a response dict."""
     return {
@@ -285,7 +310,7 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
         "category": inst.category,
         "title": inst.title,
         "status": inst.status,
-        "data_json": inst.data_json,
+        "data_json": _signed_data_json(inst.data_json),
         "signed_at": inst.signed_at,
         "file_url": inst.file_url,
         "notes": inst.notes,
@@ -989,6 +1014,11 @@ async def submit_scroll(
     }
 
 
+def _scroll_fields_view(data: dict) -> dict:
+    """The stored scroll fields with every government ID reference swapped for a signed link."""
+    return signed_id_fields(data, ID_VIEW_SECONDS)
+
+
 @router.get("/scroll/my")
 async def get_my_scroll(
     db: AsyncSession = Depends(get_db, scope="function"),
@@ -1022,10 +1052,10 @@ async def get_my_scroll(
             "bbp_cert_url": data.get("bbp_cert_url"),
             "first_aid_cert_url": data.get("first_aid_cert_url"),
             "cpr_cert_url": data.get("cpr_cert_url"),
-            "govt_id_url": data.get("govt_id_url"),
+            "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
             "owner_sig_url": data.get("owner_sig_url"),
             "tax_opt_in": data.get("tax_opt_in"),
-            "fields": data,
+            "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
         }
     }
@@ -1071,10 +1101,10 @@ async def get_user_scroll(
             "bbp_cert_url": data.get("bbp_cert_url"),
             "first_aid_cert_url": data.get("first_aid_cert_url"),
             "cpr_cert_url": data.get("cpr_cert_url"),
-            "govt_id_url": data.get("govt_id_url"),
+            "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
             "owner_sig_url": data.get("owner_sig_url"),
             "tax_opt_in": data.get("tax_opt_in"),
-            "fields": data,
+            "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
         }
     }
@@ -1612,7 +1642,7 @@ async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = D
         prior_data = prior["data"]
         on_file = {
             "signed_at": prior["signed_at"].isoformat() if prior["signed_at"] else None,
-            "photo_id_url": _stored_photo_id_url(prior_data),
+            "photo_id_url": signed_id_url(_stored_photo_id_url(prior_data), ID_VIEW_SECONDS),
             "signature_url": _stored_signature_url(prior_data),
             "health": {key: prior_data[key] for key in WAIVER_HEALTH_KEYS if prior_data.get(key) not in (None, "")},
         }

@@ -52,6 +52,8 @@ from app.schemas.waiver import (
 from app.services.email import FROM_SHOP, send_email
 from app.services.email_foundry_waiver import render_aftercare_instructions
 from app.services.quest_hooks import check_and_complete_quest
+from app.services.scroll_pdf import normalize_embed_image
+from app.services.storage import canonical_id_reference, is_own_storage_url, private_id_key, signed_id_url
 from app.services.storage import upload_file as upload_to_drive
 
 logger = logging.getLogger("ryozan.waiver")
@@ -61,6 +63,10 @@ router = APIRouter(prefix="/waiver", tags=["waiver"])
 # Max photo ID file size: 10 MB
 _MAX_ID_SIZE = 10 * 1024 * 1024
 _ALLOWED_ID_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"}
+# Government ID images are private in R2. Clients only ever see short-lived signed links:
+# long enough to load the preview right after upload, or a staff review session.
+_ID_PREVIEW_SECONDS = 600
+_ID_VIEW_SECONDS = 900
 
 # Shop-local time. The waiver is signed in person at the studio, and the printed
 # record is read there, so dates on the page are rendered in shop time rather than UTC.
@@ -150,8 +156,9 @@ async def upload_photo_id(
 
     Accepts JPEG, PNG, WebP, HEIC/HEIF (iPhone), or PDF up to 10 MB.
     HEIC/HEIF is converted to JPEG so the artist dashboard can render it.
-    Uploads to Cloudflare R2 under waivers/pending-ids/.
-    Returns the public URL to include in the waiver submission.
+    Uploads to Cloudflare R2 under waivers/pending-ids/, a private prefix.
+    Returns a short-lived signed link: the browser shows it as the preview and
+    sends it back on submit, where it is normalized to the stored reference.
     """
     # Validate content type
     if file.content_type not in _ALLOWED_ID_TYPES:
@@ -210,7 +217,7 @@ async def upload_photo_id(
     if not url:
         raise HTTPException(status_code=500, detail="Photo upload failed. Please try again.")
 
-    return {"photo_id_url": url}
+    return {"photo_id_url": signed_id_url(url, _ID_PREVIEW_SECONDS)}
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -284,7 +291,7 @@ async def submit_waiver(
         "skin_condition": body.skin_condition,
         "allergies": body.allergies,
         "medical_conditions": body.medical_conditions,
-        "photo_id_url": body.photo_id_url,
+        "photo_id_url": canonical_id_reference(body.photo_id_url),
         "health_and_eligibility": body.health_and_eligibility,
         "risks_and_consent": body.risks_and_consent,
         "accept_terms": body.accept_terms,
@@ -347,7 +354,7 @@ async def submit_waiver(
             ref_code=ref_code,
             client_name=body.full_name,
             signature_data=body.signature_data,
-            photo_id_url=body.photo_id_url,
+            photo_id_url=canonical_id_reference(body.photo_id_url),
         )
     )
 
@@ -532,7 +539,7 @@ async def get_waiver(
         checkin_source=data.get("checkin_source"),
         photo_id_reused_from=_str_or_none(data.get("photo_id_reused_from")),
         signature_adopted_from=_str_or_none(data.get("signature_adopted_from")),
-        photo_id_url=data.get("photo_id_url") or data.get("photo_id"),
+        photo_id_url=signed_id_url(data.get("photo_id_url") or data.get("photo_id"), _ID_VIEW_SECONDS),
         signature_url=data.get("signature_url"),
         artist_signed_at=inst.artist_signed_at,
         artist_reviewed_by=await _resolve_artist_name(db, inst.artist_id_reviewed),
@@ -826,25 +833,43 @@ async def export_waiver_pdf(
         elements.append(Spacer(1, 10))
 
     # Photo ID
-    photo_id_url = data.get("photo_id_url") or data.get("photo_id")
-    if photo_id_url and photo_id_url.startswith("http"):
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(photo_id_url)
-                if resp.status_code == 200:
-                    img_buf = io.BytesIO(resp.content)
-                    elements.append(Paragraph("Photo ID", heading_style))
-                    elements.append(Image(img_buf, width=2.5 * inch, height=1.6 * inch, kind="proportional"))
-                    elements.append(Spacer(1, 10))
-        except Exception:
-            pass
+    # The ID image bytes are embedded in the PDF itself. The private R2 object is fetched through a
+    # short-lived signed link and never printed as a URL, so the packet stays complete after the
+    # public path is blocked. Every export rebuilds from the stored reference, so re-exporting an
+    # older waiver embeds its ID the same way.
+    # Only this install's own R2 ID objects are fetched. A client-submitted foreign URL is never
+    # requested by the server (no server-side request forgery); the packet just notes the ID is on file.
+    photo_id_ref = data.get("photo_id_url") or data.get("photo_id")
+    if photo_id_ref:
+        photo_id_url = signed_id_url(photo_id_ref) if private_id_key(photo_id_ref) else None
+        id_png = None
+        if photo_id_url and photo_id_url.startswith("http"):
+            try:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.get(photo_id_url)
+                    if resp.status_code == 200:
+                        id_png = normalize_embed_image(resp.content)
+            except Exception:
+                logger.warning("Waiver %s: photo ID could not be fetched for the PDF", ref_code)
+        elif not photo_id_url:
+            logger.warning("Waiver %s: photo ID reference is not a stored ID object; not fetched", ref_code)
+        elements.append(Paragraph("Photo ID", heading_style))
+        if id_png:
+            elements.append(Image(io.BytesIO(id_png), width=2.5 * inch, height=1.6 * inch, kind="proportional"))
+        else:
+            elements.append(
+                Paragraph("Photo ID is on file but could not be embedded here. View it in the waiver record.", small)
+            )
+        elements.append(Spacer(1, 10))
 
     # Client Signature. The heading and the signed date always print; the signature
     # image is a best-effort addition layered on top. A slow or broken image fetch
     # degrades the document, it does not silently strip the date off a legal record.
     elements.append(Paragraph("Client Signature", heading_style))
+    # Signature images are fetched only from this install's own storage: the public form
+    # copies client-supplied fields, so a foreign URL here is never requested by the server.
     sig_url = data.get("signature_url")
-    if sig_url and sig_url.startswith("http"):
+    if sig_url and is_own_storage_url(sig_url):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(sig_url)
@@ -878,7 +903,7 @@ async def export_waiver_pdf(
 
     # Artist signature image
     artist_sig = data.get("artist_countersignature") or inst.artist_signature
-    if artist_sig and artist_sig.startswith("http"):
+    if artist_sig and is_own_storage_url(artist_sig):
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(artist_sig)
@@ -916,7 +941,8 @@ async def export_waiver_pdf(
         folder_path=f"waivers/{month}/{safe_name}_{ref_code}",
     )
 
-    return {"pdf_url": pdf_url, "reference_code": ref_code}
+    # The packet embeds the client's ID, so staff get a short-lived signed link, never the public path.
+    return {"pdf_url": signed_id_url(pdf_url, _ID_VIEW_SECONDS), "reference_code": ref_code}
 
 
 # ─────────────────────────────────────────────────────────────────────
