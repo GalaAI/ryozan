@@ -1864,6 +1864,8 @@ export interface StudioSettings {
   sample_flash_urls: string[]
   /** Domain studio email handles live on; empty means handles are off. */
   email_domain: string
+  /** @scope (without the @) of the shop brand pack served at /dependencies/@<scope>/; empty means no pack. */
+  shop_pack_scope: string
   /** The studio's public website; blank values hide their section. */
   site: StudioSiteSettings
 }
