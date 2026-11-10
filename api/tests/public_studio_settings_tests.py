@@ -130,6 +130,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
         self.assertEqual(body["waiver_template_id"], "")
         self.assertEqual(body["sample_flash_urls"], [])
         self.assertEqual(body["email_domain"], "")
+        self.assertEqual(body["shop_pack_scope"], "")
         self.assertEqual(
             body["booking_days"],
             {"closed_weekdays": [], "request_only_weekdays": [], "request_only_artist_slugs": []},
@@ -162,6 +163,7 @@ class PublicStudioSettingsEndpointTests(unittest.TestCase):
                     "https://cdn.example.test/flash-2.jpg",
                 ],
                 "email_domain": "in.example.test",
+                "shop_pack_scope": "",
                 "site": {
                     "mode": "studio",
                     "studio_hosts": ["example.test"],

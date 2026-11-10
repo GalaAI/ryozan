@@ -53,6 +53,8 @@ LEGACY_PUBLIC_SECRETS = frozenset(
 _HOSTNAME = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*")
 # Characters that would let a URL break out of an HTML attribute or a CSS url().
 _URL_FORBIDDEN = re.compile(r"[\s\"'()<>\\`]")
+# A shop brand pack's npm-style @scope, without the @.
+_SHOP_PACK_SCOPE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?")
 
 
 def _is_hostname(value: str) -> bool:
@@ -186,6 +188,14 @@ class Settings(BaseSettings):
     # email handles (<handle>@) live on it. Blank turns both off.
     COURIER_REPLY_DOMAIN: str = ""
 
+    @field_validator("GIFT_CARD_CODE_PREFIX")
+    @classmethod
+    def _validate_gift_card_code_prefix(cls, value: str) -> str:
+        prefix = (value or "").strip().upper()
+        if not re.fullmatch(r"[A-Z0-9]{1,6}", prefix):
+            raise ValueError("GIFT_CARD_CODE_PREFIX must be 1 to 6 letters or digits")
+        return prefix
+
     @field_validator("COURIER_REPLY_DOMAIN")
     @classmethod
     def validate_courier_reply_domain(cls, value: str) -> str:
@@ -211,6 +221,9 @@ class Settings(BaseSettings):
     # Studio identity printed on client email, SMS and PDF output. The postal
     # address is env-only: a deployment sets its own, and nothing prints when blank.
     STUDIO_NAME: str = "Ryozan Studio"
+    # Prefix on newly issued gift card codes (PREFIX-XXXX-XXXX-XXXX). Codes already
+    # issued under another prefix keep redeeming: redemption matches the stored code.
+    GIFT_CARD_CODE_PREFIX: str = "GC"
     # IANA zone the studio trades in: every "which day" question, client-facing
     # time and calendar entry. The owner sets it during first-run setup.
     STUDIO_TIMEZONE: str = "America/New_York"
@@ -797,6 +810,41 @@ class Settings(BaseSettings):
     R2_SECRET_ACCESS_KEY: str = ""
     R2_BUCKET_NAME: str = ""  # blank: uploads stay off until the deployment names its bucket
     R2_PUBLIC_DOMAIN: str = ""  # custom domain for R2 public access; env-only
+
+    # Shop brand pack: this install's shop-branded standalone surfaces (for example the
+    # Email Foundry templates) published as versioned folders under
+    # <base>/@<scope>/<package>/<version>/. GET /dependencies/@<scope>/... serves them
+    # same-origin through app.services.shop_pack, and GET /studio/settings reports the
+    # scope. Pack files are shop content and never live in this repository. Both blank:
+    # no pack. Publish with scripts/publish_shop_pack.py; see docs/SHOP_BRAND_PACKS.md.
+    SHOP_PACK_BASE_URL: str = ""  # https:// base the pack files live under, e.g. an R2 public prefix
+    SHOP_PACK_SCOPE: str = ""  # the packages' @scope without the @, e.g. "studio"
+
+    @field_validator("SHOP_PACK_BASE_URL")
+    @classmethod
+    def validate_shop_pack_base_url(cls, value: str) -> str:
+        value = (value or "").strip().rstrip("/")
+        if value and (not _is_web_url(value) or "?" in value or "#" in value):
+            raise ValueError("SHOP_PACK_BASE_URL must be an https:// URL without a query or fragment")
+        return value
+
+    @field_validator("SHOP_PACK_SCOPE")
+    @classmethod
+    def validate_shop_pack_scope(cls, value: str) -> str:
+        value = (value or "").strip().removeprefix("@")
+        if value and not _SHOP_PACK_SCOPE.fullmatch(value):
+            raise ValueError("SHOP_PACK_SCOPE must be lowercase letters, digits and hyphens, such as studio-pack")
+        return value
+
+    @model_validator(mode="after")
+    def validate_shop_pack_pair(self):
+        if bool(self.SHOP_PACK_BASE_URL) != bool(self.SHOP_PACK_SCOPE):
+            raise ValueError("SHOP_PACK_BASE_URL and SHOP_PACK_SCOPE are set together, or both left blank")
+        return self
+
+    @property
+    def shop_pack_enabled(self) -> bool:
+        return bool(self.SHOP_PACK_BASE_URL and self.SHOP_PACK_SCOPE)
 
     # Hugging Face (SAM 2 image segmentation for flash sheets)
     HF_API_TOKEN: str = ""

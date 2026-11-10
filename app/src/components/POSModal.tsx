@@ -683,7 +683,7 @@ export default function POSModal({ open, onClose, preselectedBooking, initialMod
                   className="pos-form-input"
                   value={giftCardCode}
                   onChange={(event) => setGiftCardCode(event.target.value.toUpperCase())}
-                  placeholder="BT-XXXX-XXXX-XXXX"
+                  placeholder="XX-XXXX-XXXX-XXXX"
                   autoComplete="off"
                 />
               </div>
