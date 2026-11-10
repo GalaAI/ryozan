@@ -157,6 +157,14 @@ def _prior_prefill_allowed(instance: DocumentInstance, current_data: dict) -> bo
     return bool(instance.sent_by) or current_data.get("checkin_verified") is True
 
 
+# Yes/no health answers every check-in waiver files. Keys match HEALTH_QUESTIONS in app/src/lib/checkin.ts.
+WAIVER_HEALTH_YES_NO_KEYS = ("pregnant", "blood_thinners", "blood_disorder", "skin_condition")
+
+# Health answers a returning client may confirm as unchanged. Sobriety is never carried over: it is asked
+# fresh on every visit (SC Reg. 60-111 801.C).
+WAIVER_HEALTH_KEYS = (*WAIVER_HEALTH_YES_NO_KEYS, "allergies", "medical_conditions")
+
+
 # Server-set waiver facts the public form never sends back; kept when the client submits.
 WAIVER_SERVER_KEYS = ("booking_id", "booking_reference", "checkin_verified", "checkin_source")
 
@@ -202,6 +210,14 @@ def _require_waiver_intake_answers(data: dict) -> None:
     for key in ("health_and_eligibility", "risks_and_consent", "accept_terms"):
         if data.get(key) is not True:
             raise HTTPException(status_code=422, detail="Confirm all three statements before you sign")
+    # A check-in waiver files every yes/no health answer explicitly. A missing one (an older waiver that never
+    # asked it, carried over as "same as last time") is rejected, never stored or printed as No.
+    if "health_same_as_last_visit" in data or data.get("checkin_verified") is True:
+        for key in WAIVER_HEALTH_YES_NO_KEYS:
+            answer = str(data.get(key) or "").strip().capitalize()
+            if answer not in ("Yes", "No"):
+                raise HTTPException(status_code=422, detail="Answer every health question before you sign")
+            data[key] = answer
 
 
 def _require_waiver_signature(signature: str | None) -> str:
@@ -1384,18 +1400,6 @@ async def _latest_prior_waiver(db: AsyncSession, emails: set[str], exclude_id: u
     if not isinstance(data, dict):
         return None
     return {"id": str(instance.id), "signed_at": instance.signed_at, "data": data}
-
-
-# Health answers a returning client may confirm as unchanged. Sobriety is never carried over: it is asked
-# fresh on every visit (SC Reg. 60-111 801.C).
-WAIVER_HEALTH_KEYS = (
-    "pregnant",
-    "blood_thinners",
-    "blood_disorder",
-    "skin_condition",
-    "allergies",
-    "medical_conditions",
-)
 
 
 def _stored_signature_url(data: dict) -> str | None:

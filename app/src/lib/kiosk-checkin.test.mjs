@@ -109,7 +109,8 @@ test('validation names each missing field', () => {
 test('health: every question, unless the client keeps the answers on file', () => {
   const fresh = { answers: { intoxicated: 'No' }, sameOffered: false, allergyDetail: '', medications: '' }
   assert.deepEqual(checkin.healthMissing(fresh), checkin.HEALTH_QUESTIONS.map((q) => q.key))
-  const same = { answers: { intoxicated: 'No', same: 'Yes' }, sameOffered: true, allergyDetail: '', medications: '' }
+  const prior = { pregnant: 'No', blood_thinners: 'No', blood_disorder: 'No', skin_condition: 'No', allergies: 'None' }
+  const same = { answers: { intoxicated: 'No', same: 'Yes' }, sameOffered: true, allergyDetail: '', medications: '', prior }
   assert.deepEqual(checkin.healthMissing(same), [])
   const allergic = { ...fresh, answers: { intoxicated: 'No', blood_thinners: 'No', allergy: 'Yes', pregnant: 'No', blood_disorder: 'No', skin_condition: 'No' } }
   assert.deepEqual(checkin.healthMissing(allergic), ['allergyDetail'])
@@ -121,7 +122,7 @@ test('the waiver payload carries what the server requires', () => {
     answers: { intoxicated: 'No', blood_thinners: 'No', allergy: 'No', pregnant: 'No', blood_disorder: 'No', skin_condition: 'No' },
     sameOffered: false, allergyDetail: '', medications: '',
   }
-  const data = checkin.buildWaiverData({ details, visit, health, priorHealth: {}, photoIdUrl: 'https://files.example.test/id', reusePhotoId: false, reuseSignature: false })
+  const data = checkin.buildWaiverData({ details, visit, health, photoIdUrl: 'https://files.example.test/id', reusePhotoId: false, reuseSignature: false })
   assert.equal(data.quoted_price, '250')
   assert.equal(data.intoxicated, 'No')
   assert.equal(data.emergency_contact, 'Test Contact 555 010 0199')
@@ -129,9 +130,10 @@ test('the waiver payload carries what the server requires', () => {
   assert.equal(data.reuse_photo_id, undefined)
   for (const key of ['health_and_eligibility', 'risks_and_consent', 'accept_terms']) assert.equal(data[key], true)
 
+  const prior = { pregnant: 'No', blood_thinners: 'No', blood_disorder: 'No', skin_condition: 'No', allergies: 'Latex' }
   const reused = checkin.buildWaiverData({
-    details, visit, priorHealth: { pregnant: 'No', allergies: 'Latex' },
-    health: { answers: { intoxicated: 'No', same: 'Yes' }, sameOffered: true, allergyDetail: '', medications: '' },
+    details, visit,
+    health: { answers: { intoxicated: 'No', same: 'Yes' }, sameOffered: true, allergyDetail: '', medications: '', prior },
     photoIdUrl: '', reusePhotoId: true, reuseSignature: true,
   })
   assert.equal(reused.reuse_photo_id, true)
@@ -149,4 +151,35 @@ test('kiosk and gift card pages use @ryozan/ui status parts, never a local statu
       assert.match(tag, /\bwrap\b/, `${page}: a status sentence wraps inside its panel (${tag})`)
     }
   }
+})
+
+test('same as last time keeps only answers the prior waiver has; anything it never asked is asked today', () => {
+  // An older waiver: no blood_thinners answer at all.
+  const prior = { pregnant: 'No', blood_disorder: 'No', skin_condition: 'Yes', allergies: 'None' }
+  const health = { answers: { intoxicated: 'No', same: 'Yes' }, sameOffered: true, allergyDetail: '', medications: '', prior }
+  assert.deepEqual(checkin.questionsToAsk(health).map((q) => q.key), ['blood_thinners'])
+  assert.deepEqual(checkin.healthMissing(health), ['blood_thinners'], 'a missing prior answer blocks submit until answered')
+  assert.equal(checkin.priorAnswer(health, 'blood_thinners'), undefined)
+  assert.throws(() => checkin.buildWaiverData({ details, visit, health, photoIdUrl: '', reusePhotoId: true, reuseSignature: true }),
+    /blood_thinners/, 'never filed as No by default')
+
+  const answered = { ...health, answers: { ...health.answers, blood_thinners: 'Yes' } }
+  assert.deepEqual(checkin.healthMissing(answered), [])
+  const data = checkin.buildWaiverData({ details, visit, health: answered, photoIdUrl: '', reusePhotoId: true, reuseSignature: true })
+  assert.equal(data.blood_thinners, 'Yes', "today's answer is filed")
+  assert.equal(data.skin_condition, 'Yes', 'the kept prior answer is filed as it was')
+  assert.equal(data.pregnant, 'No')
+  assert.equal(data.allergies, 'None')
+  assert.ok(checkin.healthNeedsReview(answered), 'a kept yes still goes to the artist')
+
+  // No allergy answer on file either: that question is asked too.
+  const noAllergy = { ...health, prior: { pregnant: 'No', blood_thinners: 'No', blood_disorder: 'No', skin_condition: 'No' } }
+  assert.deepEqual(checkin.healthMissing(noAllergy), ['allergy'])
+  assert.ok(!checkin.healthNeedsReview({ ...noAllergy, answers: { ...noAllergy.answers, allergy: 'No' } }))
+})
+
+test('a fresh waiver never files an unanswered health question', () => {
+  const health = { answers: { intoxicated: 'No', allergy: 'No', pregnant: 'No', blood_disorder: 'No', skin_condition: 'No' }, sameOffered: false, allergyDetail: '', medications: '' }
+  assert.deepEqual(checkin.healthMissing(health), ['blood_thinners'])
+  assert.throws(() => checkin.buildWaiverData({ details, visit, health, photoIdUrl: 'https://files.example.test/id', reusePhotoId: false, reuseSignature: false }))
 })

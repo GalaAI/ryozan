@@ -135,6 +135,26 @@ class IntakeAnswerTests(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaises(HTTPException):
                 _require_waiver_intake_answers(self._complete(**bad))
 
+    def _checkin(self, **overrides: object) -> dict:
+        health = {"pregnant": "No", "blood_thinners": "No", "blood_disorder": "No", "skin_condition": "Yes"}
+        return self._complete(health_same_as_last_visit=True, **{**health, **overrides})
+
+    def test_a_checkin_waiver_files_every_health_answer(self) -> None:
+        data = self._checkin(blood_thinners="yes")
+        _require_waiver_intake_answers(data)
+        self.assertEqual(data["blood_thinners"], "Yes")
+        self.assertEqual(data["skin_condition"], "Yes")
+
+    def test_a_missing_health_answer_is_rejected_never_filed_as_no(self) -> None:
+        for key in ("pregnant", "blood_thinners", "blood_disorder", "skin_condition"):
+            for bad in (None, "", "maybe"):
+                with self.subTest(key=key, bad=bad), self.assertRaises(HTTPException):
+                    _require_waiver_intake_answers(self._checkin(**{key: bad}))
+        # A verified check-in that drops the same-as-last flag is held to the same rule.
+        data = self._complete(checkin_verified=True, pregnant="No", blood_disorder="No", skin_condition="No")
+        with self.assertRaises(HTTPException):
+            _require_waiver_intake_answers(data)
+
 
 if __name__ == "__main__":
     unittest.main()

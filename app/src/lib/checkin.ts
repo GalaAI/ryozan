@@ -112,25 +112,64 @@ export interface HealthState {
   sameOffered: boolean
   allergyDetail: string
   medications: string
+  /** The prior waiver's health answers (on_file.health), exactly as the server returned them. */
+  prior?: Record<string, string>
+}
+
+/** The prior waiver's field each question reads from: the allergy question stores its answer as `allergies`. */
+const PRIOR_KEY: Record<string, string> = { allergy: 'allergies' }
+
+function priorYesNo(value: string | undefined): YesNo | undefined {
+  const v = String(value ?? '').trim().toLowerCase()
+  return v === 'yes' ? 'Yes' : v === 'no' ? 'No' : undefined
+}
+
+/**
+ * The prior answer to one question, or undefined when the prior waiver never asked it (blood_thinners is
+ * absent from older waivers). A missing answer is never read as No.
+ */
+export function priorAnswer(h: HealthState, key: string): string | undefined {
+  const raw = h.prior?.[PRIOR_KEY[key] ?? key]
+  if (key === 'allergy') return raw && raw.trim() ? raw.trim() : undefined
+  return priorYesNo(raw)
 }
 
 export function sameAsLast(h: HealthState): boolean {
   return h.sameOffered && h.answers.same === 'Yes'
 }
 
+/** The questions to show: all of them, or with "same as last time", only those the prior waiver did not answer. */
+export function questionsToAsk(h: HealthState): ReadonlyArray<{ key: string; question: string; hint?: string }> {
+  if (!sameAsLast(h)) return HEALTH_QUESTIONS
+  return HEALTH_QUESTIONS.filter((q) => priorAnswer(h, q.key) === undefined)
+}
+
 /** Keys still unanswered, plus 'allergyDetail' when a yes needs a what. */
 export function healthMissing(h: HealthState): string[] {
   const keys = ['intoxicated']
   if (h.sameOffered) keys.push('same')
-  if (!sameAsLast(h)) keys.push(...HEALTH_QUESTIONS.map((q) => q.key))
+  const ask = questionsToAsk(h)
+  keys.push(...ask.map((q) => q.key))
   const missing = keys.filter((k) => !h.answers[k])
-  if (!sameAsLast(h) && h.answers.allergy === 'Yes' && h.allergyDetail.trim().length <= 1) missing.push('allergyDetail')
+  if (ask.some((q) => q.key === 'allergy') && h.answers.allergy === 'Yes' && h.allergyDetail.trim().length <= 1) {
+    missing.push('allergyDetail')
+  }
   return missing
 }
 
-/** Any yes on the medical questions: the artist goes over it before starting. */
+/** The answer filed for one yes/no question: the prior one when kept, else what the client picked today. */
+function effectiveYesNo(h: HealthState, key: string): YesNo | undefined {
+  const kept = sameAsLast(h) ? priorYesNo(h.prior?.[key]) : undefined
+  return kept ?? h.answers[key]
+}
+
+/** Any yes on the medical questions, today's or kept from last time: the artist goes over it before starting. */
 export function healthNeedsReview(h: HealthState): boolean {
-  return !sameAsLast(h) && HEALTH_QUESTIONS.some((q) => h.answers[q.key] === 'Yes')
+  return HEALTH_QUESTIONS.some((q) => {
+    if (q.key !== 'allergy') return effectiveYesNo(h, q.key) === 'Yes'
+    const kept = sameAsLast(h) ? priorAnswer(h, 'allergy') : undefined
+    return kept !== undefined ? kept.toLowerCase() !== 'none' : h.answers.allergy === 'Yes'
+  })
 }
 
 /** The `data` body for POST /documents/public/{token}/complete. */
@@ -138,14 +177,20 @@ export function buildWaiverData(input: {
   details: CheckinDetails
   visit: CheckinVisit
   health: HealthState
-  priorHealth: Record<string, string>
   photoIdUrl: string
   reusePhotoId: boolean
   reuseSignature: boolean
 }): Record<string, unknown> {
-  const { details, visit, health, priorHealth } = input
+  const { details, visit, health } = input
   const same = sameAsLast(health)
-  const yn = (key: string) => (same ? priorHealth[key] || 'No' : health.answers[key])
+  const yn = (key: string) => {
+    const answer = effectiveYesNo(health, key)
+    if (!answer) throw new Error(`Health question ${key} has no answer`)
+    return answer
+  }
+  const priorAllergies = same ? priorAnswer(health, 'allergy') : undefined
+  if (priorAllergies === undefined && !health.answers.allergy) throw new Error('Health question allergy has no answer')
+  const priorConditions = same ? health.prior?.medical_conditions?.trim() : undefined
   const data: Record<string, unknown> = {
     full_name: details.fullName.trim(),
     date_of_birth: details.dob,
@@ -164,10 +209,8 @@ export function buildWaiverData(input: {
     blood_thinners: yn('blood_thinners'),
     blood_disorder: yn('blood_disorder'),
     skin_condition: yn('skin_condition'),
-    allergies: same
-      ? priorHealth.allergies || 'None'
-      : health.answers.allergy === 'Yes' ? health.allergyDetail.trim() : 'None',
-    medical_conditions: same ? priorHealth.medical_conditions || '' : health.medications.trim(),
+    allergies: priorAllergies ?? (health.answers.allergy === 'Yes' ? health.allergyDetail.trim() : 'None'),
+    medical_conditions: priorConditions || health.medications.trim(),
     health_same_as_last_visit: same,
     health_and_eligibility: true,
     risks_and_consent: true,

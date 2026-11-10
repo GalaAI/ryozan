@@ -25,8 +25,8 @@ import {
   type DocumentPublicForm,
 } from '../lib/api'
 import {
-  HEALTH_QUESTIONS, buildWaiverData, contactOk, detailsErrors, digits, healthMissing, healthNeedsReview,
-  isoDate, sameAsLast, splitEmergency, visitErrors,
+  buildWaiverData, contactOk, detailsErrors, digits, healthMissing, healthNeedsReview,
+  isoDate, questionsToAsk, sameAsLast, splitEmergency, visitErrors,
   type CheckinDetails, type CheckinVisit, type HealthState, type YesNo,
 } from '../lib/checkin'
 import { useKioskIdleReset } from '../hooks/useKioskIdleReset'
@@ -192,7 +192,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
     const onFile = res?.on_file
     if (onFile?.photo_id_url) setReusePhotoId(true)
     if (onFile?.signature_url) setReuseSignature(true)
-    if (onFile && Object.keys(onFile.health || {}).length) setHealth((h) => ({ ...h, sameOffered: true }))
+    if (onFile && Object.keys(onFile.health || {}).length) setHealth((h) => ({ ...h, sameOffered: true, prior: onFile.health }))
 
     if (!formToken) {
       setDetails(base)
@@ -345,7 +345,6 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
     try {
       const data = buildWaiverData({
         details, visit, health,
-        priorHealth: ctx?.on_file?.health ?? {},
         photoIdUrl, reusePhotoId, reuseSignature,
       })
       const res = await documents.submitPublicForm(token, { data, signature_data: reuseSignature ? undefined : signature })
@@ -582,12 +581,12 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
               <SectionLabel>Straight answers keep you safe. Only your artist sees these.</SectionLabel>
               {yesNo('intoxicated', 'Had alcohol or drugs today?', 'Includes cannabis and edibles')}
               {health.sameOffered && yesNo('same', 'Health the same as last time?', onFile?.signed_at ? `From your visit in ${monthYear(onFile.signed_at)}` : undefined, ['Yes', 'No'])}
-              {!sameAsLast(health) && HEALTH_QUESTIONS.map((q) => yesNo(q.key, q.question, q.hint))}
-              {!sameAsLast(health) && health.answers.allergy === 'Yes' && (
+              {questionsToAsk(health).map((q) => yesNo(q.key, q.question, q.hint))}
+              {questionsToAsk(health).some((q) => q.key === 'allergy') && health.answers.allergy === 'Yes' && (
                 <TextField label="What are you allergic to?" value={health.allergyDetail}
                   onChange={(e) => setHealth((h) => ({ ...h, allergyDetail: e.target.value }))} hint={errors.allergyDetail} aria-invalid={Boolean(errors.allergyDetail)} />
               )}
-              {!sameAsLast(health) && (
+              {!(sameAsLast(health) && health.prior?.medical_conditions?.trim()) && (
                 <TextField label="Medications or conditions (optional)" placeholder="Anything that could affect healing" value={health.medications}
                   onChange={(e) => setHealth((h) => ({ ...h, medications: e.target.value }))} />
               )}
