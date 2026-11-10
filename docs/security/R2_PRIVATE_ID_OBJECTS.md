@@ -68,6 +68,17 @@ unchanged and is never fetched by the server.
 Write points normalize an echoed signed link back to the stored reference (`storage.canonical_id_reference`),
 so a browser that submits the preview link it was shown never persists an expiring URL.
 
+`POST /documents/` holds callers below staff (below `assistant`) to ownership: a private key in
+`file_url` or anywhere in `data_json` is stored only when it lies under the caller's own upload folders
+(`signatures/<user>/`, `scrolls/<user>/`, `scrolls/<category>/<user>/`); anything else is refused with
+"Upload the file again" and nothing is stored. This install has no server-verified upload link check, so
+below staff every `waivers/` key, a pending ID upload included, is refused on this route (no app screen
+sends one there). Staff writes are unchanged. Below admin, `POST /documents/` and
+`POST /documents/upload` also refuse category `scroll` (the artist scroll, created only by
+`submit_scroll`) and any `data_json` carrying a key only `submit_scroll` writes (`submission_id`,
+`scroll_pdf_url`, `acceptance_record`, `storage_prefix`, `public_storage_prefix`, `certs_stored`,
+`artist_user_id`) at any depth. No caller in the app uses those routes for either.
+
 Access to records does not change. A founder or admin (and an assigned artist, as before) opens,
 downloads and prints any waiver from the app. The waiver PDF prints the client's filled form values as
 text and embeds the ID image, the client's signature and the artist's countersignature as images. The
@@ -82,7 +93,10 @@ and an admin.
 Artist Scroll PDFs embed the government ID image bytes at generation time (the upload itself, not a
 re-download). The PDF never prints a government ID link, whatever its key, and never contains its own
 URL: the ID page reads "Private (staff open it through the app)". The server alone sets
-`scroll_pdf_url`; a value sent in the submitted fields is dropped.
+`scroll_pdf_url`. The submitted fields never carry a storage reference: every server-owned key
+(certificate, ID, signature and PDF URLs, `certs_stored`, `submission_id`, `storage_prefix`,
+`acceptance_record`) is dropped, and so is any string anywhere in the payload that resolves to this
+install's bucket. Only files uploaded in the same request end up referenced.
 
 The scroll PDF's bytes are kept in the database only when storing it fails. The owner email row then
 holds them (never attached), and a retry (`scroll_archive.retry_unstored_scroll_pdfs`, at boot and on

@@ -43,7 +43,7 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.routes import ROUTES
-from app.core.security import get_current_user, require_role
+from app.core.security import ROLE_RANK, get_current_user, require_role
 from app.models.booking import Booking
 from app.models.document import DocumentInstance, DocumentTemplate
 from app.models.notification import Notification
@@ -88,6 +88,7 @@ from app.services.storage import (
     SCROLL_NOID_PDF_FILENAME,
     canonical_id_reference,
     is_own_storage_url,
+    private_id_key,
     public_scroll_prefix,
     signed_id_fields,
     signed_id_url,
@@ -182,6 +183,137 @@ def _require_owner_archive_access(user: User, category: str | None) -> None:
     """Keep owner compliance archives founder-only across generic document routes."""
     if category == OWNER_ARCHIVE_CATEGORY and user.role != "founder":
         raise HTTPException(status_code=403, detail="Owner archive access requires founder role")
+
+
+# A caller below staff may only store a private reference it can prove it owns.
+CALLER_REUPLOAD_MESSAGE = "Upload the file again"
+
+# Categories only the server creates for a caller below admin: the artist scroll is created by
+# submit_scroll (and the scrolls artist upload), never through the generic document routes. Artists and
+# assistants are held to this too: they are peers of the artists whose submissions they could forge.
+SERVER_CREATED_CATEGORIES = frozenset({"scroll", OWNER_ARCHIVE_CATEGORY})
+# data_json keys only submit_scroll writes. Scroll PDF recovery never trusts them, but a caller below
+# admin has no reason to send them through the generic routes, so a payload carrying one is refused.
+RESERVED_SCROLL_MARKERS = frozenset(
+    {
+        "submission_id",
+        "scroll_pdf_url",
+        "acceptance_record",
+        "storage_prefix",
+        "public_storage_prefix",
+        "certs_stored",
+        "artist_user_id",
+    }
+)
+RESERVED_MARKER_MESSAGE = "This document cannot carry server-reserved fields"
+SERVER_CATEGORY_MESSAGE = "This document category is created by the server only"
+
+
+def _is_admin(user: User) -> bool:
+    return ROLE_RANK.get(getattr(user, "role", None) or "", -1) >= ROLE_RANK["admin"]
+
+
+def _is_staff(user: User) -> bool:
+    """Assistant and above. Staff already read stored records, so their writes are not checked here."""
+    return ROLE_RANK.get(getattr(user, "role", None) or "", -1) >= ROLE_RANK["assistant"]
+
+
+def _require_caller_category(category: str | None) -> None:
+    """Below admin, the generic document routes never create a server-only category."""
+    if category in SERVER_CREATED_CATEGORIES:
+        raise HTTPException(status_code=403, detail=SERVER_CATEGORY_MESSAGE)
+
+
+def _has_reserved_marker(value) -> bool:
+    if isinstance(value, dict):
+        return any(k in RESERVED_SCROLL_MARKERS or _has_reserved_marker(v) for k, v in value.items())
+    if isinstance(value, list):
+        return any(_has_reserved_marker(v) for v in value)
+    return False
+
+
+def _require_no_reserved_markers(raw: str | None) -> None:
+    """Refuse caller data_json carrying a key only submit_scroll writes, at any depth. Never logs values."""
+    if not raw:
+        return
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        # Kept as text and never parsed for recovery, but the marker must not appear in it either.
+        if any(f'"{marker}"' in raw for marker in RESERVED_SCROLL_MARKERS):
+            raise HTTPException(status_code=422, detail=RESERVED_MARKER_MESSAGE) from None
+        return
+    if _has_reserved_marker(data):
+        raise HTTPException(status_code=422, detail=RESERVED_MARKER_MESSAGE)
+
+
+def _is_uuid(text: str) -> bool:
+    try:
+        uuid.UUID(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_callers_own_private_key(key: str, user_id: uuid.UUID) -> bool:
+    """
+    True when a private key sits under a folder the server writes only for this user.
+
+    signatures/<user>/ (saved signature), scrolls/<user>/ (Gala document upload, and the scroll submission
+    folder scrolls/<user>/<submission>/) and scrolls/<category>/<user>/ (category upload marked as an ID).
+    """
+    parts = key.split("/")
+    uid = str(user_id)
+    if parts[0] == "signatures":
+        return len(parts) > 2 and parts[1] == uid
+    if parts[0] == "scrolls":
+        if len(parts) > 2 and parts[1] == uid:
+            return True
+        return len(parts) > 3 and parts[2] == uid and not _is_uuid(parts[1])
+    return False
+
+
+def _caller_private_reference(value: str, user: User) -> str:
+    """
+    The stored form of a reference a non-staff caller submits, or 422.
+
+    Anything that is not a private key on our bucket passes through. A private key is accepted only when it
+    lies under the caller's own upload folders; otherwise the caller could plant another person's ID, waiver
+    PDF or signature and read it back as a freshly signed link. This install has no server-verified upload
+    link check, so a waivers/ key (including a pending ID upload) is always refused here. Never logs the value.
+    """
+    key = private_id_key(value)
+    if not key:
+        return value
+    if _is_callers_own_private_key(key, user.id):
+        return canonical_id_reference(value) or value
+    raise HTTPException(status_code=422, detail=CALLER_REUPLOAD_MESSAGE)
+
+
+def _caller_private_references(value, user: User):
+    """Copy of a JSON-like value with every string checked by _caller_private_reference."""
+    if isinstance(value, str):
+        return _caller_private_reference(value, user)
+    if isinstance(value, dict):
+        return {k: _caller_private_references(v, user) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_caller_private_references(v, user) for v in value]
+    return value
+
+
+def _caller_data_json(raw: str | None, user: User) -> str | None:
+    """
+    data_json as a non-staff caller may store it. Unparseable JSON is kept as is: it is never signed on read
+    (_signed_data_json returns it untouched). The raw text is kept unless a reference had to be rewritten.
+    """
+    if not raw:
+        return raw
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return raw
+    checked = _caller_private_references(data, user)
+    return raw if checked == data else json.dumps(checked)
 
 
 def _require_document_instance_access(instance: DocumentInstance, user: User) -> None:
@@ -556,15 +688,26 @@ async def submit_document(
 ):
     """Submit a filled form or create a document instance."""
     _require_owner_archive_access(current_user, body.category)
+    if not _is_admin(current_user):
+        # No server-only category and no server-reserved scroll marker below admin (checked before any write).
+        _require_caller_category(body.category)
+        _require_no_reserved_markers(body.data_json)
+    if _is_staff(current_user):
+        data_json = body.data_json
+        # A client echoing a signed private link back stores the stable reference, never an expiring URL.
+        file_url = canonical_id_reference(body.file_url)
+    else:
+        # Below staff, a private reference is stored only with proof the caller owns it (checked before any write).
+        data_json = _caller_data_json(body.data_json, current_user)
+        file_url = _caller_private_reference(body.file_url, current_user) if body.file_url else body.file_url
     instance = DocumentInstance(
         template_id=body.template_id,
         user_id=current_user.id,
         category=body.category,
         title=body.title,
         status="submitted",
-        data_json=body.data_json,
-        # A client echoing a signed private link back stores the stable reference, never an expiring URL.
-        file_url=canonical_id_reference(body.file_url),
+        data_json=data_json,
+        file_url=file_url,
         notes=body.notes,
     )
     db.add(instance)
@@ -658,6 +801,8 @@ async def upload_document(
 ):
     """Upload a file and create a document instance for it."""
     _require_owner_archive_access(current_user, category)
+    if not _is_admin(current_user):
+        _require_caller_category(category)
 
     from app.services.storage import upload_file as upload_to_drive
 
