@@ -29,14 +29,26 @@ and served through signed links. New files are routed by content:
 | Government ID upload on the scroll form | `scrolls/<user>/<submission>/govt-id.<ext>` (private) |
 | Generated scroll PDF that embeds the ID image | `scrolls/<user>/<submission>/artist-scroll.id.pdf` (private) |
 | Scroll category upload marked "This file is an ID" | `scrolls/<slug>/<user>/<random>.id.<ext>` (private, never sent to the Gala AI digest) |
-| Generated scroll PDF without an embedded ID (no ID supplied, or an ID uploaded as a PDF, which cannot be embedded) | `scrolls-public/<user>/<submission>/artist-scroll.noid.pdf` (public) |
+| Generated scroll PDF without an embedded ID (no ID supplied, or an ID uploaded as a PDF, which cannot be embedded) | `scrolls/<user>/<submission>/artist-scroll.noid.pdf` (private: it still prints the artist signature and the artist's details) |
 | Signature PNGs from the scroll form (artist and owner) | `scrolls/<user>/<submission>/` (private) |
 | Certificates from the scroll form | `scrolls-public/<user>/<submission>/` (public) |
 | Unmarked scroll category upload | `scrolls-public/<slug>/<user>/<random>.<ext>` (public) |
 
 The server knows at generation time whether it embedded the government ID image
 (`scroll_pdf.build_scroll_pdf_report`, `embeds_government_id`). The `.id.<ext>` marker is kept on new
-private files so they read as IDs wherever they are listed. A boot step
+private files so they read as IDs wherever they are listed. The `.id`/`.noid` PDF names record only
+whether the ID image is embedded; privacy comes from the prefix, and every generated scroll PDF is
+private.
+
+Generated `artist-scroll*.pdf` files written under `scrolls-public/` before that rule are moved at boot
+by a one-shot background task (`scroll_archive.move_public_scroll_pdfs`, started from `main.py`'s
+lifespan, so R2 never holds up startup): read the public object, write the same bytes to the private
+twin key (same folder and file name), read the copy back and compare SHA-256, repoint every referencing
+artist scroll and owner archive record, commit, and only then delete the public object, and only when no
+document or Gala memory still mentions it. Any storage failure keeps the original reference and the
+public object ("failed"); the next boot tries again. It logs one line of counts (pdfs, moved, failed,
+public deleted, public kept) and nothing else. Idempotent: a moved record no longer references a
+public PDF. A boot step
 (`scroll_archive.count_legacy_scroll_references`) counts document rows that still reference
 `scrolls/` objects and logs only that number; it changes nothing.
 
@@ -100,9 +112,9 @@ install's bucket. Only files uploaded in the same request end up referenced.
 
 The scroll PDF's bytes are kept in the database only when storing it fails. The owner email row then
 holds them (never attached), and a retry (`scroll_archive.retry_unstored_scroll_pdfs`, at boot and on
-every outbox loop) uploads them under the submission's prefix (`artist-scroll.id.pdf` under
-`scrolls/`, or `artist-scroll.noid.pdf` under `scrolls-public/`; a legacy row of unknown content goes
-to the private name), records the URL on the owner archive copies and the artist's scroll record, and
+every outbox loop) uploads them under the submission's private `scrolls/` prefix
+(`artist-scroll.id.pdf`, or `artist-scroll.noid.pdf`; a legacy row of unknown content gets the `.id`
+name; never under `scrolls-public/`), records the URL on the owner archive copies and the artist's scroll record, and
 clears the bytes. A failed retry keeps them. It logs only counts (waiting, stored, failed).
 
 Owner emails queued before this change kept the PDF bytes in the outbox table. A boot step
@@ -143,7 +155,7 @@ its Cloudflare zone.
 
    Exactly what it covers: every object under `/waivers/` (ID photos, waiver packets, client signature
    images), every object under `/signatures/` (artists' saved signatures) and every object under
-   `/scrolls/` (scroll IDs, ID-bearing and legacy scroll PDFs, scroll signatures, and every older
+   `/scrolls/` (scroll IDs, every generated and legacy scroll PDF, scroll signatures, and every older
    scroll certificate or category upload). Nothing else is blocked: `/scrolls-public/` stays open (the
    prefix test includes the slash), as do avatars, portfolios, flash, references and bookings uploads. Keep URL normalization on (Rules, Settings, Normalize incoming URLs) so encoded paths cannot slip
    past the match. WAF rules run before cache, so cached copies are blocked too.
@@ -157,8 +169,9 @@ its Cloudflare zone.
    export the PDF with the ID and both signatures on it, a returning client still sees "ID on file"
    after the check-in code, and the owner can open a scroll PDF from Artist Scrolls.
    Any older `/scrolls/...` certificate or category upload link also returns 403, while new
-   `/scrolls-public/...` links (an `artist-scroll.noid.pdf`, a certificate, an unmarked category
-   upload) still open publicly.
+   `/scrolls-public/...` links (a certificate, an unmarked category upload) still open publicly. A
+   legacy `/scrolls-public/.../artist-scroll.noid.pdf` link stops opening once the boot move has
+   deleted it; the app opens the private copy through a signed link.
 
 After the rule, legacy public links stop working; the app keeps working through signed links.
 

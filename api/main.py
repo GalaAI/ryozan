@@ -71,6 +71,26 @@ async def _run_owner_email_outbox() -> None:
         await asyncio.sleep(15)
 
 
+async def _move_public_scroll_pdfs() -> None:
+    """One pass at boot, in the background: generated scroll PDFs under scrolls-public/ move to scrolls/.
+
+    In the background because it reads and writes R2, which must never hold up startup. Idempotent, so a
+    failed or interrupted pass is finished by the next start. Logs counts only.
+    """
+    from app.services.scroll_archive import move_public_scroll_pdfs_once
+
+    try:
+        counts = await move_public_scroll_pdfs_once()
+        print(
+            "[Ryozan] Public scroll PDFs moved to private storage: " + ", ".join(f"{n} {k}" for k, n in counts.items()),
+            flush=True,
+        )
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - advisory only, retried on the next boot
+        print(f"[Ryozan] Public scroll PDF move skipped: {type(exc).__name__}", flush=True)
+
+
 async def _heal_portfolio_derivatives() -> None:
     """One pass, in the background, so a deployment fills its own thumb and focus gaps.
 
@@ -565,15 +585,17 @@ async def lifespan(app: FastAPI):
         demo_shop_task = asyncio.create_task(run_nightly_resets(async_session))
     await _announce_first_run_setup()
     outbox_task = asyncio.create_task(_run_owner_email_outbox())
+    scroll_pdf_move_task = asyncio.create_task(_move_public_scroll_pdfs())
     derivatives_task = (
         asyncio.create_task(_heal_portfolio_derivatives()) if settings.PORTFOLIO_DERIVATIVES_ON_STARTUP else None
     )
     try:
         yield
     finally:
-        outbox_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await outbox_task
+        for task in (outbox_task, scroll_pdf_move_task):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
         if derivatives_task:
             derivatives_task.cancel()
             with suppress(asyncio.CancelledError):

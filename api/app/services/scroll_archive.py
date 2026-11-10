@@ -27,6 +27,8 @@ mirroring `storage.build_object_key`, so an earlier archive's objects are never 
 
 from __future__ import annotations
 
+import contextlib
+import hashlib
 import json
 import logging
 import secrets
@@ -34,7 +36,7 @@ from datetime import UTC, datetime, timedelta
 from html import escape
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, or_, select, text
+from sqlalchemy import and_, func, or_, select, text
 
 from app.constants.timezones import shop_timezone
 from app.models.document import DocumentInstance
@@ -507,10 +509,11 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
 
     A submission's bytes are kept on its outbox rows only while its archive PDF is not stored
     (never attached to an email). For each such submission this uploads the bytes under the
-    submission's storage prefix (an ID-bearing PDF, or one whose content is unknown, stays under the
-    private "scrolls/" prefix; a ".noid" PDF goes under "scrolls-public/"), records the URL on the
-    archive copies and the artist's scroll record, then clears the bytes. A failed upload keeps the
-    bytes for the next run. Returns (pending, stored, failed). Logs counts only.
+    submission's private "scrolls/" storage prefix (every generated PDF prints the artist signature,
+    so none is ever stored under "scrolls-public/"; the ".noid" name is kept, a legacy row of unknown
+    content gets the ".id" name), records the URL on the archive copies and the artist's scroll
+    record, then clears the bytes. A failed upload keeps the bytes for the next run.
+    Returns (pending, stored, failed). Logs counts only.
     """
     table = ScrollOwnerEmailOutbox.__tablename__
     rows = (
@@ -559,14 +562,15 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
         if not prefix:
             failed += 1
             continue
-        is_public = group[0].attachment_filename == storage.SCROLL_NOID_PDF_FILENAME
-        filename = storage.SCROLL_NOID_PDF_FILENAME if is_public else storage.SCROLL_ID_PDF_FILENAME
+        no_id = group[0].attachment_filename == storage.SCROLL_NOID_PDF_FILENAME
+        filename = storage.SCROLL_NOID_PDF_FILENAME if no_id else storage.SCROLL_ID_PDF_FILENAME
         try:
             url = await storage.upload_file(
                 file_bytes=group[0].attachment_content,
                 filename=filename,
                 mime_type="application/pdf",
-                folder_path=storage.public_scroll_prefix(prefix) if is_public else prefix,
+                # Always the private folder: the PDF prints the signatures whether or not it embeds the ID.
+                folder_path=prefix,
             )
         except Exception:
             url = None
@@ -586,6 +590,154 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     logger.info("Scroll PDFs stored on retry: %d", stored)
     logger.info("Scroll PDF store retries that failed (bytes kept): %d", failed)
     return len(by_submission), stored, failed
+
+
+# ── Generated scroll PDFs stored under the public prefix ────────────────
+
+_SCROLL_PDF_STEM = "artist-scroll"
+
+
+def _public_scroll_pdf_key(reference: object) -> str | None:
+    """The object key when `reference` is a generated scroll PDF on our bucket under scrolls-public/."""
+    key = storage.storage_key(reference) if isinstance(reference, str) else None
+    if not key or not key.startswith(storage.SCROLL_PUBLIC_ROOT):
+        return None
+    name = key.rsplit("/", 1)[-1]
+    return key if name.startswith(_SCROLL_PDF_STEM) and name.endswith(".pdf") else None
+
+
+def _collect_public_pdf_refs(value: object, found: dict[str, str]) -> None:
+    """Every public scroll PDF reference inside a JSON-like value, as key -> one stored reference."""
+    if isinstance(value, str):
+        key = _public_scroll_pdf_key(value)
+        if key:
+            found.setdefault(key, value)
+    elif isinstance(value, dict):
+        for item in value.values():
+            _collect_public_pdf_refs(item, found)
+    elif isinstance(value, list):
+        for item in value:
+            _collect_public_pdf_refs(item, found)
+
+
+def _replace_pdf_ref(value: object, old_key: str, new_url: str) -> object:
+    """Copy of a JSON-like value with every reference to `old_key` replaced by `new_url`."""
+    if isinstance(value, str):
+        return new_url if _public_scroll_pdf_key(value) == old_key else value
+    if isinstance(value, dict):
+        return {k: _replace_pdf_ref(v, old_key, new_url) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replace_pdf_ref(v, old_key, new_url) for v in value]
+    return value
+
+
+async def _remaining_references(db: AsyncSession, object_key: str) -> int:
+    """How many stored records still mention `object_key`, in any document or Gala memory."""
+    from app.models.ai_memory import AIMemory
+
+    documents = await db.execute(
+        select(func.count())
+        .select_from(DocumentInstance)
+        .where(
+            or_(
+                DocumentInstance.file_url.contains(object_key, autoescape=True),
+                DocumentInstance.data_json.contains(object_key, autoescape=True),
+                DocumentInstance.artist_signature.contains(object_key, autoescape=True),
+            )
+        )
+    )
+    memories = await db.execute(
+        select(func.count()).select_from(AIMemory).where(AIMemory.value.contains(object_key, autoescape=True))
+    )
+    return int(documents.scalar_one() or 0) + int(memories.scalar_one() or 0)
+
+
+async def move_public_scroll_pdfs(db: AsyncSession) -> dict[str, int]:
+    """
+    Boot step: move generated scroll PDFs written under scrolls-public/ to the private scrolls/ prefix.
+
+    Every generated scroll PDF prints the artist signature, any owner countersignature and the artist's
+    details, so none may stay public. For each such PDF referenced by an artist scroll or owner archive
+    record: read it, write the same bytes to the private twin key (same folder name and file name, so
+    the .id/.noid marker is kept), read the copy back and compare, then point every record at the private
+    copy and commit. Only after that commit, and only when no stored record still mentions the old key,
+    is the public object deleted; otherwise it is kept and counted. On any storage failure the record
+    keeps its original reference. Idempotent: a moved record no longer references a public PDF.
+    Logs counts only.
+    """
+    counts = {"pdfs": 0, "moved": 0, "failed": 0, "public deleted": 0, "public kept": 0}
+    result = await db.execute(
+        select(DocumentInstance)
+        .where(
+            DocumentInstance.category.in_((OWNER_ARCHIVE_CATEGORY, "scroll")),
+            or_(
+                DocumentInstance.file_url.contains(f"/{storage.SCROLL_PUBLIC_ROOT}"),
+                DocumentInstance.data_json.contains(f"/{storage.SCROLL_PUBLIC_ROOT}"),
+            ),
+            or_(
+                DocumentInstance.file_url.contains(_SCROLL_PDF_STEM),
+                DocumentInstance.data_json.contains(_SCROLL_PDF_STEM),
+            ),
+        )
+        .with_for_update(skip_locked=True)
+    )
+    by_key: dict[str, list[DocumentInstance]] = {}
+    old_refs: dict[str, str] = {}
+    for inst in result.scalars().all():
+        found: dict[str, str] = {}
+        _collect_public_pdf_refs(inst.file_url, found)
+        with contextlib.suppress(TypeError, ValueError):
+            _collect_public_pdf_refs(json.loads(inst.data_json or "null"), found)
+        for key, ref in found.items():
+            by_key.setdefault(key, []).append(inst)
+            old_refs.setdefault(key, ref)
+    counts["pdfs"] = len(by_key)
+
+    moved: list[str] = []
+    for old_key, records in by_key.items():
+        folder, name = old_key.rsplit("/", 1)
+        new_folder = storage.private_scroll_prefix(folder)
+        content = await storage.fetch_object(old_key)
+        new_url = None
+        if content:
+            try:
+                new_url = await storage.upload_file(
+                    file_bytes=content, filename=name, mime_type="application/pdf", folder_path=new_folder
+                )
+            except Exception:  # noqa: BLE001 - counted, original reference kept
+                new_url = None
+        readback = await storage.fetch_object(f"{new_folder}/{name}") if new_url else None
+        if not (content and readback and hashlib.sha256(readback).digest() == hashlib.sha256(content).digest()):
+            counts["failed"] += 1
+            continue
+        for inst in records:
+            inst.file_url = _replace_pdf_ref(inst.file_url, old_key, new_url)
+            try:
+                data = json.loads(inst.data_json or "null")
+            except (TypeError, ValueError):
+                data = None
+            if data is not None:
+                inst.data_json = json.dumps(_replace_pdf_ref(data, old_key, new_url))
+        moved.append(old_key)
+    counts["moved"] = len(moved)
+    await db.commit()
+
+    for old_key in moved:
+        deleted = False
+        if await _remaining_references(db, old_key) == 0:
+            deleted = await storage.delete_file(old_refs[old_key], allowed_prefix=storage.SCROLL_PUBLIC_ROOT)
+        counts["public deleted" if deleted else "public kept"] += 1
+
+    logger.info("Public scroll PDFs moved to private storage: %s", ", ".join(f"{n} {k}" for k, n in counts.items()))
+    return counts
+
+
+async def move_public_scroll_pdfs_once() -> dict[str, int]:
+    """One boot pass in its own session (run in the background: it reads and writes R2)."""
+    from app.core.database import async_session
+
+    async with async_session() as db:
+        return await move_public_scroll_pdfs(db)
 
 
 async def process_unstored_scroll_pdfs_once(limit: int = 20) -> int:

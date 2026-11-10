@@ -285,14 +285,16 @@ def _r2_public_url(object_key: str) -> str:
 # signature image (.../signature.png). Artists' saved signatures live under "signatures/".
 # Both prefixes are private by key; staff open them through short-lived signed links.
 PRIVATE_ID_PREFIXES = ("waivers/", "signatures/")
-# Everything under "scrolls/" is private by key: Artist Scroll government IDs (govt-id.*), the
-# generated scroll PDF (artist-scroll.id.pdf, or the legacy artist-scroll.pdf), and every older
-# certificate, signature and category upload, which was never inspected and may hold an ID.
-# New files that are safe to serve publicly (unmarked category uploads, certificates,
-# a generated artist-scroll.noid.pdf) are written under the separate "scrolls-public/" prefix
-# (public_scroll_prefix). A new file that is, or embeds, an ID stays under "scrolls/" and keeps the
-# ".id.<ext>" marker name (scroll_id_filename) so it reads as an ID wherever it is listed. New
-# signature images stay under "scrolls/" too.
+# Everything under "scrolls/" is private by key: Artist Scroll government IDs (govt-id.*), every
+# generated scroll PDF (artist-scroll.id.pdf and artist-scroll.noid.pdf alike, since each one prints
+# the artist signature, any owner countersignature and the artist's details; or the legacy
+# artist-scroll.pdf), the signature images, and every older certificate, signature and category
+# upload, which was never inspected and may hold an ID. New files with no ID, signature or client
+# record (unmarked category uploads, certificates) are written under the separate "scrolls-public/"
+# prefix (public_scroll_prefix). Generated PDFs written there before that rule are moved to
+# "scrolls/" at boot (scroll_archive.move_public_scroll_pdfs). A new file that is, or embeds, an ID
+# keeps the ".id.<ext>" marker name (scroll_id_filename) so it reads as an ID wherever it is listed;
+# the PDF names (.id/.noid) record only whether the ID image is embedded, privacy comes from the prefix.
 _SCROLL_ID_ROOT = "scrolls/"
 SCROLL_PUBLIC_ROOT = "scrolls-public/"
 SCROLL_ID_PDF_FILENAME = "artist-scroll.id.pdf"
@@ -316,6 +318,16 @@ def public_scroll_prefix(private_prefix: str) -> str:
         return SCROLL_PUBLIC_ROOT + prefix[len(_SCROLL_ID_ROOT) :]
     if prefix == _SCROLL_ID_ROOT.rstrip("/"):
         return SCROLL_PUBLIC_ROOT.rstrip("/")
+    return prefix
+
+
+def private_scroll_prefix(public_prefix: str) -> str:
+    """The "scrolls/" twin of a "scrolls-public/..." folder: the private half of the same submission folder."""
+    prefix = public_prefix.strip("/")
+    if prefix.startswith(SCROLL_PUBLIC_ROOT):
+        return _SCROLL_ID_ROOT + prefix[len(SCROLL_PUBLIC_ROOT) :]
+    if prefix == SCROLL_PUBLIC_ROOT.rstrip("/"):
+        return _SCROLL_ID_ROOT.rstrip("/")
     return prefix
 
 
@@ -359,11 +371,16 @@ def _r2_key_from_reference(reference: str) -> str | None:
     return key
 
 
+def storage_key(reference: str | None) -> str | None:
+    """The object key when `reference` is an object on this install's own R2 bucket, else None. Never logs."""
+    if not reference or not isinstance(reference, str):
+        return None
+    return _r2_key_from_reference(reference.strip())
+
+
 def is_own_storage_url(reference: str | None) -> bool:
     """True when `reference` is an object on this install's own R2 bucket. The server only fetches these."""
-    if not reference or not isinstance(reference, str):
-        return False
-    return _r2_key_from_reference(reference.strip()) is not None
+    return storage_key(reference) is not None
 
 
 def private_id_key(reference: str | None) -> str | None:
@@ -446,6 +463,28 @@ def presign_get_url(object_key: str, expires_seconds: int = 300, *, now: datetim
         now=now or datetime.now(UTC),
         expires_seconds=expires,
     )
+
+
+async def fetch_object(object_key: str) -> bytes | None:
+    """
+    The bytes of one R2 object, read through a short-lived signed link on the S3 host.
+
+    Works for private and public keys alike. Returns None when R2 is not configured, the object is
+    missing or the read fails. Never raises, never logs the key.
+    """
+    url = presign_get_url(object_key, 120)
+    if not url:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url)
+    except Exception as exc:  # noqa: BLE001 - never raises
+        logger.error("R2 read failed: %s", type(exc).__name__)
+        return None
+    if response.status_code != 200:
+        logger.error("R2 read failed: HTTP %s", response.status_code)
+        return None
+    return response.content
 
 
 def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | None:

@@ -907,9 +907,9 @@ async def submit_scroll(
     # certificate objects in place and silently rewrote what earlier archive copies
     # pointed at.
     storage_prefix = build_submission_prefix(str(current_user.id))
-    # Files that are, or embed, the government ID, and the signature images, stay under the private
-    # "scrolls/" prefix; the certificates and a PDF without the ID go under the public
-    # "scrolls-public/" twin, since everything under "scrolls/" is private by key.
+    # The government ID, the signature images and the generated PDF (which prints the signatures whether
+    # or not it embeds the ID) stay under the private "scrolls/" prefix; only the certificates go under
+    # the public "scrolls-public/" twin, since everything under "scrolls/" is private by key.
     public_prefix = public_scroll_prefix(storage_prefix)
 
     def _decode_signature(raw_b64: str, label: str) -> bytes:
@@ -1136,14 +1136,16 @@ async def submit_scroll(
             )
         )
         pdf_bytes = report.pdf
-        # Named by content: a PDF that actually embeds the government ID image is the private
-        # "artist-scroll.id.pdf"; without an embedded ID it is the public "artist-scroll.noid.pdf".
+        # The name records whether the PDF embeds the government ID image ("artist-scroll.id.pdf", else
+        # "artist-scroll.noid.pdf"). Privacy comes from the prefix: every generated PDF prints the artist
+        # signature (and any owner countersignature), so it is always private and reaches clients only as
+        # a short-lived signed link.
         pdf_filename = SCROLL_ID_PDF_FILENAME if report.embeds_government_id else SCROLL_NOID_PDF_FILENAME
         scroll_pdf_url = await upload_to_blob(
             file_bytes=pdf_bytes,
             filename=pdf_filename,
             mime_type="application/pdf",
-            folder_path=storage_prefix if report.embeds_government_id else public_prefix,
+            folder_path=storage_prefix,
         )
         if not scroll_pdf_url:
             logger.error(
@@ -1244,7 +1246,7 @@ async def submit_scroll(
         "artist_sig_url": artist_sig_url,
         "owner_sig_url": owner_sig_url,
         "bbp_cert_url": bbp_cert_url,
-        # A scroll PDF that embeds the artist's government ID: a short-lived signed link, never the public URL.
+        # Every scroll PDF prints the artist signature: a short-lived signed link, never the public URL.
         "scroll_pdf_url": signed_id_url(scroll_pdf_url, ID_VIEW_SECONDS),
         "submission_id": submission_id,
         "owner_copies_filed": len(archive_rows),

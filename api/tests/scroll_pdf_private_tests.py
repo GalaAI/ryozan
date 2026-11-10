@@ -1,10 +1,10 @@
-"""Only Artist Scroll PDFs that contain the artist's government ID image are private in R2.
+"""Every generated Artist Scroll PDF is private in R2 and reaches clients only as a signed link.
 
 Generated scroll PDFs are named by content: one that embeds the ID image is
-scrolls/<user>/<submission>/artist-scroll.id.pdf (private, signed links only), one without an embedded
-ID is artist-scroll.noid.pdf (public). Legacy artist-scroll.pdf objects stay private by key, because the
-app form requires a government ID. PDFs uploaded to scroll categories stay public, except an upload
-that is itself an ID (govt-id.*). The owner email is link only: no attachment and no storage link.
+scrolls/<user>/<submission>/artist-scroll.id.pdf, one without an embedded ID is
+scrolls/<user>/<submission>/artist-scroll.noid.pdf. Both are private (each prints the artist
+signature) and served through signed links only. Legacy artist-scroll.pdf objects stay private by
+key. PDFs uploaded to scroll categories stay public, except an upload that is itself an ID (govt-id.*). The owner email is link only: no attachment and no storage link.
 
 Every install names its own bucket and assets domain in settings, so these tests use a fake bucket and
 neutral example.test hosts. All image data is generated; no real client or artist data is used.
@@ -569,26 +569,36 @@ class SubmitScrollTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("X-Amz-Signature", doc.data_json)
             self.assertNotIn("evil.example.test", doc.data_json)
 
-    async def test_without_an_embedded_id_the_pdf_is_the_public_noid_name(self):
+    async def test_without_an_embedded_id_the_pdf_is_named_noid_but_private_and_signed(self):
+        # The PDF still prints the artist signature, so it is private even with no ID image in it.
         id_as_pdf = SimpleNamespace(
             filename="id.pdf", content_type="application/pdf", read=AsyncMock(return_value=b"%PDF-1.4 synthetic")
         )
         for label, govt_id in (("id uploaded as a pdf", id_as_pdf), ("no id", None)):
             with self.subTest(case=label):
-                response, uploads, session = await _submit(self, govt_id)
+                folders: dict[str, str] = {}
+                response, uploads, session = await _submit(self, govt_id, folders=folders)
                 self.assertEqual(set(uploads) & {"artist-scroll.pdf", "artist-scroll.id.pdf"}, set())
                 pdf = uploads["artist-scroll.noid.pdf"]
                 self.assertNotIn(b"/Width 7", pdf)
                 self.assertNotIn(b"govt-id", pdf)
-                public = response["scroll_pdf_url"]
-                self.assertNotIn("X-Amz-Signature", public)
-                self.assertEqual(urlsplit(public).hostname, ASSETS_HOST)
+                folder = folders["artist-scroll.noid.pdf"]
+                self.assertTrue(folder.startswith("scrolls/"))
+                self.assertEqual(folder, folders["artist-sig.png"], "same private folder as the signature")
+                key = f"{folder}/artist-scroll.noid.pdf"
+                self.assertTrue(storage.is_private_id_key(key))
+                stored = f"https://{ASSETS_HOST}/{key}"
+                with _settings_patch():
+                    _assert_signed(self, response["scroll_pdf_url"], key)
+                self.assertNotIn(stored, json.dumps(response), "never a permanent URL")
                 for doc in _docs(session):
                     data = json.loads(doc.data_json)
-                    self.assertEqual(doc.file_url, public)
-                    self.assertEqual(data["scroll_pdf_url"], public)
+                    self.assertEqual(doc.file_url, stored)
+                    self.assertEqual(data["scroll_pdf_url"], stored)
                     with _settings_patch():
-                        self.assertEqual(documents._instance_to_response(doc, None, None)["file_url"], public)
+                        view = documents._instance_to_response(doc, None, None)
+                    _assert_signed(self, view["file_url"], key)
+                    self.assertNotIn(stored, view["data_json"])
                 if govt_id is not None:
                     # The ID upload itself (govt-id.pdf) stays private.
                     stored_id = json.loads(_docs(session)[0].data_json)["govt_id_url"]
