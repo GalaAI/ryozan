@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Button, Chip, ChipGroup, MetaList, PageTitle, Panel, SectionLabel, StatusText, TextField, token } from '@ryozan/ui'
 import StudioSiteShell from '../components/studio-site/StudioSiteShell'
 import { useStudioSettings } from '../hooks/useStudioSettings'
 import {
@@ -38,9 +39,11 @@ import {
 import {
   BOOK_ROUTE,
   artistSlugFromPath,
+  beginRequest,
   bookingPayload,
   checkoutReturn,
   clearDraft,
+  completeRequest,
   contactProblem,
   depositLine,
   filledSlots,
@@ -49,8 +52,10 @@ import {
   readDraft,
   seshProblem,
   slotLabel,
+  withFreshInquiryId,
   writeDraft,
   type BookingDraft,
+  type BookingRequest,
   type BookingStep,
   type CheckoutReturn,
   type InquiryFields,
@@ -74,6 +79,17 @@ function errorText(caught: unknown, fallback: string): string {
 }
 
 /* ── Frame ──────────────────────────────────────────────────────────── */
+/*
+ * Everything below is composed from @ryozan/ui. The only website classes left
+ * are layout (container, the purpose band grid, form-grid columns, the action
+ * row); @ryozan/ui has no layout primitive yet. Prose sits in the website's
+ * calendar-purpose-copy, since @ryozan/ui has no body-text primitive either.
+ */
+
+type MetaRows = Array<{ label: string; value: string }>
+
+/** Panel padding and rhythm, from the spacing scale. */
+const PANEL_BODY = { padding: token.space.s6, gap: token.space.s4 } as const
 
 type FrameProps = {
   settings: StudioSettings
@@ -84,7 +100,7 @@ type FrameProps = {
   children: ReactNode
 }
 
-/** One step: the website's purpose band, then the website booking card. */
+/** One step: the website's purpose band, then the summary and the step's panel. */
 export function BookingFrame({ settings, eyebrow, title, intro, summary, children }: FrameProps) {
   const name = studioName(settings)
   return (
@@ -96,21 +112,19 @@ export function BookingFrame({ settings, eyebrow, title, intro, summary, childre
       <section className="calendar-purpose" aria-labelledby="booking-title">
         <div className="container calendar-purpose-grid">
           <div>
-            <span className="calendar-purpose-eyebrow">{eyebrow}</span>
-            <h1 id="booking-title" className="booking-cta-heading serif">{title}</h1>
+            <SectionLabel tone="gold" scale="md">{eyebrow}</SectionLabel>
+            <PageTitle id="booking-title">{title}</PageTitle>
           </div>
           <div className="calendar-purpose-copy">{intro}</div>
         </div>
       </section>
       <section aria-label={title}>
-        <div className="container">
-          <div className="booking-wrap">
-            <div className="booking-info">
-              <h2 className="serif">{name}</h2>
-              {summary}
-            </div>
-            <div className="booking-form">{children}</div>
-          </div>
+        <div className="container calendar-purpose-grid">
+          <Panel surface="flat" style={PANEL_BODY}>
+            <PageTitle as="h2" compact>{name}</PageTitle>
+            {summary}
+          </Panel>
+          <Panel lifted style={PANEL_BODY}>{children}</Panel>
         </div>
       </section>
     </StudioSiteShell>
@@ -119,19 +133,21 @@ export function BookingFrame({ settings, eyebrow, title, intro, summary, childre
 
 function DraftSummary({ draft }: { draft: BookingDraft }) {
   const slots = filledSlots(draft.slots)
-  return (
-    <div className="calendar-purpose-copy">
-      {draft.artistName ? <p>Artist: {draft.artistName}</p> : <p>Choose an artist to start.</p>}
-      {draft.placement.trim() && <p>Placement: {draft.placement.trim()}</p>}
-      {draft.size.trim() && <p>Size: {draft.size.trim()}</p>}
-      {slots.length > 0 && <p>Proposed times: {slots.map(slotLabel).join(' · ')}</p>}
-    </div>
-  )
+  if (!draft.artistName) return <div className="calendar-purpose-copy"><p>Choose an artist to start.</p></div>
+  const rows: MetaRows = [{ label: 'Artist', value: draft.artistName }]
+  if (draft.placement.trim()) rows.push({ label: 'Placement', value: draft.placement.trim() })
+  if (draft.size.trim()) rows.push({ label: 'Size', value: draft.size.trim() })
+  if (slots.length > 0) rows.push({ label: 'Proposed times', value: slots.map(slotLabel).join(' · ') })
+  return <MetaList rows={rows} />
 }
 
+/**
+ * A form or load error. StatusText is a single-line status by design; an error
+ * sentence has to wrap inside the panel, so whiteSpace is the one override.
+ */
 function Problem({ message }: { message: string | null }) {
   if (!message) return null
-  return <div className="form-response is-visible" role="alert">{message}</div>
+  return <StatusText tone="danger" role="alert" style={{ whiteSpace: 'normal' }}>{message}</StatusText>
 }
 
 /* ── Step 1: artist ─────────────────────────────────────────────────── */
@@ -160,32 +176,28 @@ export function ArtistStepView({ settings, roster, selected, missingSlug, onSele
       eyebrow="Book a session · Step 1 of 3"
       title="Choose an artist"
       intro={<p>Pick who you want to work with. You will describe the piece and propose times next, and the artist confirms one.</p>}
-      summary={(
-        <div className="calendar-purpose-copy">
-          {chosen ? <p>{chosen.name}{chosen.specialty?.length ? ` · ${chosen.specialty.join(', ')}` : ''}</p> : <p>Not a tattoo? <Link to={BOOK_ROUTE.ask} className="calendar-purpose-link">Ask the shop</Link></p>}
-        </div>
-      )}
+      summary={chosen
+        ? <MetaList rows={[{ label: 'Artist', value: `${chosen.name}${chosen.specialty?.length ? ` · ${chosen.specialty.join(', ')}` : ''}` }]} />
+        : <div className="calendar-purpose-copy"><p>Not a tattoo? <Link to={BOOK_ROUTE.ask}>Ask the shop</Link></p></div>}
     >
       <form className="form-grid" onSubmit={submit} noValidate>
-        {roster.status === 'loading' && <p className="full-width" aria-live="polite">Loading artists</p>}
+        {roster.status === 'loading' && <div className="full-width" aria-live="polite"><StatusText tone="pending">Loading artists</StatusText></div>}
         {roster.status === 'failed' && <div className="full-width"><Problem message="The artist list could not be loaded. Refresh to try again." /></div>}
         {roster.status === 'ready' && artists.length === 0 && (
-          <p className="full-width">This studio has not listed its artists yet. <Link to={BOOK_ROUTE.ask} className="calendar-purpose-link">Ask the shop</Link></p>
+          <div className="full-width calendar-purpose-copy"><p>This studio has not listed its artists yet. <Link to={BOOK_ROUTE.ask}>Ask the shop</Link></p></div>
         )}
         {missingSlug && <div className="full-width"><Problem message="There is no artist at that booking link. Choose one below." /></div>}
         {artists.length > 0 && (
-          <div className="input-group full-width">
-            <label htmlFor="booking-artist">Artist</label>
-            <select id="booking-artist" value={selected} onChange={(event) => onSelect(event.currentTarget.value)} required>
-              <option value="">Choose an artist</option>
-              {artists.map((artist) => <option key={artist.slug} value={artist.slug}>{artist.name}</option>)}
-              {anyArtist && <option value={NO_PREFERENCE}>No preference</option>}
-            </select>
-          </div>
+          <ChipGroup className="full-width" label="Artist" role="group" aria-label="Artist">
+            {artists.map((artist) => (
+              <Chip key={artist.slug} selected={selected === artist.slug} onClick={() => onSelect(artist.slug)}>{artist.name}</Chip>
+            ))}
+            {anyArtist && <Chip selected={selected === NO_PREFERENCE} onClick={() => onSelect(NO_PREFERENCE)}>No preference</Chip>}
+          </ChipGroup>
         )}
         {artists.length > 0 && (
           <div className="full-width">
-            <button type="submit" className="btn btn-primary" disabled={!selected}>Continue</button>
+            <Button type="submit" disabled={!selected}>Continue</Button>
           </div>
         )}
       </form>
@@ -197,7 +209,19 @@ export function ArtistStepView({ settings, roster, selected, missingSlug, onSele
 
 export type StatusLoad = { status: 'loading' } | { status: 'ready'; result: PublicCheckoutStatus } | { status: 'missing' }
 
+/** The closing actions every finished step offers. */
+function DoneActions({ primary, to }: { primary: string; to: string }) {
+  const navigate = useNavigate()
+  return (
+    <div className="calendar-purpose-actions">
+      <Button onClick={() => navigate(to)}>{primary}</Button>
+      <Button variant="ghost" onClick={() => navigate('/')}>Back to the studio</Button>
+    </div>
+  )
+}
+
 export function CheckoutReturnView({ settings, ret, load }: { settings: StudioSettings; ret: CheckoutReturn; load: StatusLoad }) {
+  const navigate = useNavigate()
   if (ret.outcome === 'cancelled') {
     return (
       <BookingFrame
@@ -206,43 +230,118 @@ export function CheckoutReturnView({ settings, ret, load }: { settings: StudioSe
         title="No payment was taken"
         intro={<p>You left checkout before paying. Nothing was charged.</p>}
       >
-        <div className="calendar-purpose-copy">
-          {ret.reference && <p>Request {ret.reference} is on file without a deposit. The shop will follow up by email.</p>}
-          <div className="calendar-purpose-actions">
-            <Link to={BOOK_ROUTE.artist} className="btn btn-primary">Start again</Link>
-            <Link to={BOOK_ROUTE.ask} className="calendar-purpose-link">Ask the shop</Link>
-          </div>
+        {ret.reference && <div className="calendar-purpose-copy"><p>Request {ret.reference} is on file without a deposit. The shop will follow up by email.</p></div>}
+        <div className="calendar-purpose-actions">
+          <Button onClick={() => navigate(BOOK_ROUTE.artist)}>Start again</Button>
+          <Button variant="ghost" onClick={() => navigate(BOOK_ROUTE.ask)}>Ask the shop</Button>
         </div>
       </BookingFrame>
     )
   }
   const result = load.status === 'ready' ? load.result : null
   const reference = result?.reference_code || ret.reference
+  const rows: MetaRows = []
+  if (reference) rows.push({ label: 'Reference', value: reference })
+  if (result?.artist_name) rows.push({ label: 'Artist', value: result.artist_name })
+  if (result?.scheduled_date) rows.push({ label: 'When', value: slotLabel({ date: result.scheduled_date, time: result.scheduled_time || '00:00' }) })
   return (
     <BookingFrame
       settings={settings}
       eyebrow="Booking request"
       title={result?.booking_status === 'confirmed' ? 'You are booked' : 'Request received'}
       intro={<p>We sent the details to your email. Keep the reference for anything you ask the shop about this booking.</p>}
-      summary={(
-        <div className="calendar-purpose-copy">
-          {reference && <p>Reference: {reference}</p>}
-          {result?.artist_name && <p>Artist: {result.artist_name}</p>}
-          {result?.scheduled_date && <p>When: {slotLabel({ date: result.scheduled_date, time: result.scheduled_time || '00:00' })}</p>}
-        </div>
-      )}
+      summary={rows.length > 0 ? <MetaList rows={rows} /> : undefined}
     >
-      <div className="calendar-purpose-copy" aria-live="polite">
-        {load.status === 'loading' && <p>Checking your payment.</p>}
-        {result && <p>{depositLine(result)}</p>}
-        {load.status === 'missing' && (
-          <p>We could not look this payment up yet. If Stripe showed a receipt, the payment went through; the shop will confirm by email.</p>
-        )}
-        <div className="calendar-purpose-actions">
-          <Link to="/portal" className="btn btn-primary">Open your account</Link>
-          <Link to="/" className="calendar-purpose-link">Back to the studio</Link>
+      <div aria-live="polite">
+        {load.status === 'loading' && <StatusText tone="pending">Checking your payment.</StatusText>}
+        <div className="calendar-purpose-copy">
+          {result && <p>{depositLine(result)}</p>}
+          {load.status === 'missing' && (
+            <p>We could not look this payment up yet. If Stripe showed a receipt, the payment went through; the shop will confirm by email.</p>
+          )}
         </div>
       </div>
+      <DoneActions primary="Open your account" to="/portal" />
+    </BookingFrame>
+  )
+}
+
+/* ── Step 3, after a submit ─────────────────────────────────────────── */
+
+export function SubmittedView({ settings, submitted }: { settings: StudioSettings; submitted: PublicBookingResponse }) {
+  const rows: MetaRows = []
+  if (submitted.reference_code) rows.push({ label: 'Reference', value: submitted.reference_code })
+  if (submitted.artist_name) rows.push({ label: 'Artist', value: submitted.artist_name })
+  return (
+    <BookingFrame
+      settings={settings}
+      eyebrow="Booking request"
+      title={submitted.checkout_url ? 'Taking you to the deposit' : 'Request sent'}
+      intro={<p>{submitted.message}</p>}
+      summary={rows.length > 0 ? <MetaList rows={rows} /> : undefined}
+    >
+      <div className="calendar-purpose-copy" aria-live="polite">
+        {submitted.checkout_url
+          ? <p>Opening secure checkout. <a href={submitted.checkout_url}>Continue to checkout</a></p>
+          : <p>Your artist reviews the request and confirms one of your times by email.</p>}
+      </div>
+      <DoneActions primary="Open your account" to="/portal" />
+    </BookingFrame>
+  )
+}
+
+/* ── Step 2: the piece ──────────────────────────────────────────────── */
+
+export function SeshStepView({ settings, draft, problem, onChange, onContinue }: {
+  settings: StudioSettings
+  draft: BookingDraft
+  problem: string | null
+  onChange: (fields: Partial<BookingDraft>) => void
+  onContinue: () => void
+}) {
+  const navigate = useNavigate()
+  const setSlot = (index: number, fields: Partial<BookingDraft['slots'][number]>) =>
+    onChange({ slots: draft.slots.map((s, i) => (i === index ? { ...s, ...fields } : s)) })
+  return (
+    <BookingFrame
+      settings={settings}
+      eyebrow="Book a session · Step 2 of 3"
+      title="Tell us about the piece"
+      intro={<p>Describe the idea, where it goes and roughly how big. Propose up to three times that work for you; nothing is held until the artist confirms one.</p>}
+      summary={<DraftSummary draft={draft} />}
+    >
+      <form className="form-grid" onSubmit={(event) => { event.preventDefault(); onContinue() }} noValidate>
+        <div className="full-width">
+          <TextField id="booking-description" label="The idea" value={draft.description} onChange={(e) => onChange({ description: e.currentTarget.value })} required />
+        </div>
+        <TextField id="booking-placement" label="Placement" value={draft.placement} onChange={(e) => onChange({ placement: e.currentTarget.value })} />
+        <TextField id="booking-size" label="Size" value={draft.size} onChange={(e) => onChange({ size: e.currentTarget.value })} />
+        {draft.slots.map((slot, index) => (
+          <div key={index} className="full-width">
+            <SectionLabel scale="md">{index === 0 ? 'Preferred time' : 'Another time (optional)'}</SectionLabel>
+            <div className="form-grid">
+              <TextField
+                id={`booking-slot-date-${index}`}
+                type="date"
+                aria-label={`Date ${index + 1}`}
+                value={slot.date}
+                onChange={(e) => setSlot(index, { date: e.currentTarget.value })}
+              />
+              <TextField
+                type="time"
+                aria-label={`Time ${index + 1}`}
+                value={slot.time}
+                onChange={(e) => setSlot(index, { time: e.currentTarget.value })}
+              />
+            </div>
+          </div>
+        ))}
+        <div className="full-width"><Problem message={problem} /></div>
+        <div className="full-width calendar-purpose-actions">
+          <Button type="submit">Continue</Button>
+          <Button variant="ghost" onClick={() => navigate(BOOK_ROUTE.artist)}>Back</Button>
+        </div>
+      </form>
     </BookingFrame>
   )
 }
@@ -254,11 +353,12 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
   const location = useLocation()
   const navigate = useNavigate()
   const storage = useMemo(sessionStore, [])
-  const [draft, setDraftState] = useState<BookingDraft>(() => readDraft(storage))
+  // The routes share this one instance, so the draft and the sent request live together.
+  const [request, setRequest] = useState<BookingRequest<PublicBookingResponse>>(() => ({ draft: readDraft(storage), submitted: null }))
+  const { draft, submitted } = request
   const [roster, setRoster] = useState<RosterLoad>({ status: 'loading' })
   const [problem, setProblem] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
-  const [submitted, setSubmitted] = useState<PublicBookingResponse | null>(null)
   const [asked, setAsked] = useState<PublicInquiryResponse | null>(null)
   const [statusLoad, setStatusLoad] = useState<{ sessionId: string; load: StatusLoad } | null>(null)
 
@@ -266,14 +366,21 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
   const ret = step === 'confirm' ? checkoutReturn(location.search) : null
   const needsRoster = step === 'artist' || step === 'ask'
 
-  const setDraft = (next: BookingDraft) => {
-    setDraftState(next)
-    writeDraft(storage, next)
+  const updateDraft = (change: (current: BookingDraft) => BookingDraft) => {
+    setRequest((current) => {
+      const next = change(current.draft)
+      if (next === current.draft) return current
+      writeDraft(storage, next)
+      return { ...current, draft: next }
+    })
   }
-  const patch = (fields: Partial<BookingDraft>) => setDraft({ ...draft, ...fields })
+  const patch = (fields: Partial<BookingDraft>) => updateDraft((current) => ({ ...current, ...fields }))
 
+  // Declared before the deep-link effect: a new request starts clean, then the link preselects.
   useEffect(() => {
     setProblem(null)
+    setRequest((current) => beginRequest(current, step))
+    if (step !== 'ask') setAsked(null)
     document.getElementById('root')?.scrollTo?.({ top: 0 })
   }, [step])
 
@@ -291,9 +398,10 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
     ? listedArtists(roster.artists).find((artist) => artist.slug === deepLinkSlug) ?? null
     : null
   useEffect(() => {
-    if (deepLinked && draft.artistSlug !== deepLinked.slug) {
-      setDraft({ ...draft, artistSlug: deepLinked.slug, artistName: deepLinked.name })
-    }
+    if (!deepLinked) return
+    updateDraft((current) => (current.artistSlug === deepLinked.slug
+      ? current
+      : { ...current, artistSlug: deepLinked.slug, artistName: deepLinked.name }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinked?.slug])
 
@@ -350,6 +458,8 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
           setProblem(null)
           try {
             setAsked(await bookingsApi.submitInquiry(inquiryPayload(fields, draft.inquiryId)))
+            // The sent question owns that id; the next request gets its own.
+            updateDraft(withFreshInquiryId)
           } catch (caught) {
             setProblem(errorText(caught, 'The question could not be sent. Try again in a moment.'))
           } finally {
@@ -361,32 +471,7 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
   }
 
   /* Step 3 after a submit */
-  if (step === 'confirm' && submitted) {
-    return (
-      <BookingFrame
-        settings={settings}
-        eyebrow="Booking request"
-        title={submitted.checkout_url ? 'Taking you to the deposit' : 'Request sent'}
-        intro={<p>{submitted.message}</p>}
-        summary={(
-          <div className="calendar-purpose-copy">
-            {submitted.reference_code && <p>Reference: {submitted.reference_code}</p>}
-            {submitted.artist_name && <p>Artist: {submitted.artist_name}</p>}
-          </div>
-        )}
-      >
-        <div className="calendar-purpose-copy" aria-live="polite">
-          {submitted.checkout_url
-            ? <p>Opening secure checkout. <a className="calendar-purpose-link" href={submitted.checkout_url}>Continue to checkout</a></p>
-            : <p>Your artist reviews the request and confirms one of your times by email.</p>}
-          <div className="calendar-purpose-actions">
-            <Link to="/portal" className="btn btn-primary">Open your account</Link>
-            <Link to="/" className="calendar-purpose-link">Back to the studio</Link>
-          </div>
-        </div>
-      </BookingFrame>
-    )
-  }
+  if (step === 'confirm' && submitted) return <SubmittedView settings={settings} submitted={submitted} />
 
   /* Steps 2 and 3 need what came before them. */
   if (!draft.artistSlug) return <Navigate to={BOOK_ROUTE.artist} replace />
@@ -394,60 +479,18 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
 
   /* Step 2 */
   if (step === 'sesh') {
-    const submit = (event: FormEvent) => {
-      event.preventDefault()
-      const missing = seshProblem(draft)
-      if (missing) { setProblem(missing); return }
-      navigate(BOOK_ROUTE.confirm)
-    }
     return (
-      <BookingFrame
+      <SeshStepView
         settings={settings}
-        eyebrow="Book a session · Step 2 of 3"
-        title="Tell us about the piece"
-        intro={<p>Describe the idea, where it goes and roughly how big. Propose up to three times that work for you; nothing is held until the artist confirms one.</p>}
-        summary={<DraftSummary draft={draft} />}
-      >
-        <form className="form-grid" onSubmit={submit} noValidate>
-          <div className="input-group full-width">
-            <label htmlFor="booking-description">The idea</label>
-            <textarea id="booking-description" rows={5} value={draft.description} onChange={(e) => patch({ description: e.currentTarget.value })} required />
-          </div>
-          <div className="input-group">
-            <label htmlFor="booking-placement">Placement</label>
-            <input id="booking-placement" value={draft.placement} onChange={(e) => patch({ placement: e.currentTarget.value })} />
-          </div>
-          <div className="input-group">
-            <label htmlFor="booking-size">Size</label>
-            <input id="booking-size" value={draft.size} onChange={(e) => patch({ size: e.currentTarget.value })} />
-          </div>
-          {draft.slots.map((slot, index) => (
-            <div key={index} className="input-group full-width">
-              <label htmlFor={`booking-slot-date-${index}`}>{index === 0 ? 'Preferred time' : `Another time (optional)`}</label>
-              <div className="form-grid">
-                <input
-                  id={`booking-slot-date-${index}`}
-                  type="date"
-                  aria-label={`Date ${index + 1}`}
-                  value={slot.date}
-                  onChange={(e) => patch({ slots: draft.slots.map((s, i) => (i === index ? { ...s, date: e.currentTarget.value } : s)) })}
-                />
-                <input
-                  type="time"
-                  aria-label={`Time ${index + 1}`}
-                  value={slot.time}
-                  onChange={(e) => patch({ slots: draft.slots.map((s, i) => (i === index ? { ...s, time: e.currentTarget.value } : s)) })}
-                />
-              </div>
-            </div>
-          ))}
-          <div className="full-width"><Problem message={problem} /></div>
-          <div className="full-width calendar-purpose-actions">
-            <button type="submit" className="btn btn-primary">Continue</button>
-            <Link to={BOOK_ROUTE.artist} className="calendar-purpose-link">Back</Link>
-          </div>
-        </form>
-      </BookingFrame>
+        draft={draft}
+        problem={problem}
+        onChange={patch}
+        onContinue={() => {
+          const missing = seshProblem(draft)
+          if (missing) { setProblem(missing); return }
+          navigate(BOOK_ROUTE.confirm)
+        }}
+      />
     )
   }
 
@@ -461,7 +504,7 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
     try {
       const response = await bookingsApi.submitPublic(bookingPayload(draft))
       clearDraft(storage)
-      setSubmitted(response)
+      setRequest(completeRequest(response))
       if (response.checkout_url) window.location.assign(response.checkout_url)
     } catch (caught) {
       setProblem(errorText(caught, 'The request could not be sent. Try again in a moment.'))
@@ -504,35 +547,24 @@ function ContactForm({ fields, onChange, sending, problem, submitLabel, onSubmit
   back?: string
   children?: ReactNode
 }) {
+  const navigate = useNavigate()
   return (
     <form className="form-grid" onSubmit={onSubmit} noValidate>
       {children}
-      <div className="input-group">
-        <label htmlFor="contact-first">First name</label>
-        <input id="contact-first" autoComplete="given-name" value={fields.firstName} onChange={(e) => onChange({ firstName: e.currentTarget.value })} required />
-      </div>
-      <div className="input-group">
-        <label htmlFor="contact-last">Last name</label>
-        <input id="contact-last" autoComplete="family-name" value={fields.lastName} onChange={(e) => onChange({ lastName: e.currentTarget.value })} required />
-      </div>
-      <div className="input-group">
-        <label htmlFor="contact-email">Email</label>
-        <input id="contact-email" type="email" autoComplete="email" value={fields.email} onChange={(e) => onChange({ email: e.currentTarget.value })} required />
-      </div>
-      <div className="input-group">
-        <label htmlFor="contact-phone">Phone (optional)</label>
-        <input id="contact-phone" type="tel" autoComplete="tel" value={fields.phone} onChange={(e) => onChange({ phone: e.currentTarget.value })} />
-      </div>
+      <TextField id="contact-first" label="First name" autoComplete="given-name" value={fields.firstName} onChange={(e) => onChange({ firstName: e.currentTarget.value })} required />
+      <TextField id="contact-last" label="Last name" autoComplete="family-name" value={fields.lastName} onChange={(e) => onChange({ lastName: e.currentTarget.value })} required />
+      <TextField id="contact-email" label="Email" type="email" autoComplete="email" value={fields.email} onChange={(e) => onChange({ email: e.currentTarget.value })} required />
+      <TextField id="contact-phone" label="Phone (optional)" type="tel" autoComplete="tel" value={fields.phone} onChange={(e) => onChange({ phone: e.currentTarget.value })} />
       {fields.phone.trim() && (
-        <label className="consent-row full-width">
-          <input type="checkbox" checked={fields.smsOptIn} onChange={(e) => onChange({ smsOptIn: e.currentTarget.checked })} />
-          <span>Text me updates about this request. Message and data rates may apply; reply STOP to opt out. <a href="/sms-terms">SMS terms</a> · <a href="/privacy">Privacy</a></span>
-        </label>
+        <div className="full-width calendar-purpose-copy">
+          <Chip selected={fields.smsOptIn} onClick={() => onChange({ smsOptIn: !fields.smsOptIn })}>Text me updates about this request.</Chip>
+          <p>Message and data rates may apply; reply STOP to opt out. <a href="/sms-terms">SMS terms</a> · <a href="/privacy">Privacy</a></p>
+        </div>
       )}
       <div className="full-width"><Problem message={problem} /></div>
       <div className="full-width calendar-purpose-actions">
-        <button type="submit" className="btn btn-primary" disabled={sending}>{sending ? 'Sending' : submitLabel}</button>
-        {back && <Link to={back} className="calendar-purpose-link">Back</Link>}
+        <Button type="submit" disabled={sending}>{sending ? 'Sending' : submitLabel}</Button>
+        {back && <Button variant="ghost" onClick={() => navigate(back)}>Back</Button>}
       </div>
     </form>
   )
@@ -562,13 +594,8 @@ function AskView({ settings, roster, sending, problem, asked, draft, onSubmit }:
   if (asked) {
     return (
       <BookingFrame settings={settings} eyebrow="Ask the shop" title="Question sent" intro={<p>{asked.message}</p>}>
-        <div className="calendar-purpose-copy">
-          <p>Reference: {asked.reference_code}</p>
-          <div className="calendar-purpose-actions">
-            <Link to={BOOK_ROUTE.artist} className="btn btn-primary">Book a session</Link>
-            <Link to="/" className="calendar-purpose-link">Back to the studio</Link>
-          </div>
-        </div>
+        <MetaList rows={[{ label: 'Reference', value: asked.reference_code }]} />
+        <DoneActions primary="Book a session" to={BOOK_ROUTE.artist} />
       </BookingFrame>
     )
   }
@@ -588,17 +615,15 @@ function AskView({ settings, roster, sending, problem, asked, draft, onSubmit }:
         onSubmit={(event) => { event.preventDefault(); onSubmit(fields) }}
       >
         {artists.length > 0 && (
-          <div className="input-group full-width">
-            <label htmlFor="ask-artist">For</label>
-            <select id="ask-artist" value={fields.artistSlug} onChange={(e) => setFields({ ...fields, artistSlug: e.currentTarget.value })}>
-              <option value="">The shop</option>
-              {artists.map((artist) => <option key={artist.slug} value={artist.slug}>{artist.name}</option>)}
-            </select>
-          </div>
+          <ChipGroup className="full-width" label="For" role="group" aria-label="For">
+            <Chip selected={fields.artistSlug === ''} onClick={() => setFields({ ...fields, artistSlug: '' })}>The shop</Chip>
+            {artists.map((artist) => (
+              <Chip key={artist.slug} selected={fields.artistSlug === artist.slug} onClick={() => setFields({ ...fields, artistSlug: artist.slug })}>{artist.name}</Chip>
+            ))}
+          </ChipGroup>
         )}
-        <div className="input-group full-width">
-          <label htmlFor="ask-message">Your question</label>
-          <textarea id="ask-message" rows={5} value={fields.message} onChange={(e) => setFields({ ...fields, message: e.currentTarget.value })} required />
+        <div className="full-width">
+          <TextField id="ask-message" label="Your question" value={fields.message} onChange={(e) => setFields({ ...fields, message: e.currentTarget.value })} required />
         </div>
       </ContactForm>
     </BookingFrame>

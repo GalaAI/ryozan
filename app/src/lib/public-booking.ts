@@ -84,6 +84,36 @@ export function emptyDraft(): BookingDraft {
   }
 }
 
+/**
+ * One booking request: the draft the collector is filling and, once sent, the
+ * server's answer. The page keeps a single component instance across the step
+ * routes, so the flow carries both together and resets them here, not by key.
+ */
+export interface BookingRequest<R> {
+  draft: BookingDraft
+  submitted: R | null
+}
+
+/** A request went out: keep its answer for the confirmation, drop its draft and idempotency id. */
+export function completeRequest<R>(submitted: R): BookingRequest<R> {
+  return { draft: emptyDraft(), submitted }
+}
+
+/**
+ * Entering the artist step after a sent request starts the next one: the old
+ * confirmation is cleared and the draft starts over with a new idempotency id.
+ * Anything else leaves the request as it is (the same object, so no re-render).
+ */
+export function beginRequest<R>(request: BookingRequest<R>, step: BookingStep): BookingRequest<R> {
+  if (step !== 'artist' || request.submitted === null) return request
+  return { draft: emptyDraft(), submitted: null }
+}
+
+/** The draft after a question went out: same fields, a new id so the next send is its own request. */
+export function withFreshInquiryId(draft: BookingDraft): BookingDraft {
+  return { ...draft, inquiryId: newInquiryId() }
+}
+
 /** Reads the tab's draft. Storage can be missing or blocked; the flow still works in memory. */
 export function readDraft(storage: Pick<Storage, 'getItem'> | null | undefined): BookingDraft {
   const base = emptyDraft()
