@@ -35,6 +35,14 @@ TEST_DATABASE_URL = os.environ.get("BTTCO_TEST_DATABASE_URL", "").replace("postg
 LOCAL = urlparse(TEST_DATABASE_URL).hostname in {"localhost", "127.0.0.1", "::1"}
 
 
+# Tables created by revisions after the baseline (each named here when its revision lands).
+POST_BASELINE_TABLES = (
+    "ryozan_studio_settings",  # 20261102_studio_settings
+    "ryozan_scroll_public_pdf_deletions",  # 20261110_scroll_public_pdf_del
+    "ryozan_scroll_pdf_pending_uploads",  # 20261110_scroll_pdf_pending
+)
+
+
 def _head_revision() -> str:
     config = Config()
     config.set_main_option("script_location", str(API_ROOT / "alembic"))
@@ -132,9 +140,10 @@ class SchemaBaselinePostgresTests(unittest.TestCase):
         self.assertIn("idx_ryozan_users_role", head["tables"]["ryozan_users"]["indexes"])
         self.assertIn("feedback_samples", head["tables"])
         self.assertIn("viber_accounts", head["tables"])
-        # The baseline tables, plus each table a later revision adds.
-        self.assertIn("ryozan_studio_settings", head["tables"])
-        self.assertEqual(len(head["tables"]), len(self.baseline["tables"]) + 1)
+        # The baseline tables, plus each table a later revision adds, by name.
+        for table in POST_BASELINE_TABLES:
+            self.assertIn(table, head["tables"])
+        self.assertEqual(len(head["tables"]), len(self.baseline["tables"]) + len(POST_BASELINE_TABLES))
 
         again = _run("-m", "alembic", "upgrade", "head")
         self.assertEqual(again.returncode, 0, again.stderr)

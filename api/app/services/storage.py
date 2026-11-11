@@ -280,27 +280,61 @@ def _r2_public_url(object_key: str) -> str:
 #  Private government ID objects (signed GET links)
 # ═══════════════════════════════════════════════════════
 
-# Waiver ID photos uploaded by the public walk-in flow.
-PRIVATE_ID_PREFIXES = ("waivers/pending-ids/",)
-# Printable waiver packets (waivers/<month>/<name>_<ref>/<name>_<ref>.pdf) embed the client's ID image.
-_WAIVER_ROOT = "waivers/"
-# Artist Scroll government IDs live beside public-safe certificates under
-# scrolls/<user>/<submission>/, so they are matched by file stem instead.
+# Everything under "waivers/" is a client record: ID photos (waivers/pending-ids/), printable
+# packets that embed the ID (waivers/<month>/<name>_<ref>/<name>_<ref>.pdf) and the client's
+# signature image (.../signature.png). Artists' saved signatures live under "signatures/".
+# Both prefixes are private by key; staff open them through short-lived signed links.
+PRIVATE_ID_PREFIXES = ("waivers/", "signatures/")
+# Everything under "scrolls/" is private by key: Artist Scroll government IDs (govt-id.*), every
+# generated scroll PDF (artist-scroll.id.pdf and artist-scroll.noid.pdf alike, since each one prints
+# the artist signature, any owner countersignature and the artist's details; or the legacy
+# artist-scroll.pdf), the signature images, and every older certificate, signature and category
+# upload, which was never inspected and may hold an ID. New files with no ID, signature or client
+# record (unmarked category uploads, certificates) are written under the separate "scrolls-public/"
+# prefix (public_scroll_prefix). Generated PDFs written there before that rule are moved to
+# "scrolls/" at boot (scroll_archive.move_public_scroll_pdfs). A new file that is, or embeds, an ID
+# keeps the ".id.<ext>" marker name (scroll_id_filename) so it reads as an ID wherever it is listed;
+# the PDF names (.id/.noid) record only whether the ID image is embedded, privacy comes from the prefix.
 _SCROLL_ID_ROOT = "scrolls/"
-_SCROLL_ID_STEM = "govt-id"
+SCROLL_PUBLIC_ROOT = "scrolls-public/"
+SCROLL_ID_PDF_FILENAME = "artist-scroll.id.pdf"
+SCROLL_NOID_PDF_FILENAME = "artist-scroll.noid.pdf"
+_SCROLL_ID_MARKER = ".id"
 # S3 caps a SigV4 query-string signature at seven days.
 _MAX_PRESIGN_SECONDS = 7 * 24 * 3600
 
 
 def is_private_id_key(object_key: str) -> bool:
-    """True when an R2 key holds a government ID (image, or a PDF embedding one) that must never be public."""
+    """True when an R2 key holds, or may hold, a government ID or a signature and must never be public."""
     if not object_key or ".." in object_key.split("/"):
         return False
-    if object_key.startswith(PRIVATE_ID_PREFIXES):
-        return True
-    if object_key.startswith(_WAIVER_ROOT) and object_key.lower().endswith(".pdf"):
-        return True
-    return object_key.startswith(_SCROLL_ID_ROOT) and object_key.rsplit("/", 1)[-1].startswith(_SCROLL_ID_STEM)
+    return object_key.startswith((*PRIVATE_ID_PREFIXES, _SCROLL_ID_ROOT))
+
+
+def public_scroll_prefix(private_prefix: str) -> str:
+    """The "scrolls-public/" twin of a "scrolls/..." folder, for new files that are safe to serve publicly."""
+    prefix = private_prefix.strip("/")
+    if prefix.startswith(_SCROLL_ID_ROOT):
+        return SCROLL_PUBLIC_ROOT + prefix[len(_SCROLL_ID_ROOT) :]
+    if prefix == _SCROLL_ID_ROOT.rstrip("/"):
+        return SCROLL_PUBLIC_ROOT.rstrip("/")
+    return prefix
+
+
+def private_scroll_prefix(public_prefix: str) -> str:
+    """The "scrolls/" twin of a "scrolls-public/..." folder: the private half of the same submission folder."""
+    prefix = public_prefix.strip("/")
+    if prefix.startswith(SCROLL_PUBLIC_ROOT):
+        return _SCROLL_ID_ROOT + prefix[len(SCROLL_PUBLIC_ROOT) :]
+    if prefix == SCROLL_PUBLIC_ROOT.rstrip("/"):
+        return _SCROLL_ID_ROOT.rstrip("/")
+    return prefix
+
+
+def scroll_id_filename(stem: str, extension: str) -> str:
+    """The ".id.<ext>" marker name for a scroll file that is (or embeds) a government ID."""
+    ext = (extension or "").lstrip(".").lower() or "bin"
+    return f"{stem}{_SCROLL_ID_MARKER}.{ext}"
 
 
 def _r2_key_from_reference(reference: str) -> str | None:
@@ -337,11 +371,16 @@ def _r2_key_from_reference(reference: str) -> str | None:
     return key
 
 
+def storage_key(reference: str | None) -> str | None:
+    """The object key when `reference` is an object on this install's own R2 bucket, else None. Never logs."""
+    if not reference or not isinstance(reference, str):
+        return None
+    return _r2_key_from_reference(reference.strip())
+
+
 def is_own_storage_url(reference: str | None) -> bool:
     """True when `reference` is an object on this install's own R2 bucket. The server only fetches these."""
-    if not reference or not isinstance(reference, str):
-        return False
-    return _r2_key_from_reference(reference.strip()) is not None
+    return storage_key(reference) is not None
 
 
 def private_id_key(reference: str | None) -> str | None:
@@ -424,6 +463,28 @@ def presign_get_url(object_key: str, expires_seconds: int = 300, *, now: datetim
         now=now or datetime.now(UTC),
         expires_seconds=expires,
     )
+
+
+async def fetch_object(object_key: str) -> bytes | None:
+    """
+    The bytes of one R2 object, read through a short-lived signed link on the S3 host.
+
+    Works for private and public keys alike. Returns None when R2 is not configured, the object is
+    missing or the read fails. Never raises, never logs the key.
+    """
+    url = presign_get_url(object_key, 120)
+    if not url:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url)
+    except Exception as exc:  # noqa: BLE001 - never raises
+        logger.error("R2 read failed: %s", type(exc).__name__)
+        return None
+    if response.status_code != 200:
+        logger.error("R2 read failed: HTTP %s", response.status_code)
+        return None
+    return response.content
 
 
 # Only the public walk-in upload writes here, so only these keys can come back as an upload capability.
@@ -524,25 +585,41 @@ def signed_id_url(reference: str | None, expires_seconds: int = 300) -> str | No
 
 # Document data keys that can hold a government ID reference (waiver photo ID, Artist Scroll ID).
 ID_REFERENCE_KEYS = ("photo_id_url", "photo_id", "govt_id_url")
+# Substrings that tell a raw data_json may hold a private reference (cheap prefilter): the ID keys, the
+# Artist Scroll PDF (which embeds the ID or prints the signatures) and every private prefix.
+PRIVATE_REFERENCE_HINTS = (*ID_REFERENCE_KEYS, "scroll_pdf_url", *PRIVATE_ID_PREFIXES, _SCROLL_ID_ROOT)
+# The owner archive copy nests the artist's scroll data under "fields"; one level is all it uses.
+_MAX_NESTED_FIELDS_DEPTH = 2
 
 
-def signed_id_fields(data: dict, expires_seconds: int = 300) -> dict:
+def signed_id_fields(data: dict, expires_seconds: int = 300, *, _depth: int = 0) -> dict:
     """
-    A shallow copy of stored document data with every government ID reference signed.
+    A copy of stored document data with every private storage reference signed.
 
-    Covers the waiver photo ID keys, the Scroll govt_id_url and certs_stored.govt_id.url.
-    The input is never mutated, so the stored record keeps its stable references.
+    Every top-level string that is a private key on our own bucket gets a signed link (waiver photo
+    IDs, the Scroll govt_id_url and scroll_pdf_url, and every scroll certificate, signature or file
+    under "scrolls/"), as does every certs_stored.<doc>.url and the same inside a nested "fields"
+    dict (owner archive copies). Everything else (text, "scrolls-public/" files, foreign URLs)
+    passes through unchanged. The input is never mutated, so the stored record keeps its stable
+    references.
     """
     view = dict(data)
-    for key in ID_REFERENCE_KEYS:
-        if isinstance(view.get(key), str) and view[key]:
-            view[key] = signed_id_url(view[key], expires_seconds)
+    for key, value in data.items():
+        if isinstance(value, str) and value:
+            view[key] = signed_id_url(value, expires_seconds)
     certs = view.get("certs_stored")
-    if isinstance(certs, dict) and isinstance(certs.get("govt_id"), dict) and certs["govt_id"].get("url"):
+    if isinstance(certs, dict):
         view["certs_stored"] = {
-            **certs,
-            "govt_id": {**certs["govt_id"], "url": signed_id_url(certs["govt_id"]["url"], expires_seconds)},
+            name: (
+                {**entry, "url": signed_id_url(entry["url"], expires_seconds)}
+                if isinstance(entry, dict) and isinstance(entry.get("url"), str) and entry["url"]
+                else entry
+            )
+            for name, entry in certs.items()
         }
+    nested = view.get("fields")
+    if isinstance(nested, dict) and _depth < _MAX_NESTED_FIELDS_DEPTH:
+        view["fields"] = signed_id_fields(nested, expires_seconds, _depth=_depth + 1)
     return view
 
 

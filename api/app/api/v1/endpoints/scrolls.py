@@ -44,10 +44,15 @@ from app.services.email import (
     send_email,
 )
 from app.services.push import send_push_notification
+from app.services.storage import public_scroll_prefix, scroll_id_filename, signed_id_url
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.scrolls")
 router = APIRouter(prefix="/scrolls", tags=["scrolls"])
+
+# Scroll PDFs that embed the artist's government ID are private in R2; list and upload responses
+# carry signed links for those, valid for one review session. Other files keep their public links.
+SCROLL_FILE_VIEW_SECONDS = 900
 
 SLUG_CHARS = set("abcdefghijklmnopqrstuvwxyz0123456789_-")
 OWNER_ARCHIVE_SLUG = "owner-archive"
@@ -342,7 +347,8 @@ async def list_category_docs(
                 "user_name": user_name,
                 "title": inst.title,
                 "status": inst.status,
-                "file_url": inst.file_url,
+                # A scroll PDF that embeds the artist's government ID: short-lived signed links only.
+                "file_url": signed_id_url(inst.file_url, SCROLL_FILE_VIEW_SECONDS),
                 "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
                 "created_at": inst.created_at.isoformat(),
                 "ai_digest": data.get("ai_digest"),
@@ -369,11 +375,15 @@ async def upload_scroll_doc(
     title: str = Form(""),
     notes: str = Form(""),
     ai_digest_enabled: bool = Form(False),
+    is_id: bool = Form(False),
     db: AsyncSession = Depends(get_db, scope="function"),
     current_user: User = Depends(get_current_user),
 ):
     """
     Upload a document to a scroll category.
+    When the uploader marks the file as a government ID (is_id), it is stored under the private
+    ".id.<ext>" marker name, only ever served through short-lived signed links, and never sent to
+    the Gala AI digest.
     Any authenticated user can upload to their own category.
     If the category has ai_digest_enabled OR the caller passes ai_digest_enabled=true,
     Gala extracts structured intel and enriches current_user.nexus_profile.
@@ -404,7 +414,8 @@ async def upload_scroll_doc(
     doc_title = title.strip() or (file.filename or "Untitled Scroll")
     doc_category = "scroll" if category_slug == "artist" else f"scroll_{category_slug}"
     ext = Path(file.filename or "doc").suffix or ""
-    filename = f"{uuid.uuid4().hex}{ext}"
+    token = uuid.uuid4().hex
+    filename = scroll_id_filename(token, ext) if is_id else f"{token}{ext}"
 
     content = await file.read()
 
@@ -412,14 +423,21 @@ async def upload_scroll_doc(
         file_bytes=content,
         filename=filename,
         mime_type=file.content_type or "application/octet-stream",
-        folder_path=f"scrolls/{category_slug}/{current_user.id}",
+        # A file marked as an ID stays under the private "scrolls/" prefix; anything else goes under
+        # the public "scrolls-public/" twin (everything under "scrolls/" is private by key).
+        folder_path=(
+            f"scrolls/{category_slug}/{current_user.id}"
+            if is_id
+            else public_scroll_prefix(f"scrolls/{category_slug}/{current_user.id}")
+        ),
     )
     if not blob_url:
         raise HTTPException(500, "File storage unavailable — upload failed")
 
     # Gala AI digest (optional, async, non-blocking)
     ai_digest_result: dict | None = None
-    should_digest = ai_digest_enabled or cat.ai_digest_enabled
+    # An ID never goes to the AI digest, whatever the category or caller asks for.
+    should_digest = (ai_digest_enabled or cat.ai_digest_enabled) and not is_id
     if should_digest and cat.ai_digest_prompt:
         try:
             ai_digest_result = await _run_gala_digest(
@@ -454,7 +472,8 @@ async def upload_scroll_doc(
     return {
         "id": str(instance.id),
         "title": instance.title,
-        "file_url": blob_url,
+        # New unmarked uploads (scrolls-public/) pass through; ID uploads and older scrolls/ files are signed.
+        "file_url": signed_id_url(blob_url, SCROLL_FILE_VIEW_SECONDS),
         "status": "submitted",
         "ai_digest": ai_digest_result,
         "created_at": instance.created_at.isoformat(),
