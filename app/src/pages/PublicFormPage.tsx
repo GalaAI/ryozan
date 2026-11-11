@@ -193,7 +193,7 @@ export default function PublicFormPage() {
 
         {/* ── Form ── */}
         {(state === 'form' || state === 'submitting') && formData && (
-          <form onSubmit={handleSubmit} className="public-form-body">
+          <form onSubmit={handleSubmit} className="public-form-body" aria-label={formData.title}>
             <div className="public-form-title-block">
               <h2>{formData.title}</h2>
               {formData.description && (
@@ -230,6 +230,7 @@ export default function PublicFormPage() {
                 <SignaturePad
                   onSign={setSignature}
                   value={signature}
+                  ariaLabel="Signature"
                 />
               </div>
             )}

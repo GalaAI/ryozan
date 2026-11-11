@@ -39,17 +39,40 @@ from app.core.rate_limit import limiter
 from app.services.email import process_booky_courier_outbox_once
 from app.services.gallery_storage import process_gallery_deletion_outbox_once
 from app.services.pack_bridge import process_pack_bridge_outbox_once, queue_recent_learning_captures_once
-from app.services.scroll_archive import process_owner_email_outbox_once
+from app.services.scroll_archive import (
+    process_owner_email_outbox_once,
+    process_unstored_scroll_pdfs_once,
+    retry_pending_scroll_pdfs_once,
+    retry_public_scroll_pdf_deletions_once,
+)
 from app.services.session_type_defaults import seed_default_session_types
+from app.services.shop_pack import serve_pack_file
 from app.services.studio_config import load_saved_settings, setup_code, setup_is_open
 
 settings = get_settings()
 
 
-async def _run_owner_email_outbox() -> None:
-    """Continuously drain the existing durable outbound-email authorities."""
+async def _drain_forever(workers, label: str) -> None:
+    """Run each worker once per pass, every 15 seconds, logging and surviving any single failure."""
     while True:
-        workers = (
+        for worker_name, worker in workers:
+            try:
+                await worker()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                print(f"[Ryozan] {worker_name} {label} error: {exc}", flush=True)
+        await asyncio.sleep(15)
+
+
+async def _run_owner_email_outbox() -> None:
+    """Continuously drain the existing durable outbound-email authorities.
+
+    Storage (R2) recovery runs in its own loop (_run_scroll_pdf_storage_recovery), so a storage outage
+    never delays customer or owner email.
+    """
+    await _drain_forever(
+        (
             ("owner email", process_owner_email_outbox_once),
             ("booking email", process_booking_email_outbox_once),
             ("BYOF deposit review", process_byof_deposit_reviews_once),
@@ -59,15 +82,44 @@ async def _run_owner_email_outbox() -> None:
             ("learning capture", queue_recent_learning_captures_once),
             ("Pack bridge", process_pack_bridge_outbox_once),
             ("Apex reviewed dataset", process_apex_training_manifest_once),
+        ),
+        "outbox",
+    )
+
+
+async def _run_scroll_pdf_storage_recovery() -> None:
+    """Continuously retry scroll PDF storage work, apart from email so slow R2 holds up nothing else."""
+    await _drain_forever(
+        (
+            # Held scroll PDFs whose store failed (founders or not). Backs off per row, never gives up.
+            ("held scroll PDF", retry_pending_scroll_pdfs_once),
+            # Legacy: PDF bytes held on owner email rows queued before the held-PDF table.
+            ("unstored scroll PDF", process_unstored_scroll_pdfs_once),
+            # Public scroll PDFs the boot move could not confirm deleted. Backs off per row.
+            ("public scroll PDF delete", retry_public_scroll_pdf_deletions_once),
+        ),
+        "recovery",
+    )
+
+
+async def _move_public_scroll_pdfs() -> None:
+    """One pass at boot, in the background: generated scroll PDFs under scrolls-public/ move to scrolls/.
+
+    In the background because it reads and writes R2, which must never hold up startup. Idempotent, so a
+    failed or interrupted pass is finished by the next start. Logs counts only.
+    """
+    from app.services.scroll_archive import move_public_scroll_pdfs_once
+
+    try:
+        counts = await move_public_scroll_pdfs_once()
+        print(
+            "[Ryozan] Public scroll PDFs moved to private storage: " + ", ".join(f"{n} {k}" for k, n in counts.items()),
+            flush=True,
         )
-        for worker_name, worker in workers:
-            try:
-                await worker()
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                print(f"[Ryozan] {worker_name} outbox error: {exc}", flush=True)
-        await asyncio.sleep(15)
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - advisory only, retried on the next boot
+        print(f"[Ryozan] Public scroll PDF move skipped: {type(exc).__name__}", flush=True)
 
 
 async def _heal_portfolio_derivatives() -> None:
@@ -277,8 +329,35 @@ async def _run_startup_seeds() -> None:
                 )
             )
 
+    # No step here may touch storage (R2): startup must finish inside the platform health-check window
+    # however slow storage is. Scroll PDFs whose upload failed are stored by the storage recovery loop
+    # (_run_scroll_pdf_storage_recovery), which starts in the background after these DB-only steps.
+
+    async def sent_owner_email_attachments() -> None:
+        # Finished owner emails (sent or exhausted) must not keep the scroll PDF (it can embed the
+        # artist's government ID), unless it may be the only copy of the archive PDF.
+        from app.services.scroll_archive import clear_sent_owner_email_attachments
+
+        async with engine.begin() as conn:
+            found, cleared, kept = await clear_sent_owner_email_attachments(conn)
+        print(
+            f"[Ryozan] Finished owner emails holding PDF bytes: {found}; cleared: {cleared}; "
+            f"kept (archive PDF not confirmed): {kept}",
+            flush=True,
+        )
+
+    async def legacy_scroll_references() -> None:
+        # Older scroll files stay under the private scrolls/ prefix and are served signed; count only.
+        from app.services.scroll_archive import count_legacy_scroll_references
+
+        async with engine.begin() as conn:
+            count = await count_legacy_scroll_references(conn)
+        print(f"[Ryozan] Document rows referencing legacy scrolls/ objects: {count}", flush=True)
+
     await _seed_step("default session types", default_session_types)
     await _seed_step("POS commission base", pos_commission_base)
+    await _seed_step("sent owner email attachments", sent_owner_email_attachments)
+    await _seed_step("legacy scroll references", legacy_scroll_references)
 
     # Convert SQLAlchemy URL to asyncpg format
     db_url = settings.DATABASE_URL
@@ -529,15 +608,18 @@ async def lifespan(app: FastAPI):
         demo_shop_task = asyncio.create_task(run_nightly_resets(async_session))
     await _announce_first_run_setup()
     outbox_task = asyncio.create_task(_run_owner_email_outbox())
+    storage_recovery_task = asyncio.create_task(_run_scroll_pdf_storage_recovery())
+    scroll_pdf_move_task = asyncio.create_task(_move_public_scroll_pdfs())
     derivatives_task = (
         asyncio.create_task(_heal_portfolio_derivatives()) if settings.PORTFOLIO_DERIVATIVES_ON_STARTUP else None
     )
     try:
         yield
     finally:
-        outbox_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await outbox_task
+        for task in (outbox_task, storage_recovery_task, scroll_pdf_move_task):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
         if derivatives_task:
             derivatives_task.cancel()
             with suppress(asyncio.CancelledError):
@@ -616,6 +698,16 @@ from app.mcp.router import mcp_router as _mcp_router  # noqa: E402
 
 app.include_router(_mcp_router)
 app.include_router(_mcp_oauth_router)
+
+
+# Shop brand pack files (app.services.shop_pack), same-origin for the pack hosts such
+# as the Email Foundry frame. Registered before the SPA catch-all so a missing file is a 404.
+# Exempt like the static files: one pack page loads dozens of files.
+@app.get("/dependencies/{path:path}", include_in_schema=False)
+@limiter.exempt
+async def shop_pack_file(path: str, request: Request):
+    return await serve_pack_file(path, request, settings)
+
 
 # Serve uploaded files (gallery images, etc.)
 # NOTE: Local /uploads/ static mount removed (2026-03-24).

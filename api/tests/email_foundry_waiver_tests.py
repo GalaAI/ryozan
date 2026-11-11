@@ -175,7 +175,7 @@ class SendPathTests(unittest.TestCase):
             self.assertTrue(asyncio.run(documents._send_checkin_code_email("sam@example.com", "123456")))
         self.assertEqual(send.await_args.kwargs["tags"], ["checkin_code"])
 
-    def test_waiver_reminder_goes_to_checkin(self) -> None:
+    def test_waiver_reminder_opens_the_form_page(self) -> None:
         send = AsyncMock(return_value=True)
         settings = SimpleNamespace(FRONTEND_URL="https://ryozan.app/")
         inst = SimpleNamespace(
@@ -185,7 +185,13 @@ class SendPathTests(unittest.TestCase):
             asyncio.run(documents._send_document_reminder(settings, inst, 20))
         kwargs = send.await_args.kwargs
         self.assertEqual(kwargs["tags"], ["waiver_reminder"])
-        self.assertIn("https://ryozan.app/checkin?t=tok", kwargs["html_body"])
+        self.assertIn("https://ryozan.app/form/tok", kwargs["html_body"])
+        self.assertNotIn("/checkin?t=", kwargs["html_body"])
+
+    def test_waiver_form_url_points_at_form_route(self) -> None:
+        for base in ("https://ryozan.app", "https://ryozan.app/"):
+            settings = SimpleNamespace(FRONTEND_URL=base)
+            self.assertEqual(documents._waiver_form_url(settings, "tok-123"), "https://ryozan.app/form/tok-123")
 
 
 if __name__ == "__main__":

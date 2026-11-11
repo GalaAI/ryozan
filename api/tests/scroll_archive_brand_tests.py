@@ -94,7 +94,7 @@ class OwnerArchiveEmailBrandTests(unittest.TestCase):
                         ScrollAsset(key="govt_id", label="Government ID", stored=False, error="timeout"),
                     ],
                 ),
-                pdf_attached=kwargs.get("pdf_attached", True),
+                pdf_filed=kwargs.get("pdf_filed", True),
             )
 
     def test_uses_foundry_shell_and_links_to_codex(self):
@@ -112,11 +112,12 @@ class OwnerArchiveEmailBrandTests(unittest.TestCase):
         self.assertIn("Not provided", html)
         self.assertIn("UPLOAD FAILED: timeout", html)
         self.assertIn("September 29, 2026 at 1:20 PM EDT", html)
-        self.assertIn("A complete PDF copy is attached", html)
+        self.assertIn("A complete PDF copy has been filed", html)
+        self.assertIn("not attached to this email", html)
 
     def test_no_dashes_and_missing_pdf_is_stated(self):
-        html = self._html(pdf_attached=False, assets=[])
-        self.assertIn("no PDF is attached", html)
+        html = self._html(pdf_filed=False, assets=[])
+        self.assertIn("the archive has no PDF", html)
         self.assertIn("No documents uploaded", html)
         self.assertNotIn("—", html)
         self.assertNotIn("–", html)

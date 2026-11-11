@@ -24,10 +24,14 @@ from app.models.document import DocumentInstance
 from app.models.user import User
 from app.schemas.archive import ArchiveListResponse, ArchiveRecord
 from app.services.scroll_archive import OWNER_ARCHIVE_CATEGORY
+from app.services.storage import signed_id_fields
 
 logger = logging.getLogger("ryozan.archive")
 
 router = APIRouter(prefix="/archive", tags=["archive"])
+
+# Signed government ID links in an archive detail stay valid for one staff review session.
+ARCHIVE_ID_VIEW_SECONDS = 900
 
 
 def _is_manager(user: User) -> bool:
@@ -349,7 +353,8 @@ async def get_archive_detail(
             "artist_name": artist_name or data.get("artist_name"),
             "signed_at": doc.signed_at.isoformat() if doc.signed_at else None,
             "created_at": doc.created_at.isoformat() if doc.created_at else None,
-            "data": data,
+            # Government ID references are private in R2: staff get short-lived signed links only.
+            "data": signed_id_fields(data, ARCHIVE_ID_VIEW_SECONDS) if isinstance(data, dict) else data,
         }
 
     # Try booking

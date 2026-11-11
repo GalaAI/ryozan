@@ -71,7 +71,12 @@ from app.services.image_processing import (
     create_design_preview,
     validate_and_normalize_image,
 )
-from app.services.payments import apply_customer_receipt, customer_price_cents, resolve_charge_routing
+from app.services.payments import (
+    apply_customer_receipt,
+    customer_price_cents,
+    public_checkout_return_url,
+    resolve_charge_routing,
+)
 from app.services.storage import build_object_key
 from app.services.storage import upload_file as upload_to_drive
 from app.services.stripe_client import get_stripe_client
@@ -1913,8 +1918,8 @@ async def book_flash_design(
 
     # Create Stripe Checkout Session
     design_label = design.name or "Flash Tattoo Design"
-    success_url = f"{settings.FRONTEND_URL}/book/confirm?checkout=success&ref={ref_code}"
-    cancel_url = f"{settings.FRONTEND_URL}/book/confirm?checkout=cancelled&ref={ref_code}"
+    success_url = public_checkout_return_url(settings.FRONTEND_URL, "success", ref_code)
+    cancel_url = public_checkout_return_url(settings.FRONTEND_URL, "cancelled", ref_code)
 
     session_params: dict = {
         "mode": "payment",
