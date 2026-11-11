@@ -406,6 +406,25 @@ class PublicBookingResponse(BaseModel):
     account_setup_token: str | None = None
 
 
+class PublicCheckoutStatusResponse(BaseModel):
+    """What the public confirm page may show after a Stripe redirect.
+
+    Keyed by the Checkout Session id the buyer was handed back. It carries no
+    client name, email or phone: only the reference, the artist and where the
+    booking and its deposit stand on the server.
+    """
+
+    reference_code: str | None = None
+    artist_name: str | None = None
+    booking_status: str
+    # "paid": captured; "authorized": held for artist review; "pending":
+    # Stripe has not reported the payment yet; "none": no deposit on record.
+    deposit_state: Literal["paid", "authorized", "pending", "none"]
+    deposit_amount: float | None = None
+    scheduled_date: date | None = None
+    scheduled_time: str | None = None
+
+
 class PublicInquirySubmit(BaseModel):
     """Public general inquiry. Opens a Courier thread and never a booking row.
 

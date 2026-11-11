@@ -14,7 +14,7 @@ export default function NotFoundPage() {
           Back Home
         </Link>
         <Link
-          to="/dashboard/book"
+          to="/book"
           className="ryozan-error-boundary__action ryozan-error-boundary__action--secondary"
         >
           Book a Session

@@ -23,6 +23,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+from urllib.parse import quote
 from uuid import UUID
 
 from sqlalchemy import select
@@ -723,6 +724,29 @@ def apply_customer_receipt(
         payment_intent_data["receipt_email"] = customer_email
     checkout_params["payment_intent_data"] = payment_intent_data
     return checkout_params
+
+
+# Stripe documents this placeholder for the success redirect, where it becomes
+# the Checkout Session id. The cancel return needs no session, so it is left off.
+CHECKOUT_SESSION_ID_PLACEHOLDER = "{CHECKOUT_SESSION_ID}"
+PUBLIC_CHECKOUT_RETURN_PATH = "/book/confirm"
+
+
+def public_checkout_return_url(frontend_url: str, outcome: str, reference_code: str | None) -> str:
+    """Where Stripe sends a public buyer back to: the public, no-login confirm page.
+
+    ``outcome`` is "success" or "cancelled". The success URL carries the session
+    id so the confirm page can read the booking's real state from
+    GET /bookings/checkout-status/{session_id}; the redirect itself is never
+    treated as a payment receipt.
+    """
+    if outcome not in {"success", "cancelled"}:
+        raise ValueError(f"unknown checkout outcome: {outcome}")
+    reference = quote(reference_code or "", safe="")
+    url = f"{frontend_url.rstrip('/')}{PUBLIC_CHECKOUT_RETURN_PATH}?checkout={outcome}&ref={reference}"
+    if outcome == "success":
+        url += f"&session_id={CHECKOUT_SESSION_ID_PLACEHOLDER}"
+    return url
 
 
 def customer_price_cents(service_price_cents: int) -> int:

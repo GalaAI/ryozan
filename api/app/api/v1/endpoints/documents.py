@@ -37,13 +37,20 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query
 from sqlalchemy import and_, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.waiver import _artist_can_access_waiver, _send_aftercare_email, spawn_background
+from app.api.v1.endpoints.waiver import (
+    UPLOAD_ID_AGAIN,
+    _artist_can_access_waiver,
+    _send_aftercare_email,
+    authorize_client_data,
+    require_uploaded_id,
+    spawn_background,
+)
 from app.constants.status import DocStatus
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.routes import ROUTES
-from app.core.security import get_current_user, require_role
+from app.core.security import ROLE_RANK, get_current_user, require_role
 from app.models.booking import Booking
 from app.models.document import DocumentInstance, DocumentTemplate
 from app.models.notification import Notification
@@ -76,12 +83,23 @@ from app.services.scroll_archive import (
     OWNER_ARCHIVE_CATEGORY,
     build_submission_prefix,
     file_owner_archive,
+    hold_pdf_for_retry,
     notify_owners,
     queue_owner_emails,
     resolve_founders,
 )
-from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf
+from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf_report
 from app.services.sms import send_sms
+from app.services.storage import (
+    ID_REFERENCE_KEYS,
+    PRIVATE_REFERENCE_HINTS,
+    SCROLL_ID_PDF_FILENAME,
+    SCROLL_NOID_PDF_FILENAME,
+    canonical_id_reference,
+    public_scroll_prefix,
+    signed_id_fields,
+    signed_id_url,
+)
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.documents")
@@ -93,6 +111,70 @@ MAX_SCROLL_SIGNATURE_BYTES = 2 * 1024 * 1024
 MAX_SCROLL_TOTAL_BYTES = 25 * 1024 * 1024
 ARTIST_SCROLL_TERMS_VERSION = "artist-scroll-2026-08-10-v1"
 REQUIRED_SCROLL_ACCEPTANCE_SECTIONS = ("application", "agreement", "bloodborne", "fire", "dhec")
+# Keys of the stored scroll record that only the server writes: the references to objects it
+# stored for this submission and the bookkeeping around them. A browser-supplied value for any of
+# them is discarded, so an artist can never point the record (and the signed links handed back for
+# it) at another object in our bucket.
+SERVER_OWNED_SCROLL_KEYS = frozenset(
+    {
+        "bbp_cert_url",
+        "first_aid_cert_url",
+        "cpr_cert_url",
+        "govt_id_url",
+        "govt_id",
+        "photo_id_url",
+        "photo_id",
+        "owner_sig_url",
+        "artist_sig_url",
+        "artist_signature",
+        "signature_url",
+        "scroll_pdf_url",
+        "file_url",
+        "certs_stored",
+        "submission_id",
+        "storage_prefix",
+        "public_storage_prefix",
+        "acceptance_record",
+    }
+)
+
+
+def _scrub_client_storage_refs(fields: dict) -> tuple[dict, int]:
+    """Copy of browser-supplied scroll fields without the keys only the server writes.
+
+    The ID, certificate, signature and PDF references and the submission bookkeeping come only from this
+    request's own uploads, so a browser-supplied value for any of them is dropped. Any other value that names
+    an object on our bucket is then held to storage.authorize_client_references (refused unless it is the
+    artist's own), so the read endpoints can never sign a link to someone else's waiver, signature or scroll.
+    Keys only submit_scroll writes (RESERVED_SCROLL_MARKERS) are also dropped at any depth: the owner
+    archive nests these fields under "fields", and a planted nested submission_id or scroll_pdf_url must
+    never sit in a record the server reads back. Returns (scrubbed, dropped_count). Never logs values.
+    """
+    dropped = 0
+
+    def _nested(value):
+        nonlocal dropped
+        if isinstance(value, dict):
+            kept = {}
+            for key, item in value.items():
+                if key in RESERVED_SCROLL_MARKERS:
+                    dropped += 1
+                    continue
+                kept[key] = _nested(item)
+            return kept
+        if isinstance(value, list):
+            return [_nested(item) for item in value]
+        return value
+
+    out = {}
+    for key, item in fields.items():
+        if key in SERVER_OWNED_SCROLL_KEYS or key in RESERVED_SCROLL_MARKERS:
+            dropped += 1
+            continue
+        out[key] = _nested(item)
+    return out, dropped
+
+
 WAIVER_CONTACT_PREFILL_FIELDS = (
     "full_name",
     "date_of_birth",
@@ -109,6 +191,60 @@ def _require_owner_archive_access(user: User, category: str | None) -> None:
     """Keep owner compliance archives founder-only across generic document routes."""
     if category == OWNER_ARCHIVE_CATEGORY and user.role != "founder":
         raise HTTPException(status_code=403, detail="Owner archive access requires founder role")
+
+
+# Categories only the server creates for a caller below admin: the artist scroll is created by
+# submit_scroll (and the scrolls artist upload), never through the generic document routes. Artists and
+# assistants are held to this too: they are peers of the artists whose submissions they could forge.
+SERVER_CREATED_CATEGORIES = frozenset({"scroll", OWNER_ARCHIVE_CATEGORY})
+# data_json keys only submit_scroll writes. Scroll PDF recovery never trusts them, but a caller below
+# admin has no reason to send them through the generic routes, so a payload carrying one is refused.
+RESERVED_SCROLL_MARKERS = frozenset(
+    {
+        "submission_id",
+        "scroll_pdf_url",
+        "acceptance_record",
+        "storage_prefix",
+        "public_storage_prefix",
+        "certs_stored",
+        "artist_user_id",
+    }
+)
+RESERVED_MARKER_MESSAGE = "This document cannot carry server-reserved fields"
+SERVER_CATEGORY_MESSAGE = "This document category is created by the server only"
+
+
+def _is_admin(user: User) -> bool:
+    return ROLE_RANK.get(getattr(user, "role", None) or "", -1) >= ROLE_RANK["admin"]
+
+
+def _require_caller_category(category: str | None) -> None:
+    """Below admin, the generic document routes never create a server-only category."""
+    if category in SERVER_CREATED_CATEGORIES:
+        raise HTTPException(status_code=403, detail=SERVER_CATEGORY_MESSAGE)
+
+
+def _has_reserved_marker(value) -> bool:
+    if isinstance(value, dict):
+        return any(k in RESERVED_SCROLL_MARKERS or _has_reserved_marker(v) for k, v in value.items())
+    if isinstance(value, list):
+        return any(_has_reserved_marker(v) for v in value)
+    return False
+
+
+def _require_no_reserved_markers(raw: str | None) -> None:
+    """Refuse caller data_json carrying a key only submit_scroll writes, at any depth. Never logs values."""
+    if not raw:
+        return
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        # Kept as text and never parsed for recovery, but the marker must not appear in it either.
+        if any(f'"{marker}"' in raw for marker in RESERVED_SCROLL_MARKERS):
+            raise HTTPException(status_code=422, detail=RESERVED_MARKER_MESSAGE) from None
+        return
+    if _has_reserved_marker(data):
+        raise HTTPException(status_code=422, detail=RESERVED_MARKER_MESSAGE)
 
 
 def _require_document_instance_access(instance: DocumentInstance, user: User) -> None:
@@ -157,6 +293,14 @@ def _prior_prefill_allowed(instance: DocumentInstance, current_data: dict) -> bo
     return bool(instance.sent_by) or current_data.get("checkin_verified") is True
 
 
+# Yes/no health answers every check-in waiver files. Keys match HEALTH_QUESTIONS in app/src/lib/checkin.ts.
+WAIVER_HEALTH_YES_NO_KEYS = ("pregnant", "blood_thinners", "blood_disorder", "skin_condition")
+
+# Health answers a returning client may confirm as unchanged. Sobriety is never carried over: it is asked
+# fresh on every visit (SC Reg. 60-111 801.C).
+WAIVER_HEALTH_KEYS = (*WAIVER_HEALTH_YES_NO_KEYS, "allergies", "medical_conditions")
+
+
 # Server-set waiver facts the public form never sends back; kept when the client submits.
 WAIVER_SERVER_KEYS = ("booking_id", "booking_reference", "checkin_verified", "checkin_source")
 
@@ -180,10 +324,59 @@ def _require_waiver_placement(data: dict) -> str:
 
 
 def _require_waiver_photo_id(data: dict) -> str:
+    """The waiver's ID reference, already verified by _verify_public_id_fields or copied server side."""
     photo_id = str(data.get("photo_id_url") or data.get("photo_id") or "").strip()
     if not photo_id:
         raise HTTPException(status_code=422, detail="Photo ID is required")
-    return photo_id
+    # The browser may echo back the signed preview link; store the stable reference instead.
+    return canonical_id_reference(photo_id) or photo_id
+
+
+def _verify_public_id_fields(data: dict, *, caller: User | None = None) -> None:
+    """
+    Hold client-supplied form data to the stored-reference rule, in place, or refuse it with 422.
+
+    Every ID key is accepted only as the signed upload link this server issued for it, rewritten to the
+    stored reference. Every other value, nested at any depth, may name a stored object only when the caller
+    proves it may (storage.authorize_client_references): read paths sign what is stored, so nobody can
+    file someone else's object and have it signed back. certs_stored is written only by the authenticated
+    Scroll submit, so client data never sets it.
+    """
+    data.pop("certs_stored", None)
+    verified: dict[str, str] = {}
+    for key in ID_REFERENCE_KEYS:
+        value = data.get(key)
+        if value in (None, ""):
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise HTTPException(status_code=422, detail=UPLOAD_ID_AGAIN)
+        verified[key] = require_uploaded_id(value)
+    rest = authorize_client_data({k: v for k, v in data.items() if k not in verified}, caller=caller)
+    merged = {k: verified[k] if k in verified else rest[k] for k in data}
+    data.clear()
+    data.update(merged)
+
+
+def _verified_client_data_json(raw: str | None, *, caller: User) -> str | None:
+    """
+    data_json from an account below admin, with every stored-object reference proven.
+
+    Document views sign stored references, so the caller must not be able to store someone else's. Data
+    that needs no change, and text that is not JSON, is kept byte for byte.
+    """
+    if not raw:
+        return raw
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        authorize_client_data(raw, caller=caller)
+        return raw
+    if not isinstance(data, dict):
+        checked = authorize_client_data(data, caller=caller)
+        return raw if checked == data else json.dumps(checked)
+    original = json.loads(raw)
+    _verify_public_id_fields(data, caller=caller)
+    return raw if data == original else json.dumps(data)
 
 
 def _require_waiver_intake_answers(data: dict) -> None:
@@ -202,6 +395,14 @@ def _require_waiver_intake_answers(data: dict) -> None:
     for key in ("health_and_eligibility", "risks_and_consent", "accept_terms"):
         if data.get(key) is not True:
             raise HTTPException(status_code=422, detail="Confirm all three statements before you sign")
+    # A check-in waiver files every yes/no health answer explicitly. A missing one (an older waiver that never
+    # asked it, carried over as "same as last time") is rejected, never stored or printed as No.
+    if "health_same_as_last_visit" in data or data.get("checkin_verified") is True:
+        for key in WAIVER_HEALTH_YES_NO_KEYS:
+            answer = str(data.get(key) or "").strip().capitalize()
+            if answer not in ("Yes", "No"):
+                raise HTTPException(status_code=422, detail="Answer every health question before you sign")
+            data[key] = answer
 
 
 def _require_waiver_signature(signature: str | None) -> str:
@@ -274,6 +475,29 @@ def _normalize_waiver_fields(fields: list[dict]) -> list[dict]:
 UPLOAD_DIR = Path(__file__).resolve().parents[4] / "uploads" / "documents"
 
 
+# Government ID images are private in R2; responses carry short-lived signed links only.
+ID_VIEW_SECONDS = 900
+
+
+def _signed_data_json(raw: str | None) -> str | None:
+    """
+    The stored data_json with any private government ID reference swapped for a signed link.
+
+    Documents with no private ID reference come back byte for byte unchanged. Stored data is
+    never mutated; this only shapes the response.
+    """
+    if not raw or not any(hint in raw for hint in PRIVATE_REFERENCE_HINTS):
+        return raw
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return raw
+    if not isinstance(data, dict):
+        return raw
+    view = signed_id_fields(data, ID_VIEW_SECONDS)
+    return raw if view == data else json.dumps(view)
+
+
 def _instance_to_response(inst: DocumentInstance, template_name: str | None, user_name: str | None) -> dict:
     """Convert a DocumentInstance row + joined names into a response dict."""
     return {
@@ -285,9 +509,10 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
         "category": inst.category,
         "title": inst.title,
         "status": inst.status,
-        "data_json": inst.data_json,
+        "data_json": _signed_data_json(inst.data_json),
         "signed_at": inst.signed_at,
-        "file_url": inst.file_url,
+        # Private ID objects, and scroll PDFs that embed the ID, reach clients as short-lived signed links only.
+        "file_url": signed_id_url(inst.file_url, ID_VIEW_SECONDS),
         "notes": inst.notes,
         # Send / lifecycle fields
         "send_token": inst.send_token,
@@ -458,15 +683,29 @@ async def submit_document(
 ):
     """Submit a filled form or create a document instance."""
     _require_owner_archive_access(current_user, body.category)
+    if not _is_admin(current_user):
+        # No server-only category and no server-reserved scroll marker below admin (checked before any write).
+        _require_caller_category(body.category)
+        _require_no_reserved_markers(body.data_json)
+    data_json, file_url, notes = body.data_json, body.file_url, body.notes
+    # Document views sign stored references, so only founder/admin (who can already open every record)
+    # may store one without proof. Everyone else references only their own uploads and folders.
+    if ROLE_RANK.get(current_user.role, -1) < ROLE_RANK["admin"]:
+        data_json = _verified_client_data_json(data_json, caller=current_user)
+        file_url = authorize_client_data(file_url, caller=current_user)
+        notes = authorize_client_data(notes, caller=current_user)
+    else:
+        # Founder/admin may store any reference; an echoed signed view link is kept as the stable reference.
+        file_url = canonical_id_reference(file_url)
     instance = DocumentInstance(
         template_id=body.template_id,
         user_id=current_user.id,
         category=body.category,
         title=body.title,
         status="submitted",
-        data_json=body.data_json,
-        file_url=body.file_url,
-        notes=body.notes,
+        data_json=data_json,
+        file_url=file_url,
+        notes=notes,
     )
     db.add(instance)
     await db.flush()
@@ -527,10 +766,11 @@ async def update_document_status(
     if not instance:
         raise HTTPException(status_code=404, detail="Document not found")
     _require_document_instance_access(instance, current_user)
+    notes = authorize_client_data(body.notes, caller=current_user)
 
     instance.status = body.status
-    if body.notes is not None:
-        instance.notes = body.notes
+    if notes is not None:
+        instance.notes = notes
     instance.updated_at = datetime.now(UTC)
 
     await db.flush()
@@ -559,6 +799,8 @@ async def upload_document(
 ):
     """Upload a file and create a document instance for it."""
     _require_owner_archive_access(current_user, category)
+    if not _is_admin(current_user):
+        _require_caller_category(category)
 
     from app.services.storage import upload_file as upload_to_drive
 
@@ -663,6 +905,10 @@ async def submit_scroll(
     # certificate objects in place and silently rewrote what earlier archive copies
     # pointed at.
     storage_prefix = build_submission_prefix(str(current_user.id))
+    # The government ID, the signature images and the generated PDF (which prints the signatures whether
+    # or not it embeds the ID) stay under the private "scrolls/" prefix; only the certificates go under
+    # the public "scrolls-public/" twin, since everything under "scrolls/" is private by key.
+    public_prefix = public_scroll_prefix(storage_prefix)
 
     def _decode_signature(raw_b64: str, label: str) -> bytes:
         try:
@@ -702,6 +948,19 @@ async def submit_scroll(
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be valid JSON") from None
     if not isinstance(fields, dict):
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be an object")
+    # Never trust a browser-supplied storage reference: the ID, certificates and signatures are
+    # only ever the files uploaded in this request, stored by the server under its own keys below.
+    fields, dropped_refs = _scrub_client_storage_refs(fields)
+    if dropped_refs:
+        logger.warning(
+            "Scroll %s: discarded %d client-supplied storage reference(s) for user %s",
+            submission_id,
+            dropped_refs,
+            current_user.id,
+        )
+    # Everything else the artist typed may name only their own stored objects (the shared validator, before
+    # anything is written), since /scroll/my and the owner views sign what is stored.
+    fields = authorize_client_data(fields, caller=current_user)
 
     terms_version = fields.get("terms_version")
     section_acceptances = fields.get("section_acceptances")
@@ -792,7 +1051,7 @@ async def submit_scroll(
                 file_bytes=content,
                 filename=f"{stem}{ext}",
                 mime_type=upload.content_type or "image/jpeg",
-                folder_path=storage_prefix,
+                folder_path=storage_prefix if key == "govt_id" else public_prefix,
             )
             if url:
                 asset.url = url
@@ -858,8 +1117,9 @@ async def submit_scroll(
     # scroll itself.
     scroll_pdf_url: str | None = None
     pdf_bytes: bytes | None = None
+    pdf_filename: str | None = None
     try:
-        pdf_bytes = build_scroll_pdf(
+        report = build_scroll_pdf_report(
             ScrollPdfInput(
                 artist_name=current_user.name or "Unknown Artist",
                 artist_email=current_user.email,
@@ -876,9 +1136,15 @@ async def submit_scroll(
                 assets=assets,
             )
         )
+        pdf_bytes = report.pdf
+        # The name records whether the PDF embeds the government ID image ("artist-scroll.id.pdf", else
+        # "artist-scroll.noid.pdf"). Privacy comes from the prefix: every generated PDF prints the artist
+        # signature (and any owner countersignature), so it is always private and reaches clients only as
+        # a short-lived signed link.
+        pdf_filename = SCROLL_ID_PDF_FILENAME if report.embeds_government_id else SCROLL_NOID_PDF_FILENAME
         scroll_pdf_url = await upload_to_blob(
             file_bytes=pdf_bytes,
-            filename="artist-scroll.pdf",
+            filename=pdf_filename,
             mime_type="application/pdf",
             folder_path=storage_prefix,
         )
@@ -901,6 +1167,8 @@ async def submit_scroll(
         fields["scroll_pdf_url"] = scroll_pdf_url
 
     instance = DocumentInstance(
+        # Set here so a held PDF can name exactly the records this submission created.
+        id=uuid.uuid4(),
         user_id=current_user.id,
         category="scroll",
         title=f"Artist Scroll — {current_user.name}",
@@ -940,7 +1208,7 @@ async def submit_scroll(
             founders,
             submitted_at,
             assets,
-            pdf_bytes,
+            bool(scroll_pdf_url),
             submission_id,
         )
     except Exception:
@@ -949,6 +1217,20 @@ async def submit_scroll(
             submission_id,
             current_user.id,
             exc_info=True,
+        )
+
+    if pdf_bytes and pdf_filename and not scroll_pdf_url:
+        # The PDF was built but storing it failed. Hold the bytes server-side (never emailed) in this same
+        # transaction, whether or not any founder exists, until the retry stores them privately and records
+        # the URL on exactly the records this submission created.
+        hold_pdf_for_retry(
+            db,
+            submission_id=submission_id,
+            folder_path=storage_prefix,
+            filename=pdf_filename,
+            content=pdf_bytes,
+            document_ids=[instance.id, *(row.id for row in archive_rows)],
+            artist_user_id=str(current_user.id),
         )
 
     # Award RYO + XP for scroll completion
@@ -979,7 +1261,8 @@ async def submit_scroll(
         "artist_sig_url": artist_sig_url,
         "owner_sig_url": owner_sig_url,
         "bbp_cert_url": bbp_cert_url,
-        "scroll_pdf_url": scroll_pdf_url,
+        # Every scroll PDF prints the artist signature: a short-lived signed link, never the public URL.
+        "scroll_pdf_url": signed_id_url(scroll_pdf_url, ID_VIEW_SECONDS),
         "submission_id": submission_id,
         "owner_copies_filed": len(archive_rows),
         "owner_emails_queued": owner_emails_queued,
@@ -987,6 +1270,11 @@ async def submit_scroll(
         "bttcoin_awarded": scroll_coin_reward,
         "xp_awarded": scroll_xp,
     }
+
+
+def _scroll_fields_view(data: dict) -> dict:
+    """The stored scroll fields with every government ID reference swapped for a signed link."""
+    return signed_id_fields(data, ID_VIEW_SECONDS)
 
 
 @router.get("/scroll/my")
@@ -1018,14 +1306,14 @@ async def get_my_scroll(
             "id": str(inst.id),
             "status": inst.status,
             "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
-            "artist_signature": inst.artist_signature,
-            "bbp_cert_url": data.get("bbp_cert_url"),
-            "first_aid_cert_url": data.get("first_aid_cert_url"),
-            "cpr_cert_url": data.get("cpr_cert_url"),
-            "govt_id_url": data.get("govt_id_url"),
-            "owner_sig_url": data.get("owner_sig_url"),
+            "artist_signature": signed_id_url(inst.artist_signature, ID_VIEW_SECONDS),
+            "bbp_cert_url": signed_id_url(data.get("bbp_cert_url"), ID_VIEW_SECONDS),
+            "first_aid_cert_url": signed_id_url(data.get("first_aid_cert_url"), ID_VIEW_SECONDS),
+            "cpr_cert_url": signed_id_url(data.get("cpr_cert_url"), ID_VIEW_SECONDS),
+            "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
+            "owner_sig_url": signed_id_url(data.get("owner_sig_url"), ID_VIEW_SECONDS),
             "tax_opt_in": data.get("tax_opt_in"),
-            "fields": data,
+            "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
         }
     }
@@ -1067,14 +1355,14 @@ async def get_user_scroll(
             "user_id": str(user_id),
             "status": inst.status,
             "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
-            "artist_signature": inst.artist_signature,
-            "bbp_cert_url": data.get("bbp_cert_url"),
-            "first_aid_cert_url": data.get("first_aid_cert_url"),
-            "cpr_cert_url": data.get("cpr_cert_url"),
-            "govt_id_url": data.get("govt_id_url"),
-            "owner_sig_url": data.get("owner_sig_url"),
+            "artist_signature": signed_id_url(inst.artist_signature, ID_VIEW_SECONDS),
+            "bbp_cert_url": signed_id_url(data.get("bbp_cert_url"), ID_VIEW_SECONDS),
+            "first_aid_cert_url": signed_id_url(data.get("first_aid_cert_url"), ID_VIEW_SECONDS),
+            "cpr_cert_url": signed_id_url(data.get("cpr_cert_url"), ID_VIEW_SECONDS),
+            "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
+            "owner_sig_url": signed_id_url(data.get("owner_sig_url"), ID_VIEW_SECONDS),
             "tax_opt_in": data.get("tax_opt_in"),
-            "fields": data,
+            "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
         }
     }
@@ -1127,7 +1415,7 @@ async def send_document(
 
     public_url = f"{settings.FRONTEND_URL}{ROUTES.FORM.format(token=token)}"
 
-    # Send the email (non-blocking, never raises). Waivers use the Email Foundry waiver link into /checkin.
+    # Send the email (non-blocking, never raises). Waivers use the Email Foundry waiver link into /form/<token>.
     if template.category == "waiver":
         public_url = _waiver_form_url(settings, token)
         rendered = render_waiver_link(
@@ -1194,6 +1482,8 @@ async def public_checkin(
 
     if not name or not email:
         raise HTTPException(status_code=422, detail="Name and email are required")
+    # The slug is stored in data_json, which document views sign: it may not name a stored object.
+    artist_slug = authorize_client_data(artist_slug)
 
     # Find the waiver template
     result = await db.execute(
@@ -1386,18 +1676,6 @@ async def _latest_prior_waiver(db: AsyncSession, emails: set[str], exclude_id: u
     return {"id": str(instance.id), "signed_at": instance.signed_at, "data": data}
 
 
-# Health answers a returning client may confirm as unchanged. Sobriety is never carried over: it is asked
-# fresh on every visit (SC Reg. 60-111 801.C).
-WAIVER_HEALTH_KEYS = (
-    "pregnant",
-    "blood_thinners",
-    "blood_disorder",
-    "skin_condition",
-    "allergies",
-    "medical_conditions",
-)
-
-
 def _stored_signature_url(data: dict) -> str | None:
     url = str(data.get("signature_url") or "").strip()
     return url if url.startswith("https://") else None
@@ -1464,8 +1742,8 @@ async def _send_checkin_code_email(to: str, code: str) -> bool:
 
 
 def _waiver_form_url(settings, token: str) -> str:
-    """Waivers open in the check-in flow; the same token carries over."""
-    return f"{settings.FRONTEND_URL.rstrip('/')}/checkin?t={token}"
+    """Emailed waiver links open the public form page for that token (the kiosk also accepts ?t= links)."""
+    return f"{settings.FRONTEND_URL.rstrip('/')}{ROUTES.FORM.format(token=token)}"
 
 
 async def _send_document_reminder(settings, instance: DocumentInstance, hours_remaining: int) -> bool:
@@ -1612,8 +1890,8 @@ async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = D
         prior_data = prior["data"]
         on_file = {
             "signed_at": prior["signed_at"].isoformat() if prior["signed_at"] else None,
-            "photo_id_url": _stored_photo_id_url(prior_data),
-            "signature_url": _stored_signature_url(prior_data),
+            "photo_id_url": signed_id_url(_stored_photo_id_url(prior_data), ID_VIEW_SECONDS),
+            "signature_url": signed_id_url(_stored_signature_url(prior_data), ID_VIEW_SECONDS),
             "health": {key: prior_data[key] for key in WAIVER_HEALTH_KEYS if prior_data.get(key) not in (None, "")},
         }
     return {
@@ -1736,6 +2014,29 @@ async def get_public_form(
     }
 
 
+async def _resolve_waiver_artist(db: AsyncSession, data: dict) -> User | None:
+    """
+    The artist a filed waiver is assigned to and notifies. A waiver linked to a booking (a server-set
+    booking_id from a verified check-in) always goes to that booking's artist; the artist the browser sent is
+    ignored. Otherwise the client's pick is matched by slug, then by name.
+    """
+    booking_id = data.get("booking_id")
+    if booking_id:
+        with contextlib.suppress(ValueError, TypeError, AttributeError):
+            booking = await db.get(Booking, uuid.UUID(str(booking_id)))
+            if booking and booking.artist_id:
+                artist = await db.get(User, booking.artist_id)
+                if artist:
+                    return artist
+    picked = str(data.get("artist_name") or "").strip()
+    if not picked:
+        return None
+    artist = (await db.execute(select(User).where(User.slug == picked))).scalar_one_or_none()
+    if not artist:
+        artist = (await db.execute(select(User).where(User.name == picked))).scalar_one_or_none()
+    return artist
+
+
 @router.post("/public/{token}/complete")
 async def complete_public_form(
     token: str,
@@ -1764,6 +2065,10 @@ async def complete_public_form(
 
     # Build data payload with form data
     data = body.data.copy()
+    # A public caller may only file objects it uploaded itself, at any depth; reuse below copies the ID and
+    # signature on file server side.
+    _verify_public_id_fields(data)
+    signature_data = authorize_client_data(body.signature_data)
 
     # For waiver documents, generate a reference code and ensure guest fields are set
     is_waiver = instance.category == "waiver"
@@ -1818,16 +2123,23 @@ async def complete_public_form(
 
     # Store signature under consistent key (matches walk-in path)
     signature_raw = None
-    if body.signature_data:
-        signature_raw = body.signature_data
-        data["signature_data"] = body.signature_data
+    if signature_data:
+        signature_raw = signature_data
+        data["signature_data"] = signature_data
     # Also check for client_signature from template-driven forms
     if not signature_raw and data.get("client_signature"):
         signature_raw = data["client_signature"]
 
+    waiver_artist: User | None = None
     if is_waiver:
         data["photo_id_url"] = _require_waiver_photo_id(data)
         _require_waiver_intake_answers(data)
+        # Assignment is server side: the booking's artist when the token carries a booking, never a client id.
+        data.pop("artist_id", None)
+        waiver_artist = await _resolve_waiver_artist(db, data)
+        if waiver_artist:
+            data["artist_name"] = waiver_artist.slug or waiver_artist.name or data.get("artist_name")
+            data["artist_id"] = str(waiver_artist.id)
         if adopted_signature_url and not signature_raw:
             # Adopted signature: already stored as an image, nothing to upload.
             data.pop("signature_data", None)
@@ -1858,28 +2170,20 @@ async def complete_public_form(
 
     # ── Notify the assigned artist ──
     artist_display = ""
-    if is_waiver:
-        artist_slug = data.get("artist_name")
-        if artist_slug:
-            # Try slug match first, fall back to name match
-            artist_result = await db.execute(select(User).where(User.slug == artist_slug))
-            artist = artist_result.scalar_one_or_none()
-            if not artist:
-                artist_result = await db.execute(select(User).where(User.name == artist_slug))
-                artist = artist_result.scalar_one_or_none()
-            if artist:
-                artist_display = artist.name or ""
-                guest = instance.guest_name or instance.recipient_name or "A client"
-                db.add(
-                    Notification(
-                        user_id=artist.id,
-                        title="Waiver Ready for Review",
-                        body=f"{guest} completed their consent waiver. Review and countersign.",
-                        notification_type="info",
-                        action_url=ROUTES.WAIVERS,
-                    )
-                )
-                await db.flush()
+    if is_waiver and waiver_artist:
+        artist = waiver_artist
+        artist_display = artist.name or ""
+        guest = instance.guest_name or instance.recipient_name or "A client"
+        db.add(
+            Notification(
+                user_id=artist.id,
+                title="Waiver Ready for Review",
+                body=f"{guest} completed their consent waiver. Review and countersign.",
+                notification_type="info",
+                action_url=ROUTES.WAIVERS,
+            )
+        )
+        await db.flush()
 
     # ── Quest: a signed-in client's "waiver-signed" quest, same as the legacy /waiver/submit path ──
     if is_waiver:

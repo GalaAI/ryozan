@@ -11,7 +11,7 @@ export interface TextFieldProps extends React.InputHTMLAttributes<HTMLInputEleme
 
 /** Single-line input. Gold focus ring, never the OS blue. */
 export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
-  { label, hint, shape = 'card', style, id, ...rest },
+  { label, hint, shape = 'card', style, id, onFocus, onBlur, ...rest },
   ref,
 ) {
   const [focused, setFocused] = React.useState(false);
@@ -35,10 +35,11 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
         </label>
       ) : null}
       <input
+        {...rest}
         ref={ref}
         id={fieldId}
-        onFocus={(e) => { setFocused(true); rest.onFocus?.(e); }}
-        onBlur={(e) => { setFocused(false); rest.onBlur?.(e); }}
+        onFocus={(e) => { setFocused(true); onFocus?.(e); }}
+        onBlur={(e) => { setFocused(false); onBlur?.(e); }}
         style={{
           width: '100%',
           boxSizing: 'border-box',
@@ -54,7 +55,6 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
           transition: `border-color ${motion.fast}`,
           ...style,
         }}
-        {...rest}
       />
       {hint ? (
         <span style={{ fontFamily: font.btn, fontSize: 'var(--text-xs)', letterSpacing: '0.08em', color: color.textDim }}>

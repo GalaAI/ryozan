@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { Chip } from '@ryozan/ui'
 import '../styles/scroll-tiles.css'
 import {
   listScrollCategories,
@@ -1011,6 +1012,7 @@ function AddScrollInlinePanel({
 }) {
   const [uploading, setUploading] = useState(false)
   const [useAi, setUseAi] = useState(aiDigestEnabled)
+  const [isId, setIsId] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -1019,7 +1021,7 @@ function AddScrollInlinePanel({
     setUploading(true)
     setError(null)
     try {
-      const result = await uploadScrollDoc({ categorySlug, file, aiDigestEnabled: useAi })
+      const result = await uploadScrollDoc({ categorySlug, file, aiDigestEnabled: useAi, isId })
       onUploaded({
         id: result.id,
         user_id: null,
@@ -1089,6 +1091,11 @@ function AddScrollInlinePanel({
         </div>
         <div className="scroll-upload-tile-hint">PDF · Image · CSV · Doc · Spreadsheet</div>
       </div>
+
+      {/* A government ID is stored privately and never sent to the Gala AI digest. */}
+      <Chip selected={isId} onClick={() => setIsId(v => !v)} disabled={uploading}>
+        This file is an ID
+      </Chip>
 
       {/* Gala AI toggle */}
       <div

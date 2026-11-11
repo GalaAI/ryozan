@@ -53,11 +53,13 @@ export interface StatusTextProps extends React.HTMLAttributes<HTMLSpanElement> {
   tone?: BadgeTone;
   /** Show the leading ● dot. */
   dot?: boolean;
+  /** Let a long line (an error sentence) wrap inside its panel instead of holding one line. */
+  wrap?: boolean;
   children?: React.ReactNode;
 }
 
 /** Bare status line — "● Confirmed". No capsule, sits inside panel headers. */
-export function StatusText({ tone = 'ok', dot = true, style, children, ...rest }: StatusTextProps) {
+export function StatusText({ tone = 'ok', dot = true, wrap = false, style, children, ...rest }: StatusTextProps) {
   return (
     <span
       style={{
@@ -67,7 +69,7 @@ export function StatusText({ tone = 'ok', dot = true, style, children, ...rest }
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
         color: tones[tone],
-        whiteSpace: 'nowrap',
+        whiteSpace: wrap ? 'normal' : 'nowrap',
         ...style,
       }}
       {...rest}
