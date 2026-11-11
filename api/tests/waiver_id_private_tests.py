@@ -19,7 +19,7 @@ import re
 import unittest
 import uuid
 import zlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 from urllib.parse import parse_qs, urlsplit
@@ -515,7 +515,7 @@ class UploadAndSubmitTests(unittest.IsolatedAsyncioTestCase):
         key = urlsplit(stored).path.lstrip("/")
         self.assertTrue(key.startswith("waivers/pending-ids/"))
         query = _assert_signed(self, signed, key)
-        self.assertEqual(query["X-Amz-Expires"], [str(waiver._ID_PREVIEW_SECONDS)])
+        self.assertEqual(query["X-Amz-Expires"], [str(storage.UPLOAD_PROOF_SECONDS)])
         self.assertEqual(stored, f"https://{ASSETS_HOST}/{key}")
         self.assertEqual(from_waiver_body, stored)
 
@@ -648,9 +648,10 @@ class VerifiedUploadKeyTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def _link(self, key: str = ID_KEY, expires: int = 600, **settings) -> str:
+    def _link(self, key: str = ID_KEY, **settings) -> str:
+        """A link signed like the one /waiver/upload-id returns (upload lifetime), for any key."""
         with patch.object(storage, "get_settings", return_value=_settings(**settings)):
-            return storage.presign_get_url(key, expires, now=FROZEN)
+            return storage._presign_object(key, storage.UPLOAD_PROOF_SECONDS, now=FROZEN)
 
     def test_an_unexpired_link_this_server_signed_resolves_to_its_key(self):
         link = self._link()
@@ -668,8 +669,10 @@ class VerifiedUploadKeyTests(unittest.TestCase):
                 self.assertIsNone(storage.verified_upload_key(reference, now=FROZEN))
 
     def test_an_expired_link_is_refused(self):
-        link = self._link(expires=600)
-        self.assertIsNone(storage.verified_upload_key(link, now=FROZEN.replace(minute=10)))
+        link = self._link()
+        lifetime = timedelta(seconds=storage.UPLOAD_PROOF_SECONDS)
+        self.assertEqual(storage.verified_upload_key(link, now=FROZEN + lifetime - timedelta(seconds=1)), ID_KEY)
+        self.assertIsNone(storage.verified_upload_key(link, now=FROZEN + lifetime))
         self.assertIsNone(storage.verified_upload_key(link, now=datetime(2026, 11, 11, tzinfo=UTC)))
 
     def test_a_signature_for_a_different_key_is_refused(self):
@@ -687,12 +690,12 @@ class VerifiedUploadKeyTests(unittest.TestCase):
     def test_tampered_expiry_date_host_or_extra_parameters_are_refused(self):
         link = self._link()
         for tampered in (
-            link.replace("X-Amz-Expires=600", "X-Amz-Expires=604800"),
+            link.replace("X-Amz-Expires=3600", "X-Amz-Expires=604800"),
             link.replace("X-Amz-Date=20261110T120000Z", "X-Amz-Date=20261110T130000Z"),
             link.replace("account-id.r2.cloudflarestorage.com", "evil.example.test"),
             link.replace(f"/{BUCKET}/", "/other-bucket/"),
             link.replace("https://", "http://"),
-            link + "&X-Amz-Expires=600",
+            link + "&X-Amz-Expires=3600",
             link + "&extra=1",
             link[:-1] + ("0" if link[-1] != "0" else "1"),
             link.split("&X-Amz-Signature=")[0],
@@ -711,9 +714,47 @@ class VerifiedUploadKeyTests(unittest.TestCase):
                     access_key="access-key",
                     secret_key="secret-key",
                     now=FROZEN,
-                    expires_seconds=600,
+                    expires_seconds=storage.UPLOAD_PROOF_SECONDS,
                 )
                 self.assertIsNone(storage.verified_upload_key(link, now=FROZEN))
+
+    def test_upload_proof_signer_matches_the_verifier_and_only_signs_pending_ids(self):
+        with _frozen_clock(FROZEN):
+            link = storage.presign_upload_proof_url(ID_KEY)
+            self.assertEqual(storage.signed_upload_proof_url(PUBLIC_ID_URL), link)
+            for key in (SCROLL_ID_KEY, "waivers/2026-11/Jane_Client_WVR-TEST01/Jane_Client_WVR-TEST01.pdf"):
+                with self.subTest(key=key):
+                    self.assertIsNone(storage.presign_upload_proof_url(key))
+        self.assertEqual(link, self._link())
+        self.assertEqual(storage.verified_upload_key(link, now=FROZEN), ID_KEY)
+
+    def test_a_viewing_link_for_the_same_key_is_not_an_upload(self):
+        for lifetime in (
+            waiver._ID_VIEW_SECONDS,
+            documents.ID_VIEW_SECONDS,
+            archive.ARCHIVE_ID_VIEW_SECONDS,
+            300,
+            3599,
+        ):
+            with self.subTest(lifetime=lifetime):
+                view = storage.presign_get_url(ID_KEY, lifetime, now=FROZEN)
+                self.assertIsNone(storage.verified_upload_key(view, now=FROZEN))
+
+    def test_a_viewing_link_relabelled_with_the_upload_lifetime_is_refused(self):
+        view = storage.presign_get_url(ID_KEY, waiver._ID_VIEW_SECONDS, now=FROZEN)
+        forged = view.replace(f"X-Amz-Expires={waiver._ID_VIEW_SECONDS}", "X-Amz-Expires=3600")
+        self.assertIn("X-Amz-Expires=3600", forged)
+        self.assertIsNone(storage.verified_upload_key(forged, now=FROZEN))
+
+    def test_viewing_signers_refuse_the_upload_lifetime(self):
+        with self.assertRaises(ValueError):
+            storage.presign_get_url(ID_KEY, storage.UPLOAD_PROOF_SECONDS, now=FROZEN)
+        with self.assertRaises(ValueError):
+            storage.signed_id_url(PUBLIC_ID_URL, storage.UPLOAD_PROOF_SECONDS)
+        with self.assertRaises(ValueError):
+            storage.signed_id_fields({"photo_id_url": PUBLIC_ID_URL}, storage.UPLOAD_PROOF_SECONDS)
+        for lifetime in (waiver._ID_VIEW_SECONDS, documents.ID_VIEW_SECONDS, archive.ARCHIVE_ID_VIEW_SECONDS):
+            self.assertNotEqual(lifetime, storage.UPLOAD_PROOF_SECONDS)
 
     def test_nothing_resolves_without_signing_credentials(self):
         link = self._link()
@@ -770,7 +811,7 @@ class PublicIdWriteTests(unittest.IsolatedAsyncioTestCase):
             access_key="access-key",
             secret_key="another-secret",
             now=FROZEN,
-            expires_seconds=600,
+            expires_seconds=storage.UPLOAD_PROOF_SECONDS,
         )
         for reference, clock in (
             (VICTIM_PUBLIC_URL, FROZEN),
@@ -802,7 +843,7 @@ class PublicIdWriteTests(unittest.IsolatedAsyncioTestCase):
         # The attacker verified their own contact, then tries to file the victim's ID object (bare, or an
         # old link that has since expired) so a later check-in lookup would sign it as theirs.
         with _frozen_clock(FROZEN.replace(hour=8)):
-            stale_link = storage.presign_get_url(VICTIM_KEY, 600)
+            stale_link = storage.presign_upload_proof_url(VICTIM_KEY)
         before = _magic_link_instance().data_json
         for reference in (VICTIM_PUBLIC_URL, stale_link):
             for field in ("photo_id_url", "photo_id", "govt_id_url"):
@@ -896,6 +937,134 @@ class PublicIdWriteTests(unittest.IsolatedAsyncioTestCase):
             DocumentInstanceCreate(category="waiver", title="Waiver", data_json=raw), db=db, current_user=admin
         )
         self.assertEqual(db.added[0].data_json, raw)
+
+
+class ViewingLinkIsNotAnUploadTests(unittest.IsolatedAsyncioTestCase):
+    """Owner ruling: uploads accept only links issued with the upload lifetime; viewing links never pass as uploads."""
+
+    def setUp(self):
+        for patcher in (
+            patch.object(storage, "get_settings", return_value=_settings()),
+            _frozen_clock(FROZEN),
+            patch.object(waiver, "spawn_background", _discard),
+            patch.object(documents, "spawn_background", _discard),
+            patch.object(waiver, "_upload_waiver_files", AsyncMock()),
+            patch.object(documents, "_upload_magic_link_files", AsyncMock()),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    async def _staff_detail_link(self) -> str:
+        inst = _waiver_instance(PUBLIC_ID_URL)
+        with (
+            patch.object(waiver, "_require_waiver_access"),
+            patch.object(waiver, "_resolve_artist_slug", AsyncMock(return_value="Test Artist")),
+            patch.object(waiver, "_resolve_artist_name", AsyncMock(return_value=None)),
+        ):
+            detail = await waiver.get_waiver(
+                waiver_id=inst.id, db=_Session(inst), current_user=SimpleNamespace(role="artist")
+            )
+        return detail.photo_id_url
+
+    async def _checkin_on_file_link(self) -> str:
+        prior = {"id": str(uuid.uuid4()), "signed_at": FROZEN, "data": {"photo_id_url": PUBLIC_ID_URL}}
+        matches = {
+            "users": [],
+            "member": None,
+            "booking": None,
+            "emails": {"alex@example.test"},
+            "visits": 1,
+            "last_visit": FROZEN,
+            "prior": prior,
+        }
+        db = _FakeDb(_ScriptedResult(scalar=SimpleNamespace(id=uuid.uuid4(), name="Tattoo Consent Waiver")))
+        contact = documents.checkin_verify.Contact("email", "alex@example.test")
+        with (
+            patch.object(documents.checkin_verify, "verify_challenge", return_value=contact),
+            patch.object(documents, "_checkin_matches", AsyncMock(return_value=matches)),
+        ):
+            verified = await documents.checkin_verify_code.__wrapped__(request=None, body={}, db=db)
+        return verified["on_file"]["photo_id_url"]
+
+    async def _archive_detail_link(self) -> str:
+        inst = _waiver_instance(PUBLIC_ID_URL)
+        detail = await archive.get_archive_detail(
+            record_id=inst.id, current_user=SimpleNamespace(role="admin"), db=_Session(inst)
+        )
+        return detail["data"]["photo_id_url"]
+
+    async def _viewing_links(self) -> dict[str, str]:
+        links = {
+            "staff waiver detail": await self._staff_detail_link(),
+            "check-in on file": await self._checkin_on_file_link(),
+            "archive detail": await self._archive_detail_link(),
+        }
+        for label, link in links.items():
+            query = _assert_signed(self, link, ID_KEY)
+            self.assertNotEqual(query["X-Amz-Expires"], [str(storage.UPLOAD_PROOF_SECONDS)], label)
+        view = links["staff waiver detail"]
+        expires = parse_qs(urlsplit(view).query)["X-Amz-Expires"][0]
+        links["view link relabelled X-Amz-Expires=3600"] = view.replace(
+            f"X-Amz-Expires={expires}", f"X-Amz-Expires={storage.UPLOAD_PROOF_SECONDS}"
+        )
+        return links
+
+    async def test_upload_endpoint_link_passes_both_public_writes(self):
+        upload = SimpleNamespace(content_type="image/jpeg", read=AsyncMock(return_value=b"\xff\xd8jpeg"))
+
+        async def _fake_upload(*, file_bytes, filename, mime_type, folder_path):
+            return PUBLIC_ID_URL
+
+        with patch.object(waiver, "upload_to_drive", _fake_upload):
+            link = (await waiver.upload_photo_id(file=upload))["photo_id_url"]
+        self.assertEqual(link, storage.presign_upload_proof_url(ID_KEY))
+
+        db = _FakeDb(
+            _ScriptedResult(first=(uuid.uuid4(), "Test Artist")),
+            _ScriptedResult(scalar=None),
+            _ScriptedResult(scalars_first=None),
+        )
+        with _frozen_clock(FROZEN + timedelta(minutes=5)):
+            await waiver.submit_waiver(_waiver_body(link), db=db)
+            instance = _magic_link_instance()
+            await documents.complete_public_form(
+                "token-1",
+                documents.DocumentPublicSubmit(
+                    data=_public_waiver_data(photo_id_url=link), signature_data="data:image/png;base64,AAAA"
+                ),
+                db=_FakeDb(_ScriptedResult(scalar=instance), _ScriptedResult(scalars_first=None)),
+            )
+        filed = next(obj for obj in db.added if isinstance(obj, waiver.DocumentInstance))
+        self.assertEqual(json.loads(filed.data_json)["photo_id_url"], PUBLIC_ID_URL)
+        self.assertEqual(json.loads(instance.data_json)["photo_id_url"], PUBLIC_ID_URL)
+
+    async def test_viewing_links_are_refused_on_walk_in_submit(self):
+        for label, link in (await self._viewing_links()).items():
+            with self.subTest(label), _frozen_clock(FROZEN + timedelta(minutes=1)):
+                db = _FakeDb()
+                with self.assertRaises(waiver.HTTPException) as caught:
+                    await waiver.submit_waiver(_waiver_body(link), db=db)
+                self.assertEqual(caught.exception.status_code, 422)
+                self.assertEqual(caught.exception.detail, "Upload the ID again")
+                self.assertEqual(db.added, [])
+
+    async def test_viewing_links_are_refused_on_public_form_complete(self):
+        for label, link in (await self._viewing_links()).items():
+            for field in ("photo_id_url", "photo_id", "govt_id_url"):
+                with self.subTest(label, field=field), _frozen_clock(FROZEN + timedelta(minutes=1)):
+                    instance = _magic_link_instance()
+                    before = instance.data_json
+                    db = _FakeDb(_ScriptedResult(scalar=instance))
+                    body = documents.DocumentPublicSubmit(
+                        data=_public_waiver_data(**{field: link}), signature_data="data:image/png;base64,AAAA"
+                    )
+                    with self.assertRaises(documents.HTTPException) as caught:
+                        await documents.complete_public_form("token-1", body, db=db)
+                    self.assertEqual(caught.exception.status_code, 422)
+                    self.assertEqual(caught.exception.detail, "Upload the ID again")
+                    self.assertEqual(instance.data_json, before)
+                    self.assertEqual(instance.status, "sent")
+                    self.assertEqual(db.added, [])
 
 
 if __name__ == "__main__":

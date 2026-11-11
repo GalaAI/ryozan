@@ -78,7 +78,7 @@ class _Patched(unittest.IsolatedAsyncioTestCase):
             self.addCleanup(patcher.stop)
 
     def upload_link(self, key: str = "waivers/pending-ids/11111111-2222-4333-8444-555555555555.jpg") -> str:
-        return storage.presign_get_url(key, 3600)
+        return storage.presign_upload_proof_url(key)
 
 
 class AuthorizeClientReferencesTests(_Patched):

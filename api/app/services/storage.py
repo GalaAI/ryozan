@@ -290,6 +290,10 @@ _SCROLL_ID_ROOT = "scrolls/"
 _SCROLL_ID_STEM = "govt-id"
 # S3 caps a SigV4 query-string signature at seven days.
 _MAX_PRESIGN_SECONDS = 7 * 24 * 3600
+# Lifetime of the signed link POST /waiver/upload-id returns. That link is the upload proof: verified_upload_key
+# accepts only this exact X-Amz-Expires, and it is reserved, so presign_get_url refuses to sign any viewing link
+# with it. The expiry is inside the signature, so a viewing link cannot be relabelled as an upload link.
+UPLOAD_PROOF_SECONDS = 3600
 
 
 def is_private_id_key(object_key: str) -> bool:
@@ -404,8 +408,38 @@ def presign_get_url(object_key: str, expires_seconds: int = 300, *, now: datetim
     Short-lived signed GET link for one R2 object, served from the S3 API host.
 
     Works whether or not the object is publicly reachable, so private keys stay viewable by the app.
-    Returns None when R2 credentials or the bucket are missing, or the key is unsafe. Never raises.
+    Returns None when R2 credentials or the bucket are missing, or the key is unsafe. Raises ValueError only
+    when asked for UPLOAD_PROOF_SECONDS, which is reserved for upload proof (presign_upload_proof_url): a
+    viewing link must never be accepted as an upload.
     """
+    if _clamp_expires(expires_seconds) == UPLOAD_PROOF_SECONDS:
+        raise ValueError("UPLOAD_PROOF_SECONDS is reserved for upload links; sign viewing links with another lifetime")
+    return _presign_object(object_key, _clamp_expires(expires_seconds), now=now)
+
+
+def presign_upload_proof_url(object_key: str, *, now: datetime | None = None) -> str | None:
+    """
+    The signed link POST /waiver/upload-id returns for a fresh pending ID upload: the only link verified_upload_key
+    accepts. Signed with UPLOAD_PROOF_SECONDS, which no viewing path may use. Keys outside waivers/pending-ids/
+    return None. Never raises.
+    """
+    key = (object_key or "").lstrip("/")
+    if not key.startswith(UPLOAD_ID_PREFIX):
+        return None
+    return _presign_object(key, UPLOAD_PROOF_SECONDS, now=now)
+
+
+def signed_upload_proof_url(reference: str | None) -> str | None:
+    """The upload-proof link for a stored pending ID reference (see presign_upload_proof_url), else None."""
+    key = private_id_key(reference)
+    return presign_upload_proof_url(key) if key else None
+
+
+def _clamp_expires(expires_seconds: int) -> int:
+    return max(1, min(int(expires_seconds), _MAX_PRESIGN_SECONDS))
+
+
+def _presign_object(object_key: str, expires: int, *, now: datetime | None) -> str | None:
     settings = get_settings()
     bucket = (settings.R2_BUCKET_NAME or "").strip()
     if not (settings.R2_ACCOUNT_ID and settings.R2_ACCESS_KEY_ID and settings.R2_SECRET_ACCESS_KEY and bucket):
@@ -414,7 +448,6 @@ def presign_get_url(object_key: str, expires_seconds: int = 300, *, now: datetim
     key = (object_key or "").lstrip("/")
     if not key or ".." in key.split("/"):
         return None
-    expires = max(1, min(int(expires_seconds), _MAX_PRESIGN_SECONDS))
     return _presign(
         host=f"{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
         canonical_uri=f"/{quote(bucket, safe='-_.~')}/{quote(key, safe='/-_.~')}",
@@ -442,7 +475,9 @@ def verified_upload_key(reference: str | None, *, now: datetime | None = None) -
     A public caller proves it uploaded an ID by handing back the signed preview link /waiver/upload-id
     returned. The SigV4 signature is recomputed for the same host, bucket, key, date and expiry with this
     install's R2 credentials and compared in constant time, so a bare URL, an expired, tampered or
-    foreign-signed link, or a link to any key outside waivers/pending-ids/ never resolves. Never raises
+    foreign-signed link, or a link to any key outside waivers/pending-ids/ never resolves. Only links signed
+    with UPLOAD_PROOF_SECONDS (presign_upload_proof_url) qualify; viewing links (staff review, check-in
+    "on file", archive) never use that lifetime, so they are refused even for the same key. Never raises
     and never logs, because the reference names a person's ID.
     """
     if not reference or not isinstance(reference, str):
@@ -475,11 +510,13 @@ def verified_upload_key(reference: str | None, *, now: datetime | None = None) -
         return None
     try:
         signed_at = datetime.strptime(query["X-Amz-Date"], "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
-        expires = int(query["X-Amz-Expires"])
     except ValueError:
         return None
-    if not 1 <= expires <= _MAX_PRESIGN_SECONDS or not query["X-Amz-Expires"].isdigit():
+    # Only the upload lifetime is proof of an upload: every viewing link is signed with another lifetime, and the
+    # lifetime is covered by the signature, so a staff or check-in viewing link for the same key is refused here.
+    if query["X-Amz-Expires"] != str(UPLOAD_PROOF_SECONDS):
         return None
+    expires = UPLOAD_PROOF_SECONDS
     if query["X-Amz-Credential"] != f"{access_key}/{signed_at:%Y%m%d}/auto/s3/aws4_request":
         return None
     expected = _presign(
