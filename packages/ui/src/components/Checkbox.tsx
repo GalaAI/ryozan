@@ -54,7 +54,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(functi
             margin: 0,
             accentColor: color.gold,
             cursor: 'inherit',
-            outline: focused ? `1px solid ${color.borderActive}` : 'none',
+            outline: focused ? `calc(var(--hair) * 2) solid ${color.borderActive}` : 'none',
             outlineOffset: 'var(--space-1)',
             transition: `outline-color ${motion.fast}`,
           }}

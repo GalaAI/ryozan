@@ -49,7 +49,7 @@ export function ScheduleList({ entries, style, ...rest }: ScheduleListProps) {
               cursor: e.onSelect ? 'pointer' : 'default',
             }}
           >
-            <span style={{ flexShrink: 0, width: 46, fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, color: color.gold }}>
+            <span style={{ flexShrink: 0, width: 46, fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, color: color.goldText }}>
               {e.time}
             </span>
             <span

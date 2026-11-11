@@ -30,7 +30,7 @@ export function Avatar({ src, initial, diameter = 40, ringColor = color.gold, da
         backgroundImage: src ? `url(${src})` : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        color: color.gold,
+        color: color.goldText,
         fontFamily: 'var(--font-btn)',
         fontSize: 'var(--text-sm)',
         fontWeight: 700,

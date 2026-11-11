@@ -11,6 +11,10 @@ export const color = {
   gold: 'var(--gold)',
   goldVibrant: 'var(--gold-vibrant)',
   goldGlow: 'var(--gold-glow)',
+  /** Gold for body and small text; 4.5:1 on website surfaces in every theme. */
+  goldText: 'var(--gold-text)',
+  /** Text on a `gold` fill. */
+  onGold: 'var(--on-gold)',
   tan: 'var(--tan)',
   tanGlow: 'var(--tan-glow)',
   cream: 'var(--cream)',

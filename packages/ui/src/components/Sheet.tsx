@@ -25,7 +25,7 @@ export interface SheetProps extends React.HTMLAttributes<HTMLDivElement> {
  * portal (booking, settings, quote, chat) is this shell.
  */
 export function Sheet({
-  open, onClose, label, eyebrow, title, accent = color.gold,
+  open, onClose, label, eyebrow, title, accent = color.goldText,
   scrim = true, maxHeight = '86%', footer, style, children, ...rest
 }: SheetProps) {
   if (!open) return null;
