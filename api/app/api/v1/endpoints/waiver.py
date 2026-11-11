@@ -61,6 +61,7 @@ from app.services.storage import (
     is_own_storage_url,
     private_id_key,
     signed_id_url,
+    signed_upload_proof_url,
     uploaded_id_reference,
 )
 from app.services.storage import upload_file as upload_to_drive
@@ -72,9 +73,9 @@ router = APIRouter(prefix="/waiver", tags=["waiver"])
 # Max photo ID file size: 10 MB
 _MAX_ID_SIZE = 10 * 1024 * 1024
 _ALLOWED_ID_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"}
-# Government ID images are private in R2. Clients only ever see short-lived signed links:
-# long enough to load the preview right after upload, or a staff review session.
-_ID_PREVIEW_SECONDS = 3600
+# Government ID images are private in R2. Clients only ever see short-lived signed links: the upload preview
+# (storage.UPLOAD_PROOF_SECONDS, long enough to finish the form, and the only link a public write accepts as an
+# upload) or a staff review session (_ID_VIEW_SECONDS, never the upload lifetime).
 _ID_VIEW_SECONDS = 900
 UPLOAD_ID_AGAIN = "Upload the ID again"
 UPLOAD_FILE_AGAIN = "Upload the file again"
@@ -290,7 +291,7 @@ async def upload_photo_id(
     if not url:
         raise HTTPException(status_code=500, detail="Photo upload failed. Please try again.")
 
-    return {"photo_id_url": signed_id_url(url, _ID_PREVIEW_SECONDS)}
+    return {"photo_id_url": signed_upload_proof_url(url) or url}
 
 
 # ─────────────────────────────────────────────────────────────────────

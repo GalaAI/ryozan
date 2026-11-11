@@ -102,7 +102,7 @@ def _waiver_instance(stored: dict):
 
 def _signed_upload_link() -> str:
     with patch.object(storage, "get_settings", return_value=FAKE_STORAGE):
-        return storage.presign_get_url(ID_KEY, 600)
+        return storage.presign_upload_proof_url(ID_KEY)
 
 
 def _submission(**overrides) -> DocumentPublicSubmit:
