@@ -1597,7 +1597,7 @@ select {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: var(--gold);
+    background: var(--gold-vibrant);
     color: var(--bg);
     display: flex;
     align-items: center;
