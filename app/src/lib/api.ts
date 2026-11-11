@@ -3866,9 +3866,19 @@ export interface MatrixModMatrix {
   label: string
   covers: 'one' | 'kind'
   engine: { name: string; starts: string; server: 'own' | 'shared' | 'none'; serverDetail: string }
-  scopes: { read: string; write: string | null }
+  /** `devices` holds per-device write scopes, for a Matrix whose writes act on hardware. */
+  scopes: { read: string; write: string | null; devices?: string[] }
   writeRefusal: string | null
+  /** The Gear Matrix lists every device and the actions it really has. */
+  devices?: MatrixModDevice[]
   tools: MatrixModTool[]
+}
+
+export interface MatrixModDevice {
+  key: string
+  label: string
+  actions: string[]
+  adapter: string
 }
 
 export interface MatrixModRun {
