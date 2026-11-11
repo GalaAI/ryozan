@@ -256,7 +256,7 @@ function ArtistScrollDetail({ scrollData, onBack }: { scrollData: ArtistScrollDa
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <img src={scrollData.bbp_cert_url} alt="BBP Cert" style={{ maxWidth: 220, maxHeight: 160, objectFit: 'contain', borderRadius: 6, border: '1px solid var(--panel-border)' }} />
                 <a href={scrollData.bbp_cert_url} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '0.75rem', color: 'var(--gold)', textDecoration: 'none', padding: '0.35rem 0.75rem', border: '1px solid rgba(166,125,67,0.3)', borderRadius: 5 }}>
+                  style={{ fontSize: '0.75rem', color: 'var(--gold-vibrant)', textDecoration: 'none', padding: '0.35rem 0.75rem', border: '1px solid rgba(166,125,67,0.3)', borderRadius: 5 }}>
                   Open Full Size
                 </a>
               </div>
@@ -291,7 +291,7 @@ interface Quest { id: 'daily' | 'weekly' | 'monthly'; name: string; xp: number; 
 
 const UPKEEP_QUESTS: Quest[] = [
   {
-    id: 'daily', name: 'Daily', xp: 30, color: 'var(--gold)',
+    id: 'daily', name: 'Daily', xp: 30, color: 'var(--gold-vibrant)',
     period: () => new Date().toISOString().slice(0, 10),
     steps: [
       { id: 'wipe',     title: 'Sanitize Station',  desc: 'Spray all surfaces with Madacide. Let sit 2 min. Wipe with clean towel. Air dry.' },
@@ -607,7 +607,7 @@ function WaiverSignModal({ d, onClose, onDone }: {
                   {savedSigUrl && !artistSig.startsWith('data:') ? (
                     <div>
                       <img src={savedSigUrl} alt="Saved signature" style={{ width: '100%', height: 60, objectFit: 'contain', borderRadius: 4, border: '1px solid var(--panel-border)', background: '#fff', display: 'block', fontSize: 0, color: 'transparent' }} />
-                      <button onClick={() => { setSavedSigUrl(null); setArtistSig('') }} style={{ fontSize: '0.62rem', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem 0', marginTop: '0.2rem' }}>
+                      <button onClick={() => { setSavedSigUrl(null); setArtistSig('') }} style={{ fontSize: '0.62rem', color: 'var(--gold-vibrant)', background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem 0', marginTop: '0.2rem' }}>
                         Draw new signature
                       </button>
                     </div>
@@ -629,7 +629,7 @@ function WaiverSignModal({ d, onClose, onDone }: {
                   disabled={!artistSig || submitting}
                   style={{
                     width: '100%', padding: '0.65rem', border: 'none', borderRadius: 8,
-                    background: artistSig ? 'var(--gold)' : 'rgba(166,125,67,0.15)',
+                    background: artistSig ? 'var(--gold-vibrant)' : 'rgba(166,125,67,0.15)',
                     color: artistSig ? '#0e0d0b' : 'var(--text-muted)',
                     fontSize: '0.85rem', fontWeight: 700, cursor: artistSig ? 'pointer' : 'not-allowed',
                     opacity: submitting ? 0.5 : 1,
@@ -805,7 +805,7 @@ function WaiversSection() {
               fetchClientSuggestions()
             }
           }}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.32rem 0.75rem', background: sendOpen ? 'rgba(166,125,67,0.1)' : 'transparent', border: '1px solid rgba(166,125,67,0.35)', borderRadius: '6px', color: 'var(--gold)', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.32rem 0.75rem', background: sendOpen ? 'rgba(166,125,67,0.1)' : 'transparent', border: '1px solid rgba(166,125,67,0.35)', borderRadius: '6px', color: 'var(--gold-vibrant)', fontSize: '0.7rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s' }}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -869,7 +869,7 @@ function WaiversSection() {
               <button type="button" onClick={() => setSendOpen(false)}
                 style={{ padding: '0.4rem 0.85rem', background: 'transparent', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--muted)', fontSize: '0.75rem', cursor: 'pointer' }}>Cancel</button>
               <button type="submit" disabled={sending}
-                style={{ padding: '0.4rem 0.85rem', background: 'var(--gold)', border: 'none', borderRadius: '6px', color: '#0e0d0b', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', opacity: sending ? 0.6 : 1 }}>
+                style={{ padding: '0.4rem 0.85rem', background: 'var(--gold-vibrant)', border: 'none', borderRadius: '6px', color: '#0e0d0b', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', opacity: sending ? 0.6 : 1 }}>
                 {sending ? 'Sending...' : 'Send'}
               </button>
             </div>
@@ -1438,7 +1438,7 @@ function QuestLogSection() {
     <div className="quest-log">
       <div className="quest-log-header">
         <div className="quest-log-title-row">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
           </svg>
           <span className="quest-log-title">Quest Log</span>
@@ -1815,7 +1815,7 @@ function AddScrollTabWizard({
             {/* What gets built */}
             <div className="scroll-wizard-builds">
               <div className="scroll-wizard-builds-label">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                 </svg>
                 Auto-configured on create
@@ -1823,7 +1823,7 @@ function AddScrollTabWizard({
               <div className="scroll-wizard-builds-list">
                 {selectedPreset.builds.map((item) => (
                   <div key={item} className="scroll-wizard-build-item">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
                     {item}
@@ -1866,7 +1866,7 @@ function AddScrollTabWizard({
         {mode === 'gala' && (
           <div className="scroll-wizard-gala-block">
             <div className="scroll-wizard-gala-header">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
               </svg>
               <span>Describe the tab you need</span>

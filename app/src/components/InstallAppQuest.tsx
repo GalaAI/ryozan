@@ -248,7 +248,7 @@ export default function InstallAppQuest({ mode = 'compact' }: InstallAppQuestPro
       )}
 
       <div style={s.stepRow}>
-        <div style={{ ...s.stepDot, background: 'var(--gold)' }}>1</div>
+        <div style={{ ...s.stepDot, background: 'var(--gold-vibrant)' }}>1</div>
         <div style={s.stepInfo}>
           <span style={s.stepLabel}>Add to Home Screen</span>
           {alreadyInstalled && <span style={s.stepCheck}>Already installed</span>}
@@ -271,7 +271,7 @@ export default function InstallAppQuest({ mode = 'compact' }: InstallAppQuestPro
       )}
 
       <div style={s.stepRow}>
-        <div style={{ ...s.stepDot, background: alreadyInstalled ? 'var(--gold)' : 'rgba(250,174,21,0.25)', color: alreadyInstalled ? 'var(--bg)' : 'var(--gold)' }}>2</div>
+        <div style={{ ...s.stepDot, background: alreadyInstalled ? 'var(--gold-vibrant)' : 'rgba(250,174,21,0.25)', color: alreadyInstalled ? 'var(--bg)' : 'var(--gold-vibrant)' }}>2</div>
         <div style={s.stepInfo}>
           <span style={s.stepLabel}>Enable Notifications</span>
         </div>
@@ -322,7 +322,7 @@ const s: Record<string, React.CSSProperties> = {
     width: '22px',
     height: '22px',
     borderRadius: '50%',
-    background: 'var(--gold)',
+    background: 'var(--gold-vibrant)',
     color: 'var(--bg)',
     fontSize: '0.7rem',
     fontWeight: 700,
@@ -350,7 +350,7 @@ const s: Record<string, React.CSSProperties> = {
   btnGold: {
     width: '100%',
     padding: '0.6rem 1.2rem',
-    background: 'var(--gold)',
+    background: 'var(--gold-vibrant)',
     color: 'var(--bg)',
     border: 'none',
     borderRadius: '8px',
@@ -368,7 +368,7 @@ const s: Record<string, React.CSSProperties> = {
     width: '100%',
     padding: '0.55rem 1rem',
     background: 'rgba(250,174,21,0.1)',
-    color: 'var(--gold)',
+    color: 'var(--gold-vibrant)',
     border: '1px solid rgba(250,174,21,0.3)',
     borderRadius: '8px',
     fontSize: '0.8rem',
@@ -437,7 +437,7 @@ const s: Record<string, React.CSSProperties> = {
     height: '20px',
     borderRadius: '50%',
     background: 'rgba(250,174,21,0.15)',
-    color: 'var(--gold)',
+    color: 'var(--gold-vibrant)',
     fontSize: '0.68rem',
     fontWeight: 700,
     display: 'flex',
@@ -445,7 +445,7 @@ const s: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     flexShrink: 0,
   },
-  gold: { color: 'var(--gold)' },
+  gold: { color: 'var(--gold-vibrant)' },
 
   blockedText: {
     fontSize: '0.8rem',

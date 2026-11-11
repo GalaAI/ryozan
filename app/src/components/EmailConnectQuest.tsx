@@ -227,7 +227,7 @@ export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQues
           <p style={styles.pendingText}>
             We sent a verification link to <strong style={{ color: 'var(--text)' }}>{targetEmail}</strong>.
             Click the link in your email to activate{' '}
-            <strong style={{ color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace" }}>
+            <strong style={{ color: 'var(--gold-vibrant)', fontFamily: "'JetBrains Mono', monospace" }}>
               {status?.bttco_email}
             </strong>
           </p>
@@ -258,7 +258,7 @@ export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQues
     <div style={isFullMode ? styles.fullContainer : styles.container}>
       {isFullMode && (
         <p style={styles.sectionDesc}>
-          Claim your own <strong style={{ color: 'var(--gold)' }}>{emailSuffix || 'studio'}</strong> email address.
+          Claim your own <strong style={{ color: 'var(--gold-vibrant)' }}>{emailSuffix || 'studio'}</strong> email address.
           Incoming mail will be forwarded to your personal inbox.
         </p>
       )}
@@ -410,7 +410,7 @@ const styles: Record<string, React.CSSProperties> = {
   domain: {
     padding: '0.7rem 0.85rem',
     fontSize: '0.78rem',
-    color: 'var(--gold)',
+    color: 'var(--gold-vibrant)',
     background: 'rgba(212, 168, 83, 0.06)',
     borderLeft: '1px solid rgba(212, 168, 83, 0.15)',
     whiteSpace: 'nowrap' as const,
@@ -441,7 +441,7 @@ const styles: Record<string, React.CSSProperties> = {
   btnGold: {
     marginTop: '1rem',
     padding: '0.6rem 1.4rem',
-    background: 'var(--gold)',
+    background: 'var(--gold-vibrant)',
     color: 'var(--bg)',
     border: 'none',
     borderRadius: '8px',
@@ -467,7 +467,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '0.5rem',
-    color: 'var(--gold)',
+    color: 'var(--gold-vibrant)',
     marginBottom: '0.6rem',
   },
   pendingTitle: {
@@ -489,7 +489,7 @@ const styles: Record<string, React.CSSProperties> = {
   btnLink: {
     background: 'none',
     border: 'none',
-    color: 'var(--gold)',
+    color: 'var(--gold-vibrant)',
     fontSize: '0.75rem',
     fontWeight: 600,
     cursor: 'pointer',

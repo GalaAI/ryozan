@@ -10,7 +10,7 @@ export default function ClubPage() {
     <div className="shop-page shop-coming-soon">
       <div className="shop-coming-soon-content">
         <div className="shop-coming-soon-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold, #a67d43)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
             <circle cx="9" cy="7" r="4"/>
             <path d="M23 21v-2a4 4 0 00-3-3.87"/>

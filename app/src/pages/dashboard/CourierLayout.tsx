@@ -1895,7 +1895,7 @@ export default function CourierLayout() {
                           <div className="msg-user-role">{u.role}</div>
                         </div>
                         {!isCollector && selected && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="courier-contact-check">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="courier-contact-check">
                             <polyline points="20 6 9 17 4 12" />
                           </svg>
                         )}
@@ -1923,7 +1923,7 @@ export default function CourierLayout() {
                           <div className="msg-user-role">{u.role}</div>
                         </div>
                         {selected && (
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="courier-contact-check">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="courier-contact-check">
                             <polyline points="20 6 9 17 4 12" />
                           </svg>
                         )}

@@ -403,7 +403,7 @@ function SlotPicker({
           {loadingSlots ? 'Finding openings...' : `${visibleSlots.length || 0} server-verified slot${visibleSlots.length !== 1 ? 's' : ''} · ${duration >= 60 ? `${duration/60}h` : `${duration}m`} session`}
         </div>
         {!calendarConnected && !loadingSlots && (
-          <p className="bkm-slot-empty" style={{ color: 'var(--gold)', opacity: 0.85 }}>
+          <p className="bkm-slot-empty" style={{ color: 'var(--gold-vibrant)', opacity: 0.85 }}>
             Google Calendar not connected for this artist. Slots below use Ryozan booking rules and local booking conflicts only.
           </p>
         )}
@@ -2555,7 +2555,7 @@ export default function BookingsManager() {
                               <span className="bkm-meta-item">{Icons.clock} Sent {timeAgo(q.sent_at)}</span>
                             </div>
                             {q.selected_date && (
-                              <div className="bkm-meta-item" style={{ marginTop: '4px', color: 'var(--gold)' }}>
+                              <div className="bkm-meta-item" style={{ marginTop: '4px', color: 'var(--gold-vibrant)' }}>
                                 {Icons.calendar} Booked: {formatDate(q.selected_date)} at {formatTime12h(q.selected_time)}
                               </div>
                             )}

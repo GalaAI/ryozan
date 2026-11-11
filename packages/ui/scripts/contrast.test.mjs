@@ -250,6 +250,10 @@ test('app text on fixed-dark panels reads 4.5:1 in every theme', { skip: !exists
 const appSrc = join(here, '..', '..', '..', 'app', 'src');
 export const SCOPE_ROOTS = ['app-view', 'ryozan-mobile-portal-home'];
 export const THEME_FOLLOWING_TEXT = ['ink', 'ink-dim', 'ink-mute', 'ink-ghost', 'cream', 'accent-cream'];
+// Gold that follows the theme (darkened for paper in shop). Banned in the back office in
+// every property (text, borders, fills, outlines): use gold-vibrant, and bg-dark on it.
+export const THEME_FOLLOWING_GOLD = ['gold', 'gold-text', 'gold-fill', 'gold-decor', 'accent-seal', 'on-gold', 'gold-ink', 'gold-wash'];
+export const BACKOFFICE_GOLD = ['gold-vibrant', 'bg-dark'];
 // Constant light text: same light value in every theme (website vocabulary plus the tile).
 export const BACKOFFICE_TEXT = ['text', 'text-primary', 'text-secondary', 'text-muted', 'muted', 'bone-white', 'accent-cream-tile'];
 // Narrow, named exceptions: light inner surfaces that deliberately follow the theme.
@@ -364,6 +368,9 @@ export function backofficeViolations() {
       const hits = [];
       const color = /(?:^|;)\s*color\s*:\s*var\(--([\w-]+)/.exec(m[2]);
       if (color && THEME_FOLLOWING_TEXT.includes(color[1])) hits.push(`var(--${color[1]})`);
+      for (const d of m[2].matchAll(/(?:^|;)\s*([\w-]+)\s*:([^;]*)/g)) {
+        for (const t of d[2].matchAll(/var\(--([\w-]+)/g)) if (THEME_FOLLOWING_GOLD.includes(t[1])) hits.push(`${d[1]}: var(--${t[1]})`);
+      }
       // A local custom property that wraps a theme-following text token (for example
       // --huddl-ink: var(--ink), or a var() fallback) carries the theme in by indirection.
       for (const d of m[2].matchAll(/(?:^|;)\s*(--[\w-]+)\s*:([^;]*)/g)) {
@@ -378,18 +385,27 @@ export function backofficeViolations() {
       }
     }
   }
+  // Inline styles and component-scoped CSS in back-office source. The desktop portal is
+  // left out: its shadow host pins every gold token to the constant seal.
+  for (const f of [...backofficeFiles()].sort()) {
+    if (f.includes(`${'/'}desktop-portal${'/'}`)) continue;
+    const src = readFileSync(f, 'utf8');
+    for (const t of src.matchAll(/var\(--([\w-]+)/g)) if (THEME_FOLLOWING_GOLD.includes(t[1])) out.push(`${f.slice(appSrc.length + 1)} -> var(--${t[1]})`);
+  }
   return out;
 }
 
-test('back office stays dark: no theme-following text tokens in portal or dashboard rules', { skip: !existsSync(join(appSrc, 'App.tsx')) && 'app/src not present (packed tarball)' }, () => {
+test('back office stays dark: no theme-following text or gold tokens in portal or dashboard rules', { skip: !existsSync(join(appSrc, 'App.tsx')) && 'app/src not present (packed tarball)' }, () => {
   for (const n of [...THEME_FOLLOWING_TEXT, ...BACKOFFICE_TEXT]) assert.ok(byName.has(n), `unknown colour token ${n}`);
   for (const n of BACKOFFICE_TEXT) {
     const per = themes.map((t) => raw(n, t));
     assert.equal(new Set(per).size, 1, `${n} must be constant across themes to be back-office text`);
   }
   for (const n of THEME_FOLLOWING_TEXT) assert.ok(new Set(themes.map((t) => raw(n, t))).size > 1, `${n} is listed as theme-following but is constant`);
+  for (const n of THEME_FOLLOWING_GOLD) assert.ok(new Set(themes.map((t) => raw(n, t))).size > 1, `${n} is listed as theme-following but is constant`);
+  for (const n of BACKOFFICE_GOLD) assert.equal(new Set(themes.map((t) => raw(n, t))).size, 1, `${n} must be constant across themes for the back office`);
   const v = backofficeViolations();
-  assert.deepEqual(v, [], `theme-following text inside the back office (use ${BACKOFFICE_TEXT.join(', ')}):\n${v.join('\n')}`);
+  assert.deepEqual(v, [], `theme-following text or gold inside the back office (text: ${BACKOFFICE_TEXT.join(', ')}; gold: ${BACKOFFICE_GOLD.join(', ')}):\n${v.join('\n')}`);
 });
 
 // ── Fixed dark shells (owner ruling 2026-11-11) ──────────────────────────────────
@@ -471,4 +487,23 @@ test('desktop portal stays dark in every theme: shadow host pins, no theme switc
   const switches = sourceFiles(portalDir).filter((f) => /data-theme|dataset\.theme/.test(readFileSync(f, 'utf8')));
   assert.deepEqual(switches, [], 'desktop portal sources must not set data-theme');
   assert.ok(!/:host\(\s*\[data-theme|:host-context\(/.test(readFileSync(join(portalDir, 'source.css'), 'utf8')), 'source.css must not theme the shadow host from outside');
+});
+
+// The back-office roots pin the theme-following gold (owner ruling 2026-11-11), so
+// @ryozan/ui components and global element rules that paint gold inline stay constant.
+export const BACKOFFICE_GOLD_PIN = { file: 'dashboard.css', selector: '.app-view, .ryozan-mobile-portal-home', tokens: ['--gold', '--gold-text', '--gold-fill', '--gold-decor', '--on-gold', '--gold-ink'] };
+
+test('back-office roots pin gold to a constant in every theme, readable on the dark shell', { skip: !existsSync(stylesDir) && 'app/src/styles not present (packed tarball)' }, () => {
+  const decl = declarations(BACKOFFICE_GOLD_PIN.file, BACKOFFICE_GOLD_PIN.selector);
+  assert.ok(decl.size, `${BACKOFFICE_GOLD_PIN.selector} gold pin not found`);
+  const shell = ['color-ground', 'color-surface', 'color-surface-2'].map((n) => col(n, themes[0]));
+  for (const p of BACKOFFICE_GOLD_PIN.tokens) {
+    assert.ok(decl.has(p), `back-office roots must pin ${p}`);
+    const c = fixedColour(decl.get(p));
+    assert.ok(c, `${p}: ${decl.get(p)} must be the same colour in every theme`);
+    if (p === '--on-gold' || p === '--gold-ink') {
+      const gold = fixedColour(decl.get('--gold'));
+      assert.ok(ratio(c, gold) >= 4.5, `${p} on pinned gold: ${ratio(c, gold).toFixed(2)}:1`);
+    } else for (const bg of shell) assert.ok(ratio(c, bg) >= 4.5, `${p} on the dark shell: ${ratio(c, bg).toFixed(2)}:1`);
+  }
 });
