@@ -31,13 +31,14 @@ import contextlib
 import hashlib
 import json
 import logging
+import re
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from html import escape
 from typing import TYPE_CHECKING
 
-from sqlalchemy import and_, func, or_, select, text
+from sqlalchemy import and_, func, or_, select, text, update
 
 from app.constants.timezones import shop_timezone
 from app.models.document import DocumentInstance
@@ -429,24 +430,56 @@ async def process_owner_email_outbox_once(limit: int = 20) -> int:
         return delivered
 
 
-def _archive_pdf_confirmed_sql(outbox_alias: str) -> str:
-    """SQL condition: the outbox row's submission has a stored archive PDF per the DB record.
+_HTTP_URL = re.compile(r"https?://\S+", re.IGNORECASE)
 
-    Confirmed means an owner archive copy for the same submission_id carries a non-empty http(s)
-    file_url or scroll_pdf_url. Only the owner archive category counts: it is created only by
-    submit_scroll (or a founder), while other categories, the artist scroll included, could once be
-    created through the generic document routes with any submission id written into data_json.
-    Nothing is fetched from R2. When PDF generation succeeded but storing it failed, the queued
-    email's bytes may be the only copy, so such rows are never confirmed.
+
+def _is_http_url(value: object) -> bool:
+    return isinstance(value, str) and _HTTP_URL.match(value) is not None
+
+
+def _confirmed_archive_submission(category: object, data_json: object, file_url: object) -> str | None:
+    """The submission id an owner archive record confirms has a stored archive PDF, or None.
+
+    Only the record's parsed TOP-LEVEL keys count. file_owner_archive writes them all itself
+    (submission_id, scroll_pdf_url) and nests the artist's fields under "fields", so a submission id or
+    PDF URL an artist plants anywhere below the top level never confirms anything. Only the owner
+    archive category counts: it is created only by submit_scroll (or a founder), while other
+    categories, the artist scroll included, could once be created through the generic document routes
+    with any submission id written into data_json. Confirmed means a non-empty http(s) file_url or
+    top-level scroll_pdf_url. Nothing is fetched from R2. When PDF generation succeeded but storing it
+    failed, the queued email's bytes may be the only copy, so such records never confirm.
     """
-    documents = DocumentInstance.__tablename__
-    return (
-        f"EXISTS (SELECT 1 FROM {documents} d "
-        f"WHERE d.category = '{OWNER_ARCHIVE_CATEGORY}' "
-        f"AND position(('\"submission_id\": \"' || {outbox_alias}.submission_id || '\"') IN coalesce(d.data_json, '')) > 0 "
-        "AND (d.file_url ~* '^https?://[^[:space:]]+' "
-        "OR coalesce(d.data_json, '') ~* '\"scroll_pdf_url\": \"https?://[^\"[:space:]]+'))"
-    )
+    if category != OWNER_ARCHIVE_CATEGORY or not isinstance(data_json, str):
+        return None
+    try:
+        data = json.loads(data_json)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    submission_id = data.get("submission_id")
+    if not isinstance(submission_id, str) or not submission_id:
+        return None
+    if _is_http_url(file_url) or _is_http_url(data.get("scroll_pdf_url")):
+        return submission_id
+    return None
+
+
+async def _confirmed_archive_submissions(db: AsyncSession | AsyncConnection) -> set[str]:
+    """Every submission id whose archive PDF is confirmed stored per the DB record (top-level match only)."""
+    rows = (
+        await db.execute(
+            select(DocumentInstance.category, DocumentInstance.data_json, DocumentInstance.file_url).where(
+                DocumentInstance.category == OWNER_ARCHIVE_CATEGORY
+            )
+        )
+    ).all()
+    confirmed = set()
+    for row in rows:
+        submission_id = _confirmed_archive_submission(row.category, row.data_json, row.file_url)
+        if submission_id is not None:
+            confirmed.add(submission_id)
+    return confirmed
 
 
 async def clear_sent_owner_email_attachments(conn: AsyncConnection) -> tuple[int, int, int]:
@@ -455,23 +488,30 @@ async def clear_sent_owner_email_attachments(conn: AsyncConnection) -> tuple[int
     Rows queued before the link-only rule kept the scroll PDF (which can embed the artist's
     government ID). Finished rows are those sent, or exhausted (never delivered, past the retry
     limit, so never picked up again). One is cleared only when its submission's archive PDF is
-    confirmed stored per the DB record (_archive_pdf_confirmed_sql); otherwise its bytes may be the
-    only copy and the row is left untouched. Pending rows are never touched here.
+    confirmed stored per the DB record (_confirmed_archive_submission: the archive's parsed top-level
+    submission id, never a substring or nested match); otherwise its bytes may be the only copy and
+    the row is left untouched. Pending rows are never touched here.
     Returns (found, cleared, kept). Logs counts only, never row data.
     """
-    table = ScrollOwnerEmailOutbox.__tablename__
-    holding = f"{table}.status IN ('sent', 'exhausted') AND {table}.attachment_content IS NOT NULL"
-    confirmed = _archive_pdf_confirmed_sql(table)
-    found = (await conn.execute(text(f"SELECT count(*) FROM {table} WHERE {holding}"))).scalar_one()
+    outbox = ScrollOwnerEmailOutbox
+    holding = (outbox.status.in_(("sent", "exhausted")), outbox.attachment_content.is_not(None))
+    finished = (await conn.execute(select(outbox.id, outbox.submission_id).where(*holding))).all()
+    found = len(finished)
     logger.info("Finished owner emails still holding PDF bytes: %d", found)
-    result = await conn.execute(
-        text(
-            f"UPDATE {table} SET attachment_content = NULL, attachment_filename = NULL WHERE {holding} AND {confirmed}"
-        )
-    )
-    cleared = int(result.rowcount or 0)
+    cleared = 0
+    if finished:
+        confirmed = await _confirmed_archive_submissions(conn)
+        ids = [row.id for row in finished if row.submission_id in confirmed]
+        if ids:
+            result = await conn.execute(
+                update(outbox)
+                .where(outbox.id.in_(ids), *holding)
+                .values(attachment_content=None, attachment_filename=None)
+                .execution_options(synchronize_session=False)
+            )
+            cleared = int(result.rowcount or 0)
     logger.info("Cleared PDF bytes from finished owner emails with a stored archive PDF: %d", cleared)
-    kept = (await conn.execute(text(f"SELECT count(*) FROM {table} WHERE {holding}"))).scalar_one()
+    kept = (await conn.execute(select(func.count()).select_from(outbox).where(*holding))).scalar_one()
     logger.info("Kept PDF bytes on finished owner emails with no confirmed archive PDF: %d", kept)
     return int(found), cleared, int(kept)
 
@@ -573,6 +613,7 @@ async def _archive_records(
     else:
         stmt = select(DocumentInstance).where(
             DocumentInstance.category.in_(ARCHIVE_RECORD_CATEGORIES),
+            # Only narrows the scan; a record is a candidate solely by its parsed top-level submission_id below.
             DocumentInstance.data_json.contains(f'"submission_id": {json.dumps(submission_id)}', autoescape=True),
         )
     candidates = []
@@ -644,24 +685,23 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     bounds the uploads attempted, so rows the retry cannot act on never starve later rows. Returns
     (pending, stored, failed), where failed counts passed-over submissions too. Logs counts only.
     """
-    table = ScrollOwnerEmailOutbox.__tablename__
     rows = (
         (
             await db.execute(
                 select(ScrollOwnerEmailOutbox)
-                .where(
-                    ScrollOwnerEmailOutbox.attachment_content.is_not(None),
-                    text(f"NOT {_archive_pdf_confirmed_sql(table)}"),
-                )
+                .where(ScrollOwnerEmailOutbox.attachment_content.is_not(None))
                 .order_by(ScrollOwnerEmailOutbox.created_at)
             )
         )
         .scalars()
         .all()
     )
+    # A submission whose archive PDF is already confirmed stored is not a retry case.
+    confirmed = await _confirmed_archive_submissions(db) if rows else set()
     by_submission: dict[str, list[ScrollOwnerEmailOutbox]] = {}
     for row in rows:
-        by_submission.setdefault(row.submission_id, []).append(row)
+        if row.submission_id not in confirmed:
+            by_submission.setdefault(row.submission_id, []).append(row)
     if not by_submission:
         return 0, 0, 0
 

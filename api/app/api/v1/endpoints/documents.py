@@ -146,10 +146,33 @@ def _scrub_client_storage_refs(fields: dict) -> tuple[dict, int]:
     request's own uploads, so a browser-supplied value for any of them is dropped. Any other value that names
     an object on our bucket is then held to storage.authorize_client_references (refused unless it is the
     artist's own), so the read endpoints can never sign a link to someone else's waiver, signature or scroll.
-    Returns (scrubbed, dropped_count). Never logs values.
+    Keys only submit_scroll writes (RESERVED_SCROLL_MARKERS) are also dropped at any depth: the owner
+    archive nests these fields under "fields", and a planted nested submission_id or scroll_pdf_url must
+    never sit in a record the server reads back. Returns (scrubbed, dropped_count). Never logs values.
     """
-    out = {key: item for key, item in fields.items() if key not in SERVER_OWNED_SCROLL_KEYS}
-    return out, len(fields) - len(out)
+    dropped = 0
+
+    def _nested(value):
+        nonlocal dropped
+        if isinstance(value, dict):
+            kept = {}
+            for key, item in value.items():
+                if key in RESERVED_SCROLL_MARKERS:
+                    dropped += 1
+                    continue
+                kept[key] = _nested(item)
+            return kept
+        if isinstance(value, list):
+            return [_nested(item) for item in value]
+        return value
+
+    out = {}
+    for key, item in fields.items():
+        if key in SERVER_OWNED_SCROLL_KEYS or key in RESERVED_SCROLL_MARKERS:
+            dropped += 1
+            continue
+        out[key] = _nested(item)
+    return out, dropped
 
 
 WAIVER_CONTACT_PREFILL_FIELDS = (

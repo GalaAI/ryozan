@@ -174,11 +174,120 @@ class RetryPagingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(rows[2].attachment_content, PDF_BYTES)
 
 
+PENDING_SID = "synthetic-pending-submission"
+PLANTER = uuid.UUID("00000000-0000-4000-8000-0000000000b1")
+PLANTER_PREFIX = f"scrolls/{PLANTER}/20261111T090000-0badc0de"
+PLANTER_URL = f"https://{HOST}/{PLANTER_PREFIX}/{storage.SCROLL_ID_PDF_FILENAME}"
+
+
+def _planted_archive():
+    """An artist's own archive with a stored PDF, whose typed fields carry another submission's id nested."""
+    data = {
+        "submission_id": "synthetic-planter-submission",
+        "artist_user_id": str(PLANTER),
+        "storage_prefix": PLANTER_PREFIX,
+        "scroll_pdf_url": PLANTER_URL,
+        "fields": {"notes": {"submission_id": PENDING_SID}, "submission_id": PENDING_SID},
+    }
+    return DocumentInstance(
+        id=uuid.uuid4(),
+        user_id=uuid.uuid4(),
+        category=OWNER_ARCHIVE_CATEGORY,
+        title="t",
+        data_json=json.dumps(data),
+        file_url=PLANTER_URL,
+    )
+
+
+def _pending_row():
+    row = _row(None)
+    row.submission_id = PENDING_SID
+    return row
+
+
 class ConfirmedArchiveTests(unittest.TestCase):
     def test_only_an_owner_archive_record_confirms_a_stored_pdf(self):
-        sql = scroll_archive._archive_pdf_confirmed_sql("o")
-        self.assertIn(f"d.category = '{OWNER_ARCHIVE_CATEGORY}'", sql)
-        self.assertNotIn("'scroll',", sql)
+        archive = _doc(OWNER_ARCHIVE_CATEGORY, uuid.uuid4(), ID_URL)
+        artist = _doc("scroll", VICTIM, ID_URL)
+        confirm = scroll_archive._confirmed_archive_submission
+        self.assertEqual(confirm(archive.category, archive.data_json, archive.file_url), SID)
+        self.assertIsNone(confirm(artist.category, artist.data_json, artist.file_url))
+
+    def test_a_planted_nested_submission_id_never_confirms(self):
+        planted = _planted_archive()
+        confirm = scroll_archive._confirmed_archive_submission
+        self.assertEqual(confirm(planted.category, planted.data_json, planted.file_url), "synthetic-planter-submission")
+        self.assertNotEqual(confirm(planted.category, planted.data_json, planted.file_url), PENDING_SID)
+
+    def test_a_nested_pdf_url_alone_never_confirms(self):
+        data = {"submission_id": SID, "scroll_pdf_url": None, "fields": {"scroll_pdf_url": ID_URL}}
+        self.assertIsNone(scroll_archive._confirmed_archive_submission(OWNER_ARCHIVE_CATEGORY, json.dumps(data), None))
+        self.assertIsNone(scroll_archive._confirmed_archive_submission(OWNER_ARCHIVE_CATEGORY, "not json", ID_URL))
+
+
+class PlantedSubmissionIdRetryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_a_planted_nested_id_does_not_skip_the_pending_pdf(self):
+        victim_archive = _doc(OWNER_ARCHIVE_CATEGORY, uuid.uuid4(), prefix=f"scrolls/{VICTIM}/pending")
+        victim_archive.data_json = victim_archive.data_json.replace(SID, PENDING_SID)
+        row = _pending_row()
+        r2 = _R2()
+        outcome, _logs = await _retry(self, _Db([_planted_archive(), victim_archive], outbox=[row]), r2)
+        # Not confirmed by the planted record: the pending PDF is stored, not passed over as already stored.
+        self.assertEqual(outcome, (1, 1, 0))
+        self.assertEqual(set(r2.objects), {f"scrolls/{VICTIM}/pending/{storage.SCROLL_ID_PDF_FILENAME}"})
+        self.assertIsNone(row.attachment_content)
+
+    async def test_a_true_top_level_match_is_confirmed_and_not_retried(self):
+        stored = _doc(OWNER_ARCHIVE_CATEGORY, uuid.uuid4(), ID_URL)
+        row = _row(None)
+        r2 = _R2()
+        with patch.object(storage, "upload_file", r2.upload):
+            outcome = await scroll_archive.retry_unstored_scroll_pdfs(_Db([stored], outbox=[row]))
+        self.assertEqual(outcome, (0, 0, 0))
+        self.assertEqual(r2.uploads, 0)
+
+
+class FileOwnerArchiveTopLevelTests(unittest.TestCase):
+    def test_client_fields_never_supply_server_top_level_keys(self):
+        artist = SimpleNamespace(id=VICTIM, name="Synthetic Artist", email="a@example.test")
+        founder = SimpleNamespace(id=uuid.uuid4())
+        added = []
+        db = SimpleNamespace(add=added.append)
+        client_fields = {
+            "submission_id": PENDING_SID,
+            "scroll_pdf_url": "https://evil.example.test/x.pdf",
+            "artist_user_id": str(PLANTER),
+            "storage_prefix": f"scrolls/{PLANTER}/x",
+            "source": "forged",
+        }
+        (record,) = scroll_archive.file_owner_archive(
+            db,
+            artist,
+            [founder],
+            client_fields,
+            [],
+            SID,
+            PREFIX,
+            scroll_archive.datetime.now(scroll_archive.UTC),
+            None,
+        )
+        data = json.loads(record.data_json)
+        self.assertEqual(data["submission_id"], SID)
+        self.assertIsNone(data["scroll_pdf_url"])
+        self.assertEqual(data["artist_user_id"], str(VICTIM))
+        self.assertEqual(data["storage_prefix"], PREFIX)
+        self.assertEqual(data["source"], "artist_scroll_submission")
+        self.assertIsNone(scroll_archive._confirmed_archive_submission(record.category, record.data_json, None))
+
+    def test_submit_scroll_drops_reserved_keys_at_any_depth(self):
+        fields = {
+            "name": "Synthetic Artist",
+            "submission_id": PENDING_SID,
+            "notes": {"submission_id": PENDING_SID, "keep": "yes", "deeper": [{"scroll_pdf_url": ID_URL}]},
+        }
+        cleaned, dropped = documents._scrub_client_storage_refs(fields)
+        self.assertEqual(cleaned, {"name": "Synthetic Artist", "notes": {"keep": "yes", "deeper": [{}]}})
+        self.assertEqual(dropped, 3)
 
 
 class BootMoveTrustedTargetTests(unittest.IsolatedAsyncioTestCase):

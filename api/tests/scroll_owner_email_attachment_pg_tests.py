@@ -221,6 +221,37 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
         )
         self._assert_counts_only(first_logs + second_logs)
 
+    async def test_a_planted_nested_submission_id_never_confirms_or_clears(self):
+        # An artist's own archive with a stored PDF carries the pending submission's id nested in their
+        # typed fields. Only the archive's top-level submission id counts, so the pending bytes stay.
+        pending = self.rows["sent_missing"]
+        async with self.sessions() as db:
+            planter_sid = uuid4().hex
+            planter_url = f"{ASSETS}/scrolls/artist-2/{planter_sid}/artist-scroll.id.pdf"
+            planted = self._doc(OWNER_ARCHIVE_CATEGORY, planter_sid, planter_url, planter_url)
+            data = json.loads(planted.data_json)
+            data["fields"]["notes"] = {"submission_id": pending.submission_id}
+            data["fields"]["submission_id"] = pending.submission_id
+            planted.data_json = json.dumps(data)
+            db.add(planted)
+            await db.commit()
+
+        (found, cleared, kept), _logs = await self._run(clear_sent_owner_email_attachments)
+        self.assertEqual((found, cleared, kept), (6, 2, 4))
+        self.assertEqual((await self._bytes())["sent_missing"], SYNTHETIC_PDF)
+
+        async def _upload(*, file_bytes, filename, mime_type, folder_path):
+            return None  # storage failing: the bytes must survive
+
+        with patch.object(storage, "upload_file", _upload), self.assertLogs("ryozan.scroll_archive", level="INFO"):
+            async with self.sessions() as db:
+                pending_count, stored, _failed = await retry_unstored_scroll_pdfs(db)
+        # Still a retry case (not skipped as confirmed); nothing stored, so nothing cleared.
+        self.assertEqual((pending_count, stored), (4, 0))
+        (found, cleared, kept), _logs = await self._run(clear_sent_owner_email_attachments)
+        self.assertEqual((found, cleared, kept), (4, 0, 4))
+        self.assertEqual((await self._bytes())["sent_missing"], SYNTHETIC_PDF)
+
     async def test_a_failed_pdf_store_is_retried_recorded_and_cleared(self):
         succeed_for = self.rows["sent_missing"].submission_id
         uploaded: list[tuple[str, str]] = []
