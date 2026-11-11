@@ -13,7 +13,7 @@ import asyncio
 import inspect
 import os
 import unittest
-from contextlib import ExitStack, redirect_stdout
+from contextlib import ExitStack, redirect_stdout, suppress
 from io import StringIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -139,6 +139,48 @@ class StartupNeverAwaitsStorageTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.wait_for(context.__aexit__(None, None, None), timeout=5)
             self.assertEqual(sorted(hanging.cancelled), sorted(hanging.started))
             self.assertIn("Shutting down", output.getvalue())
+
+    async def test_hanging_storage_recovery_never_delays_outbound_email(self):
+        """A storage outage stalls only the storage recovery loop; every email worker still runs."""
+        hanging = _HangingStorage()
+        email_ran = asyncio.Event()
+
+        async def _booking_email():
+            email_ran.set()
+            return 0
+
+        storage_workers = (
+            "retry_pending_scroll_pdfs_once",
+            "process_unstored_scroll_pdfs_once",
+            "retry_public_scroll_pdf_deletions_once",
+        )
+        with ExitStack() as stack:
+            enter = stack.enter_context
+            for worker in OUTBOX_WORKERS:
+                enter(patch.object(main, worker, AsyncMock(return_value=0)))
+            for worker in storage_workers:
+                enter(patch.object(main, worker, hanging.call(worker)))
+            enter(patch.object(main, "process_booking_email_outbox_once", _booking_email))
+            recovery = asyncio.create_task(main._run_scroll_pdf_storage_recovery())
+            outbox = asyncio.create_task(main._run_owner_email_outbox())
+            try:
+                await asyncio.wait_for(hanging.any_started.wait(), timeout=5)
+                await asyncio.wait_for(email_ran.wait(), timeout=5)
+                self.assertEqual(hanging.started, ["retry_pending_scroll_pdfs_once"])
+            finally:
+                for task in (outbox, recovery):
+                    task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await task
+
+    def test_email_loop_names_no_storage_pass(self):
+        source = inspect.getsource(main._run_owner_email_outbox)
+        for name in (
+            "retry_pending_scroll_pdfs_once",
+            "process_unstored_scroll_pdfs_once",
+            "retry_public_scroll_pdf_deletions_once",
+        ):
+            self.assertNotIn(name, source)
 
     def test_no_startup_seed_step_names_a_storage_pass(self):
         source = inspect.getsource(main._run_startup_seeds)

@@ -52,17 +52,28 @@ from app.services.studio_config import load_saved_settings, setup_code, setup_is
 settings = get_settings()
 
 
-async def _run_owner_email_outbox() -> None:
-    """Continuously drain the existing durable outbound-email authorities."""
+async def _drain_forever(workers, label: str) -> None:
+    """Run each worker once per pass, every 15 seconds, logging and surviving any single failure."""
     while True:
-        workers = (
-            # Held scroll PDFs whose store failed (founders or not). Backs off per row, never gives up.
-            ("held scroll PDF", retry_pending_scroll_pdfs_once),
+        for worker_name, worker in workers:
+            try:
+                await worker()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                print(f"[Ryozan] {worker_name} {label} error: {exc}", flush=True)
+        await asyncio.sleep(15)
+
+
+async def _run_owner_email_outbox() -> None:
+    """Continuously drain the existing durable outbound-email authorities.
+
+    Storage (R2) recovery runs in its own loop (_run_scroll_pdf_storage_recovery), so a storage outage
+    never delays customer or owner email.
+    """
+    await _drain_forever(
+        (
             ("owner email", process_owner_email_outbox_once),
-            # Legacy: PDF bytes held on owner email rows queued before the held-PDF table.
-            ("unstored scroll PDF", process_unstored_scroll_pdfs_once),
-            # Public scroll PDFs the boot move could not confirm deleted. Backs off per row.
-            ("public scroll PDF delete", retry_public_scroll_pdf_deletions_once),
             ("booking email", process_booking_email_outbox_once),
             ("BYOF deposit review", process_byof_deposit_reviews_once),
             ("Booky Courier", process_booky_courier_outbox_once),
@@ -71,15 +82,24 @@ async def _run_owner_email_outbox() -> None:
             ("learning capture", queue_recent_learning_captures_once),
             ("Pack bridge", process_pack_bridge_outbox_once),
             ("Apex reviewed dataset", process_apex_training_manifest_once),
-        )
-        for worker_name, worker in workers:
-            try:
-                await worker()
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                print(f"[Ryozan] {worker_name} outbox error: {exc}", flush=True)
-        await asyncio.sleep(15)
+        ),
+        "outbox",
+    )
+
+
+async def _run_scroll_pdf_storage_recovery() -> None:
+    """Continuously retry scroll PDF storage work, apart from email so slow R2 holds up nothing else."""
+    await _drain_forever(
+        (
+            # Held scroll PDFs whose store failed (founders or not). Backs off per row, never gives up.
+            ("held scroll PDF", retry_pending_scroll_pdfs_once),
+            # Legacy: PDF bytes held on owner email rows queued before the held-PDF table.
+            ("unstored scroll PDF", process_unstored_scroll_pdfs_once),
+            # Public scroll PDFs the boot move could not confirm deleted. Backs off per row.
+            ("public scroll PDF delete", retry_public_scroll_pdf_deletions_once),
+        ),
+        "recovery",
+    )
 
 
 async def _move_public_scroll_pdfs() -> None:
@@ -310,8 +330,8 @@ async def _run_startup_seeds() -> None:
             )
 
     # No step here may touch storage (R2): startup must finish inside the platform health-check window
-    # however slow storage is. Scroll PDFs whose upload failed are stored by the outbox worker loop
-    # (_run_owner_email_outbox), which starts in the background after these DB-only steps.
+    # however slow storage is. Scroll PDFs whose upload failed are stored by the storage recovery loop
+    # (_run_scroll_pdf_storage_recovery), which starts in the background after these DB-only steps.
 
     async def sent_owner_email_attachments() -> None:
         # Finished owner emails (sent or exhausted) must not keep the scroll PDF (it can embed the
@@ -588,6 +608,7 @@ async def lifespan(app: FastAPI):
         demo_shop_task = asyncio.create_task(run_nightly_resets(async_session))
     await _announce_first_run_setup()
     outbox_task = asyncio.create_task(_run_owner_email_outbox())
+    storage_recovery_task = asyncio.create_task(_run_scroll_pdf_storage_recovery())
     scroll_pdf_move_task = asyncio.create_task(_move_public_scroll_pdfs())
     derivatives_task = (
         asyncio.create_task(_heal_portfolio_derivatives()) if settings.PORTFOLIO_DERIVATIVES_ON_STARTUP else None
@@ -595,7 +616,7 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
-        for task in (outbox_task, scroll_pdf_move_task):
+        for task in (outbox_task, storage_recovery_task, scroll_pdf_move_task):
             task.cancel()
             with suppress(asyncio.CancelledError):
                 await task
