@@ -661,10 +661,13 @@ class SubmitScrollTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("artist-scroll.id.pdf", uploads)
         outbox = [obj for obj in session.added if type(obj).__name__ == "ScrollOwnerEmailOutbox"]
         self.assertEqual(len(outbox), 1)
-        # The bytes are kept with the private target name, only so the store can be retried.
-        self.assertTrue(outbox[0].attachment_content.startswith(b"%PDF"))
-        self.assertEqual(outbox[0].attachment_filename, "artist-scroll.id.pdf")
+        self.assertIsNone(outbox[0].attachment_content, "the owner email never carries the bytes")
         self.assertIn("the archive has no PDF", outbox[0].html_body)
+        # The bytes are held server-side with the private target name, only so the store can be retried.
+        (held,) = [obj for obj in session.added if type(obj).__name__ == "ScrollPdfPendingUpload"]
+        self.assertTrue(held.content.startswith(b"%PDF"))
+        self.assertEqual(held.filename, "artist-scroll.id.pdf")
+        self.assertTrue(held.folder_path.startswith("scrolls/"))
         for doc in _docs(session):
             self.assertIsNone(doc.file_url)
 

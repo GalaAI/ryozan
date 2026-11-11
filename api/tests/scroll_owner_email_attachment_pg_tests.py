@@ -25,12 +25,15 @@ from app.core import legacy_env
 from app.core.database import Base
 from app.models.document import DocumentInstance
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
+from app.models.scroll_pdf_pending_upload import ScrollPdfPendingUpload
 from app.models.user import User  # noqa: F401 - registers the founder foreign key target
 from app.services import storage
 from app.services.scroll_archive import (
     OWNER_ARCHIVE_CATEGORY,
     clear_sent_owner_email_attachments,
     count_legacy_scroll_references,
+    hold_pdf_for_retry,
+    retry_pending_scroll_pdfs,
     retry_unstored_scroll_pdfs,
 )
 
@@ -278,6 +281,49 @@ class OwnerEmailBootStepPostgresTests(unittest.IsolatedAsyncioTestCase):
         # setup plus the 3 still unstored; the 2 confirmed are cleared, the 3 unstored kept.
         (found, cleared, kept), _logs = await self._run(clear_sent_owner_email_attachments)
         self.assertEqual((found, cleared, kept), (5, 2, 3))
+
+    async def test_a_held_pdf_with_no_founder_is_kept_until_a_private_store_succeeds(self):
+        submission_id = uuid4().hex
+        prefix = f"scrolls/artist-1/{submission_id}"
+        async with self.sessions() as db:
+            record = self._doc("scroll", submission_id, None, None)
+            record.id = uuid4()
+            db.add(record)
+            hold_pdf_for_retry(
+                db,
+                submission_id=submission_id,
+                folder_path=prefix,
+                filename=storage.SCROLL_NOID_PDF_FILENAME,
+                content=SYNTHETIC_PDF,
+                document_ids=[record.id],
+                artist_user_id="artist-1",
+            )
+            await db.commit()
+
+        fail = True
+
+        async def _upload(*, file_bytes, filename, mime_type, folder_path):
+            return None if fail else f"{ASSETS}/{folder_path}/{filename}"
+
+        with patch.object(storage, "upload_file", _upload), self.assertLogs("ryozan.scroll_archive", level="INFO"):
+            async with self.sessions() as db:
+                self.assertEqual(await retry_pending_scroll_pdfs(db), (1, 0, 1))
+        async with self.sessions() as db:
+            (held,) = (await db.execute(select(ScrollPdfPendingUpload))).scalars().all()
+            self.assertEqual((held.content, held.attempts), (SYNTHETIC_PDF, 1))
+            held.next_attempt_at = datetime.now(UTC)
+            await db.commit()
+
+        fail = False
+        with patch.object(storage, "upload_file", _upload), self.assertLogs("ryozan.scroll_archive", level="INFO"):
+            async with self.sessions() as db:
+                self.assertEqual(await retry_pending_scroll_pdfs(db), (1, 1, 0))
+        url = f"{ASSETS}/{prefix}/{storage.SCROLL_NOID_PDF_FILENAME}"
+        async with self.sessions() as db:
+            self.assertEqual((await db.execute(select(ScrollPdfPendingUpload))).scalars().all(), [])
+            stored = await db.get(DocumentInstance, record.id)
+        self.assertEqual(stored.file_url, url)
+        self.assertEqual(json.loads(stored.data_json)["scroll_pdf_url"], url)
 
     async def test_legacy_scroll_references_are_counted_and_nothing_changes(self):
         async with self.sessions() as db:

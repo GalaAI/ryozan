@@ -76,6 +76,7 @@ from app.services.scroll_archive import (
     OWNER_ARCHIVE_CATEGORY,
     build_submission_prefix,
     file_owner_archive,
+    hold_pdf_for_retry,
     notify_owners,
     queue_owner_emails,
     resolve_founders,
@@ -1205,10 +1206,6 @@ async def submit_scroll(
             assets,
             bool(scroll_pdf_url),
             submission_id,
-            # Storing the PDF failed: keep its bytes in the DB (never attached) so it can be retried.
-            unstored_pdf=(pdf_bytes, pdf_filename) if pdf_bytes and pdf_filename and not scroll_pdf_url else None,
-            # The retry records the stored URL on exactly these server-created records.
-            document_ids=[instance.id, *(row.id for row in archive_rows)],
         )
     except Exception:
         logger.error(
@@ -1216,6 +1213,20 @@ async def submit_scroll(
             submission_id,
             current_user.id,
             exc_info=True,
+        )
+
+    if pdf_bytes and pdf_filename and not scroll_pdf_url:
+        # The PDF was built but storing it failed. Hold the bytes server-side (never emailed) in this same
+        # transaction, whether or not any founder exists, until the retry stores them privately and records
+        # the URL on exactly the records this submission created.
+        hold_pdf_for_retry(
+            db,
+            submission_id=submission_id,
+            folder_path=storage_prefix,
+            filename=pdf_filename,
+            content=pdf_bytes,
+            document_ids=[instance.id, *(row.id for row in archive_rows)],
+            artist_user_id=str(current_user.id),
         )
 
     # Award RYO + XP for scroll completion

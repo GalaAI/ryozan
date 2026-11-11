@@ -197,15 +197,17 @@ class SubmitRecordsTargetIdsTests(unittest.IsolatedAsyncioTestCase):
                 db=session,
                 current_user=artist,
             )
-        held = [r for r in session.added if type(r).__name__ == "ScrollOwnerEmailOutbox"]
+        (held,) = [r for r in session.added if type(r).__name__ == "ScrollPdfPendingUpload"]
         created = [r for r in session.added if isinstance(r, DocumentInstance)]
-        self.assertEqual(len(held), 2)
         self.assertEqual(len(created), 3)
         self.assertTrue(all(r.id is not None for r in created))
-        for row in held:
-            self.assertTrue(row.attachment_content.startswith(b"%PDF"))
-            self.assertEqual(set(json.loads(row.document_ids)), {str(r.id) for r in created})
-            self.assertEqual(row.artist_user_id, str(artist.id))
+        self.assertTrue(held.content.startswith(b"%PDF"))
+        self.assertEqual(set(json.loads(held.document_ids)), {str(r.id) for r in created})
+        self.assertEqual(held.artist_user_id, str(artist.id))
+        self.assertTrue(held.folder_path.startswith(f"scrolls/{artist.id}/"))
+        # The owner emails never carry the bytes.
+        for row in (r for r in session.added if type(r).__name__ == "ScrollOwnerEmailOutbox"):
+            self.assertIsNone(row.attachment_content)
 
     def test_rows_with_no_held_pdf_record_no_targets(self):
         from scroll_pdf_private_tests import _QueueSession

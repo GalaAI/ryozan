@@ -42,6 +42,7 @@ from app.services.pack_bridge import process_pack_bridge_outbox_once, queue_rece
 from app.services.scroll_archive import (
     process_owner_email_outbox_once,
     process_unstored_scroll_pdfs_once,
+    retry_pending_scroll_pdfs_once,
     retry_public_scroll_pdf_deletions_once,
 )
 from app.services.session_type_defaults import seed_default_session_types
@@ -54,7 +55,10 @@ async def _run_owner_email_outbox() -> None:
     """Continuously drain the existing durable outbound-email authorities."""
     while True:
         workers = (
+            # Held scroll PDFs whose store failed (founders or not). Backs off per row, never gives up.
+            ("held scroll PDF", retry_pending_scroll_pdfs_once),
             ("owner email", process_owner_email_outbox_once),
+            # Legacy: PDF bytes held on owner email rows queued before the held-PDF table.
             ("unstored scroll PDF", process_unstored_scroll_pdfs_once),
             # Public scroll PDFs the boot move could not confirm deleted. Backs off per row.
             ("public scroll PDF delete", retry_public_scroll_pdf_deletions_once),

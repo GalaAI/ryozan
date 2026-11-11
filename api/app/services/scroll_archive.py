@@ -43,6 +43,7 @@ from app.constants.timezones import shop_timezone
 from app.models.document import DocumentInstance
 from app.models.notification import Notification
 from app.models.scroll_owner_email_outbox import ScrollOwnerEmailOutbox
+from app.models.scroll_pdf_pending_upload import ScrollPdfPendingUpload
 from app.models.scroll_public_pdf_deletion import ScrollPublicPdfDeletion
 from app.models.user import User
 from app.services import storage
@@ -715,6 +716,126 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     logger.info("Scroll PDF store retries that failed (bytes kept): %d", failed)
     logger.info("Scroll PDF records skipped as unproven: %d", untrusted)
     return len(by_submission), stored, failed
+
+
+# ── Scroll PDFs held because storing them failed ───────────────────────
+
+PDF_RETRY_MAX_BACKOFF_MINUTES = 60
+
+
+def hold_pdf_for_retry(
+    db: AsyncSession,
+    *,
+    submission_id: str,
+    folder_path: str,
+    filename: str,
+    content: bytes,
+    document_ids: list[uuid.UUID | str],
+    artist_user_id: str,
+) -> ScrollPdfPendingUpload:
+    """
+    Keep a generated PDF in the database because storing it failed. Added to the caller's transaction.
+
+    Independent of founders: the row exists whether or not any owner email is queued. `document_ids` are
+    the exact records the server created for this submission; the retry writes the PDF URL onto those and
+    no others. The folder is always the private scrolls/ one.
+    """
+    now = datetime.now(UTC)
+    if folder_path.startswith(storage.SCROLL_PUBLIC_ROOT):
+        folder_path = storage.private_scroll_prefix(folder_path)
+    row = ScrollPdfPendingUpload(
+        id=uuid.uuid4(),
+        submission_id=submission_id,
+        folder_path=folder_path,
+        filename=filename,
+        content=content,
+        document_ids=json.dumps([str(i) for i in document_ids]),
+        artist_user_id=artist_user_id,
+        attempts=0,
+        next_attempt_at=now,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(row)
+    return row
+
+
+async def retry_pending_scroll_pdfs(db: AsyncSession, limit: int = 10) -> tuple[int, int, int]:
+    """
+    Store held scroll PDFs whose retry is due, in `db`. Never gives up: a held PDF may be the only copy.
+
+    Each due row is uploaded under its private scrolls/ folder (a folder still under scrolls-public/ is
+    re-aimed at its private twin). Only once storage returns a URL is it recorded on the exact records
+    named at submit (records it cannot prove are skipped and counted), and only then, in the same commit,
+    is the row and its bytes deleted. A failed upload keeps the row and backs off (up to an hour).
+    Returns (due, stored, failed). Logs counts only.
+    """
+    now = datetime.now(UTC)
+    rows = list(
+        (
+            await db.execute(
+                select(ScrollPdfPendingUpload)
+                .where(ScrollPdfPendingUpload.next_attempt_at <= now)
+                .order_by(ScrollPdfPendingUpload.created_at)
+                .with_for_update(skip_locked=True)
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not rows:
+        return 0, 0, 0
+    stored = failed = untrusted = 0
+    for row in rows:
+        if row.folder_path.startswith(storage.SCROLL_PUBLIC_ROOT):
+            row.folder_path = storage.private_scroll_prefix(row.folder_path)
+        url, error = None, None
+        if row.folder_path.startswith("scrolls/") and ".." not in row.folder_path.split("/"):
+            try:
+                url = await storage.upload_file(
+                    file_bytes=row.content,
+                    filename=row.filename,
+                    mime_type="application/pdf",
+                    folder_path=row.folder_path,
+                )
+            except Exception as exc:  # noqa: BLE001 - recorded on the row, retried later
+                error = type(exc).__name__
+        else:
+            error = "folder is not a private scroll folder"
+        if url:
+            records, skipped = await _archive_records(
+                db,
+                row.submission_id,
+                document_ids=_parse_ids(row.document_ids),
+                artist_user_id=row.artist_user_id,
+            )
+            untrusted += skipped
+            for doc, _data in records:
+                _set_scroll_pdf_reference(doc, url)
+            await db.delete(row)
+            stored += 1
+            continue
+        failed += 1
+        row.attempts += 1
+        row.last_error = error or "storage returned no URL"
+        row.next_attempt_at = now + timedelta(minutes=min(2**row.attempts, PDF_RETRY_MAX_BACKOFF_MINUTES))
+        row.updated_at = now
+    await db.commit()
+    logger.info("Held scroll PDFs due for retry: %d", len(rows))
+    logger.info("Held scroll PDFs stored privately: %d", stored)
+    logger.info("Held scroll PDF retries that failed (bytes kept): %d", failed)
+    logger.info("Held scroll PDF records skipped as unproven: %d", untrusted)
+    return len(rows), stored, failed
+
+
+async def retry_pending_scroll_pdfs_once(limit: int = 10) -> int:
+    """One retry pass in its own session, for the outbox loop (which starts at boot)."""
+    from app.core.database import async_session
+
+    async with async_session() as db:
+        _due, stored, _failed = await retry_pending_scroll_pdfs(db, limit)
+    return stored
 
 
 # ── Generated scroll PDFs stored under the public prefix ────────────────

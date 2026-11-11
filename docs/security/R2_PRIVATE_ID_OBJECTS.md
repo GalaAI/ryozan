@@ -116,9 +116,15 @@ URL: the ID page reads "Private (staff open it through the app)". The server alo
 `acceptance_record`) is dropped, and so is any string anywhere in the payload that resolves to this
 install's bucket. Only files uploaded in the same request end up referenced.
 
-The scroll PDF's bytes are kept in the database only when storing it fails. The owner email row then
-holds them (never attached), and a retry (`scroll_archive.retry_unstored_scroll_pdfs`, at boot and on
-every outbox loop) uploads them under the submission's private `scrolls/` prefix
+The scroll PDF's bytes are kept in the database only when storing it fails. They are held in
+`ryozan_scroll_pdf_pending_uploads` (Alembic revision `20261110_scroll_pdf_pending`), one row per
+submission, written in the submission transaction whether or not the shop has a founder (owner email rows
+exist only per founder, so a shop with no founder used to lose the only copy). The row names the exact
+records the submission created and the artist. The outbox loop, started at boot, retries it
+(`scroll_archive.retry_pending_scroll_pdfs_once`) with backoff up to an hour and no give-up; the bytes
+are deleted only in the same commit that records the URL of a confirmed private store. Never emailed;
+counts-only logs. Owner email rows queued before this table may still hold bytes; a retry
+(`scroll_archive.retry_unstored_scroll_pdfs`, at boot and on every outbox loop) uploads those under the submission's private `scrolls/` prefix
 (`artist-scroll.id.pdf`, or `artist-scroll.noid.pdf`; a legacy row of unknown content gets the `.id`
 name; never under `scrolls-public/`), records the URL on the records the server created for that
 submission, and clears the bytes. A failed retry keeps them. It logs only counts (waiting, stored,
