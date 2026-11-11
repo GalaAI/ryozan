@@ -107,6 +107,7 @@
   --accent-army: #353c31;
   --accent-seal: var(--color-seal);
   --accent-cream: var(--color-cream);
+  --accent-cream-tile: var(--color-cream);
   --accent-ink: var(--color-ground);
   --accent: var(--accent-coral);
   --wall-paper: #f7f2e7;
@@ -167,6 +168,7 @@
   --plate-mute: #9a9184;
   --plate-accent: #c8a15e;
   --accent-seal: #654f1e;
+  --accent-cream: #5f512e;
   --gold-glow: 0 0 20px rgba(200,161,94,.22);
   --shadow-sm: 0 1px 3px rgba(60,48,28,.12);
   --shadow-md: 0 4px 12px rgba(60,48,28,.14);
