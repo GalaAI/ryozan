@@ -15,10 +15,10 @@
   --color-line-2: #303849;
   --color-bone: #ebe5d6;
   --color-dim: #a9adba;
-  --color-ghost: #737a8c;
+  --color-ghost: #838999;
   --color-patina: #93cf8a;
   --color-ember: #e2a74c;
-  --color-rust: #d4553b;
+  --color-rust: #d96750;
   --color-moss: #93ad8c;
   --color-coral: #d9573c;
   --color-seal: #c9a24b;
@@ -60,7 +60,9 @@
   --danger: var(--color-rust);
   --info: #2196f3;
   --border-subtle: var(--color-line);
-  --border-active: var(--gold-text);
+  --field-border: #586786;
+  --border-hover: #7484a4;
+  --border-active: #d7ba79;
   --ground: var(--color-ground);
   --ground-2: #0e1017;
   --surface: var(--color-surface);
@@ -69,15 +71,15 @@
   --well: #07090d;
   --line: var(--color-line);
   --line-2: var(--color-line-2);
-  --line-live: rgba(217,87,60,.6);
+  --line-live: rgba(217,87,60,.8);
   --line-dash: var(--color-line);
   --ink: var(--color-bone);
   --ink-dim: var(--color-dim);
   --ink-mute: var(--color-ghost);
-  --ink-ghost: #5d6475;
+  --ink-ghost: #82899c;
   --ink-faint: var(--color-line);
   --track: #1c212c;
-  --numeral: #4b5163;
+  --numeral: #646c83;
   --gold-fill: var(--color-seal);
   --gold-decor: var(--color-seal);
   --gold-ink: var(--color-ground);
@@ -92,13 +94,13 @@
   --sky: #63badf;
   --blush: #fd8e8e;
   --oxblood: #5e2222;
-  --flame: #d7382a;
+  --flame: #d13527;
   --flame-ink: #fff2ec;
   --hero-bg: var(--color-ground);
   --hero-ink: var(--color-bone);
   --plate: #e8dfcf;
   --plate-ink: #121312;
-  --plate-mute: #7a6a4e;
+  --plate-mute: #706148;
   --plate-accent: #8f3a22;
   --accent-coral: var(--color-coral);
   --accent-brick: #8f3626;
@@ -125,9 +127,9 @@
 }
 
 [data-theme="shop"] {
-  --gold: #7a5a2b;
+  --gold: #83612e;
   --gold-text: #ab7f3d;
-  --on-gold: var(--color-bone);
+  --on-gold: var(--wall-paper);
   --cream: #1a1916;
   --ground: #c6d6ba;
   --ground-2: #b8cbab;
@@ -137,7 +139,7 @@
   --well: #e6dfcd;
   --line: rgba(200,161,94,.42);
   --line-2: rgba(200,161,94,.6);
-  --line-live: rgba(200,161,94,.95);
+  --line-live: rgba(131,99,45,.95);
   --line-dash: rgba(200,161,94,.52);
   --ink: #1a1916;
   --ink-dim: #3b382f;
@@ -146,16 +148,16 @@
   --ink-faint: #b6c1b1;
   --track: #d8d3c6;
   --numeral: #5f6b59;
-  --gold-fill: #c8a15e;
-  --gold-decor: #c8a15e;
-  --gold-ink: #1a1916;
+  --gold-fill: #81612c;
+  --gold-decor: #81612c;
+  --gold-ink: var(--wall-paper);
   --gold-wash: rgba(200,161,94,.16);
-  --sig-live: #1d6e8c;
+  --sig-live: #175971;
   --sig-live-wash: rgba(29,110,140,.14);
-  --sig-warn: #8a5410;
-  --sig-err: #a33a3a;
-  --sig-ok: #2f7a3d;
-  --sage: #3e5641;
+  --sig-warn: #76480e;
+  --sig-err: #8f3333;
+  --sig-ok: #245d2f;
+  --sage: #648a68;
   --sky: #1d6e8c;
   --blush: #b24a4a;
   --hero-bg: #1a1b1a;
@@ -164,6 +166,7 @@
   --plate-ink: #e8dfcf;
   --plate-mute: #9a9184;
   --plate-accent: #c8a15e;
+  --accent-seal: #654f1e;
   --gold-glow: 0 0 20px rgba(200,161,94,.22);
   --shadow-sm: 0 1px 3px rgba(60,48,28,.12);
   --shadow-md: 0 4px 12px rgba(60,48,28,.14);

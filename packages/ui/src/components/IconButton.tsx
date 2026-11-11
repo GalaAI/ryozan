@@ -29,7 +29,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
           alignItems: 'center',
           justifyContent: 'center',
           padding: 0,
-          border: `1px solid ${color.panelBorder}`,
+          border: `1px solid ${color.fieldBorder}`,
           borderRadius: shape === 'pill' ? radius.pill : radius.md,
           background: color.bgDark,
           color: color.text,

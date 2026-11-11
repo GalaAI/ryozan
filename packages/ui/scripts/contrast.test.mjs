@@ -1,12 +1,9 @@
-// Contrast floor for @ryozan/ui tokens (WCAG 2 relative luminance).
-// Reads design-system/tokens.json, resolves {alias} values per theme,
-// composites translucent colours over their ground, and asserts each pair
-// the design rulings of 2026-11-11 fixed:
-//   1. text-input focus: border-active is a visible ring, 3:1 against the
-//      surfaces it sits on and against the resting panel-border;
-//   2. text-dim holds 4.5:1 on every website surface it is set on;
-//   3. small gold text (gold-text) holds 4.5:1, text on a gold fill (on-gold)
-//      holds 4.5:1, and shop `gold` keeps 3:1 for large text, borders, accents.
+// Contrast floor for every @ryozan/ui colour pair the design system documents
+// (WCAG 2 relative luminance). Reads design-system/tokens.json, resolves
+// {alias} values per theme, composites translucent colours over the ground
+// they sit on, and asserts:
+//   text 4.5:1 · large-only text (24px+) 3:1 · control outlines, focus rings,
+//   hover edges and meaningful fills 3:1 · focus 3:1 against the resting edge.
 // Run: node --test packages/ui/scripts/contrast.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -48,61 +45,93 @@ const lum = (c) => {
   return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]);
 };
 const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+const col = (name, theme) => parse(raw(name, theme));
 
-/**
- * The website surfaces the package paints these tokens on, as opaque colours.
- * Washes and the raised-panel gradient stops (production-only.css) are
- * composited over `bg`, which is what sits under them on every page.
- */
-function surfaces(theme) {
-  const bg = parse(raw('bg', theme));
-  const tok = (n) => { const c = parse(raw(n, theme)); return c[3] < 1 ? over(c, bg) : c; };
+/** Website surfaces (what @ryozan/ui components and website pages paint). */
+function website(theme) {
+  const bg = col('bg', theme);
+  const tok = (n) => { const c = col(n, theme); return c[3] < 1 ? over(c, bg) : c; };
   return {
-    bg,
-    'bg-dark': tok('bg-dark'),
-    panel: tok('panel'),
-    'panel-hover': tok('panel-hover'),
-    'bg-surface-elevated': tok('bg-surface-elevated'),
-    'color-surface': tok('color-surface'),
+    bg, 'bg-dark': tok('bg-dark'), panel: tok('panel'), 'panel-hover': tok('panel-hover'),
+    'bg-surface-elevated': tok('bg-surface-elevated'), 'color-surface': tok('color-surface'),
     'color-surface-2': tok('color-surface-2'),
-    'panel-raised top': over([28, 29, 28, 0.92], bg),
-    'panel-raised bottom': over([12, 13, 12, 0.97], bg),
+    // panel-raised gradient stops (production-only.css), over bg
+    'panel-raised top': over([28, 29, 28, 0.92], bg), 'panel-raised bottom': over([12, 13, 12, 0.97], bg),
   };
 }
 
-function assertOnAll(fgName, min, theme, why) {
-  const fg = parse(raw(fgName, theme));
-  for (const [ground, g] of Object.entries(surfaces(theme))) {
+/** Portal surfaces (what the design scenes paint), washes over `surface`. */
+function portal(theme) {
+  const surface = col('surface', theme);
+  return {
+    surface, ground: col('ground', theme), 'ground-2': col('ground-2', theme), well: col('well', theme),
+    'surface-2': over(col('surface-2', theme), surface), 'surface-3': over(col('surface-3', theme), surface),
+  };
+}
+
+function onAll(fgName, grounds, min, theme, why) {
+  const fg = col(fgName, theme);
+  for (const [ground, g] of Object.entries(grounds)) {
     const r = ratio(fg[3] < 1 ? over(fg, g) : fg, g);
-    assert.ok(r >= min, `${fgName} on ${ground} (${theme}) is ${r.toFixed(2)}:1, needs ${min}:1 — ${why}`);
+    assert.ok(r >= min, `${fgName} on ${ground} (${theme}) is ${r.toFixed(2)}:1, needs ${min}:1 (${why})`);
   }
 }
 
+function pair(fgName, bgName, min, theme, why) {
+  const r = ratio(col(fgName, theme), col(bgName, theme));
+  assert.ok(r >= min, `${fgName} on ${bgName} (${theme}) is ${r.toFixed(2)}:1, needs ${min}:1 (${why})`);
+}
+
 for (const theme of themes) {
-  test(`text-dim reads 4.5:1 on every website surface (${theme})`, () => {
-    assertOnAll('text-dim', 4.5, theme, 'hints, meta and ledger labels are text');
+  test(`website text reads 4.5:1 on every website surface (${theme})`, () => {
+    for (const n of ['text', 'text-secondary', 'muted', 'text-muted', 'text-dim', 'gold-text', 'danger', 'ok', 'alt-spring', 'alt-pink', 'alt-sky', 'pending']) {
+      onAll(n, website(theme), 4.5, theme, 'text');
+    }
   });
 
-  test(`gold-text reads 4.5:1 on every website surface (${theme})`, () => {
-    assertOnAll('gold-text', 4.5, theme, 'small gold text: outline labels, links, mono labels');
+  test(`website outlines, focus and hover edges read 3:1 (${theme})`, () => {
+    onAll('field-border', website(theme), 3, theme, 'resting control outline');
+    onAll('border-hover', website(theme), 3, theme, 'hover edge');
+    onAll('border-active', website(theme), 3, theme, 'focus indicator');
+    onAll('gold', website(theme), 3, theme, 'gold borders, selected chip edge, large gold text');
+    const focus = col('border-active', theme);
+    const rest = col('field-border', theme);
+    const hover = col('border-hover', theme);
+    assert.ok(ratio(focus, rest) >= 3, `focus vs resting edge (${theme}) is ${ratio(focus, rest).toFixed(2)}:1, needs 3:1`);
+    assert.notDeepEqual(focus, hover, 'hover and focus must differ');
+    assert.notDeepEqual(rest, hover, 'hover must differ from rest');
   });
 
-  test(`on-gold reads 4.5:1 on a gold fill (${theme})`, () => {
-    const r = ratio(parse(raw('on-gold', theme)), parse(raw('gold', theme)));
-    assert.ok(r >= 4.5, `on-gold on gold (${theme}) is ${r.toFixed(2)}:1`);
+  test(`text on fills reads 4.5:1 (${theme})`, () => {
+    pair('on-gold', 'gold', 4.5, theme, 'primary button label, filled gold badge');
+    for (const fill of ['alt-spring', 'pending', 'alt-pink', 'alt-sky', 'text-muted']) pair('alt-smoke', fill, 4.5, theme, 'filled badge');
+    pair('gold-ink', 'gold-fill', 4.5, theme, 'text on gold-fill');
+    pair('gold-ink', 'gold-decor', 4.5, theme, 'text on gold-decor');
+    pair('accent-ink', 'accent-coral', 4.5, theme, 'coral pill label');
+    pair('flame-ink', 'flame', 4.5, theme, 'destructive button label');
+    for (const g of ['accent-brick', 'accent-army', 'oxblood']) pair('accent-cream', g, 4.5, theme, 'text on dark tile');
+    pair('hero-ink', 'hero-bg', 4.5, theme, 'hero text');
+    for (const n of ['plate-ink', 'plate-mute', 'plate-accent']) pair(n, 'plate', 4.5, theme, 'text on plate');
+    pair('ink', 'sage', 4.5, theme, 'text on a sage tile');
   });
 
-  test(`gold keeps 3:1 on bg for large text, borders and accents (${theme})`, () => {
-    const r = ratio(parse(raw('gold', theme)), parse(raw('bg', theme)));
-    assert.ok(r >= 3, `gold on bg (${theme}) is ${r.toFixed(2)}:1`);
+  test(`portal text reads 4.5:1 on every portal surface (${theme})`, () => {
+    for (const n of ['ink', 'ink-dim', 'ink-mute', 'ink-ghost', 'sig-live', 'sig-warn', 'sig-err', 'sig-ok', 'accent-seal']) {
+      onAll(n, portal(theme), 4.5, theme, 'text');
+    }
   });
 
-  test(`border-active is a visible focus ring (${theme})`, () => {
-    assertOnAll('border-active', 3, theme, 'focus indicator');
-    const active = parse(raw('border-active', theme));
-    const rest = parse(raw('panel-border', theme));
-    assert.notDeepEqual(active, rest, 'border-active must differ from panel-border');
-    const r = ratio(active, rest);
-    assert.ok(r >= 3, `border-active vs panel-border (${theme}) is ${r.toFixed(2)}:1, needs 3:1 change of state`);
+  test(`portal large text, rings and fills read 3:1 (${theme})`, () => {
+    onAll('numeral', portal(theme), 3, theme, 'numerals, 24px and up only');
+    onAll('line-live', portal(theme), 3, theme, 'portal focus ring');
+    onAll('gold-fill', portal(theme), 3, theme, 'progress fill, picked chip');
   });
 }
+
+// Known gap, not a pass: `accent-cream` titles the shop ground (light) and also
+// sits on oxblood and brick tiles (dark in every theme), so no single shop
+// value meets both. It needs a split token, not a lightness change. Asserted
+// in default only, where both hold.
+test('accent-cream titles read 4.5:1 on the portal grounds (default)', () => {
+  onAll('accent-cream', portal('default'), 4.5, 'default', 'screen titles');
+});

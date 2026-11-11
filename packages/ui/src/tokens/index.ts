@@ -33,6 +33,10 @@ export const color = {
   panelRaised: 'var(--panel-raised)',
   panelBorder: 'var(--panel-border)',
   panelBorderHover: 'var(--panel-border-hover)',
+  /** Resting outline of a control (input, icon button, unselected chip); 3:1 on every surface. */
+  fieldBorder: 'var(--field-border)',
+  /** Hover edge: brighter blue-grey, apart from the gold focus edge. */
+  borderHover: 'var(--border-hover)',
 
   text: 'var(--text)',
   textSecondary: 'var(--text-secondary)',

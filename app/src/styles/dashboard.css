@@ -3224,7 +3224,7 @@ body:has(.modal-overlay) {
 }
 
 .csel-trigger:hover {
-  border-color: var(--border-active);
+  border-color: var(--border-hover);
 }
 
 .csel-trigger:focus-visible {
@@ -6360,7 +6360,7 @@ body:has(.bkm-lightbox) .hotbar {
   transition: all 0.2s;
 }
 .pw-modal-actions button:hover {
-  border-color: var(--border-active);
+  border-color: var(--border-hover);
 }
 .pw-modal-submit {
   background: var(--gold, #a67d43) !important;
@@ -18662,7 +18662,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 .hub-overview::-webkit-scrollbar { width: 6px; }
 .hub-overview::-webkit-scrollbar-track { background: transparent; }
 .hub-overview::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
-.hub-overview::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+.hub-overview::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
 .hub-section {
   display: flex;
@@ -25474,7 +25474,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 }
 .cs-checkbox:hover {
   background: var(--cs-surface-hover);
-  border-color: var(--border-active);
+  border-color: var(--border-hover);
 }
 .cs-checkbox input[type="checkbox"] {
   margin-top: 0.1rem;
@@ -25718,7 +25718,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 }
 .cs-btn-secondary:not(:disabled):hover {
   color: var(--text);
-  border-color: var(--border-active);
+  border-color: var(--border-hover);
   background: var(--cs-surface-hover);
 }
 

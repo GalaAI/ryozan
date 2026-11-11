@@ -434,7 +434,7 @@ select {
 
 .tab-btn:hover {
     transform: translateY(-1px);
-    border-color: var(--border-active);
+    border-color: var(--border-hover);
     color: #f6f6f6;
 }
 
@@ -2424,7 +2424,7 @@ a.quick-action-btn:hover {
 }
 
 .doc-filter:hover {
-    border-color: var(--border-active);
+    border-color: var(--border-hover);
     color: var(--bone-white);
 }
 
