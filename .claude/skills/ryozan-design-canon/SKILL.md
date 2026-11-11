@@ -21,6 +21,7 @@ The Ryozan Studio Design System artifact (https://claude.ai/artifact/CzFDxv28geZ
 - Assets copied from the artifact store, never approximated. Portraits and portfolios come from R2 through the API, not the design system.
 - A need the system cannot express goes upstream first: add the token, card, asset or rule to the artifact, mirror `tokens.json` here, then build.
 - Themes: `default`, `shop`, `jwt`. Public site reads website tokens (`bg`, `text`, `muted`, `panel`, `space-*`, `r-*`); portal reads Relic tokens (`ground`, `surface`, `ink`, `line`, `gold-fill`, `sig-*`, `accent-*`). Never cross them.
+- The back office (portal, hub and dashboard, everything inside `.app-view`) stays dark in every theme. Its text uses only constant light tokens (`text`, `text-secondary`, `text-muted`, `accent-cream-tile`), never `ink`, `ink-dim`, `ink-mute`, `ink-ghost`, `cream` or `accent-cream`; a light inner surface that follows the theme is a named exception in `packages/ui/scripts/contrast.test.mjs`.
 - The portal is canon-locked: only the four channels in the earlier artifact's README, Building for the portal.
 
 ## Gates (all green before "done")

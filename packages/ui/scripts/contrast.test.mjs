@@ -7,7 +7,7 @@
 // Run: node --test packages/ui/scripts/contrast.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -239,3 +239,148 @@ test('app text on fixed-dark panels reads 4.5:1 in every theme', { skip: !exists
   assert.deepEqual(failures, [], `text below 4.5:1 on fixed-dark panels:\n${failures.join('\n')}`);
 });
 
+
+// ── Back-office stays dark (owner ruling 2026-11-11) ─────────────────────────────
+// The portal and dashboard are the back office: dark in every theme. Inside them,
+// text may never use a token that follows the theme (it goes dark in shop). This
+// checks token NAMES, so it also catches rules whose ground cannot be resolved.
+// Scope: the authenticated shell (.app-view, DashboardLayout) and the portal root
+// (.ryozan-mobile-portal-home, which holds the hub). A rule is in scope when its
+// selector names a scope root, or any class only back-office source renders.
+const appSrc = join(here, '..', '..', '..', 'app', 'src');
+export const SCOPE_ROOTS = ['app-view', 'ryozan-mobile-portal-home'];
+export const THEME_FOLLOWING_TEXT = ['ink', 'ink-dim', 'ink-mute', 'ink-ghost', 'cream', 'accent-cream'];
+// Constant light text: same light value in every theme (website vocabulary plus the tile).
+export const BACKOFFICE_TEXT = ['text', 'text-primary', 'text-secondary', 'text-muted', 'muted', 'bone-white', 'accent-cream-tile'];
+// Narrow, named exceptions: light inner surfaces that deliberately follow the theme.
+export const BACKOFFICE_EXCEPTIONS = [
+  { file: 'dashboard.css', selector: '.flash-design-card--inventory .flash-design-cutout-preview > span', reason: 'index badge paints its own --well; ink follows the theme together with well (13.23:1 shop, 15.86:1 default)' },
+  { file: 'dashboard.css', selector: '.ryozan-books-page .ryozan-books-calendar > strong', reason: 'books calendar and list paint var(--surface) on the books page; ink follows it (15.75:1 shop, 14.52:1 default)' },
+  { file: 'dashboard.css', selector: '.ryozan-books-page .ryozan-calendar-grid button', reason: 'calendar day buttons on the books-page var(--surface) card' },
+  { file: 'dashboard.css', selector: '.ryozan-books-page .ryozan-book-row strong', reason: 'book rows inside the books-page var(--surface) list' },
+  { file: 'dashboard.css', selector: '.ryozan-books-page .ryozan-portal-empty', reason: 'empty state on the books-page var(--surface) card' },
+  { file: 'dashboard.css', selector: '.ryozan-books-page .ryozan-calendar-weekdays span', reason: 'weekday labels on the books-page var(--surface) card (was literal #6f5f55, 2.99:1 in default)' },
+  { file: 'dashboard.css', selector: '.ryozan-books-page .ryozan-book-row small', reason: 'book-row meta on the books-page var(--surface) list' },
+  { file: 'dashboard.css', selector: '.ryozan-hub-workflow-form input', reason: 'input paints its own var(--well); ink follows it' },
+  { file: 'dashboard.css', selector: '.ryozan-huddl-booking-prompt > strong', reason: 'booking prompt card paints var(--surface)' },
+  { file: 'booking.css', selector: '.bkm-booky-sources strong', reason: 'source chips sit on the var(--surface) sources panel' },
+];
+
+function sourceFiles(dir) {
+  const out = [];
+  for (const name of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, name.name);
+    if (name.isDirectory()) out.push(...sourceFiles(p));
+    else if (/\.(tsx?|jsx?)$/.test(name.name) && !/\.(test|spec)\./.test(name.name)) out.push(p);
+  }
+  return out;
+}
+
+function resolveImport(from, spec) {
+  if (!spec.startsWith('.')) return null;
+  const base = join(dirname(from), spec);
+  for (const c of [base, `${base}.tsx`, `${base}.ts`, `${base}.jsx`, `${base}.js`, join(base, 'index.tsx'), join(base, 'index.ts')]) {
+    if (existsSync(c) && statSync(c).isFile()) return c;
+  }
+  return null;
+}
+
+/** Source files the authenticated routes reach and no public route does. */
+export function backofficeFiles() {
+  const app = join(appSrc, 'App.tsx');
+  const text = readFileSync(app, 'utf8');
+  const ids = new Map();
+  for (const m of text.matchAll(/(?:const|let)\s+(\w+)\s*=\s*\w*\(\s*\(\)\s*=>\s*import\(\s*['"]([^'"]+)['"]\s*\)/g)) ids.set(m[1], resolveImport(app, m[2]));
+  for (const m of text.matchAll(/import\s+(?:(\w+)|\{([^}]+)\})\s+from\s+['"]([^'"]+)['"]/g)) {
+    const file = resolveImport(app, m[3]);
+    if (m[1]) ids.set(m[1], file);
+    if (m[2]) for (const n of m[2].split(',')) { const k = n.trim().split(/\s+as\s+/).pop(); if (k) ids.set(k, file); }
+  }
+  // The <Route element={<ProtectedRoute />}> block, matched by nesting.
+  const start = text.indexOf('<Route element={<ProtectedRoute />}>');
+  assert.ok(start > 0, 'App.tsx: ProtectedRoute block not found');
+  // Walk <Route …> tags (braces may hold nested JSX such as element={<X />}).
+  let depth = 0, end = -1;
+  for (let i = start; i < text.length && end < 0;) {
+    if (text.startsWith('</Route>', i)) { depth--; i += 8; if (depth === 0) end = i; continue; }
+    if (text.startsWith('<Route', i) && /[\s>]/.test(text[i + 6])) {
+      let j = i + 6, braces = 0;
+      for (; j < text.length; j++) { const ch = text[j]; if (ch === '{') braces++; else if (ch === '}') braces--; else if (ch === '>' && braces === 0) break; }
+      if (text[j - 1] !== '/') depth++;
+      i = j + 1; continue;
+    }
+    i++;
+  }
+  assert.ok(end > start, 'App.tsx: ProtectedRoute block end not found');
+  const tags = (s) => new Set([...s.matchAll(/<([A-Z]\w*)/g)].map((m) => m[1]).filter((t) => ids.get(t)));
+  const routesStart = text.indexOf('<Routes');
+  const inside = tags(text.slice(start, end));
+  const outside = tags(text.slice(routesStart, start) + text.slice(end));
+  const reach = (roots) => {
+    const seen = new Set(); const stack = [...roots].map((t) => ids.get(t)).filter(Boolean);
+    while (stack.length) {
+      const f = stack.pop(); if (seen.has(f)) continue; seen.add(f);
+      const src = readFileSync(f, 'utf8');
+      for (const m of src.matchAll(/(?:from\s+|import\(\s*)['"]([^'"]+)['"]/g)) { const r = resolveImport(f, m[1]); if (r && !seen.has(r)) stack.push(r); }
+    }
+    return seen;
+  };
+  const dash = reach(inside), pub = reach([...outside].filter((t) => !inside.has(t)));
+  return new Set([...dash].filter((f) => !pub.has(f)));
+}
+
+/** Class names each file renders (className strings and templates; dynamic suffixes are skipped). */
+function classesIn(file) {
+  const src = readFileSync(file, 'utf8');
+  const out = new Set();
+  for (const m of src.matchAll(/className=(?:"([^"]*)"|'([^']*)'|\{\s*`([^`]*)`|\{\s*['"]([^'"]*)['"])/g)) {
+    const v = (m[1] ?? m[2] ?? m[3] ?? m[4] ?? '').replace(/\$\{[^}]*\}/g, ' ');
+    for (const c of v.split(/\s+/)) if (/^[a-zA-Z][\w-]*$/.test(c)) out.add(c);
+  }
+  // String literals inside className={cond ? 'a' : 'b'} and class lists.
+  for (const m of src.matchAll(/className=\{[^}]*\}/g)) for (const s of m[0].matchAll(/['"`]([\w -]+)['"`]/g)) for (const c of s[1].split(/\s+/)) if (/^[a-zA-Z][\w-]*$/.test(c)) out.add(c);
+  return out;
+}
+
+export function backofficeClasses() {
+  const office = backofficeFiles();
+  const inOffice = new Set(), elsewhere = new Set();
+  for (const f of sourceFiles(appSrc)) {
+    if (f.includes(`${'/'}desktop-portal${'/'}`)) continue; // own scoped vocabulary (source.css)
+    for (const c of classesIn(f)) (office.has(f) ? inOffice : elsewhere).add(c);
+  }
+  return new Set([...inOffice].filter((c) => !elsewhere.has(c)).concat(SCOPE_ROOTS));
+}
+
+export function backofficeViolations() {
+  const office = backofficeClasses();
+  const exceptions = new Set(BACKOFFICE_EXCEPTIONS.map((e) => `${e.file}|${e.selector}`));
+  const out = [];
+  for (const name of readdirSync(stylesDir).filter((n) => n.endsWith('.css'))) {
+    const css = readFileSync(join(stylesDir, name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const sel = m[1].trim().replace(/\s+/g, ' ');
+      if (!sel || sel.startsWith('@') || /:root|\[data-theme/.test(sel)) continue;
+      const color = /(?:^|;)\s*color\s*:\s*var\(--([\w-]+)/.exec(m[2]);
+      if (!color || !THEME_FOLLOWING_TEXT.includes(color[1])) continue;
+      for (const part of splitTop(sel)) {
+        const classes = [...part.matchAll(/\.([\w-]+)/g)].map((c) => c[1]);
+        if (!classes.some((c) => office.has(c))) continue;
+        if (exceptions.has(`${name}|${part}`)) continue;
+        out.push(`${name} ${part} -> var(--${color[1]})`);
+      }
+    }
+  }
+  return out;
+}
+
+test('back office stays dark: no theme-following text tokens in portal or dashboard rules', { skip: !existsSync(join(appSrc, 'App.tsx')) && 'app/src not present (packed tarball)' }, () => {
+  for (const n of [...THEME_FOLLOWING_TEXT, ...BACKOFFICE_TEXT]) assert.ok(byName.has(n), `unknown colour token ${n}`);
+  for (const n of BACKOFFICE_TEXT) {
+    const per = themes.map((t) => raw(n, t));
+    assert.equal(new Set(per).size, 1, `${n} must be constant across themes to be back-office text`);
+  }
+  for (const n of THEME_FOLLOWING_TEXT) assert.ok(new Set(themes.map((t) => raw(n, t))).size > 1, `${n} is listed as theme-following but is constant`);
+  const v = backofficeViolations();
+  assert.deepEqual(v, [], `theme-following text inside the back office (use ${BACKOFFICE_TEXT.join(', ')}):\n${v.join('\n')}`);
+});
