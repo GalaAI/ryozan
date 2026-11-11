@@ -17,7 +17,7 @@ export interface ReceiptBlockProps extends React.HTMLAttributes<HTMLDivElement> 
  * border, mono eyebrow, optional ledger rows. Read-only by construction —
  * a receipt never carries an action.
  */
-export function ReceiptBlock({ eyebrow, headline, rows, accent = color.gold, note, style, children, ...rest }: ReceiptBlockProps) {
+export function ReceiptBlock({ eyebrow, headline, rows, accent = color.goldText, note, style, children, ...rest }: ReceiptBlockProps) {
   return (
     <div
       style={{

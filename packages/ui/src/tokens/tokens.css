@@ -24,6 +24,8 @@
   --color-seal: #c9a24b;
   --color-cream: #ebe5d6;
   --gold: var(--color-seal);
+  --gold-text: var(--color-seal);
+  --on-gold: var(--color-ground);
   --gold-vibrant: var(--color-seal);
   --tiger-orange: var(--color-ember);
   --tiger-orange-glow: rgba(226,167,76,0.30);
@@ -43,7 +45,7 @@
   --text-primary: var(--color-bone);
   --text-secondary: var(--color-dim);
   --text-muted: var(--color-ghost);
-  --text-dim: #4b5163;
+  --text-dim: #7d859d;
   --muted: var(--color-dim);
   --bone-white: var(--color-bone);
   --cream: var(--color-cream);
@@ -58,7 +60,7 @@
   --danger: var(--color-rust);
   --info: #2196f3;
   --border-subtle: var(--color-line);
-  --border-active: var(--color-line-2);
+  --border-active: var(--gold-text);
   --ground: var(--color-ground);
   --ground-2: #0e1017;
   --surface: var(--color-surface);
@@ -124,6 +126,8 @@
 
 [data-theme="shop"] {
   --gold: #7a5a2b;
+  --gold-text: #ab7f3d;
+  --on-gold: var(--color-bone);
   --cream: #1a1916;
   --ground: #c6d6ba;
   --ground-2: #b8cbab;

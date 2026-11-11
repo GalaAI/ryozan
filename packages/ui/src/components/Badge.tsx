@@ -10,6 +10,11 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   children?: React.ReactNode;
 }
 
+/** Text colour per tone where it differs from the tone colour (gold text must hold 4.5:1). */
+const textTones: Partial<Record<BadgeTone, string>> = { gold: color.goldText };
+/** Text colour on a filled capsule. */
+const onFill = (tone: BadgeTone) => (tone === 'gold' ? color.onGold : color.smoke);
+
 const tones: Record<BadgeTone, string> = {
   ok: color.spring,
   pending: color.pending,
@@ -33,7 +38,7 @@ export function Badge({ tone = 'neutral', filled = false, style, children, ...re
         borderRadius: radius.pill,
         border: filled ? 0 : `1px solid ${c}`,
         background: filled ? c : 'transparent',
-        color: filled ? color.smoke : c,
+        color: filled ? onFill(tone) : (textTones[tone] ?? c),
         fontFamily: font.btn,
         fontSize: 'var(--text-xs)',
         fontWeight: 700,
@@ -68,7 +73,7 @@ export function StatusText({ tone = 'ok', dot = true, wrap = false, style, child
         fontWeight: 700,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
-        color: tones[tone],
+        color: textTones[tone] ?? tones[tone],
         whiteSpace: wrap ? 'normal' : 'nowrap',
         ...style,
       }}
