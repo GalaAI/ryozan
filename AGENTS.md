@@ -59,7 +59,7 @@ Before claiming a change is safe: run the same checks locally (`cd app && npm ru
 - The only UI source is `packages/ui` (published internally as `@ryozan/ui`). Consumers import from `@ryozan/ui`; nobody authors new UI components or inline styled elements. Read `packages/ui/README.md` before touching any UI.
 - No hex, no px literals, no fonts outside the allowlist in app code. `npm run lint:adherence:src` in `app/` enforces it and runs in CI.
 - Editing `packages/ui/src` changes nothing in the app until you repack and relock (`cd packages/ui && npm run pack:app`, then in `app/` run `npm install --package-lock-only "@ryozan/ui@file:vendor/ryozan-ui-<version>.tgz"`); `npm run check:ui-tarball` fails otherwise.
-- Source of record is the Ryozan Studio Design System artifact (claude.ai artifact id 35f92e5b-ae2d-4c67-a4e1-ec118dfe929e). A need the package cannot express is a design request upstream, never an improvised screen.
+- Source of record is the Ryozan Studio Design System artifact (https://claude.ai/artifact/CzFDxv28geZyLTfoYVfup1), built from `@ryozan/ui` with one card per export (including `Checkbox`, `TextArea` and `StatusText` wrap). The north star layouts (website kit, portal, booking, JWT) stay in the earlier Ryozan Modern Classic artifact (id 35f92e5b-ae2d-4c67-a4e1-ec118dfe929e). A need the package cannot express is a design request upstream, never an improvised screen.
 
 ## Agent behavior
 

@@ -5,13 +5,13 @@ description: Use before building or changing any Ryozan UI (website, portal, boo
 
 # Ryozan design canon
 
-The Ryozan Studio Design System artifact (Ryozan Modern Classic) is the source of record for every Ryozan surface. This repo mirrors it and never leads it. Operator rule: agents build from the system; they do not regenerate assumed designs or interpret applications.
+The Ryozan Studio Design System artifact (https://claude.ai/artifact/CzFDxv28geZyLTfoYVfup1) is the source of record for every Ryozan surface: tokens, components, fonts and brand assets. It is built from `@ryozan/ui` as published in this repo, one card per export. This repo mirrors it and never leads it. Operator rule: agents build from the system; they do not regenerate assumed designs or interpret applications.
 
 ## Read order, every time
 
-1. The artifact's `project/README.md` (Build law, canon lock, surfaces, type, colour, motion, imagery, generated Index). If the artifact is not reachable, read `packages/ui/README.md` and `packages/ui/design-system/tokens.json` and say the artifact was not read.
-2. `project/api/tokens.md`, then the `project/api/components/<Comp>.md` card of every component the surface uses.
-3. The north star for the surface: `website-kit.html` + `WEBSITE-V2-BRIEF.md` (public site); `portal-desktop.dc.html` / `portal-mobile.dc.html` (portal, canon-locked); `packages/ryozan-booking-flow-build/` (booking); `JWT.md` (jwt theme).
+1. The artifact's `project/README.md` (brand book). If the artifact is not reachable, read `packages/ui/README.md` and `packages/ui/design-system/tokens.json` and say the artifact was not read.
+2. `project/tokens.json`, then the `project/components/<Comp>/README.md` card of every component the surface uses. Each card's usage notes flag the token pairs that fail contrast; do not use a flagged pair for text.
+3. The north star layouts for the surface live in the earlier Ryozan Modern Classic artifact (claude.ai artifact id 35f92e5b-ae2d-4c67-a4e1-ec118dfe929e) and are layouts only: `website-kit.html` + `WEBSITE-V2-BRIEF.md` (public site); `portal-desktop.dc.html` / `portal-mobile.dc.html` (portal, canon-locked); `packages/ryozan-booking-flow-build/` (booking); `JWT.md` (jwt theme). Tokens and components always come from the current artifact.
 4. `AGENTS.md` § Design system.
 
 ## Building
@@ -21,7 +21,7 @@ The Ryozan Studio Design System artifact (Ryozan Modern Classic) is the source o
 - Assets copied from the artifact store, never approximated. Portraits and portfolios come from R2 through the API, not the design system.
 - A need the system cannot express goes upstream first: add the token, card, asset or rule to the artifact, mirror `tokens.json` here, then build.
 - Themes: `default`, `shop`, `jwt`. Public site reads website tokens (`bg`, `text`, `muted`, `panel`, `space-*`, `r-*`); portal reads Relic tokens (`ground`, `surface`, `ink`, `line`, `gold-fill`, `sig-*`, `accent-*`). Never cross them.
-- The portal is canon-locked: only the four channels in the README's Building for the portal.
+- The portal is canon-locked: only the four channels in the earlier artifact's README, Building for the portal.
 
 ## Gates (all green before "done")
 
