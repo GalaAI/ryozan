@@ -309,16 +309,9 @@ async def _run_startup_seeds() -> None:
                 )
             )
 
-    async def unstored_scroll_pdfs() -> None:
-        # A scroll PDF whose upload failed keeps its bytes in the DB only until it is stored; retry now.
-        from sqlalchemy.ext.asyncio import AsyncSession
-
-        from app.services.scroll_archive import retry_unstored_scroll_pdfs
-
-        # Bound to this module's engine like the other seed steps.
-        async with AsyncSession(engine, expire_on_commit=False) as db:
-            pending, stored, failed = await retry_unstored_scroll_pdfs(db, limit=100)
-        print(f"[Ryozan] Unstored scroll PDFs: {pending}; stored: {stored}; still failing: {failed}", flush=True)
+    # No step here may touch storage (R2): startup must finish inside the platform health-check window
+    # however slow storage is. Scroll PDFs whose upload failed are stored by the outbox worker loop
+    # (_run_owner_email_outbox), which starts in the background after these DB-only steps.
 
     async def sent_owner_email_attachments() -> None:
         # Finished owner emails (sent or exhausted) must not keep the scroll PDF (it can embed the
@@ -343,7 +336,6 @@ async def _run_startup_seeds() -> None:
 
     await _seed_step("default session types", default_session_types)
     await _seed_step("POS commission base", pos_commission_base)
-    await _seed_step("unstored scroll PDFs", unstored_scroll_pdfs)
     await _seed_step("sent owner email attachments", sent_owner_email_attachments)
     await _seed_step("legacy scroll references", legacy_scroll_references)
 
