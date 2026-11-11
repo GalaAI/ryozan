@@ -361,13 +361,20 @@ export function backofficeViolations() {
     for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const sel = m[1].trim().replace(/\s+/g, ' ');
       if (!sel || sel.startsWith('@') || /:root|\[data-theme/.test(sel)) continue;
+      const hits = [];
       const color = /(?:^|;)\s*color\s*:\s*var\(--([\w-]+)/.exec(m[2]);
-      if (!color || !THEME_FOLLOWING_TEXT.includes(color[1])) continue;
+      if (color && THEME_FOLLOWING_TEXT.includes(color[1])) hits.push(`var(--${color[1]})`);
+      // A local custom property that wraps a theme-following text token (for example
+      // --huddl-ink: var(--ink), or a var() fallback) carries the theme in by indirection.
+      for (const d of m[2].matchAll(/(?:^|;)\s*(--[\w-]+)\s*:([^;]*)/g)) {
+        for (const t of d[2].matchAll(/var\(--([\w-]+)/g)) if (THEME_FOLLOWING_TEXT.includes(t[1])) hits.push(`${d[1]}: var(--${t[1]})`);
+      }
+      if (!hits.length) continue;
       for (const part of splitTop(sel)) {
         const classes = [...part.matchAll(/\.([\w-]+)/g)].map((c) => c[1]);
         if (!classes.some((c) => office.has(c))) continue;
         if (exceptions.has(`${name}|${part}`)) continue;
-        out.push(`${name} ${part} -> var(--${color[1]})`);
+        for (const h of hits) out.push(`${name} ${part} -> ${h}`);
       }
     }
   }
@@ -383,4 +390,85 @@ test('back office stays dark: no theme-following text tokens in portal or dashbo
   for (const n of THEME_FOLLOWING_TEXT) assert.ok(new Set(themes.map((t) => raw(n, t))).size > 1, `${n} is listed as theme-following but is constant`);
   const v = backofficeViolations();
   assert.deepEqual(v, [], `theme-following text inside the back office (use ${BACKOFFICE_TEXT.join(', ')}):\n${v.join('\n')}`);
+});
+
+// ── Fixed dark shells (owner ruling 2026-11-11) ──────────────────────────────────
+// Huddle and the desktop portal paint their own shell surfaces. Each must resolve to
+// the same dark colour in every theme, and their text tokens to the same light one.
+export const FIXED_DARK_SHELLS = [
+  { file: 'dashboard.css', selector: '.huddl-shell', surfaces: ['background', '--huddl-surface', '--huddl-surface-strong'], text: ['--huddl-ink', '--huddl-muted', '--huddl-accent'] },
+];
+
+function declarations(file, selector) {
+  const css = readFileSync(join(stylesDir, file), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const out = new Map();
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (m[1].trim().replace(/\s+/g, ' ') !== selector) continue;
+    for (const d of m[2].matchAll(/(?:^|;)\s*([\w-]+)\s*:([^;]*)/g)) out.set(d[1], d[2].trim());
+  }
+  return out;
+}
+
+/** The one colour a value resolves to in every theme (light text), or null if it varies or cannot resolve. */
+function fixedColour(value) {
+  const per = themes.map((t) => stopsOf(value, t));
+  if (per.some((s) => !s || s.length !== 1)) return null;
+  return new Set(per.map((s) => s[0].slice(0, 3).map(Math.round).join())).size === 1 ? per[0][0] : null;
+}
+
+test('Huddle shell surfaces are constant dark and its text constant light in every theme', { skip: !existsSync(stylesDir) && 'app/src/styles not present (packed tarball)' }, () => {
+  for (const shell of FIXED_DARK_SHELLS) {
+    const decl = declarations(shell.file, shell.selector);
+    assert.ok(decl.size, `${shell.file} ${shell.selector} not found`);
+    const surfaces = [];
+    for (const p of shell.surfaces) {
+      assert.ok(decl.has(p), `${shell.selector} must declare ${p}`);
+      const dark = fixedDark(decl.get(p));
+      assert.ok(dark, `${shell.selector} ${p}: ${decl.get(p)} must be the same dark colour in every theme`);
+      surfaces.push(...dark);
+    }
+    for (const p of shell.text) {
+      assert.ok(decl.has(p), `${shell.selector} must declare ${p}`);
+      const fg = fixedColour(decl.get(p));
+      assert.ok(fg, `${shell.selector} ${p}: ${decl.get(p)} must be the same colour in every theme`);
+      for (const bg of surfaces) {
+        const k = ratio(fg, bg);
+        assert.ok(k >= 4.5, `${shell.selector} ${p} on its own surface ${bg.slice(0, 3)}: ${k.toFixed(2)}:1 < 4.5`);
+      }
+    }
+  }
+});
+
+// The desktop portal (app/src/components/desktop-portal) is canon-locked: source.css
+// is extracted from the frozen canon and carries its own [data-theme="shop"] block.
+// It renders in a shadow root, so that block applies only if something inside the
+// shadow tree carries data-theme; the host pins every surface and text token to the
+// theme-constant --color-* primitives. This test holds both halves without editing canon.
+const portalDir = join(appSrc, 'components', 'desktop-portal');
+export const PORTAL_SURFACES = ['--ground', '--ground-2', '--surface', '--surface-2'];
+export const PORTAL_TEXT = ['--ink', '--ink-dim', '--ink-mute', '--ink-ghost', '--text', '--text-primary', '--accent-cream'];
+
+test('desktop portal stays dark in every theme: shadow host pins, no theme switch inside', { skip: !existsSync(portalDir) && 'desktop portal not present (packed tarball)' }, () => {
+  const host = readFileSync(join(portalDir, 'NativeDesktopPortal.tsx'), 'utf8');
+  assert.ok(/attachShadow\(/.test(host), 'desktop portal must render in a shadow root');
+  const pin = /`:host\{([^`]*?)\}/.exec(host);
+  assert.ok(pin, 'NativeDesktopPortal.tsx: :host token pin not found');
+  const decl = new Map([...pin[1].matchAll(/(--[\w-]+):([^;]*)/g)].map((d) => [d[1], d[2].trim()]));
+  const surfaces = [];
+  for (const p of PORTAL_SURFACES) {
+    assert.ok(decl.has(p), `desktop portal :host must pin ${p}`);
+    const dark = fixedDark(decl.get(p));
+    assert.ok(dark, `desktop portal ${p}: ${decl.get(p)} must be the same dark colour in every theme`);
+    surfaces.push(...dark);
+  }
+  for (const p of PORTAL_TEXT) {
+    assert.ok(decl.has(p), `desktop portal :host must pin ${p}`);
+    const fg = fixedColour(decl.get(p));
+    assert.ok(fg, `desktop portal ${p}: ${decl.get(p)} must be the same colour in every theme`);
+    for (const bg of surfaces) assert.ok(ratio(fg, bg) >= 4.5, `desktop portal ${p} on ${bg.slice(0, 3)}: ${ratio(fg, bg).toFixed(2)}:1`);
+  }
+  // Nothing in the portal may switch the theme, or source.css's shop block would apply.
+  const switches = sourceFiles(portalDir).filter((f) => /data-theme|dataset\.theme/.test(readFileSync(f, 'utf8')));
+  assert.deepEqual(switches, [], 'desktop portal sources must not set data-theme');
+  assert.ok(!/:host\(\s*\[data-theme|:host-context\(/.test(readFileSync(join(portalDir, 'source.css'), 'utf8')), 'source.css must not theme the shadow host from outside');
 });

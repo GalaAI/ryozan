@@ -2607,9 +2607,9 @@
 
 /* ── Admin act-as proxy booking form ──────────────────────────── */
 .bkm-add-booking-btn {
-  background: var(--gold);
+  background: var(--gold-vibrant);
   color: var(--bg-dark);
-  border: 1px solid var(--gold);
+  border: 1px solid var(--gold-vibrant);
   border-radius: 6px;
   height: 42px;
   padding: 0 14px;
@@ -2626,7 +2626,7 @@
 /* Secondary header action: open the personal time-block composer. */
 .bkm-block-time-btn {
   background: rgba(255, 248, 236, 0.04);
-  color: var(--gold);
+  color: var(--gold-vibrant);
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   height: 42px;
@@ -2637,7 +2637,7 @@
   white-space: nowrap;
 }
 .bkm-block-time-btn:hover {
-  border-color: var(--gold);
+  border-color: var(--gold-vibrant);
 }
 
 /* Time-block panel: two cards side by side (new block + upcoming list). */

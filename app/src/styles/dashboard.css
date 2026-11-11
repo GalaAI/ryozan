@@ -4228,7 +4228,7 @@ input[type="range"]::-moz-range-thumb {
   position: sticky;
   top: 0;
   z-index: 6;
-  background: var(--surface);
+  background: var(--color-surface);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -4243,7 +4243,7 @@ input[type="range"]::-moz-range-thumb {
 .bkm-eyebrow {
   display: block;
   margin-bottom: 0.24rem;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   font-family: var(--font-mono);
   font-size: 0.62rem;
   font-weight: 700;
@@ -4352,7 +4352,7 @@ input[type="range"]::-moz-range-thumb {
   padding: 0.1rem 0.45rem;
   border-radius: var(--radius-pill);
   background: rgba(255, 248, 236, 0.08);
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 
 .bkm-tab.active .bkm-tab-count {
@@ -7589,14 +7589,18 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
   min-height: 260px;
 }
 
-/* Huddl palette: cream paper, brick-red actions, dark readable ink. */
+/* Huddl palette: a fixed dark shell in every theme (back office), brick-red
+   actions, constant light ink. The shell never follows the theme. */
 .huddl-shell {
-  --huddl-ink: var(--ink);
-  --huddl-muted: var(--ink-mute);
-  --huddl-surface: var(--surface);
+  --huddl-ink: var(--text);
+  --huddl-muted: var(--text-muted);
+  --huddl-surface: var(--color-surface);
   --huddl-surface-strong: var(--color-surface-2);
-  --huddl-line: var(--line-2);
-  background: var(--ground);
+  --huddl-line: var(--color-line-2);
+  --huddl-rule: var(--color-line);
+  /* brick-red as text on the dark shell: rust reads 4.87:1 or better on every shell surface */
+  --huddl-accent: var(--color-rust);
+  background: var(--color-ground);
   color: var(--huddl-ink);
   scrollbar-color: var(--brick-red) transparent;
 }
@@ -7643,21 +7647,21 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
   .huddl-panel__eyebrow,
   .huddl-feature-time
 ) {
-  color: var(--brick-red);
+  color: var(--huddl-accent);
 }
 
 .huddl-shell :is(.huddl-panel__head, .huddl-readiness-check, .huddl-chip-row span) {
-  border-color: rgba(24, 20, 17, 0.14);
+  border-color: var(--huddl-rule);
 }
 
 .huddl-shell .huddl-readiness-check {
-  background: rgba(24, 20, 17, 0.035);
+  background: var(--huddl-surface-strong);
 }
 
 .huddl-shell :is(.huddl-icon-btn, .huddl-today-btn, .huddl-readiness-action) {
   border-color: rgba(var(--brick-red-rgb), 0.36);
   background: rgba(var(--brick-red-rgb), 0.06);
-  color: var(--brick-red);
+  color: var(--huddl-accent);
 }
 
 .huddl-shell :is(.huddl-icon-btn, .huddl-today-btn, .huddl-readiness-action):hover {
@@ -7690,15 +7694,15 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
 }
 
 .huddl-shell .huddl-link {
-  color: var(--brick-red);
+  color: var(--huddl-accent);
 }
 
 .huddl-shell .huddl-row {
-  border-bottom-color: rgba(24, 20, 17, 0.12);
+  border-bottom-color: var(--huddl-rule);
 }
 
 .huddl-shell .huddl-row--button:hover strong {
-  color: var(--brick-red);
+  color: var(--huddl-accent);
 }
 
 .huddl-shell .btn-primary {
@@ -7710,7 +7714,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
 .huddl-shell .btn-outline {
   border-color: rgba(var(--brick-red-rgb), 0.42);
   background: transparent;
-  color: var(--brick-red);
+  color: var(--huddl-accent);
 }
 
 @media (max-width: 980px) {
@@ -9355,7 +9359,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
   width: min(100%, 320px);
 }
 .flash-manager .flash-inventory-workbench .flash-upload-zone {
-  --upload-accent: var(--portal-agent-accent, var(--cream));
+  --upload-accent: var(--portal-agent-accent, var(--accent-cream-tile));
   position: relative;
   isolation: isolate;
   width: 100%;
@@ -9451,7 +9455,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
   animation: flashConfirmActionsIn 380ms ease 130ms both;
 }
 .flash-upload-btn {
-  --upload-accent: var(--portal-agent-accent, var(--cream));
+  --upload-accent: var(--portal-agent-accent, var(--accent-cream-tile));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -22337,7 +22341,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 }
 .onboarding-pct {
   font-size: 0.75rem;
-  color: var(--gold, #faae15);
+  color: var(--gold-vibrant);
   font-weight: 500;
 }
 .onboarding-dismiss {
@@ -22366,7 +22370,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 .onboarding-progress-fill {
   display: block;
   height: 100%;
-  background: var(--gold, #faae15);
+  background: var(--gold-vibrant);
   border-radius: 2px;
   transition: width 0.4s ease;
 }
@@ -22387,10 +22391,10 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
   color: var(--muted, #b9ad96);
 }
 .onboarding-checklist li.done {
-  color: var(--gold, #faae15);
+  color: var(--gold-vibrant);
 }
 .onboarding-checklist li.done svg {
-  color: var(--gold, #faae15);
+  color: var(--gold-vibrant);
 }
 .onboarding-checklist li svg {
   flex-shrink: 0;
@@ -22398,7 +22402,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 }
 .onboarding-cta {
   padding: 0.4rem 1rem;
-  background: var(--gold, #faae15);
+  background: var(--gold-vibrant);
   color: var(--bg, #121312);
   border: none;
   border-radius: 6px;
@@ -26253,7 +26257,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 }
 
 .flash-upload-zone {
-  --upload-accent: var(--portal-agent-accent, var(--cream));
+  --upload-accent: var(--portal-agent-accent, var(--accent-cream-tile));
   width: 100%;
   max-width: 480px;
   border: 2px dashed var(--upload-border);
@@ -28024,7 +28028,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .courier-input-stack {
 /* Ryozan Portal mobile home. Structure and proportions are copied from
    Portal Mobile v2; the legacy dashboard remains available above 720px. */
 .ryozan-mobile-portal-home {
-  --accent-cream: var(--cream);
+  --accent-cream: var(--accent-cream-tile);
   --ryozan-portal-agent-fab-size: 54px;
   --ryozan-portal-nav-height-roomy: calc(
     var(--touch-min)
