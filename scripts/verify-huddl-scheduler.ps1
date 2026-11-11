@@ -23,7 +23,7 @@ $AppDir = Join-Path $RepoRoot "app"
 $ReportDir = Join-Path $RepoRoot ".dev\state"
 $ReportFile = if ($ReadOnlyRemote) { "huddl-scheduler-remote-readonly-verification.json" } else { "huddl-scheduler-verification.json" }
 $ReportPath = Join-Path $ReportDir $ReportFile
-$DatabaseSyncUrl = if ($env:DATABASE_SYNC_URL) { $env:DATABASE_SYNC_URL } else { "postgresql://postgres:galax2025@localhost:5432/nexus" }
+$DatabaseSyncUrl = if ($env:DATABASE_SYNC_URL) { $env:DATABASE_SYNC_URL } elseif ($env:DATABASE_URL) { $env:DATABASE_URL } else { throw "Set DATABASE_SYNC_URL or DATABASE_URL (see api/.env.example); no default password is built in." }
 if ($DatabaseSyncUrl.StartsWith("postgresql+asyncpg://")) {
   $DatabaseSyncUrl = $DatabaseSyncUrl.Replace("postgresql+asyncpg://", "postgresql://")
 }

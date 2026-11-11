@@ -51,10 +51,8 @@ REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
 FRONTEND_ROOT = REPO_ROOT / "app"
 FRONTEND_API_FILE = FRONTEND_ROOT / "src" / "lib" / "api.ts"
 
-DB_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:galax2025@localhost:5432/nexus",
-)
+# No default: set DATABASE_URL (see api/.env.example). A literal password never lives in source.
+DB_URL = os.environ.get("DATABASE_URL", "")
 
 # -- ANSI Colors --------------------------------------------------
 GREEN = "\033[92m"
@@ -223,6 +221,11 @@ async def check_schema_drift(fix: bool = False):
         import asyncpg
     except ImportError:
         failed("asyncpg not installed -- pip install asyncpg")
+        _record_encounter("schema", 1)
+        return
+
+    if not DB_URL:
+        failed("DATABASE_URL is not set -- export it or put it in api/.env")
         _record_encounter("schema", 1)
         return
 
@@ -695,7 +698,7 @@ async def run_all(fix: bool = False, check: str | None = None, exit_on_fail: boo
     print(f"\n{BOLD}PREFLIGHT DAEMON -- The Watcher{RESET}")
     print(f"{DIM}Protocol: DETECT -> IDENTIFY -> MEASURE -> CLASSIFY -> LOG{RESET}")
     print(f"Project: {PROJECT_ROOT}")
-    print(f"Database: {DB_URL.split('@')[1] if '@' in DB_URL else DB_URL}")
+    print(f"Database: {DB_URL.split('@')[1] if '@' in DB_URL else (DB_URL or 'DATABASE_URL not set')}")
 
     if check:
         if check not in CHECKS:
