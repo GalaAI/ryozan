@@ -50,6 +50,7 @@ from reportlab.platypus import (
 )
 
 from app.constants.timezones import shop_timezone
+from app.services.storage import private_id_key
 
 logger = logging.getLogger("ryozan.scroll_pdf")
 
@@ -288,7 +289,7 @@ _RENDERED_ELSEWHERE = {
 }
 
 
-def _normalize_image(data: bytes) -> bytes | None:
+def normalize_embed_image(data: bytes) -> bytes | None:
     """Decode any Pillow-readable image to an upright PNG, or return None.
 
     exif_transpose is the point of this function: a phone photo of a certificate carries
@@ -366,7 +367,7 @@ def _signature_block(
     styles: dict,
     elements: list,
 ) -> None:
-    normalized = _normalize_image(png) if png else None
+    normalized = normalize_embed_image(png) if png else None
     flowable = _fitted_image(normalized, 2.6 * inch, 0.9 * inch) if normalized else None
     if flowable is not None:
         body = flowable
@@ -405,7 +406,11 @@ def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> Non
         if asset.content_type:
             meta.append(("Content type", asset.content_type))
         meta.append(("Stored", "Yes" if asset.stored else "No"))
-        if asset.url:
+        private_id = bool(asset.url and private_id_key(asset.url))
+        if asset.url and private_id:
+            # Government IDs are private objects: the bytes are embedded below, never a link.
+            meta.append(("Storage", "Private (staff open it through the app)"))
+        elif asset.url:
             meta.append(("Storage URL", asset.url))
         elements.append(_kv_table(meta, styles))
         elements.append(Spacer(1, 10))
@@ -420,7 +425,7 @@ def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> Non
             )
             continue
 
-        normalized = _normalize_image(asset.data) if asset.data else None
+        normalized = normalize_embed_image(asset.data) if asset.data else None
         flowable = _fitted_image(normalized, _CONTENT_WIDTH, _CONTENT_HEIGHT) if normalized else None
         if flowable is not None:
             elements.append(flowable)
@@ -428,7 +433,11 @@ def _asset_pages(assets: list[ScrollAsset], styles: dict, elements: list) -> Non
             elements.append(
                 Paragraph(
                     "This upload is not an embeddable image (for example a PDF). "
-                    "It is stored separately at the storage URL above and forms part of this record.",
+                    + (
+                        "It is stored privately and forms part of this record."
+                        if private_id
+                        else "It is stored separately at the storage URL above and forms part of this record."
+                    ),
                     styles["normal"],
                 )
             )

@@ -37,13 +37,20 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query
 from sqlalchemy import and_, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.endpoints.waiver import _artist_can_access_waiver, _send_aftercare_email, spawn_background
+from app.api.v1.endpoints.waiver import (
+    UPLOAD_ID_AGAIN,
+    _artist_can_access_waiver,
+    _send_aftercare_email,
+    authorize_client_data,
+    require_uploaded_id,
+    spawn_background,
+)
 from app.constants.status import DocStatus
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.rate_limit import limiter
 from app.core.routes import ROUTES
-from app.core.security import get_current_user, require_role
+from app.core.security import ROLE_RANK, get_current_user, require_role
 from app.models.booking import Booking
 from app.models.document import DocumentInstance, DocumentTemplate
 from app.models.notification import Notification
@@ -82,6 +89,7 @@ from app.services.scroll_archive import (
 )
 from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf
 from app.services.sms import send_sms
+from app.services.storage import ID_REFERENCE_KEYS, signed_id_fields, signed_id_url
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.documents")
@@ -92,6 +100,20 @@ MAX_SCROLL_FILE_BYTES = 10 * 1024 * 1024
 MAX_SCROLL_SIGNATURE_BYTES = 2 * 1024 * 1024
 MAX_SCROLL_TOTAL_BYTES = 25 * 1024 * 1024
 ARTIST_SCROLL_TERMS_VERSION = "artist-scroll-2026-08-10-v1"
+# Scroll fields only the server writes, from this submission's own uploads.
+SCROLL_SERVER_KEYS = (
+    *ID_REFERENCE_KEYS,
+    "bbp_cert_url",
+    "first_aid_cert_url",
+    "cpr_cert_url",
+    "owner_sig_url",
+    "artist_sig_url",
+    "scroll_pdf_url",
+    "submission_id",
+    "storage_prefix",
+    "certs_stored",
+    "acceptance_record",
+)
 REQUIRED_SCROLL_ACCEPTANCE_SECTIONS = ("application", "agreement", "bloodborne", "fire", "dhec")
 WAIVER_CONTACT_PREFILL_FIELDS = (
     "full_name",
@@ -188,10 +210,58 @@ def _require_waiver_placement(data: dict) -> str:
 
 
 def _require_waiver_photo_id(data: dict) -> str:
+    """The waiver's ID reference, already verified by _verify_public_id_fields or copied server side."""
     photo_id = str(data.get("photo_id_url") or data.get("photo_id") or "").strip()
     if not photo_id:
         raise HTTPException(status_code=422, detail="Photo ID is required")
     return photo_id
+
+
+def _verify_public_id_fields(data: dict, *, caller: User | None = None) -> None:
+    """
+    Hold client-supplied form data to the stored-reference rule, in place, or refuse it with 422.
+
+    Every ID key is accepted only as the signed upload link this server issued for it, rewritten to the
+    stored reference. Every other value, nested at any depth, may name a stored object only when the caller
+    proves it may (storage.authorize_client_references): read paths sign what is stored, so nobody can
+    file someone else's object and have it signed back. certs_stored is written only by the authenticated
+    Scroll submit, so client data never sets it.
+    """
+    data.pop("certs_stored", None)
+    verified: dict[str, str] = {}
+    for key in ID_REFERENCE_KEYS:
+        value = data.get(key)
+        if value in (None, ""):
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise HTTPException(status_code=422, detail=UPLOAD_ID_AGAIN)
+        verified[key] = require_uploaded_id(value)
+    rest = authorize_client_data({k: v for k, v in data.items() if k not in verified}, caller=caller)
+    merged = {k: verified[k] if k in verified else rest[k] for k in data}
+    data.clear()
+    data.update(merged)
+
+
+def _verified_client_data_json(raw: str | None, *, caller: User) -> str | None:
+    """
+    data_json from an account below admin, with every stored-object reference proven.
+
+    Document views sign stored references, so the caller must not be able to store someone else's. Data
+    that needs no change, and text that is not JSON, is kept byte for byte.
+    """
+    if not raw:
+        return raw
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        authorize_client_data(raw, caller=caller)
+        return raw
+    if not isinstance(data, dict):
+        checked = authorize_client_data(data, caller=caller)
+        return raw if checked == data else json.dumps(checked)
+    original = json.loads(raw)
+    _verify_public_id_fields(data, caller=caller)
+    return raw if data == original else json.dumps(data)
 
 
 def _require_waiver_intake_answers(data: dict) -> None:
@@ -290,6 +360,29 @@ def _normalize_waiver_fields(fields: list[dict]) -> list[dict]:
 UPLOAD_DIR = Path(__file__).resolve().parents[4] / "uploads" / "documents"
 
 
+# Government ID images are private in R2; responses carry short-lived signed links only.
+ID_VIEW_SECONDS = 900
+
+
+def _signed_data_json(raw: str | None) -> str | None:
+    """
+    The stored data_json with any private government ID reference swapped for a signed link.
+
+    Documents with no private ID reference come back byte for byte unchanged. Stored data is
+    never mutated; this only shapes the response.
+    """
+    if not raw or not any(key in raw for key in ID_REFERENCE_KEYS):
+        return raw
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        return raw
+    if not isinstance(data, dict):
+        return raw
+    view = signed_id_fields(data, ID_VIEW_SECONDS)
+    return raw if view == data else json.dumps(view)
+
+
 def _instance_to_response(inst: DocumentInstance, template_name: str | None, user_name: str | None) -> dict:
     """Convert a DocumentInstance row + joined names into a response dict."""
     return {
@@ -301,7 +394,7 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
         "category": inst.category,
         "title": inst.title,
         "status": inst.status,
-        "data_json": inst.data_json,
+        "data_json": _signed_data_json(inst.data_json),
         "signed_at": inst.signed_at,
         "file_url": inst.file_url,
         "notes": inst.notes,
@@ -474,15 +567,22 @@ async def submit_document(
 ):
     """Submit a filled form or create a document instance."""
     _require_owner_archive_access(current_user, body.category)
+    data_json, file_url, notes = body.data_json, body.file_url, body.notes
+    # Document views sign stored references, so only founder/admin (who can already open every record)
+    # may store one without proof. Everyone else references only their own uploads and folders.
+    if ROLE_RANK.get(current_user.role, -1) < ROLE_RANK["admin"]:
+        data_json = _verified_client_data_json(data_json, caller=current_user)
+        file_url = authorize_client_data(file_url, caller=current_user)
+        notes = authorize_client_data(notes, caller=current_user)
     instance = DocumentInstance(
         template_id=body.template_id,
         user_id=current_user.id,
         category=body.category,
         title=body.title,
         status="submitted",
-        data_json=body.data_json,
-        file_url=body.file_url,
-        notes=body.notes,
+        data_json=data_json,
+        file_url=file_url,
+        notes=notes,
     )
     db.add(instance)
     await db.flush()
@@ -543,10 +643,11 @@ async def update_document_status(
     if not instance:
         raise HTTPException(status_code=404, detail="Document not found")
     _require_document_instance_access(instance, current_user)
+    notes = authorize_client_data(body.notes, caller=current_user)
 
     instance.status = body.status
-    if body.notes is not None:
-        instance.notes = body.notes
+    if notes is not None:
+        instance.notes = notes
     instance.updated_at = datetime.now(UTC)
 
     await db.flush()
@@ -718,6 +819,12 @@ async def submit_scroll(
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be valid JSON") from None
     if not isinstance(fields, dict):
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be an object")
+    # The record's files are the server's: certificate, ID, signature and PDF references, and the storage
+    # prefix, come only from this request's uploads below. Anything else the artist typed may name only
+    # their own stored objects, since /scroll/my and the owner views sign what is stored.
+    for key in SCROLL_SERVER_KEYS:
+        fields.pop(key, None)
+    fields = authorize_client_data(fields, caller=current_user)
 
     terms_version = fields.get("terms_version")
     section_acceptances = fields.get("section_acceptances")
@@ -1005,6 +1112,11 @@ async def submit_scroll(
     }
 
 
+def _scroll_fields_view(data: dict) -> dict:
+    """The stored scroll fields with every government ID reference swapped for a signed link."""
+    return signed_id_fields(data, ID_VIEW_SECONDS)
+
+
 @router.get("/scroll/my")
 async def get_my_scroll(
     db: AsyncSession = Depends(get_db, scope="function"),
@@ -1038,10 +1150,10 @@ async def get_my_scroll(
             "bbp_cert_url": data.get("bbp_cert_url"),
             "first_aid_cert_url": data.get("first_aid_cert_url"),
             "cpr_cert_url": data.get("cpr_cert_url"),
-            "govt_id_url": data.get("govt_id_url"),
+            "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
             "owner_sig_url": data.get("owner_sig_url"),
             "tax_opt_in": data.get("tax_opt_in"),
-            "fields": data,
+            "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
         }
     }
@@ -1087,10 +1199,10 @@ async def get_user_scroll(
             "bbp_cert_url": data.get("bbp_cert_url"),
             "first_aid_cert_url": data.get("first_aid_cert_url"),
             "cpr_cert_url": data.get("cpr_cert_url"),
-            "govt_id_url": data.get("govt_id_url"),
+            "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
             "owner_sig_url": data.get("owner_sig_url"),
             "tax_opt_in": data.get("tax_opt_in"),
-            "fields": data,
+            "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
         }
     }
@@ -1210,6 +1322,8 @@ async def public_checkin(
 
     if not name or not email:
         raise HTTPException(status_code=422, detail="Name and email are required")
+    # The slug is stored in data_json, which document views sign: it may not name a stored object.
+    artist_slug = authorize_client_data(artist_slug)
 
     # Find the waiver template
     result = await db.execute(
@@ -1616,7 +1730,7 @@ async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = D
         prior_data = prior["data"]
         on_file = {
             "signed_at": prior["signed_at"].isoformat() if prior["signed_at"] else None,
-            "photo_id_url": _stored_photo_id_url(prior_data),
+            "photo_id_url": signed_id_url(_stored_photo_id_url(prior_data), ID_VIEW_SECONDS),
             "signature_url": _stored_signature_url(prior_data),
             "health": {key: prior_data[key] for key in WAIVER_HEALTH_KEYS if prior_data.get(key) not in (None, "")},
         }
@@ -1791,6 +1905,10 @@ async def complete_public_form(
 
     # Build data payload with form data
     data = body.data.copy()
+    # A public caller may only file objects it uploaded itself, at any depth; reuse below copies the ID and
+    # signature on file server side.
+    _verify_public_id_fields(data)
+    signature_data = authorize_client_data(body.signature_data)
 
     # For waiver documents, generate a reference code and ensure guest fields are set
     is_waiver = instance.category == "waiver"
@@ -1845,9 +1963,9 @@ async def complete_public_form(
 
     # Store signature under consistent key (matches walk-in path)
     signature_raw = None
-    if body.signature_data:
-        signature_raw = body.signature_data
-        data["signature_data"] = body.signature_data
+    if signature_data:
+        signature_raw = signature_data
+        data["signature_data"] = signature_data
     # Also check for client_signature from template-driven forms
     if not signature_raw and data.get("client_signature"):
         signature_raw = data["client_signature"]
