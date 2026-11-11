@@ -1032,7 +1032,7 @@ function DesignTool() {
               </label>
               <label>
                 Text
-                <input value={tweaks.color} onChange={e => applyTweak({ color: e.target.value })} placeholder="var(--gold)" />
+                <input value={tweaks.color} onChange={e => applyTweak({ color: e.target.value })} placeholder="var(--gold-vibrant)" />
               </label>
               <label>
                 Radius

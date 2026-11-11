@@ -73,7 +73,7 @@
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   font-weight: 700;
   overflow: hidden;
   flex-shrink: 0;
@@ -105,7 +105,7 @@
 }
 
 .scroll-tile:hover .scroll-tile-meta {
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 1;
 }
 
@@ -343,7 +343,7 @@
 
 .scroll-tile-status.signed   { background: #6dbf7e; opacity: 1; }
 .scroll-tile-status.missing  { background: #e05c5c; opacity: 0.7; }
-.scroll-tile-status.uploaded { background: var(--gold); opacity: 1; }
+.scroll-tile-status.uploaded { background: var(--gold-vibrant); opacity: 1; }
 
 /* ── Scroll doc tile (div variant, not a button) ────────── */
 
@@ -376,7 +376,7 @@
 
 .scroll-tile-add-icon {
   font-size: 1.25rem;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 0.7;
   line-height: 1;
   transition: opacity 0.18s;
@@ -490,7 +490,7 @@
 
 .scroll-tile-action-btn.active {
   background: rgba(166, 125, 67, 0.08);
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 1;
 }
 
@@ -518,7 +518,7 @@
   place-items: center;
   border: 1px solid rgba(166, 125, 67, 0.24);
   border-radius: 999px;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   background: rgba(166, 125, 67, 0.055);
 }
 
@@ -531,7 +531,7 @@
   margin-bottom: 0.2rem;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.56rem;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -588,7 +588,7 @@
   background: rgba(166, 125, 67, 0.13);
   border: 1px solid rgba(166, 125, 67, 0.42);
   border-radius: 8px;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   cursor: pointer;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.58rem;
@@ -735,7 +735,7 @@
 }
 
 .scroll-upload-tile-icon {
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 0.5;
 }
 
@@ -803,7 +803,7 @@
 }
 .scroll-doc-row-action:hover {
   border-color: rgba(166, 125, 67, 0.38);
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 
 /* ── AI Index wizard (inline, full-width panel) ──────────── */
@@ -951,7 +951,7 @@ body.wizard-open .hotbar {
 }
 .scroll-wizard-mode-btn.active {
   background: rgba(166, 125, 67, 0.12);
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 .scroll-wizard-mode-btn:hover:not(.active) { color: var(--text); }
 
@@ -971,7 +971,7 @@ body.wizard-open .hotbar {
   opacity: 0.45;
   transition: opacity 0.2s, color 0.2s;
 }
-.scroll-wizard-step.active { color: var(--gold); opacity: 1; }
+.scroll-wizard-step.active { color: var(--gold-vibrant); opacity: 1; }
 .scroll-wizard-step.done { color: var(--ok, #4caf50); opacity: 0.8; }
 .scroll-wizard-step-dot {
   width: 18px;
@@ -1064,7 +1064,7 @@ body.wizard-open .hotbar {
   border-radius: 99px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.57rem;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   letter-spacing: 0.03em;
 }
 
@@ -1108,7 +1108,7 @@ body.wizard-open .hotbar {
   font-family: 'Inter', sans-serif;
   font-size: 0.65rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1138,7 +1138,7 @@ body.wizard-open .hotbar {
   font-size: 0.88rem;
   padding: 0.5rem 0;
   outline: none;
-  caret-color: var(--gold);
+  caret-color: var(--gold-vibrant);
   transition: border-color 0.15s;
   box-sizing: border-box;
 }
@@ -1159,7 +1159,7 @@ body.wizard-open .hotbar {
 }
 .scroll-wizard-toggle-row:hover { border-color: rgba(166, 125, 67, 0.4); background: rgba(166, 125, 67, 0.09); }
 .scroll-wizard-toggle-row input[type="checkbox"] {
-  accent-color: var(--gold);
+  accent-color: var(--gold-vibrant);
   width: 14px;
   height: 14px;
   flex-shrink: 0;
@@ -1218,7 +1218,7 @@ body.wizard-open .hotbar {
   box-shadow: 0 0 14px rgba(166, 125, 67, 0.12);
 }
 .scroll-gala-toggle-icon {
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 0.5;
   flex-shrink: 0;
   transition: opacity 0.2s;
@@ -1251,7 +1251,7 @@ body.wizard-open .hotbar {
   position: relative;
   transition: background 0.2s, border-color 0.2s;
 }
-.scroll-gala-toggle-pill.on { background: var(--gold); border-color: var(--gold); }
+.scroll-gala-toggle-pill.on { background: var(--gold-vibrant); border-color: var(--gold-vibrant); }
 .scroll-gala-toggle-thumb {
   position: absolute;
   top: 2px;
@@ -1302,7 +1302,7 @@ body.wizard-open .hotbar {
   line-height: 1.55;
   padding: 0.5rem 0;
   outline: none;
-  caret-color: var(--gold);
+  caret-color: var(--gold-vibrant);
   resize: none;
   box-sizing: border-box;
   transition: border-color 0.15s;
@@ -1343,7 +1343,7 @@ body.wizard-open .hotbar {
   align-items: center;
   gap: 0.4rem;
   padding: 0.52rem 1.25rem;
-  background: var(--gold);
+  background: var(--gold-vibrant);
   border: none;
   border-radius: 7px;
   color: #0e0d0b;
@@ -1406,7 +1406,7 @@ body.wizard-open .hotbar {
   background: rgba(166, 125, 67, 0.1);
   border: 1px solid rgba(166, 125, 67, 0.3);
   border-radius: 6px;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   font-family: 'Inter', sans-serif;
   font-size: 0.72rem;
   font-weight: 600;
@@ -1436,7 +1436,7 @@ body.wizard-open .hotbar {
   font-size: 0.84rem;
   padding: 0.4rem 0;
   outline: none;
-  caret-color: var(--gold);
+  caret-color: var(--gold-vibrant);
   transition: border-color 0.15s;
   box-sizing: border-box;
 }
@@ -1454,7 +1454,7 @@ body.wizard-open .hotbar {
   line-height: 1.5;
   padding: 0.4rem 0;
   outline: none;
-  caret-color: var(--gold);
+  caret-color: var(--gold-vibrant);
   resize: none;
   transition: border-color 0.15s;
   box-sizing: border-box;
@@ -1485,7 +1485,7 @@ body.wizard-open .hotbar {
 
 .tmpl-btn-save {
   padding: 0.38rem 0.95rem;
-  background: var(--gold);
+  background: var(--gold-vibrant);
   border: none;
   border-radius: 6px;
   color: #0e0d0b;
@@ -1552,7 +1552,7 @@ body.wizard-open .hotbar {
   font-family: 'Inter', sans-serif;
   font-size: 0.68rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   background: rgba(166, 125, 67, 0.1);
   border: 1px solid rgba(166, 125, 67, 0.2);
   border-radius: 20px;
@@ -1604,7 +1604,7 @@ body.wizard-open .hotbar {
   border-radius: 20px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.55rem;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   letter-spacing: 0.07em;
   text-transform: uppercase;
 }
@@ -1630,8 +1630,8 @@ body.wizard-open .hotbar {
   transition: border-color 0.15s, color 0.15s;
 }
 .upkeep-tab.active {
-  border-color: var(--gold);
-  color: var(--gold);
+  border-color: var(--gold-vibrant);
+  color: var(--gold-vibrant);
 }
 .upkeep-tab.complete {
   color: inherit;
@@ -1661,12 +1661,12 @@ body.wizard-open .hotbar {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 .upkeep-card-xp {
   font-size: 0.65rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   margin-left: 0.4rem;
 }
 .upkeep-card-done-label {
@@ -1730,8 +1730,8 @@ body.wizard-open .hotbar {
   transition: border-color 0.15s, background 0.15s;
 }
 .upkeep-step-check.checked {
-  background: var(--gold);
-  border-color: var(--gold);
+  background: var(--gold-vibrant);
+  border-color: var(--gold-vibrant);
 }
 .upkeep-step-check svg { display: none; }
 .upkeep-step-check.checked svg { display: block; }
@@ -1798,7 +1798,7 @@ body.wizard-open .hotbar {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 
 .quest-log-filters {
@@ -1831,8 +1831,8 @@ body.wizard-open .hotbar {
 
 .quest-log-filter-btn.active {
   background: rgba(166, 125, 67, 0.12);
-  border-color: var(--gold);
-  color: var(--gold);
+  border-color: var(--gold-vibrant);
+  color: var(--gold-vibrant);
 }
 
 .quest-log-filter-count {
@@ -1842,7 +1842,7 @@ body.wizard-open .hotbar {
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  background: var(--gold);
+  background: var(--gold-vibrant);
   color: #000;
   border-radius: 10px;
   font-size: 0.6rem;
@@ -1908,7 +1908,7 @@ body.wizard-open .hotbar {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 0.8;
 }
 
@@ -1938,7 +1938,7 @@ body.wizard-open .hotbar {
   gap: 3px;
   font-size: 0.68rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--gold-vibrant);
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -1959,7 +1959,7 @@ body.wizard-open .hotbar {
 
 .quest-log-fill {
   height: 100%;
-  background: var(--gold);
+  background: var(--gold-vibrant);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -1994,7 +1994,7 @@ body.wizard-open .hotbar {
   border: 1px solid rgba(166, 125, 67, 0.5);
   border-radius: 8px;
   background: rgba(166, 125, 67, 0.09);
-  color: var(--gold);
+  color: var(--gold-vibrant);
   font: 700 0.72rem/1 var(--font-btn, sans-serif);
   letter-spacing: 0.08em;
   text-transform: uppercase;

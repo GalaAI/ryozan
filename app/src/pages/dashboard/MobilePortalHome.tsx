@@ -271,7 +271,7 @@ function SpyderMark({ size = 24, strongBloom = false }: { size?: number; strongB
       strokeLinejoin="round"
       aria-hidden="true"
       style={{
-        color: 'var(--gold)',
+        color: 'var(--gold-vibrant)',
         filter: strongBloom
           ? 'drop-shadow(0 0 4px currentColor) drop-shadow(0 0 10px currentColor)'
           : 'drop-shadow(0 0 4px rgba(217, 191, 149, .45))',
@@ -667,7 +667,7 @@ function statusColor(status: string): string {
   if (normalized === 'confirmed' || normalized === 'completed') return 'var(--sig-ok)'
   if (normalized.includes('deposit')) return 'var(--alt-sky)'
   if (normalized === 'cancelled' || normalized === 'canceled') return 'var(--sig-err)'
-  return 'var(--gold)'
+  return 'var(--gold-vibrant)'
 }
 
 function shortDate(value: string): string {
@@ -3522,7 +3522,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
           suggestion: 'What is stuck, and who owns the next verified step?',
         }
       : {
-          id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
+          id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold-vibrant)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
           opener: galaLine,
           suggestion: 'What is stuck on the floor?',
         }
@@ -3591,7 +3591,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
         }
       : agentOverrideId === 'spyder'
         ? {
-            id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
+            id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold-vibrant)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
             opener: 'Your staff account controls are ready in the Hub.',
             suggestion: 'Show me the account controls.',
           }
