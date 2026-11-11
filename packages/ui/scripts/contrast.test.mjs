@@ -547,18 +547,25 @@ test('sweep pairs read 4.5:1 in every theme', { skip: !existsSync(stylesDir) && 
 });
 
 // Coral count chips in the desktop portal's own workspace templates (not the frozen
-// shell, see below): ink written on var(--accent-coral), pinned to color-coral.
+// shell, see below). They render in the portal's shadow root, so each colour resolves
+// through the :host pin in NativeDesktopPortal.tsx: ink and fill must both be tokens
+// (no hex literals, AGENTS.md), and the ink must read 4.5:1 on the fill in every theme.
 const coralTemplates = ['home-workspace.html', 'booky-workspace.html'];
-test('coral count chips read 4.5:1 on color-coral', { skip: !existsSync(portalDir) && 'desktop portal not present (packed tarball)' }, () => {
-  const coral = col('color-coral', themes[0]);
+test('coral count chips read 4.5:1 through the portal pins', { skip: !existsSync(portalDir) && 'desktop portal not present (packed tarball)' }, () => {
+  const host = readFileSync(join(portalDir, 'NativeDesktopPortal.tsx'), 'utf8');
+  const pin = new Map([...(/`:host\{([^`]*?)\}/.exec(host)?.[1] ?? '').matchAll(/(--[\w-]+):([^;]*)/g)].map((d) => [d[1], d[2].trim()]));
+  const resolve = (value) => { const v = /^var\((--[\w-]+)\)$/.exec(value); return v && pin.has(v[1]) ? fixedColour(pin.get(v[1])) : null; };
   let seen = 0;
   for (const name of coralTemplates) {
     for (const m of readFileSync(join(portalDir, name), 'utf8').matchAll(/style="([^"]*background:var\(--accent-coral\)[^"]*)"/g)) {
-      const ink = /(?:^|;)color:(#[0-9a-fA-F]{6})/.exec(m[1]);
+      const ink = /(?:^|;)color:([^;]+)/.exec(m[1]);
       if (!ink) continue;
       seen++;
-      const k = ratio(parse(ink[1]), coral);
-      assert.ok(k >= 4.5, `${name}: ${ink[1]} on color-coral reads ${k.toFixed(2)}:1`);
+      assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test(ink[1]), `${name}: coral chip ink ${ink[1]} is a hex literal; use a token`);
+      const fg = resolve(ink[1].trim()), bg = resolve('var(--accent-coral)');
+      assert.ok(fg && bg, `${name}: ${ink[1]} or accent-coral does not resolve through the :host pin`);
+      const k = ratio(fg, bg);
+      assert.ok(k >= 4.5, `${name}: ${ink[1]} on accent-coral reads ${k.toFixed(2)}:1`);
     }
   }
   assert.ok(seen >= 4, `expected the four coral chips and buttons, found ${seen}`);
@@ -588,4 +595,16 @@ test('SessionPass ribbon letters read 4.5:1 on both ribbon stops', () => {
     const k = ratio(parse(letters[1]), parse(stop));
     assert.ok(k >= 4.5, `SessionPass letters ${letters[1]} on ${stop}: ${k.toFixed(2)}:1`);
   }
+});
+
+// Colours may be CSS variables (agent accents are var(--token)), so no source may build
+// a translucent colour by appending hex alpha to an interpolated colour: `${accent}22`
+// becomes invalid CSS. Use color-mix(in srgb, <colour> N%, transparent).
+test('no hex alpha suffix on interpolated colours', () => {
+  const roots = [join(here, '..', 'src'), appSrc].filter((d) => existsSync(d));
+  const hits = [];
+  for (const dir of roots) for (const f of sourceFiles(dir)) {
+    for (const m of readFileSync(f, 'utf8').matchAll(/\$\{([^}]*(?:accent|color|colour|tone|tint)[^}]*)\}[0-9a-fA-F]{2}(?![0-9a-zA-Z_])/gi)) hits.push(`${f.slice(f.indexOf('/src/') + 1)}: \${${m[1]}}…`);
+  }
+  assert.deepEqual(hits, [], `hex alpha appended to an interpolated colour (use color-mix):\n${hits.join('\n')}`);
 });
