@@ -640,7 +640,9 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     submission (the ids recorded on the row at submit; for older rows only trusted relationships, see
     _archive_records), then clears the bytes. Records that cannot be proven the submission's own are
     skipped and counted. With no trusted record at all, or a failed upload, the bytes are kept for the
-    next run. Returns (pending, stored, failed). Logs counts only.
+    next run. A submission with no trusted record is passed over without using up the pass: `limit`
+    bounds the uploads attempted, so rows the retry cannot act on never starve later rows. Returns
+    (pending, stored, failed), where failed counts passed-over submissions too. Logs counts only.
     """
     table = ScrollOwnerEmailOutbox.__tablename__
     rows = (
@@ -663,8 +665,10 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     if not by_submission:
         return 0, 0, 0
 
-    stored = failed = untrusted = 0
-    for submission_id, group in list(by_submission.items())[:limit]:
+    stored = failed = untrusted = passed_over = attempted = 0
+    for submission_id, group in by_submission.items():
+        if attempted >= limit:
+            break
         recorded = next((row for row in group if row.document_ids is not None), None)
         artist = next((row.artist_user_id for row in group if _safe_segment(row.artist_user_id)), None)
         records, skipped = await _archive_records(
@@ -685,8 +689,11 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
             )
         prefix = _trusted_prefix(records, submission_id, artist) if records else None
         if not prefix:
+            # Kept for a later run, but it does not use up this pass.
             failed += 1
+            passed_over += 1
             continue
+        attempted += 1
         no_id = group[0].attachment_filename == storage.SCROLL_NOID_PDF_FILENAME
         filename = storage.SCROLL_NOID_PDF_FILENAME if no_id else storage.SCROLL_ID_PDF_FILENAME
         try:
@@ -715,6 +722,7 @@ async def retry_unstored_scroll_pdfs(db: AsyncSession, limit: int = 20) -> tuple
     logger.info("Scroll PDFs stored on retry: %d", stored)
     logger.info("Scroll PDF store retries that failed (bytes kept): %d", failed)
     logger.info("Scroll PDF records skipped as unproven: %d", untrusted)
+    logger.info("Scroll PDFs passed over with no trusted record (bytes kept): %d", passed_over)
     return len(by_submission), stored, failed
 
 

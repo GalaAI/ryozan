@@ -130,8 +130,10 @@ counts-only logs. Owner email rows queued before this table may still hold bytes
 (`scroll_archive.retry_unstored_scroll_pdfs`, at boot and on every outbox loop) uploads those under the submission's private `scrolls/` prefix
 (`artist-scroll.id.pdf`, or `artist-scroll.noid.pdf`; a legacy row of unknown content gets the `.id`
 name; never under `scrolls-public/`), records the URL on the records the server created for that
-submission, and clears the bytes. A failed retry keeps them. It logs only counts (waiting, stored,
-failed, unproven records skipped).
+submission, and clears the bytes. A failed retry keeps them. A submission with no trusted record is
+passed over (bytes kept) without using up the pass, whose limit bounds upload attempts only, so such rows
+never starve later ones. It logs only counts (waiting, stored, failed, unproven records skipped, passed
+over).
 
 **Scroll PDF recovery trusts no client-writable field.** `data_json` could once be written by any
 caller, so a submission id inside it proves nothing. `submit_scroll` records the exact ids of the

@@ -133,6 +133,47 @@ class RetryTrustedTargetTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(set(r2.objects), {f"scrolls/{VICTIM}/{SID}/{storage.SCROLL_ID_PDF_FILENAME}"})
 
 
+class RetryPagingTests(unittest.IsolatedAsyncioTestCase):
+    async def test_rows_with_no_trusted_record_never_starve_later_rows(self):
+        stuck = []
+        for index in range(3):
+            row = _row(None)
+            row.submission_id = f"synthetic-orphan-{index}"
+            stuck.append(row)
+        archive, artist, _forged = _records()
+        live = _row(None)
+        r2 = _R2()
+        with patch.object(storage, "upload_file", r2.upload), self.assertLogs("ryozan.scroll_archive", "INFO") as logs:
+            outcome = await scroll_archive.retry_unstored_scroll_pdfs(
+                _Db([archive, artist], outbox=[*stuck, live]), limit=2
+            )
+        self.assertEqual(outcome, (4, 1, 3))
+        self.assertEqual((archive.file_url, artist.file_url), (ID_URL, ID_URL))
+        self.assertIsNone(live.attachment_content)
+        for row in stuck:
+            self.assertEqual(row.attachment_content, PDF_BYTES, "passed over, never dropped")
+        messages = [r.getMessage() for r in logs.records]
+        self.assertIn("Scroll PDFs passed over with no trusted record (bytes kept): 3", messages)
+        self.assertNotIn("synthetic-orphan", "\n".join(messages))
+
+    async def test_the_limit_bounds_upload_attempts(self):
+        rows, docs = [], []
+        for index in range(3):
+            sid = f"synthetic-live-{index}"
+            archive = _doc(OWNER_ARCHIVE_CATEGORY, uuid.uuid4(), prefix=f"{PREFIX}-{index}")
+            archive.data_json = archive.data_json.replace(SID, sid)
+            row = _row([archive.id], VICTIM)
+            row.submission_id = sid
+            rows.append(row)
+            docs.append(archive)
+        r2 = _R2()
+        with patch.object(storage, "upload_file", r2.upload), self.assertLogs("ryozan.scroll_archive", "INFO"):
+            outcome = await scroll_archive.retry_unstored_scroll_pdfs(_Db(docs, outbox=rows), limit=2)
+        self.assertEqual(outcome, (3, 2, 0))
+        self.assertEqual(len(r2.objects), 2)
+        self.assertEqual(rows[2].attachment_content, PDF_BYTES)
+
+
 class ConfirmedArchiveTests(unittest.TestCase):
     def test_only_an_owner_archive_record_confirms_a_stored_pdf(self):
         sql = scroll_archive._archive_pdf_confirmed_sql("o")
