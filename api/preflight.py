@@ -51,8 +51,15 @@ REQUIREMENTS_FILE = PROJECT_ROOT / "requirements.txt"
 FRONTEND_ROOT = REPO_ROOT / "app"
 FRONTEND_API_FILE = FRONTEND_ROOT / "src" / "lib" / "api.ts"
 
-# No default: set DATABASE_URL (see api/.env.example). A literal password never lives in source.
-DB_URL = os.environ.get("DATABASE_URL", "")
+# No default: DATABASE_URL comes from the environment, else api/.env (see api/.env.example).
+# A literal password never lives in source.
+try:
+    from dotenv import dotenv_values
+
+    _ENV_FILE_VALUES = dotenv_values(PROJECT_ROOT / ".env")
+except ImportError:
+    _ENV_FILE_VALUES = {}
+DB_URL = os.environ.get("DATABASE_URL") or _ENV_FILE_VALUES.get("DATABASE_URL") or ""
 
 # -- ANSI Colors --------------------------------------------------
 GREEN = "\033[92m"
@@ -225,7 +232,7 @@ async def check_schema_drift(fix: bool = False):
         return
 
     if not DB_URL:
-        failed("DATABASE_URL is not set -- export it or put it in api/.env")
+        failed("DATABASE_URL is not set -- export it or set it in api/.env")
         _record_encounter("schema", 1)
         return
 
