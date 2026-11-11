@@ -222,7 +222,7 @@
 /* ── Public form state reconciliation ──────────────── */
 
 .public-form-shell .public-form-status {
-    color: var(--ink);
+    color: var(--text);
     background: var(--panel-raised);
     border-color: var(--line-2);
 }
@@ -233,7 +233,7 @@
 }
 
 .public-form-status p {
-    color: var(--ink-mute);
+    color: var(--text-muted);
 }
 
 .public-form-status .public-form-icon.expired,

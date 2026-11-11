@@ -7,7 +7,7 @@
 // Run: node --test packages/ui/scripts/contrast.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -135,3 +135,107 @@ for (const theme of themes) {
     onAll('gold-fill', portal(theme), 3, theme, 'progress fill, picked chip');
   });
 }
+
+// ── App stylesheet consumers ───────────────────────────────────────────────────
+// Token pairs pass above, but a rule can still pick a theme-following text token
+// (ink, cream…) for a panel that paints a fixed dark ground in every theme
+// (panel-raised, dark gradients, brick-red fills). Resolve each app text rule's
+// ground — its own background, an exact context rule, or an ancestor class — and
+// require 4.5:1 in every theme wherever that ground is fixed-dark.
+const stylesDir = join(here, '..', '..', '..', 'app', 'src', 'styles');
+const productionOnly = (() => {
+  const file = join(here, '..', 'src', 'tokens', 'production-only.css');
+  const out = new Map();
+  if (!existsSync(file)) return out;
+  for (const m of readFileSync(file, 'utf8').matchAll(/--([\w-]+):\s*([^;]+);/g)) out.set(m[1], m[2].trim());
+  return out;
+})();
+const TEXT_TOKENS = new Set(['text', 'text-secondary', 'text-muted', 'muted', 'ink', 'ink-dim', 'ink-mute', 'ink-ghost', 'cream', 'accent-cream', 'accent-cream-tile', 'plate-ink', 'plate-mute']);
+
+/** Opaque colour stops a CSS background value paints in a theme, or null if it uses a token we cannot resolve. */
+function stopsOf(value, theme) {
+  const bg = col('bg', theme);
+  let v = value;
+  for (let i = 0; i < 4; i++) {
+    v = v.replace(/var\(--([\w-]+)(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g, (all, name) => {
+      if (byName.has(name)) return raw(name, theme);
+      if (productionOnly.has(name)) return productionOnly.get(name);
+      return all;
+    });
+  }
+  if (/var\(--/.test(v)) return null;
+  const found = [...v.matchAll(/#[0-9a-fA-F]{6}\b|rgba?\([^()]*\)/g)].map((m) => {
+    const s = m[0];
+    if (s.startsWith('#')) return parse(s);
+    const p = s.slice(s.indexOf('(') + 1, -1).split(',').map(Number);
+    return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+  });
+  if (!found.length || found.some((c) => c.some((x) => Number.isNaN(x)))) return null;
+  return found.map((c) => (c[3] < 1 ? over(c, bg) : c));
+}
+
+/** Fixed-dark: the same stops in every theme, all dark. */
+function fixedDark(value) {
+  const per = themes.map((t) => stopsOf(value, t));
+  if (per.some((s) => !s)) return null;
+  const key = (s) => JSON.stringify(s.map((c) => c.slice(0, 3).map(Math.round)));
+  if (new Set(per.map(key)).size !== 1) return null;
+  return per[0].every((c) => lum(c) < 0.12) ? per[0] : null;
+}
+
+function cssRules() {
+  const rules = [];
+  for (const name of ['components.css', 'booking.css', 'dashboard.css']) {
+    const file = join(stylesDir, name);
+    if (!existsSync(file)) continue;
+    const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const sel = m[1].trim().replace(/\s+/g, ' ');
+      if (!sel || sel.startsWith('@') || /:root|data-theme|:hover|:focus|::/.test(sel)) continue;
+      const color = /(?:^|;)\s*color\s*:\s*var\(--([\w-]+)/.exec(m[2]);
+      const background = /(?:^|;)\s*background(?:-color)?\s*:\s*([^;]+)/.exec(m[2]);
+      rules.push({ file: name, sel, color: color && color[1], background: background && background[1].trim() });
+    }
+  }
+  return rules;
+}
+
+const splitTop = (sel) => { const out = []; let d = 0, cur = ''; for (const ch of sel) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { out.push(cur.trim()); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur.trim()); return out; };
+
+test('app text on fixed-dark panels reads 4.5:1 in every theme', { skip: !existsSync(stylesDir) && 'app/src/styles not present (packed tarball)' }, () => {
+  const rules = cssRules();
+  const bySel = new Map(); // exact selector part -> background value (last wins, like the cascade)
+  const byClass = new Map(); // last class of a selector part -> background value
+  for (const r of rules) {
+    if (!r.background) continue;
+    for (const part of splitTop(r.sel)) {
+      bySel.set(part, r.background);
+      const last = part.split(/\s*[>+~]\s*|\s+/).pop();
+      for (const c of last.matchAll(/\.([\w-]+)/g)) if (!byClass.has(c[1])) byClass.set(c[1], r.background);
+    }
+  }
+  const failures = [];
+  for (const r of rules) {
+    if (!r.color || !TEXT_TOKENS.has(r.color) || !byName.has(r.color)) continue;
+    for (const part of splitTop(r.sel)) {
+      const segs = part.split(/\s*[>+~]\s*|\s+/).filter(Boolean);
+      let ground = r.background;
+      if (!ground && segs.length > 1) {
+        const context = part.slice(0, part.lastIndexOf(segs[segs.length - 1])).replace(/[\s>+~]+$/, '').trim();
+        ground = bySel.get(context);
+        if (!ground) for (const seg of segs.slice(0, -1).reverse()) { const c = [...seg.matchAll(/\.([\w-]+)/g)].pop(); if (c && byClass.has(c[1])) { ground = byClass.get(c[1]); break; } }
+      }
+      if (!ground) continue;
+      const stops = fixedDark(ground);
+      if (!stops) continue;
+      for (const theme of themes) {
+        const fg = col(r.color, theme);
+        const worst = Math.min(...stops.map((g) => ratio(fg, g)));
+        if (worst < 4.5) failures.push(`${r.file} ${part} -> ${r.color} (${theme}) ${worst.toFixed(2)}:1`);
+      }
+      break;
+    }
+  }
+  assert.deepEqual(failures, [], `text below 4.5:1 on fixed-dark panels:\n${failures.join('\n')}`);
+});
+
