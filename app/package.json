@@ -23,7 +23,7 @@
     "@radix-ui/react-select": "^2.4.1",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-tabs": "^1.1.21",
-    "@ryozan/ui": "file:vendor/ryozan-ui-0.2.6.tgz",
+    "@ryozan/ui": "file:vendor/ryozan-ui-0.2.7.tgz",
     "@streamdown/cjk": "^1.0.4",
     "@streamdown/code": "^1.1.1",
     "@streamdown/math": "^1.0.3",

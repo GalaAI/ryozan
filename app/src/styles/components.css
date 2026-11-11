@@ -115,9 +115,9 @@
 }
 
 .ryozan-error-boundary__action--primary {
-    border: 1px solid var(--accent-cream);
+    border: 1px solid var(--accent-cream-tile);
     color: var(--accent-ink);
-    background: var(--accent-cream);
+    background: var(--accent-cream-tile);
 }
 
 .ryozan-error-boundary__action--secondary {

@@ -109,14 +109,15 @@ for (const theme of themes) {
     pair('gold-ink', 'gold-decor', 4.5, theme, 'text on gold-decor');
     pair('accent-ink', 'accent-coral', 4.5, theme, 'coral pill label');
     pair('flame-ink', 'flame', 4.5, theme, 'destructive button label');
-    for (const g of ['accent-brick', 'accent-army', 'oxblood']) pair('accent-cream', g, 4.5, theme, 'text on dark tile');
+    for (const g of ['accent-brick', 'accent-army', 'oxblood']) pair('accent-cream-tile', g, 4.5, theme, 'text on a dark tile');
     pair('hero-ink', 'hero-bg', 4.5, theme, 'hero text');
+    pair('accent-ink', 'accent-cream-tile', 4.5, theme, 'text on a cream fill');
     for (const n of ['plate-ink', 'plate-mute', 'plate-accent']) pair(n, 'plate', 4.5, theme, 'text on plate');
     pair('ink', 'sage', 4.5, theme, 'text on a sage tile');
   });
 
   test(`portal text reads 4.5:1 on every portal surface (${theme})`, () => {
-    for (const n of ['ink', 'ink-dim', 'ink-mute', 'ink-ghost', 'sig-live', 'sig-warn', 'sig-err', 'sig-ok', 'accent-seal']) {
+    for (const n of ['ink', 'ink-dim', 'ink-mute', 'ink-ghost', 'sig-live', 'sig-warn', 'sig-err', 'sig-ok', 'accent-seal', 'accent-cream']) {
       onAll(n, portal(theme), 4.5, theme, 'text');
     }
   });
@@ -127,11 +128,3 @@ for (const theme of themes) {
     onAll('gold-fill', portal(theme), 3, theme, 'progress fill, picked chip');
   });
 }
-
-// Known gap, not a pass: `accent-cream` titles the shop ground (light) and also
-// sits on oxblood and brick tiles (dark in every theme), so no single shop
-// value meets both. It needs a split token, not a lightness change. Asserted
-// in default only, where both hold.
-test('accent-cream titles read 4.5:1 on the portal grounds (default)', () => {
-  onAll('accent-cream', portal('default'), 4.5, 'default', 'screen titles');
-});
