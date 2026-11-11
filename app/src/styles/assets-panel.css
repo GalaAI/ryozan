@@ -47,7 +47,7 @@
 .assets-content::-webkit-scrollbar { width: 6px; }
 .assets-content::-webkit-scrollbar-track { background: transparent; }
 .assets-content::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
-.assets-content::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+.assets-content::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
 
 /* ── Section headers ──────────────────────────────────────────────────── */
 
@@ -84,7 +84,7 @@
 
 .assets-section-action:hover {
   color: var(--text);
-  border-color: var(--border-active);
+  border-color: var(--border-hover);
 }
 
 /* ── Email tab — template rows ────────────────────────────────────────── */
@@ -730,7 +730,7 @@
   justify-content: center;
 }
 
-.library-asset:hover { border-color: var(--border-active); }
+.library-asset:hover { border-color: var(--border-hover); }
 
 .library-asset img {
   width: 100%;
@@ -845,7 +845,7 @@
   transition: all 0.15s;
 }
 
-.css-reset-btn:hover { color: var(--text); border-color: var(--border-active); }
+.css-reset-btn:hover { color: var(--text); border-color: var(--border-hover); }
 
 .css-status {
   font-size: 0.62rem;

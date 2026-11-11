@@ -25,7 +25,7 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(function Chip
         minHeight: '32px',
         padding: '0 var(--space-3)',
         borderRadius: radius.pill,
-        border: `1px solid ${selected ? accent : color.panelBorder}`,
+        border: `1px solid ${selected ? accent : color.fieldBorder}`,
         background: selected ? color.bgActive : 'transparent',
         color: selected ? color.text : color.textMuted,
         cursor: 'pointer',
