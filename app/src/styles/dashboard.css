@@ -4341,7 +4341,7 @@ input[type="range"]::-moz-range-thumb {
 
 .bkm-tab.active,
 .bkm-tab.bkm-tab-active {
-  color: var(--cream);
+  color: var(--text);
   border-color: var(--brick-red);
   background: var(--brick-red);
 }
@@ -4356,8 +4356,9 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .bkm-tab.active .bkm-tab-count {
-  background: rgba(var(--cream-rgb), 0.18);
-  color: var(--cream);
+  /* 6% wash keeps the count at 4.5:1 or better on the brick-red tab in every theme. */
+  background: var(--bg-hover);
+  color: var(--text);
 }
 
 /* ── Huddl schedule board ───────────────────── */
@@ -7662,7 +7663,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
 .huddl-shell :is(.huddl-icon-btn, .huddl-today-btn, .huddl-readiness-action):hover {
   border-color: var(--brick-red);
   background: var(--brick-red);
-  color: var(--cream);
+  color: var(--text);
 }
 
 .huddl-shell .huddl-date-tile:hover {
@@ -7673,11 +7674,11 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
 .huddl-shell .huddl-date-tile.selected {
   border-color: var(--brick-red);
   background: var(--brick-red);
-  color: var(--cream);
+  color: var(--text);
 }
 
 .huddl-shell .huddl-date-tile.selected :is(span, strong, small) {
-  color: var(--cream);
+  color: var(--text);
 }
 
 .huddl-shell .huddl-date-tile.today:not(.selected) {
@@ -7703,7 +7704,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
 .huddl-shell .btn-primary {
   border-color: var(--brick-red);
   background: var(--brick-red);
-  color: var(--cream);
+  color: var(--text);
 }
 
 .huddl-shell .btn-outline {
@@ -28085,7 +28086,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   border-radius: 16px;
   background: linear-gradient(160deg, rgba(30, 30, 28, 0.98), rgba(11, 12, 11, 0.99));
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55), inset 0 1px rgba(var(--cream-rgb), 0.05);
-  color: var(--ink);
+  color: var(--text);
   pointer-events: auto;
   overscroll-behavior: contain;
 }
@@ -28103,7 +28104,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 .ryozan-artist-tour > strong {
   display: block;
   margin-top: 5px;
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 800;
@@ -28113,7 +28114,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 
 .ryozan-artist-tour > p {
   margin: 7px 0 13px;
-  color: var(--ink-dim);
+  color: var(--text-secondary);
   font-family: var(--font-body);
   font-size: 12px;
   line-height: 1.45;
@@ -28131,7 +28132,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   border: 1px solid rgba(var(--cream-rgb), 0.2);
   border-radius: 99px;
   background: rgba(var(--cream-rgb), 0.04);
-  color: var(--ink-dim);
+  color: var(--text-secondary);
   font-family: var(--font-btn);
   font-size: 9px;
   font-weight: 700;
@@ -28470,7 +28471,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   border: 0;
   border-radius: 99px;
   background: var(--brick-red);
-  color: var(--cream);
+  color: var(--text);
   font-family: var(--font-btn);
   font-size: 11px;
   font-weight: 700;
@@ -28490,7 +28491,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   border-radius: 18px;
   background: linear-gradient(155deg, #181a19 0%, #0c0e0d 72%);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62), 0 0 28px rgba(183, 138, 64, 0.08);
-  color: var(--ink);
+  color: var(--text);
   animation: ryozan-account-menu-in 0.2s ease both;
 }
 
@@ -28655,7 +28656,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   border: 1px solid rgba(226, 218, 194, 0.18);
   border-radius: 11px;
   background: #0a0c0b;
-  color: var(--cream, #e2dac2);
+  color: var(--text, #e2dac2);
   font: 600 15px/1.2 var(--font-body);
 }
 
@@ -28903,7 +28904,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   font-size: 19.5px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--text-muted);
 }
 
 .ryozan-calendar-rule {
@@ -29048,7 +29049,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 .ryozan-book-row strong,
 .ryozan-thread-row strong {
   overflow: hidden;
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-body);
   font-size: 13px;
   font-weight: 700;
@@ -29059,7 +29060,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 .ryozan-book-row small,
 .ryozan-thread-row small {
   overflow: hidden;
-  color: var(--ink-mute);
+  color: var(--text-muted);
   font-family: var(--font-btn);
   font-size: 10.5px;
   letter-spacing: 0.06em;
@@ -29131,7 +29132,7 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 .ryozan-books-page .ryozan-book-row__action {
   border-color: var(--brick-red);
   background: var(--brick-red);
-  color: var(--cream);
+  color: var(--text);
   box-shadow: 0 0 16px rgba(var(--brick-red-rgb), .24);
 }
 
@@ -29184,7 +29185,7 @@ button.ryozan-portal-empty {
   border: 1px solid var(--line-2);
   border-radius: 99px;
   background: rgba(12, 13, 13, 0.88);
-  color: var(--ink-mute);
+  color: var(--text-muted);
 }
 
 .ryozan-courier-commandbar svg {
@@ -29255,8 +29256,8 @@ button.ryozan-portal-empty {
   text-transform: uppercase;
 }
 
-.ryozan-pulse-action-card, .ryozan-mercury-action-card > header strong { color: var(--ink); font: 800 18px var(--font-display); text-transform: uppercase; }
-.ryozan-pulse-action-card, .ryozan-mercury-action-card > header small { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--ink-ghost); }
+.ryozan-pulse-action-card, .ryozan-mercury-action-card > header strong { color: var(--text); font: 800 18px var(--font-display); text-transform: uppercase; }
+.ryozan-pulse-action-card, .ryozan-mercury-action-card > header small { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: var(--text-muted); }
 
 .ryozan-pulse-contact-list, .ryozan-mercury-contact-list { display: flex; flex-direction: column; gap: 7px; max-height: 330px; overflow-y: auto; }
 .ryozan-pulse-contact-list, .ryozan-mercury-contact-list > p { color: var(--ink-mute); font: 13px var(--font-body); text-align: center; }
@@ -29270,7 +29271,7 @@ button.ryozan-portal-empty {
   border: 1px solid var(--line-2);
   border-radius: 12px;
   background: rgba(12, 13, 13, 0.74);
-  color: var(--ink);
+  color: var(--text);
   text-align: left;
   cursor: pointer;
 }
@@ -29284,7 +29285,7 @@ button.ryozan-portal-empty {
 .ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels button { min-height: 36px; border: 1px solid var(--line-2); border-radius: 99px; background: transparent; color: var(--ink-ghost); font: 700 9px var(--font-btn); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
 .ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels button.active { border-color: #b795e8; background: rgba(183,149,232,.13); color: var(--ink); box-shadow: 0 0 14px rgba(183,149,232,.16); }
 .ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact { display: flex; flex-direction: column; gap: 6px; }
-.ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: #101111; color: var(--ink); font: 13px var(--font-body); outline: none; }
+.ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: #101111; color: var(--text); font: 13px var(--font-body); outline: none; }
 .ryozan-pulse-compose-start, .ryozan-mercury-compose-start { border-color: #b795e8 !important; color: #c7a6ee !important; }
 
 .ryozan-thread-row {
@@ -29479,7 +29480,7 @@ button.ryozan-portal-empty {
 
 .ryozan-collector-message > header > time {
   flex-shrink: 0;
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   font-family: var(--font-btn);
   font-size: 8px;
   letter-spacing: 0.08em;
@@ -29487,7 +29488,7 @@ button.ryozan-portal-empty {
 
 .ryozan-collector-message > p {
   margin: 0;
-  color: var(--ink-mute);
+  color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 12.5px;
   line-height: 1.5;
@@ -29525,13 +29526,13 @@ button.ryozan-portal-empty {
   resize: none;
   background: linear-gradient(-90deg, #0f0e0e, #141414);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55);
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.45;
 }
 
-.ryozan-collector-thread__composer textarea::placeholder { color: var(--ink-ghost); }
+.ryozan-collector-thread__composer textarea::placeholder { color: var(--text-muted); }
 .ryozan-collector-thread__composer textarea:focus-visible { border-color: rgba(183, 149, 232, 0.5); }
 .ryozan-collector-thread__composer textarea:disabled { opacity: 0.5; }
 
@@ -29584,7 +29585,7 @@ button.ryozan-portal-empty {
   border: 1px solid var(--line-2);
   border-radius: 99px;
   background: rgba(12, 13, 13, 0.88);
-  color: var(--ink-mute);
+  color: var(--text-muted);
   font-family: var(--font-btn);
   font-size: 9.5px;
   letter-spacing: 0.13em;
@@ -29776,7 +29777,7 @@ button.ryozan-portal-empty {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  color: var(--ink-ghost);
+  color: var(--text-secondary);
   font-family: var(--font-body);
   font-size: 11px;
   text-align: right;
@@ -30346,7 +30347,7 @@ button.ryozan-portal-empty {
   border: 1px solid rgba(255, 255, 255, 0.32);
   border-radius: 99px;
   background: rgba(12, 13, 12, 0.88);
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-btn);
   font-size: 8px;
   font-weight: 700;
@@ -30757,7 +30758,7 @@ button.ryozan-portal-empty {
   overflow: hidden;
   border: 1px solid rgba(183, 149, 232, .58);
   border-radius: 15px;
-  color: var(--ink);
+  color: var(--text);
   background: linear-gradient(180deg, rgba(25, 26, 25, .98), rgba(9, 10, 9, .99));
   box-shadow: 0 14px 32px rgba(0, 0, 0, .38), 0 0 24px rgba(183, 149, 232, .08);
 }
@@ -30780,7 +30781,7 @@ button.ryozan-portal-empty {
 
 .ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > span { color: #b795e8; }
 .ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > strong { font-size: 15px; }
-.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > small { color: var(--ink-ghost); }
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > small { color: var(--text-muted); }
 
 .ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky {
   gap: 2px;
@@ -31293,7 +31294,7 @@ button.ryozan-portal-empty {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 11px;
   text-align: right;
@@ -31326,8 +31327,8 @@ button.ryozan-portal-empty {
 }
 
 .ryozan-club-tool > header span { color: #9bd4aa; font-size: 16px; }
-.ryozan-club-tool > header strong { color: var(--ink-mute); font-size: 11px; letter-spacing: 0.08em; }
-.ryozan-club-tool > small { color: var(--ink-ghost); font-family: var(--font-body); font-size: 10.5px; line-height: 1.45; }
+.ryozan-club-tool > header strong { color: var(--text-muted); font-size: 11px; letter-spacing: 0.08em; }
+.ryozan-club-tool > small { color: var(--text-muted); font-family: var(--font-body); font-size: 10.5px; line-height: 1.45; }
 .ryozan-club-tool-empty,
 .ryozan-club-tool-error { margin: 0; color: var(--ink-mute); font-family: var(--font-body); font-size: 12px; line-height: 1.45; }
 .ryozan-club-tool-error { color: var(--accent-coral); }
@@ -31806,9 +31807,9 @@ button.ryozan-portal-empty {
 .ryozan-club-story { display: flex; flex-direction: column; gap: 7px; padding: 14px 15px; border-radius: 16px; text-align: left; cursor: pointer; }
 .ryozan-club-story > header { display: flex; align-items: baseline; gap: 8px; }
 .ryozan-club-story > header strong { flex: 1; color: #8fb89a; font-family: var(--font-btn); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
-.ryozan-club-story > header time { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 10px; }
+.ryozan-club-story > header time { color: var(--text-muted); font-family: var(--font-btn); font-size: 10px; }
 .ryozan-club-story h2 { margin: 0; color: var(--accent-cream); font-family: var(--font-display); font-size: 17px; line-height: 1.1; text-transform: uppercase; }
-.ryozan-club-story p { margin: 0; display: -webkit-box; overflow: hidden; color: var(--ink-mute); font-family: var(--font-body); font-size: 12.5px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.ryozan-club-story p { margin: 0; display: -webkit-box; overflow: hidden; color: var(--text-muted); font-family: var(--font-body); font-size: 12.5px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 .ryozan-herald-feed {
   height: 56px;
   min-height: 56px;
@@ -31850,7 +31851,7 @@ button.ryozan-portal-empty {
 .ryozan-herald-compact-notice strong,
 .ryozan-herald-compact-notice small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ryozan-herald-compact-notice strong { color: var(--accent-cream); font-family: var(--font-body); font-size: 12px; }
-.ryozan-herald-compact-notice small { color: var(--ink-mute); font-family: var(--font-body); font-size: 11px; }
+.ryozan-herald-compact-notice small { color: var(--text-muted); font-family: var(--font-body); font-size: 11px; }
 .ryozan-herald-feed-body { min-height: 0; display: flex; flex: 1; flex-direction: column; gap: 10px; padding: 0 13px 13px; overflow: hidden; opacity: 0; transform: translateY(-8px) scale(0.99, 0.94); transform-origin: 50% 0; pointer-events: none; transition: opacity 180ms ease, transform 380ms cubic-bezier(0.22, 1, 0.36, 1); }
 .ryozan-herald-feed.is-open .ryozan-herald-feed-body { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
 .ryozan-herald-feed-tabs {
@@ -31867,7 +31868,7 @@ button.ryozan-portal-empty {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   cursor: pointer;
   font-family: var(--font-btn);
   font-size: 9px;
@@ -31895,7 +31896,7 @@ button.ryozan-portal-empty {
 .ryozan-herald-feed .ryozan-club-story { width: 100%; color: inherit; }
 .ryozan-club-story footer { display: flex; align-items: center; gap: 8px; padding-top: 2px; }
 .ryozan-club-story footer span,
-.ryozan-club-story footer b { color: var(--ink-ghost); font-family: var(--font-btn); font-size: 8px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+.ryozan-club-story footer b { color: var(--text-muted); font-family: var(--font-btn); font-size: 8px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
 .ryozan-club-story footer span { flex: 1; }
 .ryozan-club-story footer b { color: #8fb89a; }
 .ryozan-herald-feed-state { min-height: 210px; display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; }

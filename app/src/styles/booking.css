@@ -1960,7 +1960,7 @@
     justify-content: space-between;
     gap: 18px;
     padding: 16px 18px;
-    color: var(--cream, #e2dac2);
+    color: var(--text, #e2dac2);
     background:
         linear-gradient(115deg, rgba(var(--brick-red-rgb, 163, 58, 49), 0.18), transparent 58%),
         #0b0c0b;
@@ -2794,14 +2794,14 @@
   border: 1px solid rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
   border-radius: 6px;
   background: var(--color-surface-2);
-  color: var(--ink);
+  color: var(--text);
 }
 .bkm-booky-command button,
 .bkm-booky-sources button {
   border: 1px solid var(--brick-red, #a33a31);
   border-radius: 6px;
   background: var(--brick-red, #a33a31);
-  color: var(--cream, #e2dac2);
+  color: var(--text, #e2dac2);
   cursor: pointer;
   font-family: var(--font-btn);
   font-weight: 700;
