@@ -36,6 +36,15 @@ unchanged and is never fetched by the server.
 Write points normalize an echoed signed link back to the stored reference (`storage.canonical_id_reference`),
 so a browser that submits the preview link it was shown never persists an expiring URL.
 
+Because read points sign what is stored, every write point that stores client data runs it through
+`storage.authorize_client_references` (dicts, lists and strings, recursively). A value naming an object on
+our bucket (any own host form, or a bare key under `waivers/`, `signatures/`, `scrolls/`, `documents/`) is
+kept only when it is an unexpired upload link this server signed, sits in the caller's own folder
+(`<root>/<user id>/...`, `scrolls/<category>/<user id>/...`), or is a reference the server copied itself in
+that request (ID reuse, adopted or saved signature). Anything else is refused with 422 and nothing is stored.
+Founder/admin skip the check only on `POST /documents/`. Artist Scroll submit drops every server-owned key
+(ID, certificate, signature, PDF, prefix) from `fields_json` and sets them only from that request's uploads.
+
 Waiver PDFs embed the ID image bytes at generation time, fetched through a signed link, and never print
 the URL. Every export rebuilds the packet from the stored reference, so re-exporting an older waiver
 embeds its ID the same way. When the reference is not one of our own ID objects, or the fetch fails,

@@ -53,7 +53,16 @@ from app.services.email import FROM_SHOP, send_email
 from app.services.email_foundry_waiver import render_aftercare_instructions
 from app.services.quest_hooks import check_and_complete_quest
 from app.services.scroll_pdf import normalize_embed_image
-from app.services.storage import is_own_storage_url, private_id_key, signed_id_url, uploaded_id_reference
+from app.services.storage import (
+    ID_REFERENCE_KEYS,
+    UnauthorizedReferenceError,
+    authorize_client_references,
+    client_reference_key,
+    is_own_storage_url,
+    private_id_key,
+    signed_id_url,
+    uploaded_id_reference,
+)
 from app.services.storage import upload_file as upload_to_drive
 
 logger = logging.getLogger("ryozan.waiver")
@@ -68,6 +77,8 @@ _ALLOWED_ID_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "ima
 _ID_PREVIEW_SECONDS = 3600
 _ID_VIEW_SECONDS = 900
 UPLOAD_ID_AGAIN = "Upload the ID again"
+UPLOAD_FILE_AGAIN = "Upload the file again"
+SIGN_AGAIN = "Sign again or use your saved signature"
 
 
 def require_uploaded_id(reference: str | None) -> str:
@@ -82,6 +93,43 @@ def require_uploaded_id(reference: str | None) -> str:
     if not stored:
         raise HTTPException(status_code=422, detail=UPLOAD_ID_AGAIN)
     return stored
+
+
+def authorize_client_data(value, *, caller=None, server_allowed=()):
+    """
+    Client data with every reference to our bucket proven, or 422 and nothing stored.
+
+    See storage.authorize_client_references. A refused ID field says "Upload the ID again", anything else
+    "Upload the file again".
+    """
+    try:
+        return authorize_client_references(value, caller=caller, server_allowed=server_allowed)
+    except UnauthorizedReferenceError as exc:
+        detail = UPLOAD_ID_AGAIN if exc.path and exc.path[0] in ID_REFERENCE_KEYS else UPLOAD_FILE_AGAIN
+        raise HTTPException(status_code=422, detail=detail) from None
+
+
+def authorize_countersignature(signature: str, caller: User) -> str:
+    """
+    An artist countersignature: an inline image, the caller's own saved signature, or a stored object the
+    caller proves is theirs (their signatures/ folder, or an upload link this server just signed).
+
+    Export embeds a stored countersignature in the PDF, so any other stored object, or a URL anywhere else,
+    is refused with 422.
+    """
+    text = (signature or "").strip()
+    if text.lower().startswith("data:image/"):
+        return signature
+    saved = (getattr(caller, "saved_signature_url", None) or "").strip()
+    if saved and text == saved:
+        return signature
+    try:
+        authorized = authorize_client_references(text, caller=caller, server_allowed=(saved,) if saved else ())
+    except UnauthorizedReferenceError:
+        raise HTTPException(status_code=422, detail=SIGN_AGAIN) from None
+    if not client_reference_key(authorized):
+        raise HTTPException(status_code=422, detail=SIGN_AGAIN)
+    return authorized
 
 
 # Shop-local time. The waiver is signed in person at the studio, and the printed
@@ -327,6 +375,8 @@ async def submit_waiver(
         "signature_data": body.signature_data,
         "reference_code": ref_code,
     }
+    # Every other answer is client text too: none may name a stored object (only the ID proven above).
+    waiver_data = authorize_client_data(waiver_data, server_allowed=(photo_id_reference,))
 
     # ── Create document instance ──
     instance = DocumentInstance(
@@ -382,7 +432,7 @@ async def submit_waiver(
             instance_id=instance.id,
             ref_code=ref_code,
             client_name=body.full_name,
-            signature_data=body.signature_data,
+            signature_data=waiver_data["signature_data"],
             photo_id_url=photo_id_reference,
         )
     )
@@ -611,10 +661,11 @@ async def update_waiver_status(
     if not inst:
         raise HTTPException(status_code=404, detail="Waiver not found")
     _require_waiver_access(inst, current_user)
+    notes = authorize_client_data(body.notes, caller=current_user)
 
     inst.status = body.status
-    if body.notes is not None:
-        inst.notes = body.notes
+    if notes is not None:
+        inst.notes = notes
 
     await db.flush()
     return {"status": "ok", "new_status": inst.status}
@@ -655,8 +706,13 @@ async def countersign_waiver(
             detail=f"Waiver status is '{inst.status}', must be pending_review to countersign",
         )
 
+    # Export embeds the countersignature and staff views show it: only the artist's own signature is stored.
+    signature = authorize_countersignature(body.signature_data, current_user)
+    condition_notes = authorize_client_data(body.client_condition_notes, caller=current_user)
+    artist_notes = authorize_client_data(body.notes, caller=current_user)
+
     now = datetime.now(UTC)
-    inst.artist_signature = body.signature_data
+    inst.artist_signature = signature
     inst.artist_signed_at = now
     inst.artist_id_reviewed = current_user.id
     inst.status = DocStatus.APPROVED
@@ -666,13 +722,13 @@ async def countersign_waiver(
     existing_data = json.loads(inst.data_json) if inst.data_json else {}
     if body.session_duration_minutes is not None:
         existing_data["session_duration_minutes"] = body.session_duration_minutes
-    if body.client_condition_notes:
-        existing_data["client_condition_notes"] = body.client_condition_notes
-    if body.notes:
-        existing_data["artist_notes"] = body.notes
+    if condition_notes:
+        existing_data["client_condition_notes"] = condition_notes
+    if artist_notes:
+        existing_data["artist_notes"] = artist_notes
     existing_data["countersigned_by"] = current_user.name
     existing_data["countersigned_at"] = now.isoformat()
-    existing_data["artist_countersignature"] = body.signature_data
+    existing_data["artist_countersignature"] = signature
     inst.data_json = json.dumps(existing_data)
 
     # ── Notify client if they have an account ──

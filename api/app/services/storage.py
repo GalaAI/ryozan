@@ -546,5 +546,121 @@ def signed_id_fields(data: dict, expires_seconds: int = 300) -> dict:
     return view
 
 
+# ═══════════════════════════════════════════════════════
+#  Client-supplied references (write side)
+# ═══════════════════════════════════════════════════════
+
+# Folders on our bucket that hold one person's records. Waivers (IDs, signatures, packets) have no
+# per-person folder. Signatures, Scrolls and uploaded documents sit under the owner's user id:
+# signatures/<id>/, scrolls/<id>/<submission>/, scrolls/<category>/<id>/, documents/<id>/.
+PRIVATE_PREFIXES = ("waivers/", "signatures/", "scrolls/", "documents/")
+
+
+class UnauthorizedReferenceError(ValueError):
+    """A client-supplied value names a stored object the caller has not proven it may reference."""
+
+    def __init__(self, path: tuple):
+        super().__init__("Upload the file again")
+        self.path = path
+
+
+def client_reference_key(value: object) -> str | None:
+    """
+    The object key when `value` names an object on this install's own bucket, else None.
+
+    Covers every own host form (assets domain, r2.dev, the S3 endpoint with our bucket, with or without a
+    signed query, scheme-relative) and a bare key under a private prefix. Foreign URLs, other buckets, inline
+    data: images and plain text return None.
+    """
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    key = _r2_key_from_reference(f"https:{text}" if text.startswith("//") else text)
+    if key:
+        return key
+    if "://" in text or text.lower().startswith("data:"):
+        return None
+    bare = text.lstrip("/")
+    if bare.startswith(PRIVATE_PREFIXES) and ".." not in bare.split("/"):
+        return bare.split("?", 1)[0].split("#", 1)[0]
+    return None
+
+
+def _caller_owns_key(key: str, caller_id: str | None) -> bool:
+    """True when `key` sits in one of the caller's own folders (<root>/<id>/..., scrolls/<category>/<id>/...)."""
+    if not caller_id:
+        return False
+    parts = key.split("/")
+    if len(parts) >= 3 and parts[1] == caller_id:
+        return True
+    return parts[0] == "scrolls" and len(parts) >= 4 and parts[2] == caller_id
+
+
+def _caller_id(caller: object) -> str | None:
+    if caller is None:
+        return None
+    raw = getattr(caller, "id", caller)
+    text = str(raw).strip() if raw is not None else ""
+    return text or None
+
+
+def authorize_client_references(
+    value: object,
+    *,
+    caller: object = None,
+    server_allowed: tuple | list | set = (),
+    now: datetime | None = None,
+):
+    """
+    A copy of client-supplied data in which every reference to our bucket is one the caller may make.
+
+    Read paths sign private references found in stored data, so every write path that stores client data
+    runs it through here first. Dicts, lists and strings are walked recursively. A string naming an object
+    on our bucket is kept only when:
+
+    - it is an unexpired upload link this server signed (verified_upload_key); the stable reference is
+      stored instead of the expiring link,
+    - the object sits in the caller's own folder (`caller` is the signed-in user or their id; None for a
+      public caller, who has no folder), or
+    - it is one of `server_allowed`, references the server copied itself in this request (an ID reused
+      from a prior waiver, an adopted or saved signature).
+
+    Anything else raises UnauthorizedReferenceError naming the offending path, so the caller refuses the request
+    and stores nothing. Foreign URLs, inline data: images and plain text pass through unchanged. The input is
+    never mutated. Never logs, because a reference can name a person's ID.
+    """
+    caller_id = _caller_id(caller)
+    allowed_refs = {ref.strip() for ref in server_allowed if isinstance(ref, str) and ref.strip()}
+    allowed_keys = {key for key in (client_reference_key(ref) for ref in allowed_refs) if key}
+
+    def _string(text: str, path: tuple) -> str:
+        stripped = text.strip()
+        if stripped in allowed_refs:
+            return text
+        upload_key = verified_upload_key(stripped, now=now)
+        if upload_key:
+            return _r2_public_url(upload_key)
+        key = client_reference_key(stripped)
+        if key is None:
+            return text
+        if key in allowed_keys or _caller_owns_key(key, caller_id):
+            # A signed link the browser echoed back is stored as the stable reference, never the expiring URL.
+            return _r2_public_url(key) if "://" in stripped and ("?" in stripped or "#" in stripped) else text
+        raise UnauthorizedReferenceError(path)
+
+    def _walk(item: object, path: tuple):
+        if isinstance(item, str):
+            return _string(item, path)
+        if isinstance(item, dict):
+            return {name: _walk(child, (*path, name)) for name, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [_walk(child, (*path, index)) for index, child in enumerate(item)]
+        return item
+
+    return _walk(value, ())
+
+
 # ── Backward compatibility alias ──
 upload_to_drive = upload_file
