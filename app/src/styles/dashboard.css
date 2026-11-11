@@ -28627,14 +28627,14 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: var(--text-muted);
 }
 
 .ryozan-portal-account-settings__header strong {
   font-family: var(--font-display);
   font-size: 20px;
   text-transform: uppercase;
-  color: var(--cream, #e2dac2);
+  color: var(--text, #e2dac2);
 }
 
 .ryozan-portal-account-settings form {
@@ -28712,12 +28712,12 @@ body:has(.ryozan-mobile-portal-home) > nav[aria-label="Portal navigation"] {
 }
 
 .ryozan-portal-account-settings__consent strong {
-  color: var(--cream, #e2dac2);
+  color: var(--text, #e2dac2);
   font: 700 13px/1.2 var(--font-body);
 }
 
 .ryozan-portal-account-settings__consent small {
-  color: var(--ink-mute);
+  color: var(--text-muted);
   font: 400 11px/1.4 var(--font-body);
 }
 
@@ -29284,7 +29284,7 @@ button.ryozan-portal-empty {
 
 .ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels button { min-height: 36px; border: 1px solid var(--line-2); border-radius: 99px; background: transparent; color: var(--ink-ghost); font: 700 9px var(--font-btn); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
-.ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels button.active { border-color: #b795e8; background: rgba(183,149,232,.13); color: var(--ink); box-shadow: 0 0 14px rgba(183,149,232,.16); }
+.ryozan-pulse-compose-channels, .ryozan-mercury-compose-channels button.active { border-color: #b795e8; background: rgba(183,149,232,.13); color: var(--text); box-shadow: 0 0 14px rgba(183,149,232,.16); }
 .ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact { display: flex; flex-direction: column; gap: 6px; }
 .ryozan-pulse-compose-contact, .ryozan-mercury-compose-contact select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 10px; background: #101111; color: var(--text); font: 13px var(--font-body); outline: none; }
 .ryozan-pulse-compose-start, .ryozan-mercury-compose-start { border-color: #b795e8 !important; color: #c7a6ee !important; }
@@ -29992,7 +29992,7 @@ button.ryozan-portal-empty {
   border: 1px solid rgba(226, 210, 177, 0.24);
   border-radius: 12px;
   background: rgba(226, 210, 177, 0.06);
-  color: var(--ink-dim);
+  color: var(--text-secondary);
   font-family: var(--font-body);
   font-size: 11px;
   line-height: 1.45;
@@ -30782,7 +30782,7 @@ button.ryozan-portal-empty {
 
 .ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > span { color: #b795e8; }
 .ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > strong { font-size: 15px; }
-.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > small { color: var(--text-muted); }
+.ryozan-pulse-thread-card, .ryozan-mercury-thread-card > header > small { color: var(--text-secondary); }
 
 .ryozan-pulse-thread-card--booky, .ryozan-mercury-thread-card--booky {
   gap: 2px;
@@ -31001,7 +31001,7 @@ button.ryozan-portal-empty {
 
 .ryozan-pos-connections-entry small {
   overflow: hidden;
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 9px;
   text-overflow: ellipsis;
@@ -31410,7 +31410,7 @@ button.ryozan-portal-empty {
 
 .ryozan-loot-preview > span,
 .ryozan-loot-slot-bank > header {
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   font-family: var(--font-btn);
   font-size: 7.5px;
   font-weight: 700;
@@ -31462,7 +31462,7 @@ button.ryozan-portal-empty {
 }
 
 .ryozan-loot-preview > small {
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   font-family: var(--font-btn);
   font-size: 7.5px;
   letter-spacing: .08em;
@@ -31485,7 +31485,7 @@ button.ryozan-portal-empty {
   gap: 8px;
 }
 
-.ryozan-loot-slot-bank > header strong { color: var(--ink-mute); font: inherit; }
+.ryozan-loot-slot-bank > header strong { color: var(--text-muted); font: inherit; }
 .ryozan-loot-slot-bank > header span { color: #9bd4aa; }
 
 .ryozan-loot-slots {
@@ -31525,7 +31525,7 @@ button.ryozan-portal-empty {
 .ryozan-loot-slots button::before { top: 3px; left: 3px; border-top: 1px solid currentColor; border-left: 1px solid currentColor; }
 .ryozan-loot-slots button::after { right: 3px; bottom: 3px; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; }
 .ryozan-loot-slots button > span { font-size: 16px; text-shadow: 0 0 10px currentColor; }
-.ryozan-loot-slots button > small { position: absolute; right: 4px; bottom: 2px; color: var(--ink-ghost); font: 6px var(--font-btn); }
+.ryozan-loot-slots button > small { position: absolute; right: 4px; bottom: 2px; color: var(--text-muted); font: 6px var(--font-btn); }
 .ryozan-loot-slots button.has-item { border-color: rgba(143, 184, 154, 0.44); color: #9bd4aa; }
 .ryozan-loot-slots button[aria-pressed="true"] { border-color: #9bd4aa; color: #9bd4aa; box-shadow: inset 0 0 16px rgba(143, 184, 154, 0.08), 0 0 14px rgba(143, 184, 154, 0.16); transform: translateY(-1px); }
 .ryozan-loot-slots button:focus-visible { box-shadow: 0 0 0 2px #111, 0 0 0 3px #9bd4aa, 0 0 14px rgba(143, 184, 154, 0.18); }
@@ -31605,7 +31605,7 @@ button.ryozan-portal-empty {
   border: 1px solid var(--line-2);
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.24);
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-btn);
   font-size: 9px;
   letter-spacing: 0.06em;
@@ -31627,7 +31627,7 @@ button.ryozan-portal-empty {
   border-radius: 11px;
   outline: 0;
   background: rgba(0, 0, 0, 0.28);
-  color: var(--ink);
+  color: var(--text);
   font: 12px/1.4 var(--font-body);
 }
 .ryozan-club-chat-compose textarea:focus { border-color: #78bd8a; box-shadow: 0 0 0 2px rgba(117, 211, 145, 0.1); }
@@ -31670,7 +31670,7 @@ button.ryozan-portal-empty {
   border: 1px solid var(--line-1);
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.22);
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   font-family: var(--font-btn);
   font-size: 9px;
   font-weight: 800;
@@ -31723,7 +31723,7 @@ button.ryozan-portal-empty {
 .ryozan-content-feed > button span,
 .ryozan-content-inspector span {
   grid-column: 1 / -1;
-  color: var(--ink-ghost);
+  color: var(--text-muted);
   font-family: var(--font-btn);
   font-size: 7.5px;
   letter-spacing: 0.12em;
@@ -31759,7 +31759,7 @@ button.ryozan-portal-empty {
 .ryozan-content-inspector small,
 .ryozan-content-pipeline span,
 .ryozan-content-connectors span {
-  color: var(--ink-mute);
+  color: var(--text-muted);
   font-family: var(--font-body);
   font-size: 10px;
   line-height: 1.35;
