@@ -81,15 +81,16 @@ Full local stack needs **PostgreSQL 16+**, **Python 3.12** (`python3.12-venv` on
 
 ### PostgreSQL (one-time per VM)
 
-The API defaults in `api/app/core/config.py` expect `postgresql+asyncpg://postgres:galax2025@localhost:5432/nexus`. On a fresh Linux VM:
+Pick your own local password; never commit it. On a fresh Linux VM:
 
 ```bash
+export POSTGRES_PASSWORD='<your-local-password>'
 sudo service postgresql start
-sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'galax2025';"
+sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '$POSTGRES_PASSWORD';"
 sudo -u postgres createdb nexus 2>/dev/null || true
 ```
 
-Copy `api/.env.example` to `api/.env` and set at least `LOCAL_DEV_MODE=true`, `ENABLE_API_DOCS=true`, and update `DATABASE_URL` to `postgresql+asyncpg://postgres:galax2025@localhost:5432/nexus` (matching the PostgreSQL setup above).
+Copy `api/.env.example` to `api/.env` and set at least `LOCAL_DEV_MODE=true`, `ENABLE_API_DOCS=true`, `POSTGRES_PASSWORD`, and `DATABASE_URL=postgresql+asyncpg://postgres:<your-local-password>@localhost:5432/nexus` (matching the PostgreSQL setup above).
 
 ### Start dev servers (tmux recommended)
 
