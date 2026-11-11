@@ -55,8 +55,17 @@ def _public(key: str) -> str:
 
 
 def _signed(key: str) -> str:
+    """The signed link a caller could hold: the upload link for a pending ID, a viewing link otherwise."""
     with patch.object(storage, "get_settings", return_value=_settings()):
-        return storage.presign_get_url(key, 3600, now=NOW - timedelta(minutes=1))
+        if key.startswith(storage.UPLOAD_ID_PREFIX):
+            return storage.presign_upload_proof_url(key, now=NOW - timedelta(minutes=1))
+        return _viewing(key)
+
+
+def _viewing(key: str) -> str:
+    """A staff viewing link (never the upload lifetime, which presign_get_url refuses)."""
+    with patch.object(storage, "get_settings", return_value=_settings()):
+        return storage.presign_get_url(key, 900, now=NOW - timedelta(minutes=1))
 
 
 class _Session:
@@ -156,9 +165,10 @@ class SubmitDocumentProvenanceTests(unittest.IsolatedAsyncioTestCase):
         key = "waivers/pending-ids/0b6f3c1e-1111-4222-8333-944445555666.jpg"
         _response, db = await self._submit(_user("collector"), file_url=_signed(key))
         self.assertEqual(db.added[0].file_url, _public(key))
-        with self.assertRaises(HTTPException) as raised:
-            await self._submit(_user("collector"), file_url=_public(key))
-        self.assertEqual(raised.exception.status_code, 422)
+        for reference in (_public(key), _viewing(key)):
+            with self.subTest(signed="X-Amz" in reference), self.assertRaises(HTTPException) as raised:
+                await self._submit(_user("collector"), file_url=reference)
+            self.assertEqual(raised.exception.status_code, 422)
 
     async def test_unparseable_data_json_is_stored_untouched(self):
         db = _Session()

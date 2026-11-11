@@ -36,8 +36,9 @@ from app.services.reward_engine import grant_configured_reward, profile_is_compl
 from app.services.storage import upload_file as upload_to_drive
 
 router = APIRouter(prefix="/users", tags=["users"])
-# Saved signatures are private in R2; the countersign screen gets a signed link valid for one session.
-SIGNATURE_VIEW_SECONDS = 3600
+# Saved signatures are private in R2; the countersign screen gets a signed viewing link valid for one session.
+# Never UPLOAD_PROOF_SECONDS (3600): that lifetime is reserved for upload links and presign_get_url refuses it.
+SIGNATURE_VIEW_SECONDS = 1800
 
 
 async def _artist_has_client_relationship(
