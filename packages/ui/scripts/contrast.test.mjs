@@ -89,6 +89,13 @@ for (const theme of themes) {
     }
   });
 
+  test(`accent-cream-tile reads 4.5:1 on panel-raised and every fixed-dark website surface (${theme})`, () => {
+    // Error-boundary, state-boundary and public-form panels paint panel-raised, a fixed dark
+    // gradient that does not follow the theme; their headings must use accent-cream-tile.
+    const bg = col('bg', theme);
+    onAll('accent-cream-tile', { 'panel-raised top': over([28, 29, 28, 0.92], bg), 'panel-raised bottom': over([12, 13, 12, 0.97], bg), ...website(theme) }, 4.5, theme, 'heading on a fixed-dark panel');
+  });
+
   test(`website outlines, focus and hover edges read 3:1 (${theme})`, () => {
     onAll('field-border', website(theme), 3, theme, 'resting control outline');
     onAll('border-hover', website(theme), 3, theme, 'hover edge');
