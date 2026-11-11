@@ -144,7 +144,7 @@
 }
 
 .scroll-tab.active {
-  border-bottom-color: var(--cream);
+  border-bottom-color: var(--accent-cream-tile);
 }
 
 .scroll-tab-num {
@@ -393,7 +393,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--cream);
+  background: var(--accent-cream-tile);
   opacity: 0.5;
 }
 
@@ -448,7 +448,7 @@
   width: 100%;
   margin-top: 1.5rem;
   padding: 0.85rem;
-  background: var(--cream);
+  background: var(--accent-cream-tile);
   color: #000;
   border: none;
   border-radius: 10px;
@@ -524,7 +524,7 @@
   width: 0.9rem;
   height: 0.9rem;
   margin: 0.15rem 0 0;
-  accent-color: var(--cream);
+  accent-color: var(--accent-cream-tile);
 }
 
 .scroll-tax-option__copy {
@@ -686,8 +686,8 @@
 .scroll-stage-gate-btn {
   height: 38px;
   padding: 0 0.9rem;
-  background: var(--cream);
-  border: 1px solid var(--cream);
+  background: var(--accent-cream-tile);
+  border: 1px solid var(--accent-cream-tile);
   border-radius: 8px;
   color: #0c0b09;
   cursor: pointer;

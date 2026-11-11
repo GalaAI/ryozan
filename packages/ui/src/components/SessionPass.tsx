@@ -68,7 +68,7 @@ function StubRail({ brand }: { brand: string }) {
             刺青
           </span>
           <span style={{ width: 22, borderTop: '1px dashed rgba(235,220,195,.5)', margin: '10px 0' }} />
-          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.02, fontFamily: font.heading, fontSize: 17, color: '#D8AE62' }}>
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.02, fontFamily: font.heading, fontSize: 17, color: '#E0B76F' }}>
             {brand.split('').map((c, i) => <span key={i}>{c}</span>)}
           </span>
         </div>
