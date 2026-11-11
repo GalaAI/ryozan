@@ -26,34 +26,6 @@
       "destination": "/privacy.html"
     },
     {
-      "source": "/book",
-      "destination": "/book.html"
-    },
-    {
-      "source": "/book/sesh",
-      "destination": "/book/sesh.html"
-    },
-    {
-      "source": "/book/confirm",
-      "destination": "/book/confirm.html"
-    },
-    {
-      "source": "/book/:artist",
-      "destination": "/book.html"
-    },
-    {
-      "source": "/checkin",
-      "destination": "/checkin.html"
-    },
-    {
-      "source": "/checkin/:artist",
-      "destination": "/checkin.html"
-    },
-    {
-      "source": "/ask",
-      "destination": "/ask.html"
-    },
-    {
       "source": "/sms-terms",
       "destination": "/sms-terms.html"
     },

@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
 import { studio, type StudioSettings } from '../lib/api'
-import { createStudioSettingsLoader, NEUTRAL_STUDIO_SETTINGS } from '../lib/studio-settings'
+import { createStudioSettingsLoader, NEUTRAL_STUDIO_SETTINGS, type StudioSettingsLoadResult } from '../lib/studio-settings'
 
 const loader = createStudioSettingsLoader(() => studio.getSettings())
 
 /** Prefetch so the first component to mount usually finds the settings ready. */
 export function loadStudioSettings(): Promise<StudioSettings> {
   return loader.load()
+}
+
+/** The same cached read, reporting a failed read as `error` instead of neutral settings. */
+export function loadStudioSettingsResult(): Promise<StudioSettingsLoadResult> {
+  return loader.loadResult()
 }
 
 /** Pick up a save the owner just made, past the browser's five-minute cache. */

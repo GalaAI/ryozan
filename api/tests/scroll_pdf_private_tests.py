@@ -25,6 +25,7 @@ from urllib.parse import parse_qs, urlsplit
 os.environ["ENABLE_API_DOCS"] = "false"
 os.environ["ENABLE_CONFIG_HEALTH"] = "false"
 
+from fastapi import HTTPException  # noqa: E402
 from waiver_id_private_tests import (  # noqa: E402
     ASSETS_HOST,
     BUCKET,
@@ -745,27 +746,17 @@ class ClientSuppliedReferenceTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(fields["legal_name"], "Synthetic Artist")
             self.assertFalse(fields["certs_stored"]["govt_id"]["provided"])
 
-    async def test_references_to_other_keys_anywhere_in_the_fields_are_dropped(self):
-        smuggled = {
-            "notes": FOREIGN_SIGNED,
-            "references": [FOREIGN_SCROLL_ID, "Synthetic Reference"],
-            "emergency": {"name": "Synthetic Contact", "doc": FOREIGN_WAIVER_ID},
-        }
-        result, _uploads, session = await _submit(self, None, extra_fields=smuggled)
-        self._assert_no_foreign_refs(session, result)
-        row = next(d for d in _docs(session) if d.category == "scroll")
-        data = json.loads(row.data_json)
-        self.assertNotIn("notes", data)
-        self.assertEqual(data["references"], ["Synthetic Reference"])
-        self.assertEqual(data["emergency"], {"name": "Synthetic Contact"})
-
-        # Reading the record back signs nothing pointing at the foreign keys.
-        row.created_at = FROZEN
-        with _settings_patch():
-            view = await documents.get_my_scroll(db=_QueueSession(row), current_user=SimpleNamespace(id=row.user_id))
-        self.assertIsNone(view["scroll"]["govt_id_url"])
-        for needle in ("other-client", "other-artist"):
-            self.assertNotIn(needle, json.dumps(view))
+    async def test_references_to_other_keys_anywhere_else_are_refused_before_anything_is_written(self):
+        # Server-owned keys are dropped; any other field naming someone else's object is refused by the
+        # shared validator (storage.authorize_client_references) and nothing is stored.
+        for smuggled in (
+            {"notes": FOREIGN_SIGNED},
+            {"references": [FOREIGN_SCROLL_ID, "Synthetic Reference"]},
+            {"emergency": {"name": "Synthetic Contact", "doc": FOREIGN_WAIVER_ID}},
+        ):
+            with self.subTest(field=list(smuggled)), self.assertRaises(HTTPException) as raised:
+                await _submit(self, None, extra_fields=smuggled)
+            self.assertEqual(raised.exception.status_code, 422)
 
     async def test_a_real_upload_still_wins_over_a_smuggled_reference(self):
         govt_id = SimpleNamespace(

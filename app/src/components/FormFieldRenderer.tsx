@@ -30,6 +30,11 @@ function sanitizeLabel(html: string): string {
   })
 }
 
+/** The label as plain text, for aria-label: admin labels may carry inline HTML such as links. */
+function plainLabel(label: string): string {
+  return label.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+}
+
 function displayField(field: FormField): FormField {
   if (field.name !== 'tattoo_description') return field
   return {
@@ -74,6 +79,9 @@ export default function FormFieldRenderer({ field, value, onChange }: Props) {
         <label className="form-checkbox-label" key={field.name}>
           <input
             type="checkbox"
+            name={field.name}
+            aria-label={plainLabel(field.label)}
+            aria-required={field.required || undefined}
             checked={!!value}
             onChange={(e) => onChange(field.name, e.target.checked)}
           />
@@ -97,6 +105,7 @@ export default function FormFieldRenderer({ field, value, onChange }: Props) {
           <SignaturePad
             onSign={(dataUrl) => onChange(field.name, dataUrl)}
             value={val as string}
+            ariaLabel={plainLabel(field.label) || 'Signature'}
           />
         </div>
       )
@@ -111,6 +120,7 @@ export default function FormFieldRenderer({ field, value, onChange }: Props) {
           <textarea
             className="form-input doc-input"
             name={field.name}
+            aria-label={plainLabel(field.label)}
             rows={3}
             required={field.required}
             placeholder={field.placeholder || ''}
@@ -133,6 +143,7 @@ export default function FormFieldRenderer({ field, value, onChange }: Props) {
             onChange={(v) => onChange(field.name, v)}
             options={(field.options || []).map((opt) => ({ value: opt, label: opt }))}
             placeholder={field.placeholder || 'Select...'}
+            ariaLabel={plainLabel(field.label)}
           />
         </div>
       )
@@ -147,6 +158,7 @@ export default function FormFieldRenderer({ field, value, onChange }: Props) {
           <input
             className="form-input doc-input"
             name={field.name}
+            aria-label={plainLabel(field.label)}
             type={field.type || 'text'}
             required={field.required}
             placeholder={field.placeholder || ''}
@@ -367,6 +379,7 @@ function ArtistSelectField({
         onChange={(v) => onChange(field.name, v)}
         options={options}
         placeholder={options.length === 0 ? 'Loading artists...' : 'Select your artist'}
+        ariaLabel={plainLabel(field.label)}
       />
     </div>
   )
@@ -415,7 +428,7 @@ function TermsScrollField({
           }
         }}
       >
-        <input type="checkbox" checked={checked} readOnly />
+        <input type="checkbox" checked={checked} readOnly aria-label={plainLabel(field.label)} aria-required={field.required || undefined} />
         <span>{field.label}</span>
         {field.required && <span className="doc-required">*</span>}
         {!checked && (

@@ -89,7 +89,7 @@ too — that is what catches a rebuild before review does.
 
 | Layer | Components |
 |---|---|
-| Primitives | Panel, GrainOverlay, EdgeDissolveRail, SectionLabel, PageTitle, MetaRow/MetaList, Button, IconButton, Chip/ChipGroup, Badge/StatusText, TextField, Avatar, Wordmark |
+| Primitives | Panel, GrainOverlay, EdgeDissolveRail, SectionLabel, PageTitle, MetaRow/MetaList, Button, IconButton, Chip/ChipGroup, Badge/StatusText, TextField, TextArea, Checkbox, Avatar, Wordmark |
 | Screens (assembled) | PortalShell, HomeScreen, BookingSheet, AgentChatSheet, AgentTools, DesktopShell |
 | Portal elements | SessionPass, ScheduleList, QuickTile, TabBar, NavRail, TopBar, AccountMenu, Sheet, AgentMark/AgentFab, AgentGlow, ChatBubble, ActionCard/ActionCardFace, ReceiptBlock |
 

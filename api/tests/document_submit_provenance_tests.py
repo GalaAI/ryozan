@@ -2,8 +2,8 @@
 POST /documents/ never lets a caller below admin store (and read back signed) a private object it does not own,
 and below admin never creates an artist scroll record or carries a key only submit_scroll writes.
 
-This install has no server-verified upload link check, so below admin a private reference is accepted only
-under the caller's own upload folders; every waivers/ key (including a pending ID upload) is refused.
+Below admin a reference into our bucket is accepted only under the caller's own folders or as a live upload
+link this server issued for waivers/pending-ids/ (storage.authorize_client_references, from #32).
 
 Synthetic fixtures only: no real client, ID or signature data.
 """
@@ -116,10 +116,15 @@ class SubmitDocumentProvenanceTests(unittest.IsolatedAsyncioTestCase):
                             file_url=kwargs.get("file_url"),
                             data_json=json.dumps(kwargs["data"]) if "data" in kwargs else None,
                         )
+                        if key.startswith("waivers/pending-ids/") and "X-Amz" in reference:
+                            # A live upload link this server issued is the caller's own upload capability.
+                            await documents.submit_document(body=body, db=db, current_user=collector)
+                            self.assertNotIn("X-Amz", json.dumps([db.added[0].file_url, db.added[0].data_json]))
+                            continue
                         with self.assertRaises(HTTPException) as raised:
                             await documents.submit_document(body=body, db=db, current_user=collector)
                         self.assertEqual(raised.exception.status_code, 422)
-                        self.assertEqual(raised.exception.detail, "Upload the file again")
+                        self.assertIn(raised.exception.detail, ("Upload the file again", "Upload the ID again"))
                         self.assertEqual(db.added, [])
 
     async def test_collector_own_uploads_and_ordinary_values_still_work(self):
@@ -147,10 +152,12 @@ class SubmitDocumentProvenanceTests(unittest.IsolatedAsyncioTestCase):
                 _response, db = await self._submit(collector, file_url=_signed(key), data={"f": _public(key)})
                 self.assertEqual(db.added[0].file_url, _public(key))
 
-    async def test_a_pending_waiver_id_upload_link_is_refused_without_upload_verification(self):
+    async def test_a_live_pending_id_upload_link_is_stored_as_the_stable_reference_a_bare_one_is_not(self):
         key = "waivers/pending-ids/0b6f3c1e-1111-4222-8333-944445555666.jpg"
+        _response, db = await self._submit(_user("collector"), file_url=_signed(key))
+        self.assertEqual(db.added[0].file_url, _public(key))
         with self.assertRaises(HTTPException) as raised:
-            await self._submit(_user("collector"), file_url=_signed(key))
+            await self._submit(_user("collector"), file_url=_public(key))
         self.assertEqual(raised.exception.status_code, 422)
 
     async def test_unparseable_data_json_is_stored_untouched(self):
@@ -163,6 +170,8 @@ class SubmitDocumentProvenanceTests(unittest.IsolatedAsyncioTestCase):
         for role in ("assistant", "artist"):
             for key in VICTIM_KEYS:
                 for where in ("file_url", "data_json"):
+                    if where == "file_url" and key.startswith("waivers/pending-ids/"):
+                        continue  # a live upload link is the caller's own upload capability
                     with self.subTest(role=role, key=key, where=where), self.assertRaises(HTTPException) as raised:
                         if where == "file_url":
                             await self._submit(_user(role), file_url=_signed(key))

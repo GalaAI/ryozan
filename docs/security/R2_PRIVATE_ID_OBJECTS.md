@@ -1,8 +1,8 @@
 # Private government ID objects in R2
 
-Status: code on branches `fix/waiver-id-photos-private` (ID photos, waiver PDFs, scroll IDs) and
-`fix/scroll-pdf-private` (Artist Scroll PDFs). The per-install infra step below is not done and needs
-the shop owner's approval for each install.
+Status: ID photos, waiver PDFs, scroll IDs and the shared write-side validator are on `main` (#32);
+signatures, every scroll PDF and scroll PDF recovery are on branch `fix/scroll-pdf-private` (#34). The
+per-install infra step below is not done and needs the shop owner's approval for each install.
 
 ## Why
 
@@ -86,12 +86,15 @@ unchanged and is never fetched by the server.
 Write points normalize an echoed signed link back to the stored reference (`storage.canonical_id_reference`),
 so a browser that submits the preview link it was shown never persists an expiring URL.
 
-`POST /documents/` holds every caller below admin (collectors, assistants and artists) to ownership: a private key in
-`file_url` or anywhere in `data_json` is stored only when it lies under the caller's own upload folders
-(`signatures/<user>/`, `scrolls/<user>/`, `scrolls/<category>/<user>/`); anything else is refused with
-"Upload the file again" and nothing is stored. This install has no server-verified upload link check, so
-below admin every `waivers/` key, a pending ID upload included, is refused on this route (no app screen
-sends one there). Admin and founder writes are unchanged. Below admin, `POST /documents/` and
+Because read points sign what is stored, every write point that stores client data runs it through
+`storage.authorize_client_references` (dicts, lists and strings, recursively). A value naming an object on
+our bucket (any own host form, or a bare key under `waivers/`, `signatures/`, `scrolls/`, `documents/`) is
+kept only when it is an unexpired upload link this server signed, sits in the caller's own folder
+(`<root>/<user id>/...`, `scrolls/<category>/<user id>/...`), or is a reference the server copied itself in
+that request (ID reuse, adopted or saved signature). Anything else is refused with 422 and nothing is stored.
+Founder/admin skip the check only on `POST /documents/`; a countersignature must be inline, the caller's
+saved signature or the caller's own object for every role. Artist Scroll submit also runs the scrub below
+first. Below admin, `POST /documents/` and
 `POST /documents/upload` also refuse category `scroll` (the artist scroll, created only by
 `submit_scroll`) and any `data_json` carrying a key only `submit_scroll` writes (`submission_id`,
 `scroll_pdf_url`, `acceptance_record`, `storage_prefix`, `public_storage_prefix`, `certs_stored`,

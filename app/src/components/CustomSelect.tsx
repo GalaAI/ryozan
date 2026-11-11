@@ -15,6 +15,8 @@ interface CustomSelectProps {
   disabled?: boolean;
   /** Compact mode for inline/table usage (smaller padding, no border-radius) */
   compact?: boolean;
+  /** Accessible name for the trigger; the current choice is read after it. */
+  ariaLabel?: string;
 }
 
 export function CustomSelect({
@@ -25,6 +27,7 @@ export function CustomSelect({
   className = '',
   disabled = false,
   compact = false,
+  ariaLabel,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [focusIdx, setFocusIdx] = useState(-1);
@@ -124,6 +127,7 @@ export function CustomSelect({
         onClick={toggle}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={ariaLabel ? `${ariaLabel}: ${selected ? selected.label : placeholder}` : undefined}
         disabled={disabled}
         tabIndex={0}
       >

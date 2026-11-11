@@ -15,18 +15,6 @@
   background: #0b0c0b;
 }
 
-.ryozan-email-foundry-frame__status {
-  display: grid;
-  min-height: 240px;
-  place-items: center;
-  padding: 24px;
-  color: var(--cream, #e4d9c0);
-  font: 700 11px/1.5 var(--font-mono, monospace);
-  letter-spacing: 0.12em;
-  text-align: center;
-  text-transform: uppercase;
-}
-
 .ryozan-portal-intermission {
   position: fixed;
   inset: 0;

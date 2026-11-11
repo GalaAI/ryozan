@@ -46,6 +46,7 @@ from app.services.scroll_archive import (
     retry_public_scroll_pdf_deletions_once,
 )
 from app.services.session_type_defaults import seed_default_session_types
+from app.services.shop_pack import serve_pack_file
 from app.services.studio_config import load_saved_settings, setup_code, setup_is_open
 
 settings = get_settings()
@@ -684,6 +685,16 @@ from app.mcp.router import mcp_router as _mcp_router  # noqa: E402
 
 app.include_router(_mcp_router)
 app.include_router(_mcp_oauth_router)
+
+
+# Shop brand pack files (app.services.shop_pack), same-origin for the pack hosts such
+# as the Email Foundry frame. Registered before the SPA catch-all so a missing file is a 404.
+# Exempt like the static files: one pack page loads dozens of files.
+@app.get("/dependencies/{path:path}", include_in_schema=False)
+@limiter.exempt
+async def shop_pack_file(path: str, request: Request):
+    return await serve_pack_file(path, request, settings)
+
 
 # Serve uploaded files (gallery images, etc.)
 # NOTE: Local /uploads/ static mount removed (2026-03-24).

@@ -12,6 +12,7 @@ const {
   NEUTRAL_STUDIO_SETTINGS, normalizeStudioSettings, createStudioSettingsLoader, isClosedDay, isRequestOnlyDay,
   todayInStudioTimezone, timezoneLabel, sampleFlashUrl, resolveWaiverTemplateId, weekdayOf,
   NEUTRAL_STUDIO_SITE, resolvePublicSiteMode, parseHoursSetting, formatHoursSetting, openDaysLabel, hourLabel,
+  shopPackScopeState,
 } = studio
 
 const configured = normalizeStudioSettings({
@@ -115,6 +116,15 @@ test('email_domain is the install receiving domain, empty when handles are off',
   assert.equal(normalizeStudioSettings({ email_domain: 42 }).email_domain, '')
 })
 
+test('shop_pack_scope is the brand pack @scope, empty without a pack or when malformed', () => {
+  assert.equal(NEUTRAL_STUDIO_SETTINGS.shop_pack_scope, '')
+  assert.equal(configured.shop_pack_scope, '')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: ' bttco ' }).shop_pack_scope, 'bttco')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: '../bttco' }).shop_pack_scope, '')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: 'BTTCO' }).shop_pack_scope, '')
+  assert.equal(normalizeStudioSettings({ shop_pack_scope: 7 }).shop_pack_scope, '')
+})
+
 test('loader reads once, and a failed read is neutral and retried', async () => {
   let calls = 0
   const loader = createStudioSettingsLoader(async () => { calls += 1; return { owner_name: 'Sam' } })
@@ -212,4 +222,51 @@ test('open days read as short ranges', () => {
   assert.equal(openDaysLabel({ 1: span, 2: span, 3: span, 4: span, 5: span, 0: null, 6: null }), 'TUE-SAT')
   assert.equal(openDaysLabel({ 0: span, 2: span, 3: span, 4: span }), 'MON, WED-FRI')
   assert.equal(openDaysLabel({}), '')
+})
+
+test('a failed settings read is reported as an error, not as no shop pack', async () => {
+  const offline = createStudioSettingsLoader(async () => { throw new Error('offline') })
+  const result = await offline.loadResult()
+  assert.equal(result.status, 'error')
+  assert.equal(result.error.message, 'offline')
+  assert.deepEqual(shopPackScopeState(result), { state: 'error' })
+  assert.equal(offline.cached(), null)
+  // load() keeps resolving neutral for every other consumer.
+  assert.equal(await offline.load(), NEUTRAL_STUDIO_SETTINGS)
+})
+
+test('a loaded install with an empty pack scope reports no shop pack', async () => {
+  const loader = createStudioSettingsLoader(async () => ({ studio_name: 'Example Ink', shop_pack_scope: '' }))
+  const result = await loader.loadResult()
+  assert.equal(result.status, 'loaded')
+  assert.equal(result.settings.studio_name, 'Example Ink')
+  assert.deepEqual(shopPackScopeState(result), { state: 'none' })
+  // A scope that fails validation is empty too, so it is no pack rather than an error.
+  const odd = await createStudioSettingsLoader(async () => ({ shop_pack_scope: '@Bad Scope' })).loadResult()
+  assert.deepEqual(shopPackScopeState(odd), { state: 'none' })
+})
+
+test('retrying after a failed read loads the shop pack', async () => {
+  let attempts = 0
+  const flaky = createStudioSettingsLoader(async () => {
+    attempts += 1
+    if (attempts === 1) throw new Error('offline')
+    return { shop_pack_scope: 'exampleshop' }
+  })
+  assert.deepEqual(shopPackScopeState(await flaky.loadResult()), { state: 'error' })
+  const retried = await flaky.loadResult()
+  assert.deepEqual(shopPackScopeState(retried), { state: 'ready', scope: 'exampleshop' })
+  assert.equal(attempts, 2)
+  // The success is cached and shared with load().
+  assert.equal(await flaky.load(), retried.settings)
+  await flaky.loadResult()
+  assert.equal(attempts, 2)
+})
+
+test('loadResult and load share one in-flight read', async () => {
+  let calls = 0
+  const loader = createStudioSettingsLoader(async () => { calls += 1; return { shop_pack_scope: 'exampleshop' } })
+  const [result, settings] = await Promise.all([loader.loadResult(), loader.load()])
+  assert.equal(calls, 1)
+  assert.equal(result.settings, settings)
 })

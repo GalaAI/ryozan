@@ -1360,7 +1360,7 @@ export default function BookingsManager() {
     }
   }
 
-  // Deep-link from email: ?ref=BT-XXXX&action=accept|reject
+  // Deep-link from email: ?ref=<reference>&action=accept|reject
   useEffect(() => {
     const ref = searchParams.get('ref')
     const action = searchParams.get('action')
