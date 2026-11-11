@@ -83,13 +83,23 @@ from app.services.scroll_archive import (
     OWNER_ARCHIVE_CATEGORY,
     build_submission_prefix,
     file_owner_archive,
+    hold_pdf_for_retry,
     notify_owners,
     queue_owner_emails,
     resolve_founders,
 )
-from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf
+from app.services.scroll_pdf import ScrollAsset, ScrollPdfInput, build_scroll_pdf_report
 from app.services.sms import send_sms
-from app.services.storage import ID_REFERENCE_KEYS, signed_id_fields, signed_id_url
+from app.services.storage import (
+    ID_REFERENCE_KEYS,
+    PRIVATE_REFERENCE_HINTS,
+    SCROLL_ID_PDF_FILENAME,
+    SCROLL_NOID_PDF_FILENAME,
+    canonical_id_reference,
+    public_scroll_prefix,
+    signed_id_fields,
+    signed_id_url,
+)
 from app.services.storage import upload_file as upload_to_blob
 
 logger = logging.getLogger("ryozan.documents")
@@ -100,21 +110,71 @@ MAX_SCROLL_FILE_BYTES = 10 * 1024 * 1024
 MAX_SCROLL_SIGNATURE_BYTES = 2 * 1024 * 1024
 MAX_SCROLL_TOTAL_BYTES = 25 * 1024 * 1024
 ARTIST_SCROLL_TERMS_VERSION = "artist-scroll-2026-08-10-v1"
-# Scroll fields only the server writes, from this submission's own uploads.
-SCROLL_SERVER_KEYS = (
-    *ID_REFERENCE_KEYS,
-    "bbp_cert_url",
-    "first_aid_cert_url",
-    "cpr_cert_url",
-    "owner_sig_url",
-    "artist_sig_url",
-    "scroll_pdf_url",
-    "submission_id",
-    "storage_prefix",
-    "certs_stored",
-    "acceptance_record",
-)
 REQUIRED_SCROLL_ACCEPTANCE_SECTIONS = ("application", "agreement", "bloodborne", "fire", "dhec")
+# Keys of the stored scroll record that only the server writes: the references to objects it
+# stored for this submission and the bookkeeping around them. A browser-supplied value for any of
+# them is discarded, so an artist can never point the record (and the signed links handed back for
+# it) at another object in our bucket.
+SERVER_OWNED_SCROLL_KEYS = frozenset(
+    {
+        "bbp_cert_url",
+        "first_aid_cert_url",
+        "cpr_cert_url",
+        "govt_id_url",
+        "govt_id",
+        "photo_id_url",
+        "photo_id",
+        "owner_sig_url",
+        "artist_sig_url",
+        "artist_signature",
+        "signature_url",
+        "scroll_pdf_url",
+        "file_url",
+        "certs_stored",
+        "submission_id",
+        "storage_prefix",
+        "public_storage_prefix",
+        "acceptance_record",
+    }
+)
+
+
+def _scrub_client_storage_refs(fields: dict) -> tuple[dict, int]:
+    """Copy of browser-supplied scroll fields without the keys only the server writes.
+
+    The ID, certificate, signature and PDF references and the submission bookkeeping come only from this
+    request's own uploads, so a browser-supplied value for any of them is dropped. Any other value that names
+    an object on our bucket is then held to storage.authorize_client_references (refused unless it is the
+    artist's own), so the read endpoints can never sign a link to someone else's waiver, signature or scroll.
+    Keys only submit_scroll writes (RESERVED_SCROLL_MARKERS) are also dropped at any depth: the owner
+    archive nests these fields under "fields", and a planted nested submission_id or scroll_pdf_url must
+    never sit in a record the server reads back. Returns (scrubbed, dropped_count). Never logs values.
+    """
+    dropped = 0
+
+    def _nested(value):
+        nonlocal dropped
+        if isinstance(value, dict):
+            kept = {}
+            for key, item in value.items():
+                if key in RESERVED_SCROLL_MARKERS:
+                    dropped += 1
+                    continue
+                kept[key] = _nested(item)
+            return kept
+        if isinstance(value, list):
+            return [_nested(item) for item in value]
+        return value
+
+    out = {}
+    for key, item in fields.items():
+        if key in SERVER_OWNED_SCROLL_KEYS or key in RESERVED_SCROLL_MARKERS:
+            dropped += 1
+            continue
+        out[key] = _nested(item)
+    return out, dropped
+
+
 WAIVER_CONTACT_PREFILL_FIELDS = (
     "full_name",
     "date_of_birth",
@@ -131,6 +191,60 @@ def _require_owner_archive_access(user: User, category: str | None) -> None:
     """Keep owner compliance archives founder-only across generic document routes."""
     if category == OWNER_ARCHIVE_CATEGORY and user.role != "founder":
         raise HTTPException(status_code=403, detail="Owner archive access requires founder role")
+
+
+# Categories only the server creates for a caller below admin: the artist scroll is created by
+# submit_scroll (and the scrolls artist upload), never through the generic document routes. Artists and
+# assistants are held to this too: they are peers of the artists whose submissions they could forge.
+SERVER_CREATED_CATEGORIES = frozenset({"scroll", OWNER_ARCHIVE_CATEGORY})
+# data_json keys only submit_scroll writes. Scroll PDF recovery never trusts them, but a caller below
+# admin has no reason to send them through the generic routes, so a payload carrying one is refused.
+RESERVED_SCROLL_MARKERS = frozenset(
+    {
+        "submission_id",
+        "scroll_pdf_url",
+        "acceptance_record",
+        "storage_prefix",
+        "public_storage_prefix",
+        "certs_stored",
+        "artist_user_id",
+    }
+)
+RESERVED_MARKER_MESSAGE = "This document cannot carry server-reserved fields"
+SERVER_CATEGORY_MESSAGE = "This document category is created by the server only"
+
+
+def _is_admin(user: User) -> bool:
+    return ROLE_RANK.get(getattr(user, "role", None) or "", -1) >= ROLE_RANK["admin"]
+
+
+def _require_caller_category(category: str | None) -> None:
+    """Below admin, the generic document routes never create a server-only category."""
+    if category in SERVER_CREATED_CATEGORIES:
+        raise HTTPException(status_code=403, detail=SERVER_CATEGORY_MESSAGE)
+
+
+def _has_reserved_marker(value) -> bool:
+    if isinstance(value, dict):
+        return any(k in RESERVED_SCROLL_MARKERS or _has_reserved_marker(v) for k, v in value.items())
+    if isinstance(value, list):
+        return any(_has_reserved_marker(v) for v in value)
+    return False
+
+
+def _require_no_reserved_markers(raw: str | None) -> None:
+    """Refuse caller data_json carrying a key only submit_scroll writes, at any depth. Never logs values."""
+    if not raw:
+        return
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        # Kept as text and never parsed for recovery, but the marker must not appear in it either.
+        if any(f'"{marker}"' in raw for marker in RESERVED_SCROLL_MARKERS):
+            raise HTTPException(status_code=422, detail=RESERVED_MARKER_MESSAGE) from None
+        return
+    if _has_reserved_marker(data):
+        raise HTTPException(status_code=422, detail=RESERVED_MARKER_MESSAGE)
 
 
 def _require_document_instance_access(instance: DocumentInstance, user: User) -> None:
@@ -214,7 +328,8 @@ def _require_waiver_photo_id(data: dict) -> str:
     photo_id = str(data.get("photo_id_url") or data.get("photo_id") or "").strip()
     if not photo_id:
         raise HTTPException(status_code=422, detail="Photo ID is required")
-    return photo_id
+    # The browser may echo back the signed preview link; store the stable reference instead.
+    return canonical_id_reference(photo_id) or photo_id
 
 
 def _verify_public_id_fields(data: dict, *, caller: User | None = None) -> None:
@@ -371,7 +486,7 @@ def _signed_data_json(raw: str | None) -> str | None:
     Documents with no private ID reference come back byte for byte unchanged. Stored data is
     never mutated; this only shapes the response.
     """
-    if not raw or not any(key in raw for key in ID_REFERENCE_KEYS):
+    if not raw or not any(hint in raw for hint in PRIVATE_REFERENCE_HINTS):
         return raw
     try:
         data = json.loads(raw)
@@ -396,7 +511,8 @@ def _instance_to_response(inst: DocumentInstance, template_name: str | None, use
         "status": inst.status,
         "data_json": _signed_data_json(inst.data_json),
         "signed_at": inst.signed_at,
-        "file_url": inst.file_url,
+        # Private ID objects, and scroll PDFs that embed the ID, reach clients as short-lived signed links only.
+        "file_url": signed_id_url(inst.file_url, ID_VIEW_SECONDS),
         "notes": inst.notes,
         # Send / lifecycle fields
         "send_token": inst.send_token,
@@ -567,6 +683,10 @@ async def submit_document(
 ):
     """Submit a filled form or create a document instance."""
     _require_owner_archive_access(current_user, body.category)
+    if not _is_admin(current_user):
+        # No server-only category and no server-reserved scroll marker below admin (checked before any write).
+        _require_caller_category(body.category)
+        _require_no_reserved_markers(body.data_json)
     data_json, file_url, notes = body.data_json, body.file_url, body.notes
     # Document views sign stored references, so only founder/admin (who can already open every record)
     # may store one without proof. Everyone else references only their own uploads and folders.
@@ -574,6 +694,9 @@ async def submit_document(
         data_json = _verified_client_data_json(data_json, caller=current_user)
         file_url = authorize_client_data(file_url, caller=current_user)
         notes = authorize_client_data(notes, caller=current_user)
+    else:
+        # Founder/admin may store any reference; an echoed signed view link is kept as the stable reference.
+        file_url = canonical_id_reference(file_url)
     instance = DocumentInstance(
         template_id=body.template_id,
         user_id=current_user.id,
@@ -676,6 +799,8 @@ async def upload_document(
 ):
     """Upload a file and create a document instance for it."""
     _require_owner_archive_access(current_user, category)
+    if not _is_admin(current_user):
+        _require_caller_category(category)
 
     from app.services.storage import upload_file as upload_to_drive
 
@@ -780,6 +905,10 @@ async def submit_scroll(
     # certificate objects in place and silently rewrote what earlier archive copies
     # pointed at.
     storage_prefix = build_submission_prefix(str(current_user.id))
+    # The government ID, the signature images and the generated PDF (which prints the signatures whether
+    # or not it embeds the ID) stay under the private "scrolls/" prefix; only the certificates go under
+    # the public "scrolls-public/" twin, since everything under "scrolls/" is private by key.
+    public_prefix = public_scroll_prefix(storage_prefix)
 
     def _decode_signature(raw_b64: str, label: str) -> bytes:
         try:
@@ -819,11 +948,18 @@ async def submit_scroll(
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be valid JSON") from None
     if not isinstance(fields, dict):
         raise HTTPException(status_code=422, detail="Artist Scroll fields_json must be an object")
-    # The record's files are the server's: certificate, ID, signature and PDF references, and the storage
-    # prefix, come only from this request's uploads below. Anything else the artist typed may name only
-    # their own stored objects, since /scroll/my and the owner views sign what is stored.
-    for key in SCROLL_SERVER_KEYS:
-        fields.pop(key, None)
+    # Never trust a browser-supplied storage reference: the ID, certificates and signatures are
+    # only ever the files uploaded in this request, stored by the server under its own keys below.
+    fields, dropped_refs = _scrub_client_storage_refs(fields)
+    if dropped_refs:
+        logger.warning(
+            "Scroll %s: discarded %d client-supplied storage reference(s) for user %s",
+            submission_id,
+            dropped_refs,
+            current_user.id,
+        )
+    # Everything else the artist typed may name only their own stored objects (the shared validator, before
+    # anything is written), since /scroll/my and the owner views sign what is stored.
     fields = authorize_client_data(fields, caller=current_user)
 
     terms_version = fields.get("terms_version")
@@ -915,7 +1051,7 @@ async def submit_scroll(
                 file_bytes=content,
                 filename=f"{stem}{ext}",
                 mime_type=upload.content_type or "image/jpeg",
-                folder_path=storage_prefix,
+                folder_path=storage_prefix if key == "govt_id" else public_prefix,
             )
             if url:
                 asset.url = url
@@ -981,8 +1117,9 @@ async def submit_scroll(
     # scroll itself.
     scroll_pdf_url: str | None = None
     pdf_bytes: bytes | None = None
+    pdf_filename: str | None = None
     try:
-        pdf_bytes = build_scroll_pdf(
+        report = build_scroll_pdf_report(
             ScrollPdfInput(
                 artist_name=current_user.name or "Unknown Artist",
                 artist_email=current_user.email,
@@ -999,9 +1136,15 @@ async def submit_scroll(
                 assets=assets,
             )
         )
+        pdf_bytes = report.pdf
+        # The name records whether the PDF embeds the government ID image ("artist-scroll.id.pdf", else
+        # "artist-scroll.noid.pdf"). Privacy comes from the prefix: every generated PDF prints the artist
+        # signature (and any owner countersignature), so it is always private and reaches clients only as
+        # a short-lived signed link.
+        pdf_filename = SCROLL_ID_PDF_FILENAME if report.embeds_government_id else SCROLL_NOID_PDF_FILENAME
         scroll_pdf_url = await upload_to_blob(
             file_bytes=pdf_bytes,
-            filename="artist-scroll.pdf",
+            filename=pdf_filename,
             mime_type="application/pdf",
             folder_path=storage_prefix,
         )
@@ -1024,6 +1167,8 @@ async def submit_scroll(
         fields["scroll_pdf_url"] = scroll_pdf_url
 
     instance = DocumentInstance(
+        # Set here so a held PDF can name exactly the records this submission created.
+        id=uuid.uuid4(),
         user_id=current_user.id,
         category="scroll",
         title=f"Artist Scroll — {current_user.name}",
@@ -1063,7 +1208,7 @@ async def submit_scroll(
             founders,
             submitted_at,
             assets,
-            pdf_bytes,
+            bool(scroll_pdf_url),
             submission_id,
         )
     except Exception:
@@ -1072,6 +1217,20 @@ async def submit_scroll(
             submission_id,
             current_user.id,
             exc_info=True,
+        )
+
+    if pdf_bytes and pdf_filename and not scroll_pdf_url:
+        # The PDF was built but storing it failed. Hold the bytes server-side (never emailed) in this same
+        # transaction, whether or not any founder exists, until the retry stores them privately and records
+        # the URL on exactly the records this submission created.
+        hold_pdf_for_retry(
+            db,
+            submission_id=submission_id,
+            folder_path=storage_prefix,
+            filename=pdf_filename,
+            content=pdf_bytes,
+            document_ids=[instance.id, *(row.id for row in archive_rows)],
+            artist_user_id=str(current_user.id),
         )
 
     # Award RYO + XP for scroll completion
@@ -1102,7 +1261,8 @@ async def submit_scroll(
         "artist_sig_url": artist_sig_url,
         "owner_sig_url": owner_sig_url,
         "bbp_cert_url": bbp_cert_url,
-        "scroll_pdf_url": scroll_pdf_url,
+        # Every scroll PDF prints the artist signature: a short-lived signed link, never the public URL.
+        "scroll_pdf_url": signed_id_url(scroll_pdf_url, ID_VIEW_SECONDS),
         "submission_id": submission_id,
         "owner_copies_filed": len(archive_rows),
         "owner_emails_queued": owner_emails_queued,
@@ -1146,12 +1306,12 @@ async def get_my_scroll(
             "id": str(inst.id),
             "status": inst.status,
             "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
-            "artist_signature": inst.artist_signature,
-            "bbp_cert_url": data.get("bbp_cert_url"),
-            "first_aid_cert_url": data.get("first_aid_cert_url"),
-            "cpr_cert_url": data.get("cpr_cert_url"),
+            "artist_signature": signed_id_url(inst.artist_signature, ID_VIEW_SECONDS),
+            "bbp_cert_url": signed_id_url(data.get("bbp_cert_url"), ID_VIEW_SECONDS),
+            "first_aid_cert_url": signed_id_url(data.get("first_aid_cert_url"), ID_VIEW_SECONDS),
+            "cpr_cert_url": signed_id_url(data.get("cpr_cert_url"), ID_VIEW_SECONDS),
             "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
-            "owner_sig_url": data.get("owner_sig_url"),
+            "owner_sig_url": signed_id_url(data.get("owner_sig_url"), ID_VIEW_SECONDS),
             "tax_opt_in": data.get("tax_opt_in"),
             "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
@@ -1195,12 +1355,12 @@ async def get_user_scroll(
             "user_id": str(user_id),
             "status": inst.status,
             "signed_at": inst.signed_at.isoformat() if inst.signed_at else None,
-            "artist_signature": inst.artist_signature,
-            "bbp_cert_url": data.get("bbp_cert_url"),
-            "first_aid_cert_url": data.get("first_aid_cert_url"),
-            "cpr_cert_url": data.get("cpr_cert_url"),
+            "artist_signature": signed_id_url(inst.artist_signature, ID_VIEW_SECONDS),
+            "bbp_cert_url": signed_id_url(data.get("bbp_cert_url"), ID_VIEW_SECONDS),
+            "first_aid_cert_url": signed_id_url(data.get("first_aid_cert_url"), ID_VIEW_SECONDS),
+            "cpr_cert_url": signed_id_url(data.get("cpr_cert_url"), ID_VIEW_SECONDS),
             "govt_id_url": signed_id_url(data.get("govt_id_url"), ID_VIEW_SECONDS),
-            "owner_sig_url": data.get("owner_sig_url"),
+            "owner_sig_url": signed_id_url(data.get("owner_sig_url"), ID_VIEW_SECONDS),
             "tax_opt_in": data.get("tax_opt_in"),
             "fields": _scroll_fields_view(data),
             "created_at": inst.created_at.isoformat(),
@@ -1731,7 +1891,7 @@ async def checkin_verify_code(request: Request, body: dict, db: AsyncSession = D
         on_file = {
             "signed_at": prior["signed_at"].isoformat() if prior["signed_at"] else None,
             "photo_id_url": signed_id_url(_stored_photo_id_url(prior_data), ID_VIEW_SECONDS),
-            "signature_url": _stored_signature_url(prior_data),
+            "signature_url": signed_id_url(_stored_signature_url(prior_data), ID_VIEW_SECONDS),
             "health": {key: prior_data[key] for key in WAIVER_HEALTH_KEYS if prior_data.get(key) not in (None, "")},
         }
     return {
