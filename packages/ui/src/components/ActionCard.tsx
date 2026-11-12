@@ -60,7 +60,8 @@ const mono: React.CSSProperties = {
 
 const paper = '#121212';
 const ink = '#dad1b9';
-const dim = 'rgba(218,209,185,.52)';
+// Muted label ink: cream at 65% reads 4.5:1 or better on every card body (52% read 3.97).
+const dim = 'rgba(218,209,185,.65)';
 const washiPlate = '#ccc4ad';
 const sumiInk = '#121212';
 const beniVermilion = '#c24b2a';
@@ -303,7 +304,7 @@ function MtgCardAnatomy({
             </span>
           </div>
         ) : (
-          <span style={{ ...mono, fontSize: 7.5, color: 'rgba(18,18,18,.62)', accentColor: accent }}>
+          <span style={{ ...mono, fontSize: 7.5, color: 'rgba(18,18,18,.75)', accentColor: accent }}>
             {card.mcpTool ? `MCP · ${card.mcpTool}` : 'Ready on Stack'}
           </span>
         )}

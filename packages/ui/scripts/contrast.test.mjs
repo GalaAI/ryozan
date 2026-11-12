@@ -608,3 +608,67 @@ test('no hex alpha suffix on interpolated colours', () => {
   }
   assert.deepEqual(hits, [], `hex alpha appended to an interpolated colour (use color-mix):\n${hits.join('\n')}`);
 });
+
+// ── Component contrast gaps (owner ruling 2026-11-11, "fix the rest") ────────────
+const uiSrc = join(here, '..', 'src');
+/** A @ryozan/ui `color.<key>` resolved through src/tokens/index.ts to its token. */
+function uiColor(key, theme) {
+  const idx = readFileSync(join(uiSrc, 'tokens', 'index.ts'), 'utf8');
+  const block = idx.slice(idx.indexOf('export const color = {'));
+  const m = new RegExp(`\\n\\s*${key}:\\s*'var\\(--([\\w-]+)\\)'`).exec(block.slice(0, block.indexOf('\n};')));
+  assert.ok(m, `color.${key} not found in tokens/index.ts`);
+  return col(m[1], theme);
+}
+const rgbaOf = (s) => { const p = /rgba\(([^)]*)\)/.exec(s)[1].split(',').map((x) => x.trim()); return [+p[0], +p[1], +p[2], +p[3]]; };
+
+test('SessionPass date rail labels read 4.5:1 on the sage rail', () => {
+  const src = readFileSync(join(uiSrc, 'components', 'SessionPass.tsx'), 'utf8');
+  const rail = /background: color\.(\w+),\s*borderRight/.exec(src);
+  assert.ok(rail, 'date rail background not found');
+  for (const field of ['month', 'weekday']) {
+    const fg = new RegExp(`color: color\\.(\\w+) \\}\\}>\\{date\\.${field}\\}`).exec(src);
+    assert.ok(fg, `date.${field} colour not found`);
+    for (const theme of themes) {
+      const k = ratio(uiColor(fg[1], theme), uiColor(rail[1], theme));
+      assert.ok(k >= 4.5, `date.${field} color.${fg[1]} on color.${rail[1]} (${theme}): ${k.toFixed(2)}:1`);
+    }
+  }
+});
+
+test('ActionCard muted labels read 4.5:1 on the card paper and every wash it paints', () => {
+  const src = readFileSync(join(uiSrc, 'components', 'ActionCard.tsx'), 'utf8');
+  const paper = parse(/const paper = '(#[0-9a-fA-F]{6})'/.exec(src)[1]);
+  const dim = rgbaOf(/const dim = '(rgba\([^)]*\))'/.exec(src)[1]);
+  // Translucent card washes up to 12% (heavier fills are controls with their own ink).
+  const washes = [...src.matchAll(/background: '(rgba\([^)]*\))'/g)].map((m) => rgbaOf(m[1])).filter((c) => c[3] <= 0.12);
+  assert.ok(washes.length >= 5, 'card washes not found');
+  for (const g of [paper, ...washes.map((w) => over(w, paper))]) {
+    const k = ratio(over(dim, g), g);
+    assert.ok(k >= 4.5, `ActionCard dim ${dim} on ${g.slice(0, 3).map(Math.round)}: ${k.toFixed(2)}:1`);
+  }
+  // The Ready on Stack / MCP label on the washi plate band.
+  const plate = parse(/const washiPlate = '(#[0-9a-fA-F]{6})'/.exec(src)[1]);
+  const ready = rgbaOf(/color: '(rgba\(18,18,18,[^)]*\))', accentColor: accent/.exec(src)[1]);
+  const k = ratio(over(ready, plate), plate);
+  assert.ok(k >= 4.5, `ActionCard ready label on the washi plate: ${k.toFixed(2)}:1`);
+});
+
+test('AgentTools resting card glyph reads 3:1 on the card back', () => {
+  const src = readFileSync(join(uiSrc, 'screens', 'AgentTools.tsx'), 'utf8');
+  const css = readFileSync(join(uiSrc, 'tokens', 'scene-compat.css'), 'utf8');
+  const cream = (/--cream-rgb:\s*([\d,\s]+);/.exec(readFileSync(join(uiSrc, 'tokens', 'production-only.css'), 'utf8'))[1]).split(',').map(Number);
+  const back = /backgroundImage?: 'linear-gradient\(165deg,(#[0-9a-fA-F]{6}),(#[0-9a-fA-F]{6})\)'/.exec(src) ?? /background: 'linear-gradient\(165deg,(#[0-9a-fA-F]{6}),(#[0-9a-fA-F]{6})\)'/.exec(src);
+  assert.ok(back, 'card back gradient not found');
+  const glyphs = [
+    ['inline emblem', /lineHeight: 1, color: 'rgba\(var\(--cream-rgb\),([\d.]+)\)', textShadow/.exec(src)],
+    ['.ryozan-agent-card-emblem', /\.ryozan-agent-card-emblem \{[^}]*color: rgba\(var\(--cream-rgb\), ([\d.]+)\)/.exec(css)],
+    ['breathe rest', /0%, 100% \{ color: rgba\(var\(--cream-rgb\), ([\d.]+)\)/.exec(css)],
+  ];
+  for (const [name, m] of glyphs) {
+    assert.ok(m, `${name}: resting glyph must be cream at an alpha (found another colour)`);
+    for (const stop of [back[1], back[2]]) {
+      const g = parse(stop), k = ratio(over([...cream, +m[1]], g), g);
+      assert.ok(k >= 3, `${name} on ${stop}: ${k.toFixed(2)}:1`);
+    }
+  }
+});
