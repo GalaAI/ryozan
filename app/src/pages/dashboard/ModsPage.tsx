@@ -91,7 +91,13 @@ function MatrixView({ view }: { view: MatrixModView }) {
               <strong>{matrix.label}</strong>
               <Badge tone={matrix.engine.server === 'none' ? 'neutral' : 'info'}>{serverLabel[matrix.engine.server]}</Badge>
               <Badge>{matrix.scopes.read}</Badge>
-              {matrix.scopes.write ? <Badge tone="gold">{matrix.scopes.write}</Badge> : <Badge>read only</Badge>}
+              {matrix.scopes.write && <Badge tone="gold">{matrix.scopes.write}</Badge>}
+              {matrix.scopes.devices?.map((scope) => (
+                <Badge key={scope} tone="gold">
+                  {scope}
+                </Badge>
+              ))}
+              {!matrix.scopes.write && !matrix.scopes.devices?.length && <Badge>read only</Badge>}
             </div>
             <MetaList
               rows={[
@@ -108,6 +114,17 @@ function MatrixView({ view }: { view: MatrixModView }) {
                 </Badge>
               ))}
             </div>
+            {matrix.devices?.length ? (
+              <MetaList
+                rows={matrix.devices.map((device) => ({
+                  label: device.label,
+                  value:
+                    device.actions.length === 1
+                      ? 'status only'
+                      : device.actions.map((action) => action.replaceAll('_', ' ')).join(', '),
+                }))}
+              />
+            ) : null}
             {matrix.writeRefusal && <p style={muted}>{matrix.writeRefusal}</p>}
           </div>
         </Panel>
