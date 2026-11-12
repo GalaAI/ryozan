@@ -18,10 +18,12 @@ concurrency:
   cancel-in-progress: false
 jobs:
   lanes:
-    runs-on: ${{ vars.SOLATREE_LIGHT_RUNNER || vars.SOLATREE_RUNNER || 'ubuntu-latest' }}
+    # Ryozan is public: a fork PR must never reach a self-hosted runner, so these jobs
+    # run on GitHub-hosted runners whatever the runner variables say.
+    runs-on: ${{ github.event.repository.visibility != 'public' && (vars.SOLATREE_LIGHT_RUNNER || vars.SOLATREE_RUNNER) || 'ubuntu-latest' }}
     timeout-minutes: 30
     steps:
-      - uses: GalaAI/solatree/actions/lanes@1e322e9a6ac6eec23733833d89841e380f6228e2
+      - uses: GalaAI/solatree/actions/lanes@ac61b56a126755e3f6c0782a3d0c2c9d2e2ebf79
         with:
           github-token: ${{ github.token }}
           worker-workflow: ""
