@@ -34,10 +34,11 @@ jobs:
         run: pip install -r requirements.txt ruff==0.17.4
 
       - name: Ruff lint
-        run: ruff check app/ main.py
+        # Whole api/ tree: app, main.py, tests, scripts, alembic, preflight.py.
+        run: ruff check .
 
       - name: Ruff format check
-        run: ruff format --check app/ main.py
+        run: ruff format --check .
 
       - name: Syntax check (all API and test modules)
         # A bad find-and-replace once left an invalid identifier in config.py and

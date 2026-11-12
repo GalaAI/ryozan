@@ -45,7 +45,9 @@ class CommitBeforeResponseTests(unittest.TestCase):
         return TestClient(app, raise_server_exceptions=False)
 
     def test_a_failed_commit_is_not_reported_as_success(self):
-        session = MagicMock(commit=AsyncMock(side_effect=RuntimeError("database went away")), rollback=AsyncMock(), close=AsyncMock())
+        session = MagicMock(
+            commit=AsyncMock(side_effect=RuntimeError("database went away")), rollback=AsyncMock(), close=AsyncMock()
+        )
         response = self._client(session, []).post("/write")
         self.assertEqual(response.status_code, 500)
         session.rollback.assert_awaited()

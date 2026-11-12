@@ -103,9 +103,7 @@ async def plan_and_apply(db: AsyncSession, *, apply: bool, exclude_names: set[st
         if not phone or not messages:
             continue
         inbound_sender_ids = [m.sender_id for m in messages]
-        sender = await db.scalar(
-            select(User).where(User.id.in_(inbound_sender_ids), User.role == "collector").limit(1)
-        )
+        sender = await db.scalar(select(User).where(User.id.in_(inbound_sender_ids), User.role == "collector").limit(1))
         move = Move(thread.id, _mask(phone), (sender.name if sender else "") or "(unknown)", None, None, len(messages))
         moves.append(move)
         if sender is None:

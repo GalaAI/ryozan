@@ -9,7 +9,6 @@ against the canonical ORM in an isolated schema and patches only calendar,
 email delivery and response enrichment.
 """
 
-import os
 import unittest
 from datetime import UTC, date, datetime, timedelta
 from unittest.mock import AsyncMock, patch

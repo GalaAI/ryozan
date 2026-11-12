@@ -31,7 +31,9 @@ from app.core.config import psycopg2_url
 from app.core.schema_compare import compare_schemas, load_baseline_snapshot, snapshot_schema
 
 API_ROOT = Path(__file__).resolve().parents[1]
-TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "").replace("postgresql+asyncpg://", "postgresql://", 1)
+TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "").replace(
+    "postgresql+asyncpg://", "postgresql://", 1
+)
 LOCAL = urlparse(TEST_DATABASE_URL).hostname in {"localhost", "127.0.0.1", "::1"}
 
 
@@ -56,7 +58,9 @@ def _alembic(*args: str) -> subprocess.CompletedProcess:
     )
 
 
-@unittest.skipUnless(TEST_DATABASE_URL and LOCAL, "set RYOZAN_TEST_DATABASE_URL to a local database this suite may wipe")
+@unittest.skipUnless(
+    TEST_DATABASE_URL and LOCAL, "set RYOZAN_TEST_DATABASE_URL to a local database this suite may wipe"
+)
 class ModelSchemaParityPostgresTests(unittest.TestCase):
     def setUp(self):
         self.engine = sa.create_engine(psycopg2_url(TEST_DATABASE_URL))

@@ -23,7 +23,7 @@ set -euo pipefail
 
 RUFF_PIN="ruff==0.17.4"
 VENV_DIR="${TMPDIR:-/tmp}/ryozan-ruff-pin-venv"
-SCOPE=( "app/" "main.py" )
+SCOPE=( "." )  # whole api/ tree, matching CI
 MODE="${1:-fix}"
 
 # Resolve repo root regardless of where this script is called from.

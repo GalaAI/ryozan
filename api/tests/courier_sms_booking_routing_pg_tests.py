@@ -9,7 +9,6 @@ canonical ORM in an isolated schema and patches only provider-facing calls.
 """
 
 import json
-import os
 import sys
 import unittest
 from datetime import UTC, datetime, timedelta

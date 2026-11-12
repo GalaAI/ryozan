@@ -62,6 +62,7 @@ class _FixtureMailSettings:
             patcher.start()
             self.addCleanup(patcher.stop)
 
+
 class _ScalarValues:
     def __init__(self, value=None):
         self.value = value
@@ -785,9 +786,7 @@ class ReplySafetyAndExchangeTests(_FixtureMailSettings, unittest.IsolatedAsyncio
             delivered = await conversations.process_courier_notification_outbox_once(message_id=message.id)
         self.assertEqual(delivered, 1)
         send.assert_awaited_once()
-        self.assertEqual(
-            send.await_args.kwargs["reply_to"], self.alias.replace("@ryozan.app", "@reply.ryozan.app")
-        )
+        self.assertEqual(send.await_args.kwargs["reply_to"], self.alias.replace("@ryozan.app", "@reply.ryozan.app"))
         self.assertEqual(send.await_args.kwargs["to"], "collector@example.test")
 
     async def test_reserved_inbox_automatic_mail_is_still_archived_and_forwarded(self):
@@ -830,9 +829,7 @@ class ReplySafetyAndExchangeTests(_FixtureMailSettings, unittest.IsolatedAsyncio
 
     async def test_forward_marker_is_still_suppressed_on_reserved_inbox(self):
         db = AsyncMock()
-        result = await self.invoke(
-            self.payload(to=["info@ryozan.app"], headers={"X-BTTCO-Courier-Forward": "1"}), db
-        )
+        result = await self.invoke(self.payload(to=["info@ryozan.app"], headers={"X-BTTCO-Courier-Forward": "1"}), db)
         self.assertEqual(result["status"], "ignored")
         db.execute.assert_not_awaited()
 

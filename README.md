@@ -274,7 +274,7 @@ Code: [`router.py`](api/app/mcp/router.py) (transport), [`oauth.py`](api/app/mcp
 
 ```bash
 # API lint and unit tests
-cd api && ruff check app/ main.py && python -m unittest discover -s tests -p "*_tests.py" && cd ..
+cd api && ruff check . && python -m unittest discover -s tests -p "*_tests.py" && cd ..
 
 # Ledger package
 cd packages/ryozan-econ && PYTHONPATH=. python -m unittest discover -s tests -p "*_tests.py" && cd ../..

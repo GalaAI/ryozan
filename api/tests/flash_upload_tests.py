@@ -441,10 +441,12 @@ class FlashPublicStorefrontTests(unittest.IsolatedAsyncioTestCase):
         artist_id = uuid.uuid4()
         sheet_id = uuid.uuid4()
         design = self._design(artist_id=artist_id, sheet_id=sheet_id)
-        db = _FakeSession(results=[
-            _RowsResult(rows=[(sheet_id, "https://assets.example/sheet.webp")]),
-            _RowsResult(rows=[(artist_id, "justin", "Justin Walker")]),
-        ])
+        db = _FakeSession(
+            results=[
+                _RowsResult(rows=[(sheet_id, "https://assets.example/sheet.webp")]),
+                _RowsResult(rows=[(artist_id, "justin", "Justin Walker")]),
+            ]
+        )
 
         responses = await flash._design_responses_with_sources(db, [design])
 
@@ -466,11 +468,13 @@ class FlashPublicStorefrontTests(unittest.IsolatedAsyncioTestCase):
             status="segmented",
             created_at=datetime.now(UTC),
         )
-        db = _FakeSession(results=[
-            _RowsResult(rows=[(artist_id, "Justin Walker", 100, True)]),
-            _RowsResult(scalar_values=[sheet]),
-            _RowsResult(scalar_values=[design]),
-        ])
+        db = _FakeSession(
+            results=[
+                _RowsResult(rows=[(artist_id, "Justin Walker", 100, True)]),
+                _RowsResult(scalar_values=[sheet]),
+                _RowsResult(scalar_values=[design]),
+            ]
+        )
 
         response = await flash.get_public_sheet_wall("justin", db=db)
 
@@ -486,10 +490,12 @@ class FlashPublicStorefrontTests(unittest.IsolatedAsyncioTestCase):
         from app.api.v1.endpoints import flash
 
         artist_id = uuid.uuid4()
-        db = _FakeSession(results=[
-            _RowsResult(rows=[(artist_id, "Justin Walker", 0, False)]),
-            _RowsResult(scalar_values=[]),
-        ])
+        db = _FakeSession(
+            results=[
+                _RowsResult(rows=[(artist_id, "Justin Walker", 0, False)]),
+                _RowsResult(scalar_values=[]),
+            ]
+        )
 
         response = await flash.get_public_sheet_wall("justin", db=db)
 

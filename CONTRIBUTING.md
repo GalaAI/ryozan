@@ -22,8 +22,8 @@ API (Python 3.12, with `pip install -r requirements-dev.txt` for ruff):
 
 ```bash
 cd api
-ruff check app/ main.py
-ruff format --check app/ main.py
+ruff check .
+ruff format --check .
 python -m unittest discover -s tests -p "*_tests.py"
 ```
 

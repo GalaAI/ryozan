@@ -213,52 +213,66 @@ class EconConnectorPersistenceTests(unittest.IsolatedAsyncioTestCase):
     async def test_sync_overall_status_classifies_provider_results(self):
         self.assertEqual(econ._sync_overall_status([]), "skipped")
         self.assertEqual(
-            econ._sync_overall_status([
-                econ._sync_provider_payload("plaid", "success", detail="ok"),
-                econ._sync_provider_payload("clover", "skipped", detail="missing token"),
-            ]),
+            econ._sync_overall_status(
+                [
+                    econ._sync_provider_payload("plaid", "success", detail="ok"),
+                    econ._sync_provider_payload("clover", "skipped", detail="missing token"),
+                ]
+            ),
             "success",
         )
         self.assertEqual(
-            econ._sync_overall_status([
-                econ._sync_provider_payload("plaid", "success", detail="ok"),
-                econ._sync_provider_payload("mercury", "error", detail="provider failed"),
-            ]),
+            econ._sync_overall_status(
+                [
+                    econ._sync_provider_payload("plaid", "success", detail="ok"),
+                    econ._sync_provider_payload("mercury", "error", detail="provider failed"),
+                ]
+            ),
             "partial",
         )
         self.assertEqual(
-            econ._sync_overall_status([
-                econ._sync_provider_payload("plaid", "skipped", detail="not linked"),
-                econ._sync_provider_payload("clover", "skipped", detail="missing token"),
-            ]),
+            econ._sync_overall_status(
+                [
+                    econ._sync_provider_payload("plaid", "skipped", detail="not linked"),
+                    econ._sync_provider_payload("clover", "skipped", detail="missing token"),
+                ]
+            ),
             "skipped",
         )
         self.assertEqual(
-            econ._sync_overall_status([
-                econ._sync_provider_payload("mercury", "error", detail="provider failed"),
-            ]),
+            econ._sync_overall_status(
+                [
+                    econ._sync_provider_payload("mercury", "error", detail="provider failed"),
+                ]
+            ),
             "error",
         )
 
     async def test_diagnostics_overall_status_classifies_results(self):
         self.assertEqual(
-            econ._diagnostics_overall_status([
-                econ._diagnostic_payload("plaid", "not_run", detail="setup only"),
-                econ._diagnostic_payload("clover", "not_run", detail="setup only"),
-            ]),
+            econ._diagnostics_overall_status(
+                [
+                    econ._diagnostic_payload("plaid", "not_run", detail="setup only"),
+                    econ._diagnostic_payload("clover", "not_run", detail="setup only"),
+                ]
+            ),
             "not_run",
         )
         self.assertEqual(
-            econ._diagnostics_overall_status([
-                econ._diagnostic_payload("plaid", "pass", detail="ok"),
-                econ._diagnostic_payload("clover", "blocked", detail="missing"),
-            ]),
+            econ._diagnostics_overall_status(
+                [
+                    econ._diagnostic_payload("plaid", "pass", detail="ok"),
+                    econ._diagnostic_payload("clover", "blocked", detail="missing"),
+                ]
+            ),
             "partial",
         )
         self.assertEqual(
-            econ._diagnostics_overall_status([
-                econ._diagnostic_payload("mercury", "fail", detail="provider failed"),
-            ]),
+            econ._diagnostics_overall_status(
+                [
+                    econ._diagnostic_payload("mercury", "fail", detail="provider failed"),
+                ]
+            ),
             "fail",
         )
 

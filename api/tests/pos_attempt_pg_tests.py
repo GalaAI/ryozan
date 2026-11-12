@@ -9,7 +9,6 @@ part of the Alembic baseline (alembic/baseline/20261031_baseline_schema.sql).
 import asyncio
 import contextlib
 import io
-import os
 import unittest
 from datetime import UTC, datetime
 from types import SimpleNamespace

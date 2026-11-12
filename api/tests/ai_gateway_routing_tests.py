@@ -121,10 +121,15 @@ class ArkGatewayRoutingTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_image_turn_keeps_vision_model(self):
         client = _FakeAsyncClient([_completion("looks clean")])
-        image_turn = [{"role": "user", "content": [
-            {"type": "text", "text": "Critique this flash"},
-            {"type": "image_url", "image_url": {"url": "https://example.org/flash.png"}},
-        ]}]
+        image_turn = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Critique this flash"},
+                    {"type": "image_url", "image_url": {"url": "https://example.org/flash.png"}},
+                ],
+            }
+        ]
         with patch.object(ai_routing.httpx, "AsyncClient", return_value=client):
             await ai_routing.call_ark_gateway_chat_completion(
                 settings=_settings(),

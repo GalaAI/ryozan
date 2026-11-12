@@ -15,7 +15,11 @@ from app.api.v1.endpoints import quests
 
 API = Path(__file__).resolve().parents[1]
 _MAIN = (API / "main.py").read_text(encoding="utf-8")
-_SEED = _MAIN[_MAIN.index("INSERT INTO ryozan_quests") : _MAIN.index("ON CONFLICT (slug)", _MAIN.index("INSERT INTO ryozan_quests"))]
+_SEED = _MAIN[
+    _MAIN.index("INSERT INTO ryozan_quests") : _MAIN.index(
+        "ON CONFLICT (slug)", _MAIN.index("INSERT INTO ryozan_quests")
+    )
+]
 SEEDED = set(re.findall(r"gen_random_uuid\(\), '([a-z-]+)',", _SEED))
 
 
@@ -35,7 +39,9 @@ class QuestAvailabilityTests(unittest.TestCase):
     def test_every_completion_hook_names_a_seeded_quest(self):
         hooked = set()
         for path in (API / "app").rglob("*.py"):
-            hooked |= set(re.findall(r'check_and_complete_quest\([^)]*?"([a-z-]+)"\)', path.read_text(encoding="utf-8")))
+            hooked |= set(
+                re.findall(r'check_and_complete_quest\([^)]*?"([a-z-]+)"\)', path.read_text(encoding="utf-8"))
+            )
         self.assertTrue(hooked)
         self.assertEqual(hooked - SEEDED, set())
 

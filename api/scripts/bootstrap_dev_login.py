@@ -111,9 +111,7 @@ async def bootstrap_dev_login(args: argparse.Namespace) -> int:
 
         if args.with_admin:
             manager_email = args.manager_email.strip().lower()
-            manager_result = await session.execute(
-                select(User).where(func.lower(User.email) == manager_email)
-            )
+            manager_result = await session.execute(select(User).where(func.lower(User.email) == manager_email))
             manager = manager_result.scalar_one_or_none()
             if manager is None:
                 manager = User(
@@ -155,7 +153,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--role", default="founder")
     parser.add_argument("--slug", default="founder")
     parser.add_argument("--password")
-    parser.add_argument("--with-admin", action="store_true", help="also create a studio admin that proxies for the founder")
+    parser.add_argument(
+        "--with-admin", action="store_true", help="also create a studio admin that proxies for the founder"
+    )
     parser.add_argument("--manager-email", default="admin@ryozan.app")
     parser.add_argument("--manager-name", default="Studio Admin")
     parser.add_argument("--manager-slug", default="studio-admin")
