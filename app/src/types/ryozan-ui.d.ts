@@ -262,14 +262,27 @@ export interface TextFieldProps extends React.InputHTMLAttributes<HTMLInputEleme
   hint?: React.ReactNode
 }
 
+export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: React.ReactNode
+  hint?: React.ReactNode
+}
+
+export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  label: React.ReactNode
+  hint?: React.ReactNode
+}
+
 export type BadgeTone = 'ok' | 'pending' | 'danger' | 'info' | 'gold' | 'neutral'
 
 export interface StatusTextProps extends React.HTMLAttributes<HTMLSpanElement> {
   tone?: BadgeTone
   dot?: boolean
+  wrap?: boolean
 }
 
 export const TextField: React.ForwardRefExoticComponent<TextFieldProps & React.RefAttributes<HTMLInputElement>>
+export const TextArea: React.ForwardRefExoticComponent<TextAreaProps & React.RefAttributes<HTMLTextAreaElement>>
+export const Checkbox: React.ForwardRefExoticComponent<CheckboxProps & React.RefAttributes<HTMLInputElement>>
 export const StatusText: React.ComponentType<StatusTextProps>
 export const Avatar: React.ComponentType<AvatarProps>
 export const Button: React.ComponentType<ButtonProps>

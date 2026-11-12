@@ -516,7 +516,7 @@ const clientsCSS = `
     outline: none;
     transition: border-color 0.2s;
   }
-  .cl-search:focus { border-color: var(--gold); }
+  .cl-search:focus { border-color: var(--gold-vibrant); }
   .cl-search::placeholder { color: var(--muted); opacity: 0.6; }
 
   .cl-sort {
@@ -532,7 +532,7 @@ const clientsCSS = `
     transition: border-color 0.2s;
     appearance: auto;
   }
-  .cl-sort:focus { border-color: var(--gold); }
+  .cl-sort:focus { border-color: var(--gold-vibrant); }
 
   /* Filter pills */
   .cl-filter-pills {
@@ -557,16 +557,16 @@ const clientsCSS = `
     color: var(--text);
   }
   .cl-filter-pill.active {
-    border-color: var(--gold);
+    border-color: var(--gold-vibrant);
     background: rgba(250,174,21,0.12);
-    color: var(--gold);
+    color: var(--gold-vibrant);
     font-weight: 600;
   }
 
   /* Club count in header */
   .cl-club-count {
     font-size: 0.78rem;
-    color: var(--gold);
+    color: var(--gold-vibrant);
     margin-left: auto;
     padding: 0.2rem 0.65rem;
     border-radius: 12px;
@@ -597,10 +597,10 @@ const clientsCSS = `
     opacity: 1;
     border-color: var(--panel-border);
     background: rgba(250,174,21,0.06);
-    color: var(--gold);
+    color: var(--gold-vibrant);
   }
   .cl-club-toggle.active {
-    color: var(--gold);
+    color: var(--gold-vibrant);
     opacity: 1;
     text-shadow: 0 0 6px rgba(250,174,21,0.4);
   }
@@ -611,7 +611,7 @@ const clientsCSS = `
     padding: 0.1rem 0.4rem;
     border-radius: 4px;
     background: rgba(250,174,21,0.15);
-    color: var(--gold);
+    color: var(--gold-vibrant);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -635,7 +635,7 @@ const clientsCSS = `
   }
   .cl-card:hover { border-color: rgba(250,174,21,0.35); }
   .cl-card.expanded {
-    border-color: var(--gold);
+    border-color: var(--gold-vibrant);
     background: rgba(255,248,236,0.04);
   }
 
@@ -657,7 +657,7 @@ const clientsCSS = `
     align-items: center;
     justify-content: center;
     font-size: 0.95rem;
-    color: var(--gold);
+    color: var(--gold-vibrant);
     font-weight: 600;
     flex-shrink: 0;
   }
@@ -676,7 +676,7 @@ const clientsCSS = `
     padding: 0.1rem 0.45rem;
     border-radius: 4px;
     background: rgba(250,174,21,0.12);
-    color: var(--gold);
+    color: var(--gold-vibrant);
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -731,7 +731,7 @@ const clientsCSS = `
   .cl-stat-value {
     font-size: 1.05rem;
     font-weight: 600;
-    color: var(--gold);
+    color: var(--gold-vibrant);
   }
   .cl-stat-label {
     font-size: 0.68rem;
@@ -758,8 +758,8 @@ const clientsCSS = `
     transition: all 0.2s;
   }
   .cl-action-btn:hover:not(:disabled) {
-    border-color: var(--gold);
-    color: var(--gold);
+    border-color: var(--gold-vibrant);
+    color: var(--gold-vibrant);
   }
   .cl-action-btn:disabled {
     opacity: 0.4;
@@ -811,7 +811,7 @@ const clientsCSS = `
   }
   .cl-booking-amount {
     font-size: 0.78rem;
-    color: var(--gold);
+    color: var(--gold-vibrant);
     font-weight: 500;
     white-space: nowrap;
   }

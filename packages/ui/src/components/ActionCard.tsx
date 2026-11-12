@@ -60,7 +60,8 @@ const mono: React.CSSProperties = {
 
 const paper = '#121212';
 const ink = '#dad1b9';
-const dim = 'rgba(218,209,185,.52)';
+// Muted label ink: cream at 65% reads 4.5:1 or better on every card body (52% read 3.97).
+const dim = 'rgba(218,209,185,.65)';
 const washiPlate = '#ccc4ad';
 const sumiInk = '#121212';
 const beniVermilion = '#c24b2a';
@@ -303,7 +304,7 @@ function MtgCardAnatomy({
             </span>
           </div>
         ) : (
-          <span style={{ ...mono, fontSize: 7.5, color: 'rgba(18,18,18,.62)', accentColor: accent }}>
+          <span style={{ ...mono, fontSize: 7.5, color: 'rgba(18,18,18,.75)', accentColor: accent }}>
             {card.mcpTool ? `MCP · ${card.mcpTool}` : 'Ready on Stack'}
           </span>
         )}
@@ -574,12 +575,16 @@ export function ActionCard(props: ActionCardProps) {
   return React.createElement(component, props);
 }
 
+// Translucent accent that works for any CSS colour, including var(--token):
+// a two-digit hex alpha suffix on the colour is invalid once the accent is a variable.
+const tint = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`;
+
 export function ActionCardFace({ shell, accent = color.gold }: { shell: ActionCardShell; accent?: string }) {
   const shared: React.CSSProperties = { position: 'absolute', inset: 7, color: accent, border: `1px solid ${accent}`, opacity: .85 };
   if (shell === 'intake-docket') return <span style={{ ...shared, borderRadius: '2px 5px 5px 2px', background: 'repeating-linear-gradient(0deg,transparent 0 9px,currentColor 9px 10px)' }}><span style={{ position: 'absolute', left: -1, insetBlock: 0, width: 5, background: 'radial-gradient(circle at 0 50%,#f1e7d6 2px,transparent 2.5px) 0 0/5px 8px' }} /></span>;
-  if (shell === 'chair-ticket') return <span style={{ ...shared, display: 'grid', gridTemplateColumns: '14px 1fr 11px', borderRadius: 4 }}><span style={{ borderRight: `1px solid ${accent}`, background: `${accent}22` }} /><span style={{ margin: 5, borderBlock: `1px solid ${accent}` }} /><span style={{ borderLeft: `1px dashed ${accent}` }} /></span>;
+  if (shell === 'chair-ticket') return <span style={{ ...shared, display: 'grid', gridTemplateColumns: '14px 1fr 11px', borderRadius: 4 }}><span style={{ borderRight: `1px solid ${accent}`, background: tint(accent, 13.3) }} /><span style={{ margin: 5, borderBlock: `1px solid ${accent}` }} /><span style={{ borderLeft: `1px dashed ${accent}` }} /></span>;
   if (shell === 'receipt-tape') return <span style={{ ...shared, border: 0, background: `repeating-linear-gradient(0deg,transparent 0 9px,${accent} 9px 10px)` }}><span style={{ position: 'absolute', inset: '4px 0 auto', height: 7, background: `repeating-linear-gradient(90deg,${accent} 0 2px,transparent 2px 4px)` }} /></span>;
-  if (shell === 'courier-manifest') return <span style={{ ...shared, borderRadius: 5 }}><span style={{ position: 'absolute', inset: '0 0 auto', height: 24, background: `${accent}22`, clipPath: 'polygon(0 0,100% 0,100% 45%,50% 100%,0 45%)' }} /><span style={{ position: 'absolute', left: 12, top: 31, width: 6, height: 6, borderRadius: 99, background: accent, boxShadow: `0 13px 0 ${accent},0 26px 0 ${accent}` }} /></span>;
-  if (shell === 'heal-chart') return <span style={{ ...shared, borderRadius: 5, background: `repeating-linear-gradient(90deg,transparent 0 8px,${accent}33 8px 9px),repeating-linear-gradient(0deg,transparent 0 8px,${accent}33 8px 9px)` }} />;
-  return <span style={{ ...shared, inset: 15, transform: 'rotate(45deg)', borderRadius: 3, boxShadow: `0 0 14px ${accent}55` }}><span style={{ position: 'absolute', inset: 8, border: `1px solid ${accent}` }} /></span>;
+  if (shell === 'courier-manifest') return <span style={{ ...shared, borderRadius: 5 }}><span style={{ position: 'absolute', inset: '0 0 auto', height: 24, background: tint(accent, 13.3), clipPath: 'polygon(0 0,100% 0,100% 45%,50% 100%,0 45%)' }} /><span style={{ position: 'absolute', left: 12, top: 31, width: 6, height: 6, borderRadius: 99, background: accent, boxShadow: `0 13px 0 ${accent},0 26px 0 ${accent}` }} /></span>;
+  if (shell === 'heal-chart') return <span style={{ ...shared, borderRadius: 5, background: `repeating-linear-gradient(90deg,transparent 0 8px,${tint(accent, 20)} 8px 9px),repeating-linear-gradient(0deg,transparent 0 8px,${tint(accent, 20)} 8px 9px)` }} />;
+  return <span style={{ ...shared, inset: 15, transform: 'rotate(45deg)', borderRadius: 3, boxShadow: `0 0 14px ${tint(accent, 33.3)}` }}><span style={{ position: 'absolute', inset: 8, border: `1px solid ${accent}` }} /></span>;
 }

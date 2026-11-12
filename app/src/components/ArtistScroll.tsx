@@ -600,7 +600,7 @@ export default function ArtistScroll({ artistName = 'Artist', onSubmitted, layou
                 {/* Personal Information */}
                 {['name','dob','address','phone','email','emergency'].some(k => fields[k]) && (
                   <div style={{ marginBottom: '1rem', padding: '0.85rem 1rem', background: 'rgba(226,218,194,0.025)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--cream)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--accent-cream-tile)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem', fontWeight: 700 }}>
                       I — Personal Information
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem 1.25rem' }}>
@@ -624,7 +624,7 @@ export default function ArtistScroll({ artistName = 'Artist', onSubmitted, layou
                 {/* Employment History */}
                 {['prev_shop','experience','specialties','references'].some(k => fields[k]) && (
                   <div style={{ marginBottom: '1rem', padding: '0.85rem 1rem', background: 'rgba(226,218,194,0.025)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--cream)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--accent-cream-tile)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem', fontWeight: 700 }}>
                       I — Employment History
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem 1.25rem' }}>
@@ -651,14 +651,14 @@ export default function ArtistScroll({ artistName = 'Artist', onSubmitted, layou
                   { label: 'III — Government ID', file: govtId },
                 ].filter(d => d.file).map(d => (
                   <div key={d.label} style={{ marginBottom: '0.5rem', padding: '0.75rem 1rem', background: 'rgba(226,218,194,0.025)', border: '1px solid var(--border-subtle)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--cream)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{d.label}</div>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--accent-cream-tile)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>{d.label}</div>
                     <span style={{ fontSize: '0.76rem', color: 'var(--text)', marginLeft: 'auto' }}>{d.file!.name}</span>
                     <span style={{ fontSize: '0.65rem', color: '#6dbf7e' }}>Ready</span>
                   </div>
                 ))}
                 {taxOptIn !== null && (
                   <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', background: 'rgba(226,218,194,0.025)', border: '1px solid var(--border-subtle)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--cream)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>III — Tax Status</div>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--accent-cream-tile)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>III — Tax Status</div>
                     <span style={{ fontSize: '0.76rem', color: 'var(--text)', marginLeft: 'auto' }}>{taxOptIn ? 'Withhold taxes (W-2)' : 'Contractor (1099)'}</span>
                     <span style={{ fontSize: '0.65rem', color: '#6dbf7e' }}>Selected</span>
                   </div>
@@ -669,7 +669,7 @@ export default function ArtistScroll({ artistName = 'Artist', onSubmitted, layou
                   .filter(([k, v]) => !['name','dob','address','phone','email','emergency','prev_shop','experience','specialties','references'].includes(k) && v?.trim())
                   .length > 0 && (
                   <div style={{ padding: '0.85rem 1rem', background: 'rgba(226,218,194,0.025)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '0.62rem', color: 'var(--cream)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem', fontWeight: 700 }}>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--accent-cream-tile)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem', fontWeight: 700 }}>
                       Additional Fields
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.45rem 1.25rem' }}>

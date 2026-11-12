@@ -10,6 +10,11 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   children?: React.ReactNode;
 }
 
+/** Text colour per tone where it differs from the tone colour (gold text must hold 4.5:1). */
+const textTones: Partial<Record<BadgeTone, string>> = { gold: color.goldText };
+/** Text colour on a filled capsule. */
+const onFill = (tone: BadgeTone) => (tone === 'gold' ? color.onGold : color.smoke);
+
 const tones: Record<BadgeTone, string> = {
   ok: color.spring,
   pending: color.pending,
@@ -33,7 +38,7 @@ export function Badge({ tone = 'neutral', filled = false, style, children, ...re
         borderRadius: radius.pill,
         border: filled ? 0 : `1px solid ${c}`,
         background: filled ? c : 'transparent',
-        color: filled ? color.smoke : c,
+        color: filled ? onFill(tone) : (textTones[tone] ?? c),
         fontFamily: font.btn,
         fontSize: 'var(--text-xs)',
         fontWeight: 700,
@@ -53,11 +58,13 @@ export interface StatusTextProps extends React.HTMLAttributes<HTMLSpanElement> {
   tone?: BadgeTone;
   /** Show the leading ● dot. */
   dot?: boolean;
+  /** Let a long line (an error sentence) wrap inside its panel instead of holding one line. */
+  wrap?: boolean;
   children?: React.ReactNode;
 }
 
 /** Bare status line — "● Confirmed". No capsule, sits inside panel headers. */
-export function StatusText({ tone = 'ok', dot = true, style, children, ...rest }: StatusTextProps) {
+export function StatusText({ tone = 'ok', dot = true, wrap = false, style, children, ...rest }: StatusTextProps) {
   return (
     <span
       style={{
@@ -66,8 +73,8 @@ export function StatusText({ tone = 'ok', dot = true, style, children, ...rest }
         fontWeight: 700,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
-        color: tones[tone],
-        whiteSpace: 'nowrap',
+        color: textTones[tone] ?? tones[tone],
+        whiteSpace: wrap ? 'normal' : 'nowrap',
         ...style,
       }}
       {...rest}

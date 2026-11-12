@@ -75,8 +75,8 @@
 
 .lightbox-close:hover {
   background: var(--panel-border);
-  border-color: var(--gold, #faae15);
-  color: var(--gold, #faae15);
+  border-color: var(--gold-vibrant);
+  color: var(--gold-vibrant);
 }
 
 /* ── Arrows — use .nav-arrow--gallery-prev/next from nav-arrows.css ── */
@@ -102,8 +102,8 @@
 
 .lightbox-arrow:hover {
   background: rgba(166, 125, 67, 0.15);
-  border-color: var(--gold);
-  color: var(--gold);
+  border-color: var(--gold-vibrant);
+  color: var(--gold-vibrant);
   box-shadow: var(--nav-arrow-glow);
 }
 

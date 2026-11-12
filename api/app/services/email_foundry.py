@@ -1,4 +1,4 @@
-"""Server-side projection of the locked @bttco/email-foundry dependency."""
+"""Server-side projection of the shop brand pack's locked email-foundry dependency."""
 
 import asyncio
 import json
@@ -40,7 +40,7 @@ TIGER_MARK_URL = config.get_settings().email_asset_url("tiger-mark.png")
 # deployment's own copies under any earlier base.
 _EMAIL_ASSET_ANY_RE = re.compile(
     r"https://(?:assets\.ryozan\.app/email"
-    r"|app\.ryozan\.app/dependencies/@bttco/email-foundry/[^\"'()\s]*?/assets"
+    r"|[^\"'()\s/]+/dependencies/@[a-z0-9][a-z0-9-]*/email-foundry/[^\"'()\s]*?/assets"
     r"|[^\"'()\s]+?/email)"
     r"/(?P<name>starseed-tile|tiger-mark(?:-trim-crop)?)\.png(?:\?v=[\w.-]+)?"
 )

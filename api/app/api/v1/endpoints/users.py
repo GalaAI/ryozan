@@ -36,6 +36,9 @@ from app.services.reward_engine import grant_configured_reward, profile_is_compl
 from app.services.storage import upload_file as upload_to_drive
 
 router = APIRouter(prefix="/users", tags=["users"])
+# Saved signatures are private in R2; the countersign screen gets a signed viewing link valid for one session.
+# Never UPLOAD_PROOF_SECONDS (3600): that lifetime is reserved for upload links and presign_get_url refuses it.
+SIGNATURE_VIEW_SECONDS = 1800
 
 
 async def _artist_has_client_relationship(
@@ -409,8 +412,10 @@ async def toggle_gala_auto_reply(
 async def get_saved_signature(
     current_user: User = Depends(require_role("artist")),
 ):
-    """Return the saved artist signature URL (or null)."""
-    return {"signature_url": current_user.saved_signature_url}
+    """Return the saved artist signature as a short-lived signed link (or null)."""
+    from app.services.storage import signed_id_url
+
+    return {"signature_url": signed_id_url(current_user.saved_signature_url, SIGNATURE_VIEW_SECONDS)}
 
 
 @router.put("/me/signature")
@@ -445,7 +450,9 @@ async def save_signature(
         current_user.saved_signature_url = sig_url
         await db.commit()
         await db.refresh(current_user)
-        return {"signature_url": sig_url}
+        from app.services.storage import signed_id_url
+
+        return {"signature_url": signed_id_url(sig_url, SIGNATURE_VIEW_SECONDS)}
     except Exception as exc:
         logger.error("Failed to save signature for %s: %s", current_user.id, exc)
         raise HTTPException(status_code=500, detail="Failed to upload signature") from exc

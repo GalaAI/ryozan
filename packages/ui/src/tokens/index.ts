@@ -11,6 +11,10 @@ export const color = {
   gold: 'var(--gold)',
   goldVibrant: 'var(--gold-vibrant)',
   goldGlow: 'var(--gold-glow)',
+  /** Gold for body and small text; 4.5:1 on website surfaces in every theme. */
+  goldText: 'var(--gold-text)',
+  /** Text on a `gold` fill. */
+  onGold: 'var(--on-gold)',
   tan: 'var(--tan)',
   tanGlow: 'var(--tan-glow)',
   cream: 'var(--cream)',
@@ -29,6 +33,10 @@ export const color = {
   panelRaised: 'var(--panel-raised)',
   panelBorder: 'var(--panel-border)',
   panelBorderHover: 'var(--panel-border-hover)',
+  /** Resting outline of a control (input, icon button, unselected chip); 3:1 on every surface. */
+  fieldBorder: 'var(--field-border)',
+  /** Hover edge: brighter blue-grey, apart from the gold focus edge. */
+  borderHover: 'var(--border-hover)',
 
   text: 'var(--text)',
   textSecondary: 'var(--text-secondary)',

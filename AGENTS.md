@@ -59,7 +59,7 @@ Before claiming a change is safe: run the same checks locally (`cd app && npm ru
 - The only UI source is `packages/ui` (published internally as `@ryozan/ui`). Consumers import from `@ryozan/ui`; nobody authors new UI components or inline styled elements. Read `packages/ui/README.md` before touching any UI.
 - No hex, no px literals, no fonts outside the allowlist in app code. `npm run lint:adherence:src` in `app/` enforces it and runs in CI.
 - Editing `packages/ui/src` changes nothing in the app until you repack and relock (`cd packages/ui && npm run pack:app`, then in `app/` run `npm install --package-lock-only "@ryozan/ui@file:vendor/ryozan-ui-<version>.tgz"`); `npm run check:ui-tarball` fails otherwise.
-- Source of record is the Ryozan Studio Design System artifact (claude.ai artifact id 35f92e5b-ae2d-4c67-a4e1-ec118dfe929e). A need the package cannot express is a design request upstream, never an improvised screen.
+- Source of record is the Ryozan Studio Design System artifact (https://claude.ai/artifact/CzFDxv28geZyLTfoYVfup1), built from `@ryozan/ui` with one card per export (including `Checkbox`, `TextArea` and `StatusText` wrap). The north star layouts (website kit, portal, booking, JWT) stay in the earlier Ryozan Modern Classic artifact (id 35f92e5b-ae2d-4c67-a4e1-ec118dfe929e). A need the package cannot express is a design request upstream, never an improvised screen.
 
 ## Agent behavior
 
@@ -81,15 +81,16 @@ Full local stack needs **PostgreSQL 16+**, **Python 3.12** (`python3.12-venv` on
 
 ### PostgreSQL (one-time per VM)
 
-The API defaults in `api/app/core/config.py` expect `postgresql+asyncpg://postgres:galax2025@localhost:5432/nexus`. On a fresh Linux VM:
+Pick your own local password; never commit it. On a fresh Linux VM:
 
 ```bash
+export POSTGRES_PASSWORD='<your-local-password>'
 sudo service postgresql start
-sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'galax2025';"
+sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '$POSTGRES_PASSWORD';"
 sudo -u postgres createdb nexus 2>/dev/null || true
 ```
 
-Copy `api/.env.example` to `api/.env` and set at least `LOCAL_DEV_MODE=true`, `ENABLE_API_DOCS=true`, and update `DATABASE_URL` to `postgresql+asyncpg://postgres:galax2025@localhost:5432/nexus` (matching the PostgreSQL setup above).
+Copy `api/.env.example` to `api/.env` and set at least `LOCAL_DEV_MODE=true`, `ENABLE_API_DOCS=true`, `POSTGRES_PASSWORD`, and `DATABASE_URL=postgresql+asyncpg://postgres:<your-local-password>@localhost:5432/nexus` (matching the PostgreSQL setup above).
 
 ### Start dev servers (tmux recommended)
 

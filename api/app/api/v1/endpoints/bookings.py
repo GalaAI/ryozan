@@ -20,7 +20,7 @@ from html import escape
 from uuid import UUID
 
 import stripe
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Request, UploadFile
 from sqlalchemy import Integer, and_, cast, desc, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -98,6 +98,7 @@ from app.schemas.booking import (
     PublicBookingDraftResponse,
     PublicBookingResponse,
     PublicBookingSubmit,
+    PublicCheckoutStatusResponse,
     PublicInquiryResponse,
     PublicInquirySubmit,
     StaffBookingCreate,
@@ -135,7 +136,12 @@ from app.services.email import (
 from app.services.email_foundry import dispatch_foundry_trigger
 from app.services.email_foundry_booking import render_artist_booking_alert, render_request_approved
 from app.services.inquiry_mirror import mirror_general_inquiry
-from app.services.payments import apply_customer_receipt, customer_price_cents, resolve_charge_routing
+from app.services.payments import (
+    apply_customer_receipt,
+    customer_price_cents,
+    public_checkout_return_url,
+    resolve_charge_routing,
+)
 from app.services.push import send_push_notification
 from app.services.quest_hooks import check_and_complete_quest
 from app.services.reward_engine import reward_user_by_id
@@ -2739,6 +2745,51 @@ async def submit_public_inquiry(
         ) from exc
 
 
+CHECKOUT_SESSION_ID_PATTERN = r"^cs_[A-Za-z0-9_]{8,250}$"
+
+
+def _public_deposit_state(booking: Booking) -> str:
+    if booking.deposit_paid or booking.deposit_authorization_status == "captured":
+        return "paid"
+    if booking.deposit_authorization_status == "authorized":
+        return "authorized"
+    if booking.deposit_amount and float(booking.deposit_amount) > 0:
+        return "pending"
+    return "none"
+
+
+@router.get("/checkout-status/{session_id}", response_model=PublicCheckoutStatusResponse)
+@limiter.limit("30/minute")
+async def get_public_checkout_status(
+    request: Request,
+    session_id: str = Path(pattern=CHECKOUT_SESSION_ID_PATTERN),
+    db: AsyncSession = Depends(get_db, scope="function"),
+):
+    """
+    Public: where a booking stands after Stripe sends the buyer back.
+
+    The public confirm page (/book/confirm?session_id=...) reads this instead of
+    trusting the redirect: the session id is only known to the buyer and the
+    shop, and the answer carries no client contact details. Public bookings and
+    flash bookings both store their Checkout Session id on the booking row.
+    """
+    result = await db.execute(select(Booking).where(Booking.stripe_checkout_session_id == session_id))
+    booking = result.scalar_one_or_none()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    artist = await db.get(User, booking.artist_id) if booking.artist_id else None
+    booking_status = booking.status.value if hasattr(booking.status, "value") else str(booking.status)
+    return PublicCheckoutStatusResponse(
+        reference_code=booking.reference_code,
+        artist_name=(artist.name or artist.slug) if artist else None,
+        booking_status=booking_status,
+        deposit_state=_public_deposit_state(booking),
+        deposit_amount=float(booking.deposit_amount) if booking.deposit_amount is not None else None,
+        scheduled_date=booking.scheduled_date,
+        scheduled_time=booking.scheduled_time,
+    )
+
+
 async def _resolve_inquiry_staff(db: AsyncSession, artist_slug: str | None) -> tuple[list[User], User | None]:
     """Return the staff accounts an inquiry thread belongs to, plus the artist when one was named.
 
@@ -3028,8 +3079,8 @@ async def _create_public_booking_checkout(
                 "quantity": 1,
             }
         ],
-        "success_url": f"{settings.FRONTEND_URL}/book?checkout=success&ref={booking.reference_code}",
-        "cancel_url": f"{settings.FRONTEND_URL}/book?checkout=cancelled&ref={booking.reference_code}",
+        "success_url": public_checkout_return_url(settings.FRONTEND_URL, "success", booking.reference_code),
+        "cancel_url": public_checkout_return_url(settings.FRONTEND_URL, "cancelled", booking.reference_code),
         "metadata": {
             "checkout_type": "public_booking_deposit",
             "booking_id": str(booking.id),

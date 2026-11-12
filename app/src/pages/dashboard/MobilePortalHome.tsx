@@ -110,8 +110,10 @@ interface PendingAgentUpload {
 }
 
 const terminalStatuses = new Set(['completed', 'cancelled', 'canceled', 'no_show', 'expired'])
-const BOOKY_ACCENT = '#a33a31'
-const BOOKY_ACCENT_RGB = '163,58,49'
+// Booky's accent is also its text and nav colour on the dark portal: rust reads
+// 5.44:1 or better there (brick #a33a31 read 2.91).
+const BOOKY_ACCENT = 'var(--color-rust)'
+const BOOKY_ACCENT_RGB = '217,103,80'
 
 function GalaStructuredReply({ response }: { response: GalaChatResponse }) {
   const toolCalls = response.tool_calls ?? []
@@ -120,12 +122,12 @@ function GalaStructuredReply({ response }: { response: GalaChatResponse }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <span>{response.response || 'The assistant returned structured results without a text summary.'}</span>
-      {response.model && <small style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-dim)' }}>Answered by {response.model}{response.model_provider ? ` on ${response.model_provider}` : ''}</small>}
+      {response.model && <small style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>Answered by {response.model}{response.model_provider ? ` on ${response.model_provider}` : ''}</small>}
       {components.map((component, index) => (
         <GalaComponentRenderer key={`${component.type}-${index}`} component={component} />
       ))}
       {toolCalls.length > 0 || response.memories_used > 0 ? (
-        <details style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-dim)' }}>
+        <details style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--text-secondary)' }}>
           <summary>Assistant receipts</summary>
           {toolCalls.map((receipt, index) => {
             const toolName = typeof receipt.tool === 'string'
@@ -271,7 +273,7 @@ function SpyderMark({ size = 24, strongBloom = false }: { size?: number; strongB
       strokeLinejoin="round"
       aria-hidden="true"
       style={{
-        color: 'var(--gold)',
+        color: 'var(--gold-vibrant)',
         filter: strongBloom
           ? 'drop-shadow(0 0 4px currentColor) drop-shadow(0 0 10px currentColor)'
           : 'drop-shadow(0 0 4px rgba(217, 191, 149, .45))',
@@ -667,7 +669,7 @@ function statusColor(status: string): string {
   if (normalized === 'confirmed' || normalized === 'completed') return 'var(--sig-ok)'
   if (normalized.includes('deposit')) return 'var(--alt-sky)'
   if (normalized === 'cancelled' || normalized === 'canceled') return 'var(--sig-err)'
-  return 'var(--gold)'
+  return 'var(--gold-vibrant)'
 }
 
 function shortDate(value: string): string {
@@ -725,7 +727,7 @@ function DailyDebriefCard({ dateLabel, bookings }: { dateLabel: string; bookings
           {bookings.map((booking) => (
             <div key={booking.id} style={{ display: 'grid', gridTemplateColumns: '58px minmax(0,1fr) auto', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
               <span style={{ fontFamily: 'var(--font-btn)', fontSize: 9.5, letterSpacing: '.08em', color: 'var(--portal-agent-accent)' }}>{formatTime(booking.scheduled_time)}</span>
-              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{bookingTitle(booking)} · {bookingSubject(booking)}</span>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{bookingTitle(booking)} · {bookingSubject(booking)}</span>
               <span style={{ fontFamily: 'var(--font-btn)', fontSize: 8.5, letterSpacing: '.08em', textTransform: 'uppercase', color: statusColor(booking.status) }}>{statusLabel(booking.status)}</span>
             </div>
           ))}
@@ -3522,7 +3524,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
           suggestion: 'What is stuck, and who owns the next verified step?',
         }
       : {
-          id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
+          id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold-vibrant)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
           opener: galaLine,
           suggestion: 'What is stuck on the floor?',
         }
@@ -3591,7 +3593,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
         }
       : agentOverrideId === 'spyder'
         ? {
-            id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
+            id: 'spyder', name: 'Sōkō', role: 'Operator · back of house', accent: 'var(--gold-vibrant)', bloom: '217,191,149', glyph: <SpyderMark size={34} strongBloom /> as ReactNode,
             opener: 'Your staff account controls are ready in the Hub.',
             suggestion: 'Show me the account controls.',
           }
@@ -5004,7 +5006,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
                         pointerEvents: 'none',
                         fontFamily: 'var(--font-body)',
                         fontSize: 13,
-                        color: 'var(--ink-ghost)',
+                        color: 'var(--text-muted)',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -5042,7 +5044,7 @@ export default function MobilePortalHome({ role, bookings, unreadCount, loading,
                       borderRadius: 99,
                       background: 'linear-gradient(-90deg,#0F0E0E,#141414)',
                       boxShadow: 'inset 0 2px 6px rgba(0,0,0,.55), inset 0 1px 0 rgba(0,0,0,.4)',
-                      color: 'var(--ink)',
+                      color: 'var(--text)',
                       fontFamily: 'var(--font-body)',
                       fontSize: 13,
                       outline: 'none',

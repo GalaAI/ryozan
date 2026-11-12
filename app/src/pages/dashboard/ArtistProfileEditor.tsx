@@ -774,8 +774,8 @@ export default function ArtistProfileEditor() {
         disabled={isSaving}
         className="action-btn"
         style={{
-          borderColor: 'var(--gold)',
-          color: 'var(--gold)',
+          borderColor: 'var(--gold-vibrant)',
+          color: 'var(--gold-vibrant)',
           opacity: isSaving ? 0.6 : 1,
         }}
       >
@@ -1687,12 +1687,12 @@ export default function ArtistProfileEditor() {
                       fontSize: '0.8rem',
                       cursor: 'pointer',
                       border: specialty.includes(s)
-                        ? '1px solid var(--gold)'
+                        ? '1px solid var(--gold-vibrant)'
                         : '1px solid var(--panel-border)',
                       background: specialty.includes(s)
                         ? 'rgba(250, 174, 21, 0.15)'
                         : 'transparent',
-                      color: specialty.includes(s) ? 'var(--gold)' : 'var(--text)',
+                      color: specialty.includes(s) ? 'var(--gold-vibrant)' : 'var(--text)',
                       transition: 'all 0.2s',
                     }}
                   >
@@ -1861,7 +1861,7 @@ export default function ArtistProfileEditor() {
             {/* Empty state */}
             {!flashLoading && flashDesigns.length === 0 && (
               <div className="flash-empty-state">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
                 <h3 className="flash-empty-title">No flash designs yet</h3>
@@ -1975,7 +1975,7 @@ export default function ArtistProfileEditor() {
         {/* ── Tab: Shop (placeholder) ────────── */}
         {activeTab === 'shop' && (
           <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '0.5rem' }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '0.5rem' }}>
               <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
             <h3 style={{ color: 'var(--text)', marginBottom: '0.5rem' }}>Merch & Prints</h3>
@@ -2197,7 +2197,7 @@ function FlashUploadModal({
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
                     <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
                   </svg>
@@ -2531,7 +2531,7 @@ function IntegrationsTab({
         disabled: stripeOnboarding,
       },
       icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', flexShrink: 0 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold-vibrant)', flexShrink: 0 }}>
           <rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" />
         </svg>
       ),
@@ -2549,7 +2549,7 @@ function IntegrationsTab({
         disabled: false,
       },
       icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', flexShrink: 0 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold-vibrant)', flexShrink: 0 }}>
           <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
         </svg>
       ),
@@ -2578,7 +2578,7 @@ function IntegrationsTab({
             disabled: googleActing,
           },
       icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', flexShrink: 0 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold-vibrant)', flexShrink: 0 }}>
           <circle cx="12" cy="12" r="3" /><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
         </svg>
       ),
@@ -2606,7 +2606,7 @@ function IntegrationsTab({
             testid: 'pinterest-connect',
           },
       icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', flexShrink: 0 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold-vibrant)', flexShrink: 0 }}>
           <circle cx="12" cy="12" r="10" /><path d="M9 18c1-3 1.5-5 2-7.5" /><path d="M9.5 9.5a2.5 2.5 0 1 1 4.5 1.5c-.5 1.5-2.5 2-3.5 1" />
         </svg>
       ),
@@ -2622,7 +2622,7 @@ function IntegrationsTab({
         disabled: false,
       },
       icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold)', flexShrink: 0 }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--gold-vibrant)', flexShrink: 0 }}>
           <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
         </svg>
       ),
@@ -2657,7 +2657,7 @@ function IntegrationsTab({
     active: '#48bb78',
     pending: '#ecc94b',
     disconnected: '#e53e3e',
-    available: 'var(--gold)',
+    available: 'var(--gold-vibrant)',
     'coming-soon': 'var(--muted)',
   }
 
