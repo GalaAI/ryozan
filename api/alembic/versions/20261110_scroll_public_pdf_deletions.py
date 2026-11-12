@@ -12,8 +12,9 @@ Revises: 20261110_scroll_outbox_targets
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "20261110_scroll_public_pdf_del"
 down_revision: str | None = "20261110_scroll_outbox_targets"

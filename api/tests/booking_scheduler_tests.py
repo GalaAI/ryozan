@@ -735,24 +735,39 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         artist_id = uuid.uuid4()
         collector_id = uuid.uuid4()
         artist = User(
-            id=artist_id, email="justin@example.test", password_hash="disabled",
-            name="Justin Walker", role="artist", slug="justin", booking_mode="mailto",
+            id=artist_id,
+            email="justin@example.test",
+            password_hash="disabled",
+            name="Justin Walker",
+            role="artist",
+            slug="justin",
+            booking_mode="mailto",
         )
         draft = BookingDraft(
-            inquiry_id="inquiry-capability", status="submitted",
-            reference_code="BKG-CAP001", artist_slug="justin",
+            inquiry_id="inquiry-capability",
+            status="submitted",
+            reference_code="BKG-CAP001",
+            artist_slug="justin",
         )
         booking = Booking(
-            id=uuid.uuid4(), artist_id=artist_id, client_id=collector_id,
-            status=BookingStatus.PENDING, description="Existing inquiry",
-            booking_kind="tattoo_session", reference_code="BKG-CAP001",
-            created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
+            id=uuid.uuid4(),
+            artist_id=artist_id,
+            client_id=collector_id,
+            status=BookingStatus.PENDING,
+            description="Existing inquiry",
+            booking_kind="tattoo_session",
+            reference_code="BKG-CAP001",
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
         )
         db = _ScriptedSession([[artist], [draft], [booking], []])
         response = await _do_submit_public_booking(
             PublicBookingSubmit(
-                inquiry_id="inquiry-capability", artist_slug="justin",
-                first_name="Client", last_name="Name", email="client@example.test",
+                inquiry_id="inquiry-capability",
+                artist_slug="justin",
+                first_name="Client",
+                last_name="Name",
+                email="client@example.test",
                 description="Black and grey shoulder piece",
                 booky_capability=create_booky_capability_token(collector_id, "inquiry-capability"),
             ),
@@ -3538,8 +3553,6 @@ class BookingSchedulerTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Superseded by native booking BKG-NATIVE", imported_duplicate.artist_notes)
         self.assertEqual(fake_db.added, [])
         self.assertEqual(fake_db.commits, 1)
-
-
 
     def test_custom_artist_working_hours_override_default_schedule(self):
         artist = User(

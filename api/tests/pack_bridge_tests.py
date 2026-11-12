@@ -90,7 +90,9 @@ class PackBridgeTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch.object(pack_bridge, "async_session", return_value=FakeSession()),
             patch.object(pack_bridge, "queue_pack_capture", new=AsyncMock(return_value=outbox)) as queue,
-            patch.object(pack_bridge, "process_pack_bridge_outbox_once", new=AsyncMock(return_value=receipt)) as process,
+            patch.object(
+                pack_bridge, "process_pack_bridge_outbox_once", new=AsyncMock(return_value=receipt)
+            ) as process,
         ):
             observed = await deliver_pack_capture(
                 {"sourceId": "bttco:phone:gala", "idempotencyKey": "elevenlabs:event:one"}

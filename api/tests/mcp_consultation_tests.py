@@ -87,8 +87,6 @@ class ConsultationMcpTests(unittest.TestCase):
         self.assertIn("review-only triage", result)
         self.assertIn("Do not message", result)
 
-
-
     def test_availability_fails_closed_without_google(self):
         async def fake_get_json(path, token, params=None):
             return {"calendar_connected": False, "slots": [{"label": "fallback"}]}

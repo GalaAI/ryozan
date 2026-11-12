@@ -116,7 +116,7 @@ Password is written to `.dev/state/dev-login-password.txt` (founder `founder@ryo
 
 ### Lint / build (CI parity)
 
-See **CI / validation** above: `cd app && npm run lint && npm run build`; `cd api && ruff check app/ main.py` (venv with `requirements-dev.txt`).
+See **CI / validation** above: `cd app && npm run lint && npm run build`; `cd api && ruff check . && ruff format --check .` (venv with `requirements-dev.txt`).
 
 ### UI-only against production API
 

@@ -123,9 +123,9 @@ class ArkBridgeRequestTests(unittest.IsolatedAsyncioTestCase):
         with (
             patch("app.services.agent_evolution.get_settings", return_value=settings),
             patch("app.services.agent_evolution.httpx.AsyncClient", return_value=context),
+            self.assertRaises(AgentEvolutionBridgeError) as raised,
         ):
-            with self.assertRaises(AgentEvolutionBridgeError) as raised:
-                await request_ark_bridge("PATCH", "/api/social/reposts/repost_1", {"caption": "x"})
+            await request_ark_bridge("PATCH", "/api/social/reposts/repost_1", {"caption": "x"})
         self.assertEqual(raised.exception.status_code, 400)
         self.assertEqual(str(raised.exception), "caption: Too long")
         self.assertEqual(

@@ -6,9 +6,10 @@ Run: python generate_vapid_keys.py
 Copy the output into your .env file or app/core/config.py.
 """
 
-from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives import serialization
 import base64
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 
 def b64url(data: bytes) -> str:

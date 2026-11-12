@@ -21,7 +21,7 @@ repos:
       - id: ruff
         name: ruff check
         args: [--fix]
-        files: ^api/(app/|main\.py)
+        files: ^api/
       - id: ruff-format
         name: ruff format
-        files: ^api/(app/|main\.py)
+        files: ^api/

@@ -13,6 +13,7 @@ Revises: 20261102_studio_settings
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "20261110_scroll_outbox_targets"

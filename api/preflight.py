@@ -30,12 +30,12 @@ Bestiary Encounters:
 import argparse
 import ast
 import asyncio
+import contextlib
 import hashlib
 import os
 import re
 import sys
-from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -81,13 +81,13 @@ WARN = f"{YELLOW}!{RESET}"
 
 # -- Bestiary Daemon Catalog --------------------------------------
 DAEMON_CATALOG = {
-    "schema":     {"name": "Migration Specter",   "class": "Swarm",   "tier": "Phantom", "xp": 40},
-    "imports":    {"name": "Import Wraith",        "class": "Swarm",   "tier": "Glitch",  "xp": 25},
-    "dead":       {"name": "Dead Code Ghoul",      "class": "Lurker",  "tier": "Glitch",  "xp": 25},
-    "router":     {"name": "Config Doppelganger",  "class": "Mimic",   "tier": "Worm",    "xp": 30},
-    "migrations": {"name": "Migration Specter",    "class": "Swarm",   "tier": "Worm",    "xp": 35},
-    "endpoints":  {"name": "Null Shade",           "class": "Shade",   "tier": "Worm",    "xp": 30},
-    "deps":       {"name": "Phantom",              "class": "Phantom", "tier": "Phantom", "xp": 50},
+    "schema": {"name": "Migration Specter", "class": "Swarm", "tier": "Phantom", "xp": 40},
+    "imports": {"name": "Import Wraith", "class": "Swarm", "tier": "Glitch", "xp": 25},
+    "dead": {"name": "Dead Code Ghoul", "class": "Lurker", "tier": "Glitch", "xp": 25},
+    "router": {"name": "Config Doppelganger", "class": "Mimic", "tier": "Worm", "xp": 30},
+    "migrations": {"name": "Migration Specter", "class": "Swarm", "tier": "Worm", "xp": 35},
+    "endpoints": {"name": "Null Shade", "class": "Shade", "tier": "Worm", "xp": 30},
+    "deps": {"name": "Phantom", "class": "Phantom", "tier": "Phantom", "xp": 50},
 }
 
 TIERS = ["Glitch", "Worm", "Phantom", "Leviathan", "Entropy"]
@@ -143,7 +143,6 @@ def iter_watch_files() -> list[Path]:
     return sorted(path for path in files if path.is_file())
 
 
-
 def _record_encounter(check_key: str, issue_count: int):
     if issue_count == 0:
         return
@@ -153,18 +152,21 @@ def _record_encounter(check_key: str, issue_count: int):
         tier_idx = min(tier_idx + 2, 4)
     elif issue_count >= 4:
         tier_idx = min(tier_idx + 1, 4)
-    _encounters.append({
-        "daemon": d.get("name", "Unknown"),
-        "class": d.get("class", "?"),
-        "tier": TIERS[tier_idx],
-        "issues": issue_count,
-        "xp_bounty": d.get("xp", 25) * issue_count,
-    })
+    _encounters.append(
+        {
+            "daemon": d.get("name", "Unknown"),
+            "class": d.get("class", "?"),
+            "tier": TIERS[tier_idx],
+            "issues": issue_count,
+            "xp_bounty": d.get("xp", 25) * issue_count,
+        }
+    )
 
 
 # =================================================================
 #  MODEL PARSER (shared)
 # =================================================================
+
 
 class ModelColumn(NamedTuple):
     table: str
@@ -192,9 +194,12 @@ def _parse_model_columns() -> list[ModelColumn]:
             for item in node.body:
                 if isinstance(item, ast.Assign):
                     for target in item.targets:
-                        if isinstance(target, ast.Name) and target.id == "__tablename__":
-                            if isinstance(item.value, ast.Constant):
-                                tablename = item.value.value
+                        if (
+                            isinstance(target, ast.Name)
+                            and target.id == "__tablename__"
+                            and isinstance(item.value, ast.Constant)
+                        ):
+                            tablename = item.value.value
                 if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
                     col_name = item.target.id
                     if item.value and isinstance(item.value, ast.Call):
@@ -205,9 +210,11 @@ def _parse_model_columns() -> list[ModelColumn]:
                         elif isinstance(func, ast.Attribute):
                             func_name = func.attr
                         if func_name == "mapped_column":
-                            if (item.value.args
-                                    and isinstance(item.value.args[0], ast.Constant)
-                                    and isinstance(item.value.args[0].value, str)):
+                            if (
+                                item.value.args
+                                and isinstance(item.value.args[0], ast.Constant)
+                                and isinstance(item.value.args[0].value, str)
+                            ):
                                 columns.append(item.value.args[0].value)
                             else:
                                 columns.append(col_name)
@@ -220,6 +227,7 @@ def _parse_model_columns() -> list[ModelColumn]:
 # =================================================================
 #  CHECK 1: Schema Drift Detector (Migration Specter)
 # =================================================================
+
 
 async def check_schema_drift(fix: bool = False):
     header("Schema Drift Detector", "schema")
@@ -273,9 +281,7 @@ async def check_schema_drift(fix: bool = False):
             for col in sorted(missing):
                 failed(f"{table}.{col} -- in model, missing from DB")
                 issues += 1
-                alter_statements.append(
-                    f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} TEXT;  -- CHECK TYPE"
-                )
+                alter_statements.append(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} TEXT;  -- CHECK TYPE")
             for col in sorted(present):
                 passed(f"{table}.{col}")
 
@@ -302,6 +308,7 @@ async def check_schema_drift(fix: bool = False):
 # =================================================================
 #  CHECK 2: Import Chain Validator (Import Wraith)
 # =================================================================
+
 
 def check_import_chains():
     header("Import Chain Validator", "imports")
@@ -339,9 +346,7 @@ def check_import_chains():
 
             defined_names = set()
             for node in ast.iter_child_nodes(target_tree):
-                if isinstance(node, ast.ClassDef):
-                    defined_names.add(node.name)
-                elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
                     defined_names.add(node.name)
                 elif isinstance(node, ast.Assign):
                     for target in node.targets:
@@ -349,11 +354,10 @@ def check_import_chains():
                             defined_names.add(target.id)
                 elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
                     defined_names.add(node.target.id)
-                elif isinstance(node, ast.ImportFrom):
-                    if node.names:
-                        for alias in node.names:
-                            name = alias.asname if alias.asname else alias.name
-                            defined_names.add(name)
+                elif isinstance(node, ast.ImportFrom) and node.names:
+                    for alias in node.names:
+                        name = alias.asname if alias.asname else alias.name
+                        defined_names.add(name)
 
             for name in imported_names:
                 name = name.strip("()")
@@ -371,6 +375,7 @@ def check_import_chains():
 # =================================================================
 #  CHECK 3: Dead Code Scanner (Dead Code Ghoul)
 # =================================================================
+
 
 def check_dead_code():
     header("Dead Code Scanner", "dead")
@@ -409,14 +414,12 @@ def check_dead_code():
             all_source += pf.read_text(encoding="utf-8") + "\n"
         except Exception:
             continue
-    try:
+    with contextlib.suppress(Exception):
         all_source += MAIN_FILE.read_text(encoding="utf-8") + "\n"
-    except Exception:
-        pass
 
     dead = []
     for name, file in sorted(definitions.items()):
-        matches = re.findall(r'\b' + re.escape(name) + r'\b', all_source)
+        matches = re.findall(r"\b" + re.escape(name) + r"\b", all_source)
         if len(matches) <= 1:
             dead.append((name, file))
 
@@ -433,6 +436,7 @@ def check_dead_code():
 # =================================================================
 #  CHECK 4: Endpoint Coverage (Null Shade)
 # =================================================================
+
 
 def _extract_backend_routes() -> dict[str, list[str]]:
     routes: dict[str, list[str]] = {}
@@ -469,9 +473,9 @@ def _extract_frontend_calls() -> set[str]:
     for match in re.finditer(r"request<[^>]*>\(\s*[`'\"]([^`'\"]+)[`'\"]", source):
         calls.add(match.group(1))
     for match in re.finditer(r"request<[^>]*>\(\s*`([^`]+)`", source):
-        calls.add(re.sub(r'\$\{[^}]+\}', '{param}', match.group(1)))
-    for match in re.finditer(r'fetch\(\s*`\$\{API_BASE\}([^`]+)`', source):
-        calls.add(re.sub(r'\$\{[^}]+\}', '{param}', match.group(1)))
+        calls.add(re.sub(r"\$\{[^}]+\}", "{param}", match.group(1)))
+    for match in re.finditer(r"fetch\(\s*`\$\{API_BASE\}([^`]+)`", source):
+        calls.add(re.sub(r"\$\{[^}]+\}", "{param}", match.group(1)))
     return calls
 
 
@@ -502,7 +506,7 @@ def check_endpoint_coverage():
         fp_clean = fp.replace("{param}", "PLACEHOLDER").rstrip("/") or "/"
         matched = False
         for bp in backend_paths:
-            bp_pattern = re.sub(r'\{[^}]+\}', '[^/]+', bp.rstrip("/") or "/")
+            bp_pattern = re.sub(r"\{[^}]+\}", "[^/]+", bp.rstrip("/") or "/")
             if re.fullmatch(bp_pattern, fp_clean):
                 matched = True
                 break
@@ -524,6 +528,7 @@ def check_endpoint_coverage():
 # =================================================================
 #  CHECK 5: Stale Migration Detector (Migration Specter)
 # =================================================================
+
 
 def check_stale_migrations():
     """The schema has one path, Alembic: require a single head and no DDL in main.py."""
@@ -557,14 +562,22 @@ def check_stale_migrations():
 # =================================================================
 
 _PACKAGE_TO_IMPORT = {
-    "python-jose": {"jose"}, "python-multipart": {"multipart"},
-    "pydantic-settings": {"pydantic_settings"}, "email-validator": {"email_validator"},
+    "python-jose": {"jose"},
+    "python-multipart": {"multipart"},
+    "pydantic-settings": {"pydantic_settings"},
+    "email-validator": {"email_validator"},
     "google-auth": {"google.auth", "google.oauth2"},
     "google-api-python-client": {"googleapiclient"},
-    "uvicorn[standard]": {"uvicorn"}, "sqlalchemy[asyncio]": {"sqlalchemy"},
-    "fastapi": {"fastapi"}, "asyncpg": {"asyncpg"}, "bcrypt": {"bcrypt"},
-    "pydantic": {"pydantic"}, "httpx": {"httpx"}, "aiosmtplib": {"aiosmtplib"},
-    "stripe": {"stripe"}, "pywebpush": {"pywebpush"},
+    "uvicorn[standard]": {"uvicorn"},
+    "sqlalchemy[asyncio]": {"sqlalchemy"},
+    "fastapi": {"fastapi"},
+    "asyncpg": {"asyncpg"},
+    "bcrypt": {"bcrypt"},
+    "pydantic": {"pydantic"},
+    "httpx": {"httpx"},
+    "aiosmtplib": {"aiosmtplib"},
+    "stripe": {"stripe"},
+    "pywebpush": {"pywebpush"},
 }
 _IMPORT_TO_PACKAGE: dict[str, str] = {}
 for _pkg, _imps in _PACKAGE_TO_IMPORT.items():
@@ -597,14 +610,50 @@ def check_dependencies():
         else:
             available_imports.add(clean.replace("-", "_"))
 
-    stdlib = set(sys.stdlib_module_names) if hasattr(sys, "stdlib_module_names") else {
-        "os", "sys", "re", "ast", "json", "uuid", "datetime", "pathlib",
-        "typing", "collections", "functools", "itertools", "contextlib",
-        "secrets", "hashlib", "base64", "io", "enum", "dataclasses",
-        "logging", "traceback", "math", "copy", "time", "asyncio",
-        "email", "html", "urllib", "http", "abc", "inspect", "string",
-        "random", "struct", "csv", "tempfile", "mimetypes", "warnings",
-    }
+    stdlib = (
+        set(sys.stdlib_module_names)
+        if hasattr(sys, "stdlib_module_names")
+        else {
+            "os",
+            "sys",
+            "re",
+            "ast",
+            "json",
+            "uuid",
+            "datetime",
+            "pathlib",
+            "typing",
+            "collections",
+            "functools",
+            "itertools",
+            "contextlib",
+            "secrets",
+            "hashlib",
+            "base64",
+            "io",
+            "enum",
+            "dataclasses",
+            "logging",
+            "traceback",
+            "math",
+            "copy",
+            "time",
+            "asyncio",
+            "email",
+            "html",
+            "urllib",
+            "http",
+            "abc",
+            "inspect",
+            "string",
+            "random",
+            "struct",
+            "csv",
+            "tempfile",
+            "mimetypes",
+            "warnings",
+        }
+    )
 
     third_party: dict[str, set[str]] = {}
     for pf in APP_DIR.rglob("*.py"):
@@ -644,6 +693,7 @@ def check_dependencies():
 # =================================================================
 #  DAEMON MODE (Background Watcher)
 # =================================================================
+
 
 async def daemon_loop(interval: int = 30):
     print(f"\n{BOLD}  THE WATCHER AWAKENS{RESET}")
@@ -742,8 +792,10 @@ async def run_all(fix: bool = False, check: str | None = None, exit_on_fail: boo
         total_xp = sum(e["xp_bounty"] for e in _encounters)
         print(f"\n  {BOLD}Encounter Log:{RESET}")
         for enc in _encounters:
-            print(f"    {RED}* {enc['daemon']} ({enc['class']}/{enc['tier']}) "
-                  f"-- {enc['issues']} issues, {enc['xp_bounty']} XP bounty{RESET}")
+            print(
+                f"    {RED}* {enc['daemon']} ({enc['class']}/{enc['tier']}) "
+                f"-- {enc['issues']} issues, {enc['xp_bounty']} XP bounty{RESET}"
+            )
         print(f"\n  {YELLOW}Total XP bounty if resolved: {total_xp} XP{RESET}")
     print()
 

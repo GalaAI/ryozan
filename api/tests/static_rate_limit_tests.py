@@ -34,7 +34,7 @@ class StaticRateLimitTests(unittest.TestCase):
 
     def test_spa_catch_all_is_exempt_in_main(self):
         start = MAIN.index('@app.get("/{full_path:path}"')
-        self.assertIn("@limiter.exempt", MAIN[start:MAIN.index("async def spa_fallback", start)])
+        self.assertIn("@limiter.exempt", MAIN[start : MAIN.index("async def spa_fallback", start)])
 
     def test_exempt_catch_all_keeps_assets_out_of_the_budget(self):
         tight = Limiter(key_func=get_rate_limit_key, default_limits=["5/minute"])

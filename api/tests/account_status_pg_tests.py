@@ -125,9 +125,7 @@ class AccountStatusPostgresTests(unittest.IsolatedAsyncioTestCase):
             owner.password_state = None
             owner.password_changed_at = None
             owner.password_change_method = None
-            collector = User(
-                email=f"{secrets.token_hex(8)}@example.com", name="Fixture Collector", role="collector"
-            )
+            collector = User(email=f"{secrets.token_hex(8)}@example.com", name="Fixture Collector", role="collector")
             set_user_password(collector, secrets.token_urlsafe(24), "change")
             db.add(collector)
             await db.commit()

@@ -9,7 +9,6 @@ two-session Message lease race is exercised without external provider writes.
 
 import asyncio
 import json
-import os
 import unittest
 from datetime import UTC, date, datetime
 from unittest.mock import patch
@@ -32,9 +31,7 @@ from app.services import email as email_service
 
 TEST_DATABASE_URL = legacy_env.getenv("RYOZAN_TEST_DATABASE_URL", "")
 if TEST_DATABASE_URL.startswith("postgresql://"):
-    TEST_DATABASE_URL = TEST_DATABASE_URL.replace(
-        "postgresql://", "postgresql+asyncpg://", 1
-    )
+    TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 
 @unittest.skipUnless(
@@ -156,9 +153,7 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             await engine.dispose()
         if self.schema.startswith("booky_courier_test_"):
             async with self.admin_engine.begin() as connection:
-                await connection.execute(
-                    text(f'DROP SCHEMA "{self.schema}" CASCADE')
-                )
+                await connection.execute(text(f'DROP SCHEMA "{self.schema}" CASCADE'))
         await self.admin_engine.dispose()
 
     async def test_worker_claim_between_projection_and_staff_lock_is_not_requeued(self):
@@ -198,9 +193,7 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
                 )
                 await asyncio.wait_for(projection_complete.wait(), timeout=10)
                 worker_task = asyncio.create_task(
-                    email_service.process_booky_courier_outbox_once(
-                        message_id=self.message.id
-                    )
+                    email_service.process_booky_courier_outbox_once(message_id=self.message.id)
                 )
                 await asyncio.wait_for(worker_claimed.wait(), timeout=10)
                 release_projection.set()
@@ -222,15 +215,13 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             retry_requests = await verification_session.scalar(
                 select(func.count(BookingLifecycleEvent.id)).where(
                     BookingLifecycleEvent.booking_id == self.booking.id,
-                    BookingLifecycleEvent.event_type
-                    == "booky_delivery_retry_requested",
+                    BookingLifecycleEvent.event_type == "booky_delivery_retry_requested",
                 )
             )
             terminal_receipts = await verification_session.scalar(
                 select(func.count(BookingLifecycleEvent.id)).where(
                     BookingLifecycleEvent.booking_id == self.booking.id,
-                    BookingLifecycleEvent.provider_event_id
-                    == "booky:postgres-race:courier-attempt:1:terminal",
+                    BookingLifecycleEvent.provider_event_id == "booky:postgres-race:courier-attempt:1:terminal",
                 )
             )
             self.assertEqual(retry_requests, 0)
@@ -238,15 +229,10 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
 
             async with self.engine.connect() as connection:
                 indexes = await connection.run_sync(
-                    lambda sync_connection: inspect(sync_connection).get_indexes(
-                        "ryozan_email_log"
-                    )
+                    lambda sync_connection: inspect(sync_connection).get_indexes("ryozan_email_log")
                 )
             attempt_index = next(
-                index
-                for index in indexes
-                if index["name"]
-                == "ix_ryozan_email_log_courier_message_attempt"
+                index for index in indexes if index["name"] == "ix_ryozan_email_log_courier_message_attempt"
             )
             self.assertFalse(attempt_index["unique"])
             self.assertEqual(
@@ -268,9 +254,7 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             patch.object(email_service, "send_email", new=held_provider_send),
         ):
             worker_task = asyncio.create_task(
-                email_service.process_booky_courier_outbox_once(
-                    message_id=self.message.id
-                )
+                email_service.process_booky_courier_outbox_once(message_id=self.message.id)
             )
             await asyncio.wait_for(provider_started.wait(), timeout=10)
 
@@ -309,8 +293,7 @@ class BookyCourierPostgresConcurrencyTests(unittest.IsolatedAsyncioTestCase):
             )
             stale_terminal = await verification_session.scalar(
                 select(func.count(BookingLifecycleEvent.id)).where(
-                    BookingLifecycleEvent.provider_event_id
-                    == "booky:postgres-race:courier-attempt:1:terminal"
+                    BookingLifecycleEvent.provider_event_id == "booky:postgres-race:courier-attempt:1:terminal"
                 )
             )
             self.assertEqual(stale_terminal, 0)

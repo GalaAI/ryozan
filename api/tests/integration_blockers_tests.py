@@ -299,7 +299,9 @@ class SenderIdentityTests(unittest.TestCase):
                 email_service.sender_identity(provider, settings), ("Fixture Studio", "hello@studio.example.test")
             )
         # SMTP sends from its own mailbox before the shop address.
-        self.assertEqual(email_service.sender_identity("smtp", _settings(SMTP_USER="box@example.test"))[1], "box@example.test")
+        self.assertEqual(
+            email_service.sender_identity("smtp", _settings(SMTP_USER="box@example.test"))[1], "box@example.test"
+        )
 
     def test_nothing_configured_yields_no_address(self):
         self.assertEqual(email_service.sender_identity("resend", _settings())[1], "")
@@ -335,7 +337,9 @@ class ProviderSendTests(unittest.TestCase):
         )
         (ok, _id, _err), client = self._send(email_service._send_via_sendgrid, settings, status=202, from_alias="admin")
         self.assertTrue(ok)
-        self.assertEqual(client.calls[0][1]["json"]["from"], {"email": "admin@studio.example.test", "name": "Fixture Studio"})
+        self.assertEqual(
+            client.calls[0][1]["json"]["from"], {"email": "admin@studio.example.test", "name": "Fixture Studio"}
+        )
 
     def test_send_email_reaches_resend_with_the_configured_identity(self):
         settings = _settings(RESEND_API_KEY="re_x", RESEND_FROM_EMAIL="rs@studio.example.test")
@@ -548,7 +552,11 @@ class ResendDeliveryWebhookSignatureTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException) as raised:
             await self._call(settings)
         self.assertEqual(raised.exception.status_code, 400)
-        bad = {"svix-id": "msg_1", "svix-timestamp": str(int(datetime.now(UTC).timestamp())), "svix-signature": "v1,AAAA"}
+        bad = {
+            "svix-id": "msg_1",
+            "svix-timestamp": str(int(datetime.now(UTC).timestamp())),
+            "svix-signature": "v1,AAAA",
+        }
         with self.assertRaises(HTTPException) as raised:
             await self._call(settings, bad)
         self.assertEqual(raised.exception.status_code, 401)
@@ -571,7 +579,12 @@ class DocsMatchCodeTests(unittest.TestCase):
     def test_new_settings_are_documented_in_env_example_and_readme(self):
         example = (API / ".env.example").read_text(encoding="utf-8")
         readme = (API.parent / "README.md").read_text(encoding="utf-8")
-        for name in ("STRIPE_CONNECT_COUNTRY", "GOOGLE_SIGNIN_CLIENT_SECRET", "SHOP_OWNER_EMAIL", "COURIER_REPLY_DOMAIN"):
+        for name in (
+            "STRIPE_CONNECT_COUNTRY",
+            "GOOGLE_SIGNIN_CLIENT_SECRET",
+            "SHOP_OWNER_EMAIL",
+            "COURIER_REPLY_DOMAIN",
+        ):
             self.assertIn(name, example, name)
             self.assertIn(name, readme, name)
 

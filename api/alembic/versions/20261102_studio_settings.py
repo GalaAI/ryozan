@@ -7,6 +7,7 @@ Revises: 20261031_ryozan_prefix
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "20261102_studio_settings"

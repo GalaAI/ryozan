@@ -15,7 +15,7 @@ bounded contribution reads, and backward compatibility when no period is passed.
 """
 
 import unittest
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, MagicMock
 
@@ -30,8 +30,6 @@ from app.api.v1.endpoints.econ import (
     get_payroll_tax_summary,
 )
 from app.constants.timezones import shop_timezone
-
-UTC = timezone.utc
 
 # (provider, bucket, count, amount_cents) -- the aggregate shape both share.
 ROWS = [
@@ -97,12 +95,16 @@ class SharedAggregateTests(IsolatedAsyncioTestCase):
     async def test_both_summaries_agree_on_the_same_period(self):
         """The regression: two endpoints, two copies of one query, free to drift."""
         ledger = await get_ledger_summary(
-            period_start=date(2026, 9, 1), period_end=date(2026, 9, 30),
-            current_user=_founder(), db=_db(),
+            period_start=date(2026, 9, 1),
+            period_end=date(2026, 9, 30),
+            current_user=_founder(),
+            db=_db(),
         )
         tax = await get_payroll_tax_summary(
-            period_start=date(2026, 9, 1), period_end=date(2026, 9, 30),
-            current_user=_founder(), db=_db(),
+            period_start=date(2026, 9, 1),
+            period_end=date(2026, 9, 30),
+            current_user=_founder(),
+            db=_db(),
         )
         for key in ("income_cents", "expense_cents", "net_taxable_cents", "estimated_tax_reserve_cents"):
             self.assertEqual(ledger[key], tax[key], f"{key} disagrees between the two Hustl summaries")
@@ -111,14 +113,20 @@ class SharedAggregateTests(IsolatedAsyncioTestCase):
     async def test_ledger_summary_response_is_a_superset_of_the_old_shape(self):
         """HustlePage already reads these keys; they must not disappear."""
         out = await get_ledger_summary(
-            period_start=None, period_end=None, current_user=_founder(), db=_db(),
+            period_start=None,
+            period_end=None,
+            current_user=_founder(),
+            db=_db(),
         )
         for key in ("buckets", "contractor_contributions_cents", "contractor_contribution_count"):
             self.assertIn(key, out)
 
     async def test_uncategorized_bucket_is_labelled_not_dropped(self):
         out = await get_payroll_tax_summary(
-            period_start=None, period_end=None, current_user=_founder(), db=_db(),
+            period_start=None,
+            period_end=None,
+            current_user=_founder(),
+            db=_db(),
         )
         self.assertIn("uncategorized", [b["bucket"] for b in out["buckets"]])
         self.assertEqual(out["uncategorized_cents"], 104000)
@@ -160,13 +168,18 @@ class BoundedReadsTests(IsolatedAsyncioTestCase):
 
     async def test_contribution_rows_feed_the_projection_unchanged(self):
         """Shop cut only, never the whole collector payment."""
-        db = _db(contribution_rows=[
-            ("contractor_contribution", 52000, None),
-            ("pos_payment", 15600, {"shop_share_category": "contractor_contribution", "shop_cut_cents": 5100}),
-            ("pos_payment", 10400, {"shop_share_category": "artist_share"}),
-        ])
+        db = _db(
+            contribution_rows=[
+                ("contractor_contribution", 52000, None),
+                ("pos_payment", 15600, {"shop_share_category": "contractor_contribution", "shop_cut_cents": 5100}),
+                ("pos_payment", 10400, {"shop_share_category": "artist_share"}),
+            ]
+        )
         out = await get_ledger_summary(
-            period_start=None, period_end=None, current_user=_founder(), db=db,
+            period_start=None,
+            period_end=None,
+            current_user=_founder(),
+            db=db,
         )
         self.assertEqual(out["contractor_contributions_cents"], 52000 + 5100)
         self.assertEqual(out["contractor_contribution_count"], 2)

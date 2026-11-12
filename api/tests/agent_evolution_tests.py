@@ -178,6 +178,7 @@ class AgentEvolutionProviderTests(unittest.IsolatedAsyncioTestCase):
 class OrchestraModelRoutingTests(unittest.IsolatedAsyncioTestCase):
     async def test_local_override_is_limited_to_model_configuration(self):
         from app.services.agent_evolution import ORCHESTRA_MODELS_PATH, request_apex_agent
+
         response = SimpleNamespace(status_code=200, content=b"{}", json=lambda: {"ok": True})
         for local_mode, path, expected_origin in [
             (True, ORCHESTRA_MODELS_PATH, "http://127.0.0.1:8790"),
@@ -188,15 +189,26 @@ class OrchestraModelRoutingTests(unittest.IsolatedAsyncioTestCase):
             client.__aenter__.return_value = client
             client.request.return_value = response
             settings = SimpleNamespace(LOCAL_DEV_MODE=local_mode, ARK_ORCHESTRA_CONFIG_URL="http://127.0.0.1:8790")
-            with patch("app.services.agent_evolution._apex_base_url", return_value=("https://hosted.example", "fixture-token")), patch("app.services.agent_evolution.get_settings", return_value=settings), patch("app.services.agent_evolution.httpx.AsyncClient", return_value=client):
+            with (
+                patch(
+                    "app.services.agent_evolution._apex_base_url",
+                    return_value=("https://hosted.example", "fixture-token"),
+                ),
+                patch("app.services.agent_evolution.get_settings", return_value=settings),
+                patch("app.services.agent_evolution.httpx.AsyncClient", return_value=client),
+            ):
                 await request_apex_agent("GET", path)
             self.assertEqual(client.request.call_args.args[1], f"{expected_origin}/api/apex/{path}")
 
     async def test_absent_resource_retains_default_but_other_failures_are_not_hidden(self):
         from app.services.agent_evolution import AgentEvolutionBridgeError, resolve_orchestra_model_lane
+
         lane = SimpleNamespace(primary_model="ark/bttco/gemini")
         for status in [404, 401, 403, 503]:
-            with patch("app.services.agent_evolution.request_apex_agent", new=AsyncMock(side_effect=AgentEvolutionBridgeError(status, "Unavailable"))):
+            with patch(
+                "app.services.agent_evolution.request_apex_agent",
+                new=AsyncMock(side_effect=AgentEvolutionBridgeError(status, "Unavailable")),
+            ):
                 if status == 404:
                     self.assertIs(await resolve_orchestra_model_lane("gala", lane), lane)
                 else:
@@ -207,11 +219,27 @@ class OrchestraModelRoutingTests(unittest.IsolatedAsyncioTestCase):
         from dataclasses import make_dataclass
 
         from app.services.agent_evolution import ORCHESTRA_MODELS_PATH, resolve_orchestra_model_lane
+
         lane_type = make_dataclass("Lane", [("primary_model", str), ("fallback_models", list)])
         inherited = lane_type("ark/bttco/gemini", ["ark/deepseek"])
+
         def snapshot(primary):
-            return {"ok": True, "routing": {"orchestraId": "orchestra:bttco", "scope": "bttco_chat", "models": [{"id": "ark/qwen"}, {"id": "ark/deepseek"}], "members": [{"actorRef": "agent:bttco-spyder", "assignment": {"defaultModel": primary, "fallbacks": []}}]}}
-        with patch("app.services.agent_evolution.request_apex_agent", new=AsyncMock(side_effect=[snapshot("ark/qwen"), snapshot("ark/deepseek"), snapshot(None)])) as api:
+            return {
+                "ok": True,
+                "routing": {
+                    "orchestraId": "orchestra:bttco",
+                    "scope": "bttco_chat",
+                    "models": [{"id": "ark/qwen"}, {"id": "ark/deepseek"}],
+                    "members": [
+                        {"actorRef": "agent:bttco-spyder", "assignment": {"defaultModel": primary, "fallbacks": []}}
+                    ],
+                },
+            }
+
+        with patch(
+            "app.services.agent_evolution.request_apex_agent",
+            new=AsyncMock(side_effect=[snapshot("ark/qwen"), snapshot("ark/deepseek"), snapshot(None)]),
+        ) as api:
             first = await resolve_orchestra_model_lane("spyder", inherited)
             second = await resolve_orchestra_model_lane("spyder", inherited)
             third = await resolve_orchestra_model_lane("spyder", inherited)
@@ -224,8 +252,20 @@ class OrchestraModelRoutingTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_wrong_orchestra_and_missing_agent_fail_closed(self):
         from app.services.agent_evolution import AgentEvolutionBridgeError, resolve_orchestra_model_lane
+
         for orchestra in ["orchestra:other", "orchestra:bttco"]:
-            with patch("app.services.agent_evolution.request_apex_agent", new=AsyncMock(return_value={"ok": True, "routing": {"orchestraId": orchestra, "scope": "bttco_chat", "members": []}})), self.assertRaises(AgentEvolutionBridgeError):
+            with (
+                patch(
+                    "app.services.agent_evolution.request_apex_agent",
+                    new=AsyncMock(
+                        return_value={
+                            "ok": True,
+                            "routing": {"orchestraId": orchestra, "scope": "bttco_chat", "members": []},
+                        }
+                    ),
+                ),
+                self.assertRaises(AgentEvolutionBridgeError),
+            ):
                 await resolve_orchestra_model_lane("gala", SimpleNamespace())
 
 
@@ -233,20 +273,39 @@ class BenchPreviewTests(unittest.IsolatedAsyncioTestCase):
     async def test_gateway_failure_is_safe_and_does_not_record_a_success(self):
         from fastapi import HTTPException
 
-        for failure in [HTTPException(502, 'Provider error with private upstream payload'), HTTPException(502, '402 Insufficient credits with private upstream payload'), ValueError('Malformed provider payload')]:
+        for failure in [
+            HTTPException(502, "Provider error with private upstream payload"),
+            HTTPException(502, "402 Insufficient credits with private upstream payload"),
+            ValueError("Malformed provider payload"),
+        ]:
             db = AsyncMock()
             with (
-                patch.object(gala_chat, "get_settings", return_value=SimpleNamespace(LOCAL_DEV_MODE=True, ANTHROPIC_MONTHLY_BUDGET_CAP=10)),
+                patch.object(
+                    gala_chat,
+                    "get_settings",
+                    return_value=SimpleNamespace(LOCAL_DEV_MODE=True, ANTHROPIC_MONTHLY_BUDGET_CAP=10),
+                ),
                 patch.object(gala_chat, "get_agent_system_prompt", return_value="Selected agent purpose"),
-                patch.object(gala_chat, "resolve_ai_lane", new=AsyncMock(return_value=SimpleNamespace(primary_model="ark/test", fallback_models=[]))),
-                patch.object(gala_chat, "resolve_orchestra_model_lane", new=AsyncMock(side_effect=lambda _agent, lane: lane)),
+                patch.object(
+                    gala_chat,
+                    "resolve_ai_lane",
+                    new=AsyncMock(return_value=SimpleNamespace(primary_model="ark/test", fallback_models=[])),
+                ),
+                patch.object(
+                    gala_chat, "resolve_orchestra_model_lane", new=AsyncMock(side_effect=lambda _agent, lane: lane)
+                ),
                 patch.object(gala_chat, "call_ark_gateway_chat_completion", new=AsyncMock(side_effect=failure)),
                 patch.object(gala_chat, "execute_tool", new=AsyncMock()) as execute,
                 patch("app.services.api_budget.check_budget", new=AsyncMock()),
                 patch("app.services.api_budget.log_usage", new=AsyncMock()) as usage,
                 self.assertRaises(HTTPException) as error,
             ):
-                await gala_chat.preview_agent_response("spyder", gala_chat.BenchPreviewRequest(scenario="Sample inquiry scenario"), db, SimpleNamespace(id="founder-1", role="founder", nexus_profile={}))
+                await gala_chat.preview_agent_response(
+                    "spyder",
+                    gala_chat.BenchPreviewRequest(scenario="Sample inquiry scenario"),
+                    db,
+                    SimpleNamespace(id="founder-1", role="founder", nexus_profile={}),
+                )
             self.assertEqual(error.exception.status_code, 502)
             self.assertIn("Nothing was applied", error.exception.detail)
             self.assertNotIn("payload", error.exception.detail)
@@ -260,27 +319,47 @@ class BenchPreviewTests(unittest.IsolatedAsyncioTestCase):
         user = SimpleNamespace(id="founder-1", role="founder", nexus_profile={})
         settings = SimpleNamespace(LOCAL_DEV_MODE=True, ANTHROPIC_MONTHLY_BUDGET_CAP=10)
         profile = {"agentId": "gala", "status": "promoted", "revision": 5, "traits": {"warmth": 50}}
-        gateway = AsyncMock(return_value={"choices": [{"message": {"content": "Illustrative comparison"}}], "model": "ark/test"})
+        gateway = AsyncMock(
+            return_value={"choices": [{"message": {"content": "Illustrative comparison"}}], "model": "ark/test"}
+        )
         db = AsyncMock()
         with (
             patch.object(gala_chat, "get_settings", return_value=settings),
-            patch.object(gala_chat, "request_apex_agent", new=AsyncMock(return_value={"promotedProfile": profile, "profile": profile})) as apex,
+            patch.object(
+                gala_chat,
+                "request_apex_agent",
+                new=AsyncMock(return_value={"promotedProfile": profile, "profile": profile}),
+            ) as apex,
             patch.object(gala_chat, "get_agent_system_prompt", return_value="Server-owned Gala purpose"),
-            patch.object(gala_chat, "resolve_ai_lane", new=AsyncMock(return_value=SimpleNamespace(primary_model="ark/test", fallback_models=[]))),
-            patch.object(gala_chat, "resolve_orchestra_model_lane", new=AsyncMock(side_effect=lambda _agent,lane:lane)),
+            patch.object(
+                gala_chat,
+                "resolve_ai_lane",
+                new=AsyncMock(return_value=SimpleNamespace(primary_model="ark/test", fallback_models=[])),
+            ),
+            patch.object(
+                gala_chat, "resolve_orchestra_model_lane", new=AsyncMock(side_effect=lambda _agent, lane: lane)
+            ),
             patch.object(gala_chat, "call_ark_gateway_chat_completion", new=gateway),
             patch.object(gala_chat, "execute_tool", new=AsyncMock()) as execute,
             patch("app.services.api_budget.check_budget", new=AsyncMock()),
             patch("app.services.api_budget.log_usage", new=AsyncMock()) as usage,
         ):
-            result = await gala_chat.preview_agent_response("gala", gala_chat.BenchPreviewRequest(
-                scenario="An inquiry needs a follow-up. No records supplied.", profile_revision=5, traits={"warmth": 80},
-                access={"revision": 0, "tools": [], "scopes": []},
-            ), db, user)
+            result = await gala_chat.preview_agent_response(
+                "gala",
+                gala_chat.BenchPreviewRequest(
+                    scenario="An inquiry needs a follow-up. No records supplied.",
+                    profile_revision=5,
+                    traits={"warmth": 80},
+                    access={"revision": 0, "tools": [], "scopes": []},
+                ),
+                db,
+                user,
+            )
         self.assertEqual(result["mode"], "illustrative_preview")
         self.assertEqual(result["profile_revision"], 5)
         self.assertEqual(gateway.await_args.kwargs["tools"], [])
         import json
+
         context = json.loads(gateway.await_args.kwargs["messages"][0]["content"])
         self.assertEqual(context["baseline_profile"]["traits"]["warmth"], 50)
         self.assertEqual(context["draft_profile"]["traits"]["warmth"], 80)
@@ -307,41 +386,67 @@ class BenchPreviewTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_preview_denies_non_founder_production_and_stale_access_before_model_call(self):
         from fastapi import HTTPException
-        for role, local, revision, status in [("artist", True, 0, 403), ("founder", False, 0, 403), ("founder", True, 2, 409)]:
+
+        for role, local, revision, status in [
+            ("artist", True, 0, 403),
+            ("founder", False, 0, 403),
+            ("founder", True, 2, 409),
+        ]:
             with (
                 patch.object(gala_chat, "get_settings", return_value=SimpleNamespace(LOCAL_DEV_MODE=local)),
                 patch.object(gala_chat, "call_ark_gateway_chat_completion", new=AsyncMock()) as gateway,
                 self.assertRaises(HTTPException) as error,
             ):
-                await gala_chat.preview_agent_response("gala", gala_chat.BenchPreviewRequest(
-                    scenario="Sample inquiry scenario", access={"revision": revision, "tools": [], "scopes": []},
-                ), AsyncMock(), SimpleNamespace(id="founder-1", role=role, nexus_profile={}))
+                await gala_chat.preview_agent_response(
+                    "gala",
+                    gala_chat.BenchPreviewRequest(
+                        scenario="Sample inquiry scenario",
+                        access={"revision": revision, "tools": [], "scopes": []},
+                    ),
+                    AsyncMock(),
+                    SimpleNamespace(id="founder-1", role=role, nexus_profile={}),
+                )
             self.assertEqual(error.exception.status_code, status)
             gateway.assert_not_awaited()
 
     async def test_preview_fails_closed_without_promoted_profile(self):
         from fastapi import HTTPException
+
         with (
             patch.object(gala_chat, "get_settings", return_value=SimpleNamespace(LOCAL_DEV_MODE=True)),
-            patch.object(gala_chat, "request_apex_agent", new=AsyncMock(return_value={"profile": {"status": "candidate"}})),
+            patch.object(
+                gala_chat, "request_apex_agent", new=AsyncMock(return_value={"profile": {"status": "candidate"}})
+            ),
             patch.object(gala_chat, "call_ark_gateway_chat_completion", new=AsyncMock()) as gateway,
             self.assertRaises(HTTPException) as error,
         ):
-            await gala_chat.preview_agent_response("gala", gala_chat.BenchPreviewRequest(scenario="Sample inquiry scenario"), AsyncMock(), SimpleNamespace(id="founder-1", role="founder", nexus_profile={}))
+            await gala_chat.preview_agent_response(
+                "gala",
+                gala_chat.BenchPreviewRequest(scenario="Sample inquiry scenario"),
+                AsyncMock(),
+                SimpleNamespace(id="founder-1", role="founder", nexus_profile={}),
+            )
         self.assertEqual(error.exception.status_code, 409)
         gateway.assert_not_awaited()
 
     async def test_unknown_tools_and_missing_scopes_fail_before_generation(self):
         from fastapi import HTTPException
+
         for tools in [["not_a_registered_tool"], ["lookup_bookings"]]:
             with (
                 patch.object(gala_chat, "get_settings", return_value=SimpleNamespace(LOCAL_DEV_MODE=True)),
                 patch.object(gala_chat, "call_ark_gateway_chat_completion", new=AsyncMock()) as gateway,
                 self.assertRaises(HTTPException) as error,
             ):
-                await gala_chat.preview_agent_response("gala", gala_chat.BenchPreviewRequest(
-                    scenario="Sample inquiry scenario", access={"revision": 0, "tools": tools, "scopes": []},
-                ), AsyncMock(), SimpleNamespace(id="founder-1", role="founder", nexus_profile={}))
+                await gala_chat.preview_agent_response(
+                    "gala",
+                    gala_chat.BenchPreviewRequest(
+                        scenario="Sample inquiry scenario",
+                        access={"revision": 0, "tools": tools, "scopes": []},
+                    ),
+                    AsyncMock(),
+                    SimpleNamespace(id="founder-1", role="founder", nexus_profile={}),
+                )
             self.assertEqual(error.exception.status_code, 422)
             gateway.assert_not_awaited()
 

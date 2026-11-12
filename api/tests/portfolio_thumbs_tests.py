@@ -75,7 +75,9 @@ class BuildThumbTests(unittest.TestCase):
             self.assertEqual(decoded.size, (480, 640))
 
     def test_focus_derivative_is_capped_at_the_focus_edge(self):
-        focus = portfolio_thumbs.build_portfolio_thumb(_jpeg(3000, 4000), max_edge_px=portfolio_thumbs.PORTFOLIO_FOCUS_EDGE_PX)
+        focus = portfolio_thumbs.build_portfolio_thumb(
+            _jpeg(3000, 4000), max_edge_px=portfolio_thumbs.PORTFOLIO_FOCUS_EDGE_PX
+        )
         self.assertEqual((focus.width, focus.height), (1050, 1400))
         self.assertEqual(focus.mime_type, "image/webp")
 
@@ -101,19 +103,31 @@ class BuildThumbTests(unittest.TestCase):
             portfolio_thumbs.build_portfolio_thumb(b"not an image")
 
     def test_thumb_filename_keeps_the_original_stem(self):
-        self.assertEqual(portfolio_thumbs.thumb_filename_for("https://assets.example.test/portfolios/justin/IMG_0212.JPG"), "IMG_0212.webp")
+        self.assertEqual(
+            portfolio_thumbs.thumb_filename_for("https://assets.example.test/portfolios/justin/IMG_0212.JPG"),
+            "IMG_0212.webp",
+        )
         self.assertEqual(portfolio_thumbs.thumb_filename_for("a1b2c3.png"), "a1b2c3.webp")
 
     def test_thumbs_for_is_parallel_to_images_with_none_for_missing(self):
         images = ["https://x/a.jpg", "https://x/b.jpg"]
-        self.assertEqual(portfolio_thumbs.thumbs_for(images, {"https://x/b.jpg": "https://x/thumbs/b.webp"}), [None, "https://x/thumbs/b.webp"])
+        self.assertEqual(
+            portfolio_thumbs.thumbs_for(images, {"https://x/b.jpg": "https://x/thumbs/b.webp"}),
+            [None, "https://x/thumbs/b.webp"],
+        )
         self.assertEqual(portfolio_thumbs.thumbs_for(None, {}), [])
 
 
 class UploadThumbTests(unittest.IsolatedAsyncioTestCase):
     async def test_upload_stores_the_thumb_next_to_the_original(self):
-        with patch.object(portfolio_thumbs, "upload_file", new=AsyncMock(return_value="https://assets.example.test/portfolios/artist/thumbs/new.webp")) as store:
-            url = await portfolio_thumbs.upload_portfolio_thumb(_jpeg(1200, 900), slug="artist", original_name="new.jpg")
+        with patch.object(
+            portfolio_thumbs,
+            "upload_file",
+            new=AsyncMock(return_value="https://assets.example.test/portfolios/artist/thumbs/new.webp"),
+        ) as store:
+            url = await portfolio_thumbs.upload_portfolio_thumb(
+                _jpeg(1200, 900), slug="artist", original_name="new.jpg"
+            )
         self.assertEqual(url, "https://assets.example.test/portfolios/artist/thumbs/new.webp")
         kwargs = store.await_args.kwargs
         self.assertEqual(kwargs["folder_path"], "portfolios/artist/thumbs")
@@ -121,8 +135,14 @@ class UploadThumbTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(kwargs["mime_type"], "image/webp")
 
     async def test_focus_upload_stores_under_the_focus_folder(self):
-        with patch.object(portfolio_thumbs, "upload_file", new=AsyncMock(return_value="https://assets.example.test/portfolios/artist/focus/new.webp")) as store:
-            url = await portfolio_thumbs.upload_portfolio_focus(_jpeg(3000, 2000), slug="artist", original_name="new.jpg")
+        with patch.object(
+            portfolio_thumbs,
+            "upload_file",
+            new=AsyncMock(return_value="https://assets.example.test/portfolios/artist/focus/new.webp"),
+        ) as store:
+            url = await portfolio_thumbs.upload_portfolio_focus(
+                _jpeg(3000, 2000), slug="artist", original_name="new.jpg"
+            )
         self.assertEqual(url, "https://assets.example.test/portfolios/artist/focus/new.webp")
         self.assertEqual(store.await_args.kwargs["folder_path"], "portfolios/artist/focus")
         with Image.open(io.BytesIO(store.await_args.kwargs["file_bytes"])) as decoded:
@@ -145,16 +165,22 @@ class GalleryEndpointThumbTests(unittest.IsolatedAsyncioTestCase):
         existing = "https://assets.example.test/portfolios/artist/existing.webp"
         uploaded = "https://assets.example.test/portfolios/artist/uploaded.jpg"
         thumb = "https://assets.example.test/portfolios/artist/thumbs/uploaded.webp"
-        current_user = _artist([existing], {existing: "https://assets.example.test/portfolios/artist/thumbs/existing.webp"})
+        current_user = _artist(
+            [existing], {existing: "https://assets.example.test/portfolios/artist/thumbs/existing.webp"}
+        )
         db = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
-        upload = SimpleNamespace(filename="uploaded.jpg", content_type="image/jpeg", read=AsyncMock(side_effect=[b"bytes", b""]))
+        upload = SimpleNamespace(
+            filename="uploaded.jpg", content_type="image/jpeg", read=AsyncMock(side_effect=[b"bytes", b""])
+        )
         normalized = SimpleNamespace(data=_jpeg(2000, 1500), extension="jpg", mime_type="image/jpeg")
 
         with (
             patch.object(artists, "_read_artist_image", new=AsyncMock(return_value=normalized)),
             patch.object(artists, "upload_to_drive", new=AsyncMock(return_value=uploaded)),
             patch.object(artists, "upload_portfolio_thumb", new=AsyncMock(return_value=thumb)) as make_thumb,
-            patch.object(artists, "upload_portfolio_focus", new=AsyncMock(return_value=thumb.replace("/thumbs/", "/focus/"))) as make_focus,
+            patch.object(
+                artists, "upload_portfolio_focus", new=AsyncMock(return_value=thumb.replace("/thumbs/", "/focus/"))
+            ) as make_focus,
         ):
             result = await artists.upload_gallery_image(file=upload, db=db, current_user=current_user)
 
@@ -164,7 +190,9 @@ class GalleryEndpointThumbTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.portfolio_images, [existing, uploaded])
         self.assertEqual(result.portfolio_thumbs[uploaded], thumb)
         self.assertEqual(result.portfolio_focus[uploaded], thumb.replace("/thumbs/", "/focus/"))
-        self.assertEqual(result.portfolio_thumbs[existing], "https://assets.example.test/portfolios/artist/thumbs/existing.webp")
+        self.assertEqual(
+            result.portfolio_thumbs[existing], "https://assets.example.test/portfolios/artist/thumbs/existing.webp"
+        )
         detail = ArtistDetail.model_validate(result)
         self.assertEqual(detail.portfolio_thumbs[uploaded], thumb)
         self.assertEqual(detail.portfolio_focus[uploaded], thumb.replace("/thumbs/", "/focus/"))
@@ -173,7 +201,9 @@ class GalleryEndpointThumbTests(unittest.IsolatedAsyncioTestCase):
         uploaded = "https://assets.example.test/portfolios/artist/uploaded.jpg"
         current_user = _artist([])
         db = SimpleNamespace(commit=AsyncMock(), refresh=AsyncMock())
-        upload = SimpleNamespace(filename="uploaded.jpg", content_type="image/jpeg", read=AsyncMock(side_effect=[b"bytes", b""]))
+        upload = SimpleNamespace(
+            filename="uploaded.jpg", content_type="image/jpeg", read=AsyncMock(side_effect=[b"bytes", b""])
+        )
         normalized = SimpleNamespace(data=_jpeg(640, 640), extension="jpg", mime_type="image/jpeg")
 
         with (
@@ -203,7 +233,9 @@ class GalleryEndpointThumbTests(unittest.IsolatedAsyncioTestCase):
             patch.object(artists, "queue_gallery_deletion", new=AsyncMock(return_value=outbox)) as queue,
             patch.object(artists, "process_gallery_deletion_outbox_once", new=AsyncMock(return_value=1)),
         ):
-            result = await artists.remove_gallery_image(body=artists.GalleryRemoveRequest(url=original), db=db, current_user=current_user)
+            result = await artists.remove_gallery_image(
+                body=artists.GalleryRemoveRequest(url=original), db=db, current_user=current_user
+            )
 
         queued_urls = sorted(call.kwargs["url"] for call in queue.await_args_list)
         self.assertEqual(queued_urls, sorted([original, thumb, focus]))
@@ -228,8 +260,16 @@ class GalleryEndpointThumbTests(unittest.IsolatedAsyncioTestCase):
 
 class BackfillTests(unittest.IsolatedAsyncioTestCase):
     async def test_backfill_makes_only_what_is_missing_and_records_per_image(self):
-        a, b, c = ("https://x/portfolios/artist/a.jpg", "https://x/portfolios/artist/b.jpg", "https://x/portfolios/artist/c.jpg")
-        artist = _artist([a, b, c], {a: "https://x/portfolios/artist/thumbs/a.webp", b: "https://x/portfolios/artist/thumbs/b.webp"}, {a: "https://x/portfolios/artist/focus/a.webp"})
+        a, b, c = (
+            "https://x/portfolios/artist/a.jpg",
+            "https://x/portfolios/artist/b.jpg",
+            "https://x/portfolios/artist/c.jpg",
+        )
+        artist = _artist(
+            [a, b, c],
+            {a: "https://x/portfolios/artist/thumbs/a.webp", b: "https://x/portfolios/artist/thumbs/b.webp"},
+            {a: "https://x/portfolios/artist/focus/a.webp"},
+        )
         rows = SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: [artist]))
         db = SimpleNamespace(execute=AsyncMock(return_value=rows), commit=AsyncMock())
         fetched: list[str] = []
@@ -242,7 +282,9 @@ class BackfillTests(unittest.IsolatedAsyncioTestCase):
             return f"https://x/{folder_path}/{filename}"
 
         with patch.object(portfolio_thumbs, "upload_file", new=store):
-            report = await portfolio_thumbs.backfill_missing_portfolio_derivatives(db, fetch_original=fetch, log=lambda line: None)
+            report = await portfolio_thumbs.backfill_missing_portfolio_derivatives(
+                db, fetch_original=fetch, log=lambda line: None
+            )
 
         self.assertEqual(fetched, [b, c])  # a is complete; b needs focus only; c needs both
         self.assertEqual((report.made_thumbs, report.made_focus, report.skipped, report.failed), (0, 1, 1, 1))
@@ -258,7 +300,9 @@ class BackfillTests(unittest.IsolatedAsyncioTestCase):
         db = SimpleNamespace(execute=AsyncMock(return_value=rows), commit=AsyncMock())
         fetch = AsyncMock()
         with patch.object(portfolio_thumbs, "upload_file", new=AsyncMock()) as store:
-            report = await portfolio_thumbs.backfill_missing_portfolio_derivatives(db, apply=False, fetch_original=fetch, log=lambda line: None)
+            report = await portfolio_thumbs.backfill_missing_portfolio_derivatives(
+                db, apply=False, fetch_original=fetch, log=lambda line: None
+            )
         fetch.assert_not_awaited()
         store.assert_not_awaited()
         db.commit.assert_not_awaited()

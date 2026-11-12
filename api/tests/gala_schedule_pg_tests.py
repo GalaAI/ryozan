@@ -7,7 +7,6 @@ PostgreSQL, so this bounded fixture runs execute_tool against real Booking
 rows in an isolated schema.
 """
 
-import os
 import unittest
 from datetime import date, timedelta
 from uuid import uuid4
