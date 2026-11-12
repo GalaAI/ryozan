@@ -240,24 +240,36 @@ export default function DocumentHub() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
 
   // ── Data fetching ────────────────────────────
-  const fetchDocs = useCallback(async () => {
-    setLoading(true)
-    try {
-      const params = category ? { category } : undefined
-      const [tplRes, docRes] = await Promise.all([
-        documents.listTemplates(params),
-        documents.listDocuments(params),
-      ])
-      setTemplates(tplRes.templates)
-      setTrackingDocs(docRes.documents)
-    } catch (err) {
-      console.error('Codex fetch failed:', err)
-    } finally {
-      setLoading(false)
-    }
+  // Fetch only: state is written once both lists answer.
+  const requestDocs = useCallback(() => {
+    const params = category ? { category } : undefined
+    return Promise.all([
+      documents.listTemplates(params),
+      documents.listDocuments(params),
+    ])
+      .then(([tplRes, docRes]) => {
+        setTemplates(tplRes.templates)
+        setTrackingDocs(docRes.documents)
+      })
+      .catch((err) => {
+        console.error('Codex fetch failed:', err)
+      })
+      .finally(() => setLoading(false))
   }, [category])
 
-  useEffect(() => { fetchDocs() }, [fetchDocs])
+  const fetchDocs = () => {
+    setLoading(true)
+    return requestDocs()
+  }
+
+  // A new category starts a fresh load: reset during render, fetch in the effect.
+  const [docsCategory, setDocsCategory] = useState(category)
+  if (docsCategory !== category) {
+    setDocsCategory(category)
+    setLoading(true)
+  }
+
+  useEffect(() => { requestDocs() }, [requestDocs])
 
   // ── Client-side search filtering ───────────
   const filteredDocs = useMemo(() => {

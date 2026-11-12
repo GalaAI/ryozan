@@ -8,7 +8,7 @@
  * On success, logs them in and redirects to the dashboard.
  */
 
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { auth, setToken } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
@@ -44,8 +44,6 @@ export default function JoinPage() {
   const navigate = useNavigate()
   const fetchMe = useAuthStore((s) => s.fetchMe)
 
-  const [payload, setPayload] = useState<InvitePayload | null>(null)
-  const [tokenError, setTokenError] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
@@ -53,22 +51,18 @@ export default function JoinPage() {
 
   const token = params.get('token') ?? ''
 
-  useEffect(() => {
-    if (!token) {
-      setTokenError('No invite token found. This link may be broken.')
-      return
-    }
+  // The invite is read from the token itself; no request is needed. Expiry is
+  // judged against the time the page opened.
+  const [openedAt] = useState(() => Date.now())
+  const { payload, tokenError } = useMemo((): { payload: InvitePayload | null; tokenError: string } => {
+    if (!token) return { payload: null, tokenError: 'No invite token found. This link may be broken.' }
     const p = decodeJwt(token)
-    if (!p) {
-      setTokenError('Invalid invite token.')
-      return
+    if (!p) return { payload: null, tokenError: 'Invalid invite token.' }
+    if (openedAt / 1000 > p.exp) {
+      return { payload: null, tokenError: 'This invite link has expired. Ask the shop admin for a new one.' }
     }
-    if (Date.now() / 1000 > p.exp) {
-      setTokenError('This invite link has expired. Ask the shop admin for a new one.')
-      return
-    }
-    setPayload(p)
-  }, [token])
+    return { payload: p, tokenError: '' }
+  }, [openedAt, token])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

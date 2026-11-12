@@ -96,4 +96,3 @@ export function SizeSelector({ value, onChange }: SizeSelectorProps) {
   )
 }
 
-export { SIZE_OPTIONS }

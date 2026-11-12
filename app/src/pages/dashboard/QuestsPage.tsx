@@ -45,20 +45,18 @@ export default function QuestsPage() {
   const [loading, setLoading] = useState(true)
   const [claiming, setClaiming] = useState<string | null>(null)
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [listRes, summaryRes] = await Promise.all([
-        questsApi.list(),
-        questsApi.summary(),
-      ])
+  const fetchData = useCallback(() => Promise.all([
+    questsApi.list(),
+    questsApi.summary(),
+  ])
+    .then(([listRes, summaryRes]) => {
       setQuestList(listRes.quests)
       setSummary(summaryRes)
-    } catch {
+    })
+    .catch(() => {
       // Silently fail. Page still renders with empty state.
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    })
+    .finally(() => setLoading(false)), [])
 
   useEffect(() => { fetchData() }, [fetchData])
 

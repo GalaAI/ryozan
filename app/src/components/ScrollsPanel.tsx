@@ -725,20 +725,25 @@ function WaiversSection() {
     } catch { /* silent */ }
   }, [])
 
-  const fetchDocs = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [tplRes, docRes] = await Promise.all([
-        documentsApi.listTemplates(),
-        documentsApi.listDocuments({ category: 'waiver' }),
-      ])
+  // Fetch only: state is written once both lists answer.
+  const requestDocs = useCallback(() => Promise.all([
+    documentsApi.listTemplates(),
+    documentsApi.listDocuments({ category: 'waiver' }),
+  ])
+    .then(([tplRes, docRes]) => {
       setTemplates(tplRes.templates)
       setTrackingDocs(docRes.documents)
-    } catch { /* silent */ }
-    finally { setLoading(false) }
-  }, [])
+    })
+    .catch(() => { /* silent */ })
+    .finally(() => setLoading(false)), [])
 
-  useEffect(() => { fetchDocs() }, [fetchDocs])
+  const fetchDocs = () => {
+    setLoading(true)
+    return requestDocs()
+  }
+
+  // Mount load: `loading` already starts true.
+  useEffect(() => { requestDocs() }, [requestDocs])
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1966,11 +1971,25 @@ export default function ScrollsPanel() {
       .finally(() => setCatsLoading(false))
   }, [])
 
-  useEffect(() => {
-    if (activeSlug === OWNER_ARCHIVE_SLUG && user?.role && user.role !== 'founder') {
-      setActiveSlug('artist')
+  // The owner archive is founder-only; anyone else lands on the artist tab.
+  if (activeSlug === OWNER_ARCHIVE_SLUG && user?.role && user.role !== 'founder') {
+    setActiveSlug('artist')
+  }
+
+  // Entering the artist tab as an artist opens their own scroll. The visible
+  // state adjusts during render; the effect below only fetches.
+  const [artistTabSeen, setArtistTabSeen] = useState<readonly [string, boolean] | null>(null)
+  if (!artistTabSeen || artistTabSeen[0] !== activeSlug || artistTabSeen[1] !== isFounderOrAdmin) {
+    setArtistTabSeen([activeSlug, isFounderOrAdmin])
+    if (activeSlug === 'artist' && !isFounderOrAdmin && user?.id) {
+      if (!(user.id in scrollDataCache)) {
+        setExpandLoading(true)
+      } else {
+        setExpandedArtistId(user.id)
+        setExpandMode('edit')
+      }
     }
-  }, [activeSlug, user?.role])
+  }
 
   // Load artist list for artist tab (founder/admin only — artists see own scroll directly)
   useEffect(() => {
@@ -1978,7 +1997,6 @@ export default function ScrollsPanel() {
     if (!isFounderOrAdmin) {
       // Artist viewing their own scroll — auto-expand
       if (user?.id && !(user.id in scrollDataCache)) {
-        setExpandLoading(true)
         getUserScroll(user.id)
           .then(resp => {
             setScrollDataCache(prev => ({ ...prev, [user.id]: resp.scroll ?? null }))
@@ -1987,9 +2005,6 @@ export default function ScrollsPanel() {
           })
           .catch(() => setScrollDataCache(prev => ({ ...prev, [user.id]: null })))
           .finally(() => setExpandLoading(false))
-      } else if (user?.id) {
-        setExpandedArtistId(user.id)
-        setExpandMode('edit')
       }
       return
     }
@@ -2023,18 +2038,26 @@ export default function ScrollsPanel() {
     })
   }, [artistList, isFounderOrAdmin]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load docs for non-artist tabs
+  // Load docs for non-artist tabs: each tab change that finds no cached docs
+  // records a request during render, and the effect fetches it.
+  const [docsSlugSeen, setDocsSlugSeen] = useState<string | null>(null)
+  const [docsRequest, setDocsRequest] = useState<{ slug: string } | null>(null)
+  if (docsSlugSeen !== activeSlug) {
+    setDocsSlugSeen(activeSlug)
+    if (activeSlug !== 'artist' && activeSlug !== 'quests' && activeSlug !== 'client-records' && !docsBySlug[activeSlug]) {
+      setDocsLoading(true)
+      setDocsRequest({ slug: activeSlug })
+    }
+  }
+
   useEffect(() => {
-    if (activeSlug === 'artist') return
-    if (activeSlug === 'quests') return
-    if (activeSlug === 'client-records') return
-    if (docsBySlug[activeSlug]) return
-    setDocsLoading(true)
-    listScrollCategoryDocs(activeSlug)
-      .then(resp => setDocsBySlug(prev => ({ ...prev, [activeSlug]: resp.docs })))
+    if (!docsRequest) return
+    const { slug } = docsRequest
+    listScrollCategoryDocs(slug)
+      .then(resp => setDocsBySlug(prev => ({ ...prev, [slug]: resp.docs })))
       .catch(console.error)
       .finally(() => setDocsLoading(false))
-  }, [activeSlug])
+  }, [docsRequest])
 
   async function handleScrollRequest(artistId: string, type: 'request' | 'remind', e: React.MouseEvent) {
     e.stopPropagation()

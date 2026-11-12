@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { API_BASE, bookings } from '../lib/api'
-import { REGIONS } from './booking/BodyMap'
+import { REGIONS } from './booking/body-regions'
 import '../styles/flash-placement-preview.css'
 
 export interface PlacementPreviewDesign {
@@ -78,11 +78,15 @@ export default function FlashPlacementPreview({ design, onClose, onSaved }: Flas
   const [designUrl, setDesignUrl] = useState('')
   const hasPublishedAsset = Boolean(design.preview_url || design.image_url || design.source_image_url)
 
+  // Losing the published asset clears the preview during render; the effect only fetches.
+  const [assetShown, setAssetShown] = useState(hasPublishedAsset)
+  if (assetShown !== hasPublishedAsset) {
+    setAssetShown(hasPublishedAsset)
+    if (!hasPublishedAsset) setDesignUrl('')
+  }
+
   useEffect(() => {
-    if (!hasPublishedAsset) {
-      setDesignUrl('')
-      return
-    }
+    if (!hasPublishedAsset) return
     const controller = new AbortController()
     let objectUrl = ''
     void fetch(`${API_BASE}/flash/public/designs/${encodeURIComponent(design.id)}/image`, {

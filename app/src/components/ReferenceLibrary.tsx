@@ -128,27 +128,41 @@ export default function ReferenceLibrary() {
 
   /* ── Fetch references ── */
 
-  const fetchRefs = useCallback(async () => {
+  // Fetch only: state is written once the request answers.
+  const requestRefs = useCallback(async () => {
+    if (!token) return
+    await fetch(`${API_BASE}/references/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to load references`)
+        return res.json()
+      })
+      .then((data) => setReferences(Array.isArray(data) ? data : data.references ?? []))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load references'))
+      .finally(() => setLoading(false))
+  }, [token])
+
+  const fetchRefs = async () => {
     if (!token) return
     setLoading(true)
     setError(null)
-    try {
-      const res = await fetch(`${API_BASE}/references/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      if (!res.ok) throw new Error(`Failed to load references`)
-      const data = await res.json()
-      setReferences(Array.isArray(data) ? data : data.references ?? [])
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load references')
-    } finally {
-      setLoading(false)
+    await requestRefs()
+  }
+
+  // A new token starts a fresh load: reset during render, fetch in the effect.
+  const [refsToken, setRefsToken] = useState(token)
+  if (refsToken !== token) {
+    setRefsToken(token)
+    if (token) {
+      setLoading(true)
+      setError(null)
     }
-  }, [token])
+  }
 
   useEffect(() => {
-    fetchRefs()
-  }, [fetchRefs])
+    requestRefs()
+  }, [requestRefs])
 
   /* ── Upload ── */
 

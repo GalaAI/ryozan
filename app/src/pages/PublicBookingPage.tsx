@@ -349,7 +349,7 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
   const { settings } = useStudioSettings()
   const location = useLocation()
   const navigate = useNavigate()
-  const storage = useMemo(sessionStore, [])
+  const storage = useMemo(() => sessionStore(), [])
   // The routes share this one instance, so the draft and the sent request live together.
   const [request, setRequest] = useState<BookingRequest<PublicBookingResponse>>(() => ({ draft: readDraft(storage), submitted: null }))
   const { draft, submitted } = request
@@ -373,11 +373,16 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
   }
   const patch = (fields: Partial<BookingDraft>) => updateDraft((current) => ({ ...current, ...fields }))
 
-  // Declared before the deep-link effect: a new request starts clean, then the link preselects.
-  useEffect(() => {
+  // Declared before the deep-link check: a new request starts clean, then the link preselects.
+  // Both adjust state during render when their input changes.
+  const [stepSeen, setStepSeen] = useState<BookingStep | null>(null)
+  if (stepSeen !== step) {
+    setStepSeen(step)
     setProblem(null)
     setRequest((current) => beginRequest(current, step))
     if (step !== 'ask') setAsked(null)
+  }
+  useEffect(() => {
     document.getElementById('root')?.scrollTo?.({ top: 0 })
   }, [step])
 
@@ -394,13 +399,15 @@ export default function PublicBookingPage({ step }: { step: BookingStep }) {
   const deepLinked = roster.status === 'ready' && deepLinkSlug
     ? listedArtists(roster.artists).find((artist) => artist.slug === deepLinkSlug) ?? null
     : null
-  useEffect(() => {
-    if (!deepLinked) return
-    updateDraft((current) => (current.artistSlug === deepLinked.slug
-      ? current
-      : { ...current, artistSlug: deepLinked.slug, artistName: deepLinked.name }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deepLinked?.slug])
+  const [deepLinkSeen, setDeepLinkSeen] = useState<string | undefined>(undefined)
+  if (deepLinkSeen !== deepLinked?.slug) {
+    setDeepLinkSeen(deepLinked?.slug)
+    if (deepLinked) {
+      updateDraft((current) => (current.artistSlug === deepLinked.slug
+        ? current
+        : { ...current, artistSlug: deepLinked.slug, artistName: deepLinked.name }))
+    }
+  }
 
   const sessionId = ret?.sessionId ?? null
   useEffect(() => {

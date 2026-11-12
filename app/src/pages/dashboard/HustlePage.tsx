@@ -217,11 +217,10 @@ export default function HustlePage() {
 
   const canSwitchCreator = currentUser?.role === 'founder' || currentUser?.role === 'admin'
 
-  useEffect(() => {
-    if (!canSwitchCreator && (activeStashTab === 'econ' || activeStashTab === 'integrations')) {
-      setActiveStashTab('flash')
-    }
-  }, [activeStashTab, canSwitchCreator])
+  // Econ and Integrations are founder/admin tabs; anyone else falls back to Flash.
+  if (!canSwitchCreator && (activeStashTab === 'econ' || activeStashTab === 'integrations')) {
+    setActiveStashTab('flash')
+  }
 
   const onPlaidSuccess = useCallback(async (publicToken: string) => {
     try {
@@ -321,10 +320,17 @@ export default function HustlePage() {
     }
   }, [currentUser])
 
+  // Opening Econ (or a new signed-in user on it) starts a load; the flag turns
+  // on during render and the effect below fetches.
+  const [econRequestSeen, setEconRequestSeen] = useState<readonly unknown[] | null>(null)
+  if (!econRequestSeen || econRequestSeen[0] !== activeStashTab || econRequestSeen[1] !== currentUser) {
+    setEconRequestSeen([activeStashTab, currentUser])
+    if (currentUser && activeStashTab === 'econ') setEconLoading(true)
+  }
+
   useEffect(() => {
     if (!currentUser || activeStashTab !== 'econ') return
     let cancelled = false
-    setEconLoading(true)
     Promise.allSettled([
       posApi.summary(hustlPeriod()),
       plaidApi.balance().catch(() => null),
@@ -353,12 +359,11 @@ export default function HustlePage() {
     }
   }, [activeStashTab, currentUser])
 
-  useEffect(() => {
-    const accounts = econStatus?.mercury.accounts ?? []
-    if (!accounts.length || selectedMercuryAccountId) return
-    const firstAccountId = accounts.find((account) => account.id)?.id
+  // Until an account is chosen, the first Mercury account is selected.
+  if (!selectedMercuryAccountId) {
+    const firstAccountId = (econStatus?.mercury.accounts ?? []).find((account) => account.id)?.id
     if (firstAccountId) setSelectedMercuryAccountId(firstAccountId)
-  }, [econStatus?.mercury.accounts, selectedMercuryAccountId])
+  }
 
   const effectiveCreatorRoster = useMemo(
     () => canSwitchCreator ? creatorRoster : currentUser ? [currentUser] : [],
@@ -401,7 +406,7 @@ export default function HustlePage() {
   const handleGoogleConnect = async () => {
     try {
       const { authorization_url } = await googleAuth.getConnectUrl()
-      window.location.href = authorization_url
+      window.location.assign(authorization_url)
     } catch {
       toast.error('Failed to start Google connection')
     }

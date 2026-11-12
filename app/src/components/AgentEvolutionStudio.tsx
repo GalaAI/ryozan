@@ -36,9 +36,9 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
   const [attachment, setAttachment] = useState<File | null>(null)
   const [evaluationArtifactId, setEvaluationArtifactId] = useState('')
 
-  const load = useCallback(() => {
-    setState('loading')
-    setEvaluationArtifactId('')
+  // Fetch only; the loading reset happens where the request is triggered
+  // (agent switch, retry) so the effect never sets state synchronously.
+  const fetchProfile = useCallback(() => {
     gala.evolution.get(agentId)
       .then((result) => {
         setProfile(result.profile ?? null)
@@ -47,7 +47,13 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
       .catch(() => setState('failed'))
   }, [agentId])
 
-  useEffect(() => load(), [load])
+  const load = () => {
+    setState('loading')
+    setEvaluationArtifactId('')
+    fetchProfile()
+  }
+
+  useEffect(() => fetchProfile(), [fetchProfile])
 
   const run = async (action: () => Promise<{ profile?: ApexAgentProfile; response?: string }>, success: string) => {
     setBusy(true)
@@ -126,6 +132,7 @@ export default function AgentEvolutionStudio({ onBack }: { onBack: () => void })
         <div><span>Agent settings</span><h2>Bella and Gala</h2></div>
         <select value={agentId} onChange={(event) => {
           setEvaluationArtifactId('')
+          setState('loading')
           setAgentId(event.target.value as ApexAgentId)
         }}>
           <option value="bella">Bella · Shop</option>

@@ -24,6 +24,16 @@ const ROLE_COLORS: Record<string, string> = {
   collector: 'rgba(185, 173, 150, 0.7)',
 }
 
+type SortColumn = 'name' | 'email' | 'role' | 'created_at' | 'bttcoin_balance'
+
+function SortIcon({ col, sortCol, sortAsc }: { col: SortColumn; sortCol: SortColumn; sortAsc: boolean }) {
+  return (
+    <span style={{ marginLeft: '0.3rem', opacity: sortCol === col ? 1 : 0.3, fontSize: '0.65rem' }}>
+      {sortCol === col ? (sortAsc ? '\u25B2' : '\u25BC') : '\u25BC'}
+    </span>
+  )
+}
+
 export default function AdminUsers() {
   const toast = useToast()
   const isOwner = useAuthStore((state) => state.user?.role === 'founder')
@@ -35,13 +45,12 @@ export default function AdminUsers() {
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
-  const [sortCol, setSortCol] = useState<'name' | 'email' | 'role' | 'created_at' | 'bttcoin_balance'>('created_at')
+  const [sortCol, setSortCol] = useState<SortColumn>('created_at')
   const [sortAsc, setSortAsc] = useState(false)
 
-  const loadUsers = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const data = await usersApi.list({ limit: 200 })
+  // Fetch only: state is written once the requests answer.
+  const requestUsers = useCallback(() => usersApi.list({ limit: 200 })
+    .then(async (data) => {
       setUserList(data)
       setTotal(data.length)
       setAccountStatus({})
@@ -54,14 +63,25 @@ export default function AdminUsers() {
           setStatusFailed(true)
         }
       }
-    } catch {
+    })
+    .catch(() => {
       toast.error('Failed to load users')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [toast, isOwner])
+    })
+    .finally(() => setIsLoading(false)), [toast, isOwner])
 
-  useEffect(() => { loadUsers() }, [loadUsers])
+  const loadUsers = () => {
+    setIsLoading(true)
+    return requestUsers()
+  }
+
+  // A changed owner flag reloads: the loading state resets during render.
+  const [usersKey, setUsersKey] = useState(() => [toast, isOwner] as const)
+  if (usersKey[0] !== toast || usersKey[1] !== isOwner) {
+    setUsersKey([toast, isOwner])
+    setIsLoading(true)
+  }
+
+  useEffect(() => { requestUsers() }, [requestUsers])
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
@@ -99,7 +119,8 @@ export default function AdminUsers() {
   }
 
   // ── Invite modal state ──
-  const [inviteOpen, setInviteOpen] = useState(false)
+  // Opened straight away when navigated with ?invite=1 (the form starts blank).
+  const [inviteOpen, setInviteOpen] = useState(() => searchParams.get('invite') === '1')
   const [inviteName, setInviteName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'collector' | 'assistant' | 'artist' | 'admin'>('artist')
@@ -109,11 +130,9 @@ export default function AdminUsers() {
   const [inviteError, setInviteError] = useState('')
   const [inviteCopied, setInviteCopied] = useState(false)
 
-  // Auto-open invite modal when navigated with ?invite=1
+  // The ?invite=1 that opened the modal is removed from the URL.
   useEffect(() => {
     if (searchParams.get('invite') === '1') {
-      resetInvite()
-      setInviteOpen(true)
       setSearchParams({}, { replace: true }) // clean URL
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,12 +197,6 @@ export default function AdminUsers() {
   // Paginate
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE)
   const pageUsers = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-
-  const SortIcon = ({ col }: { col: typeof sortCol }) => (
-    <span style={{ marginLeft: '0.3rem', opacity: sortCol === col ? 1 : 0.3, fontSize: '0.65rem' }}>
-      {sortCol === col ? (sortAsc ? '\u25B2' : '\u25BC') : '\u25BC'}
-    </span>
-  )
 
   if (isLoading) {
     return <div className="dashboard-panel"><p className="text-muted" style={{ padding: '2rem' }}>Loading users...</p></div>
@@ -350,19 +363,19 @@ export default function AdminUsers() {
           <thead>
             <tr>
               <th style={{ cursor: 'pointer' }} onClick={() => handleSort('name')}>
-                Name <SortIcon col="name" />
+                Name <SortIcon col="name" sortCol={sortCol} sortAsc={sortAsc} />
               </th>
               <th style={{ cursor: 'pointer' }} onClick={() => handleSort('email')}>
-                Email <SortIcon col="email" />
+                Email <SortIcon col="email" sortCol={sortCol} sortAsc={sortAsc} />
               </th>
               <th style={{ cursor: 'pointer' }} onClick={() => handleSort('role')}>
-                Role <SortIcon col="role" />
+                Role <SortIcon col="role" sortCol={sortCol} sortAsc={sortAsc} />
               </th>
               <th style={{ cursor: 'pointer' }} onClick={() => handleSort('created_at')}>
-                Joined <SortIcon col="created_at" />
+                Joined <SortIcon col="created_at" sortCol={sortCol} sortAsc={sortAsc} />
               </th>
               <th style={{ cursor: 'pointer' }} onClick={() => handleSort('bttcoin_balance')}>
-                RYO <SortIcon col="bttcoin_balance" />
+                RYO <SortIcon col="bttcoin_balance" sortCol={sortCol} sortAsc={sortAsc} />
               </th>
               <th>Inbox Relay</th>
               {isOwner && <th>Artist account</th>}

@@ -11,7 +11,7 @@
  * card, Apple Pay, Google Pay, Venmo, or Cash App.
  */
 
-import { useState, useEffect, useRef, useCallback, type ReactNode, type FC } from 'react'
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   pos,
@@ -88,6 +88,18 @@ const Icons = {
 
 /* ── Component ─────────────────────────── */
 
+// Embedded mode: render the panel inline (no fixed overlay) so it can be slotted
+// into the Nexus canvas like other charms (Hub, Codex, Profile, Axiom).
+function POSFrame({ embedded, onClose, children }: { embedded: boolean; onClose: POSModalProps['onClose']; children: ReactNode }) {
+  return embedded
+    ? <div className="pos-modal pos-modal-embedded">{children}</div>
+    : (
+      <div className="pos-overlay" onClick={onClose}>
+        <div className="pos-modal" onClick={(e) => e.stopPropagation()}>{children}</div>
+      </div>
+    )
+}
+
 export default function POSModal({ open, onClose, preselectedBooking, initialMode, initialAmount, embedded = false }: POSModalProps) {
   const [step, setStep] = useState<POSStep>('numpad')
   const [todayBookings, setTodayBookings] = useState<Booking[]>([])
@@ -131,7 +143,6 @@ export default function POSModal({ open, onClose, preselectedBooking, initialMod
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    setCollectorsLoading(true)
     usersApi.myClients()
       .then((clients) => {
         if (!cancelled) setSavedCollectors(clients)
@@ -145,28 +156,47 @@ export default function POSModal({ open, onClose, preselectedBooking, initialMod
     return () => { cancelled = true }
   }, [open])
 
+  // Opening, closing and launch props adjust the checkout state during render
+  // (React's "adjust state when a prop changes" pattern); the effects above only
+  // fetch. Each check mirrors the dependencies of the effect it replaced.
+  const [openSeen, setOpenSeen] = useState<boolean | null>(null)
+  const [launchSeen, setLaunchSeen] = useState<readonly unknown[] | null>(null)
+  const [prefillSeen, setPrefillSeen] = useState<readonly unknown[] | null>(null)
+  const launchKey = [open, initialMode, initialAmount, preselectedBooking] as const
+  const prefillKey = [open, preselectedBooking] as const
+  const keyChanged = (seen: readonly unknown[] | null, next: readonly unknown[]) =>
+    seen === null || seen.some((value, index) => !Object.is(value, next[index]))
+
+  if (openSeen !== open && open) {
+    // The saved-collector roster starts loading as soon as the modal opens.
+    setCollectorsLoading(true)
+  }
+
   // Handle initialMode from POS widget — preserves backwards compat
-  useEffect(() => {
-    if (!open || preselectedBooking) return
-    if (initialAmount) setAmountDollars(initialAmount)
-    if (initialMode === 'appointment') {
-      // Skip numpad if amount preset, jump to source picker
-      setStep(initialAmount ? 'source' : 'numpad')
-    } else if (initialMode === 'cash') {
-      setPaymentMethod('cash')
-      setStep(initialAmount ? 'source' : 'numpad')
-    } else if (initialMode === 'stripe' || initialMode === 'online' || initialMode === 'clover') {
-      setPaymentMethod('card')
-      setStep(initialAmount ? 'source' : 'numpad')
-    } else if (initialMode === 'walkin' || initialMode === 'custom') {
-      setSelectedBooking(null)
-      setDescription(initialMode === 'custom' ? 'Custom charge' : 'Walk-in')
-      setStep(initialAmount ? 'method' : 'numpad')
+  if (keyChanged(launchSeen, launchKey)) {
+    setLaunchSeen(launchKey)
+    if (open && !preselectedBooking) {
+      if (initialAmount) setAmountDollars(initialAmount)
+      if (initialMode === 'appointment') {
+        // Skip numpad if amount preset, jump to source picker
+        setStep(initialAmount ? 'source' : 'numpad')
+      } else if (initialMode === 'cash') {
+        setPaymentMethod('cash')
+        setStep(initialAmount ? 'source' : 'numpad')
+      } else if (initialMode === 'stripe' || initialMode === 'online' || initialMode === 'clover') {
+        setPaymentMethod('card')
+        setStep(initialAmount ? 'source' : 'numpad')
+      } else if (initialMode === 'walkin' || initialMode === 'custom') {
+        setSelectedBooking(null)
+        setDescription(initialMode === 'custom' ? 'Custom charge' : 'Walk-in')
+        setStep(initialAmount ? 'method' : 'numpad')
+      }
     }
-  }, [open, initialMode, initialAmount, preselectedBooking])
+  }
 
   // If preselected booking, prefill and skip to method picker
-  useEffect(() => {
+  if (keyChanged(prefillSeen, prefillKey)) {
+    setPrefillSeen(prefillKey)
     if (open && preselectedBooking) {
       setSelectedBooking(preselectedBooking)
       setClientName(preselectedBooking.resolved_name || preselectedBooking.client_name || '')
@@ -179,10 +209,11 @@ export default function POSModal({ open, onClose, preselectedBooking, initialMod
       }
       setStep('method')
     }
-  }, [open, preselectedBooking])
+  }
 
   // Reset on close
-  useEffect(() => {
+  if (openSeen !== open) {
+    setOpenSeen(open)
     if (!open) {
       setStep('numpad')
       setSelectedBooking(null)
@@ -199,8 +230,12 @@ export default function POSModal({ open, onClose, preselectedBooking, initialMod
       setPaymentStatus('waiting')
       setError('')
       setIsCreating(false)
-      if (pollRef.current) clearInterval(pollRef.current)
     }
+  }
+
+  // Closing also stops any payment polling.
+  useEffect(() => {
+    if (!open && pollRef.current) clearInterval(pollRef.current)
   }, [open])
 
   // Poll for payment status
@@ -407,18 +442,8 @@ export default function POSModal({ open, onClose, preselectedBooking, initialMod
 
   if (!open) return null
 
-  // Embedded mode: render the panel inline (no fixed overlay) so it can be slotted
-  // into the Nexus canvas like other charms (Hub, Codex, Profile, Axiom).
-  const Wrapper: FC<{ children: ReactNode }> = ({ children }) => embedded
-    ? <div className="pos-modal pos-modal-embedded">{children}</div>
-    : (
-      <div className="pos-overlay" onClick={onClose}>
-        <div className="pos-modal" onClick={(e) => e.stopPropagation()}>{children}</div>
-      </div>
-    )
-
   return (
-    <Wrapper>
+    <POSFrame embedded={embedded} onClose={onClose}>
         {/* Header */}
         <div className="pos-header">
           {step !== 'numpad' && step !== 'confirmed' && step !== 'invoice-sent' && (
@@ -776,6 +801,6 @@ export default function POSModal({ open, onClose, preselectedBooking, initialMod
             </div>
           )}
         </div>
-    </Wrapper>
+    </POSFrame>
   )
 }

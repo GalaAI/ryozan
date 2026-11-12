@@ -103,10 +103,18 @@ export function DayPreference({
     }
   }, [value?.holdToken])
 
-  useEffect(() => {
+  // Without an artist calendar (or for venue availability) there is nothing busy.
+  // Checked during render whenever the inputs of the availability read change.
+  const [busySeen, setBusySeen] = useState<readonly unknown[] | null>(null)
+  if (!busySeen || busySeen[0] !== month || busySeen[1] !== artistSlug || busySeen[2] !== availabilitySource) {
+    setBusySeen([month, artistSlug, availabilitySource])
     if (!artistSlug || availabilitySource === 'venue') {
-      setBusy([]); setConnected(false); return
+      setBusy([]); setConnected(false)
     }
+  }
+
+  useEffect(() => {
+    if (!artistSlug || availabilitySource === 'venue') return
     // Always try the calendar endpoint even when availabilitySource
     // is 'none' — the API field might not have propagated yet but
     // the artist may have Google Calendar connected. The endpoint
@@ -118,19 +126,19 @@ export function DayPreference({
       .catch(() => { setBusy([]); setConnected(false) })
   }, [month, artistSlug, availabilitySource])
 
+  // The session type is known locally unless it has to be looked up; the local
+  // cases resolve during render and the effect only performs the lookup.
+  const sessionTypeKey = [artistSlug, selectedSize, selectedPlacement, selectedSessionType, consultation] as const
+  const [sessionTypeSeen, setSessionTypeSeen] = useState<readonly unknown[] | null>(null)
+  if (!sessionTypeSeen || sessionTypeSeen.some((part, index) => part !== sessionTypeKey[index])) {
+    setSessionTypeSeen(sessionTypeKey)
+    if (consultation) setSessionType(null)
+    else if (selectedSessionType) setSessionType(selectedSessionType)
+    else if (!artistSlug || !selectedSize) setSessionType(null)
+  }
+
   useEffect(() => {
-    if (consultation) {
-      setSessionType(null)
-      return
-    }
-    if (selectedSessionType) {
-      setSessionType(selectedSessionType)
-      return
-    }
-    if (!artistSlug || !selectedSize) {
-      setSessionType(null)
-      return
-    }
+    if (consultation || selectedSessionType || !artistSlug || !selectedSize) return
     sessionTypesApi.lookup(artistSlug, selectedSize, selectedPlacement || undefined).then(setSessionType).catch(() => setSessionType(null))
   }, [artistSlug, selectedSize, selectedPlacement, selectedSessionType, consultation])
 
@@ -164,11 +172,25 @@ export function DayPreference({
     return hrs < 8
   }, [month, today, availabilitySource, connected, busy, consultation])
 
+  // Keep the selected day in step with the value from the parent.
+  const nextDate = value?.date ?? null
+  if (nextDate !== pickedDay) {
+    setPickedDay(nextDate)
+    setServerSlots(null)
+    setBlockedSlots([])
+  }
+
+  // Each new slot query shows loading during render; the effect below reads the
+  // cache or fetches.
+  const slotsKey = [artistSlug, pickedDay, selectedSize, selectedPlacement, effectiveSessionTypeId, hasSessionType, dur, bufferMinutes, toSlotOption, slotRefresh, consultation] as const
+  const [slotsSeen, setSlotsSeen] = useState<readonly unknown[] | null>(null)
+  if (!slotsSeen || slotsSeen.some((part, index) => part !== slotsKey[index])) {
+    setSlotsSeen(slotsKey)
+    setSlotsLoading(Boolean(artistSlug && pickedDay))
+  }
+
   useEffect(() => {
-    if (!artistSlug || !pickedDay) {
-      setSlotsLoading(false)
-      return
-    }
+    if (!artistSlug || !pickedDay) return
 
     const cacheKey = `${artistSlug}:${pickedDay}:${selectedSize || ''}:${selectedPlacement || ''}:${effectiveSessionTypeId || ''}:${dur}:${bufferMinutes ?? ''}:${consultation}`
     const cached = slotCacheRef.current.get(cacheKey)
@@ -182,7 +204,6 @@ export function DayPreference({
     }
 
     let cancelled = false
-    setSlotsLoading(true)
     calendarApi.getArtistSlots(artistSlug, {
       start: pickedDay,
       end: pickedDay,
@@ -221,15 +242,6 @@ export function DayPreference({
   // Never fabricate interim times while the live scheduling API is loading.
   // Locally generated slots can conflict with Google Calendar and fail to hold.
   const slots = serverSlots ?? []
-
-  useEffect(() => {
-    const nextDate = value?.date ?? null
-    if (nextDate !== pickedDay) {
-      setPickedDay(nextDate)
-      setServerSlots(null)
-      setBlockedSlots([])
-    }
-  }, [pickedDay, value?.date])
 
   const isSpecialRequestDay = useCallback((ds: string) => (
     !consultation && isRequestOnlyDay(studioSettings, ds, artistSlug)

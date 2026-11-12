@@ -127,28 +127,27 @@ export default function EmailTemplateEditor({ token, initialSlug, onClose }: Pro
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const imgInputRef = useRef<HTMLInputElement>(null)
 
-  const load = useCallback(async () => {
+  // Fetch only; callers that reload reset loading and error first.
+  const fetchAll = useCallback(() => fetchTemplates(token)
+    .then(setTemplates)
+    .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed to load'))
+    .finally(() => setLoading(false)), [token])
+
+  const load = () => {
     setLoading(true)
     setError(null)
-    try {
-      const data = await fetchTemplates(token)
-      setTemplates(data)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load')
-    } finally {
-      setLoading(false)
-    }
-  }, [token])
+    return fetchAll()
+  }
 
-  useEffect(() => { load() }, [load])
+  // A new token starts a fresh load: reset during render, fetch in the effect.
+  const [loadedToken, setLoadedToken] = useState(token)
+  if (loadedToken !== token) {
+    setLoadedToken(token)
+    setLoading(true)
+    setError(null)
+  }
 
-  // Auto-start editing if initialSlug is provided (launched from AssetsPanel)
-  useEffect(() => {
-    if (initialSlug && templates.length > 0 && !editingSlug) {
-      const t = templates.find(x => x.slug === initialSlug)
-      if (t) startEdit(t)
-    }
-  }, [initialSlug, templates]) // eslint-disable-line
+  useEffect(() => { fetchAll() }, [fetchAll])
 
   const startEdit = (t: EmailTemplate) => {
     setEditingSlug(t.slug)
@@ -160,6 +159,17 @@ export default function EmailTemplateEditor({ token, initialSlug, onClose }: Pro
     setEditorMode('code')
     setError(null)
     setSelectedLayer(null)
+  }
+
+  // Auto-start editing if initialSlug is provided (launched from AssetsPanel).
+  // Checked during render whenever the slug or the loaded templates change.
+  const [autoStartSeen, setAutoStartSeen] = useState({ slug: initialSlug, templates })
+  if (autoStartSeen.slug !== initialSlug || autoStartSeen.templates !== templates) {
+    setAutoStartSeen({ slug: initialSlug, templates })
+    if (initialSlug && templates.length > 0 && !editingSlug) {
+      const t = templates.find(x => x.slug === initialSlug)
+      if (t) startEdit(t)
+    }
   }
 
   const cancelEdit = () => {
@@ -243,9 +253,11 @@ export default function EmailTemplateEditor({ token, initialSlug, onClose }: Pro
     }
   }, [token, editHtml, editingSlug, templates])
 
-  useEffect(() => {
-    if (editorMode === 'preview') loadPreview()
-  }, [editorMode]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Entering preview mode loads the preview (from the mode tab handler).
+  const selectEditorMode = (mode: EditorMode) => {
+    if (mode === 'preview' && editorMode !== 'preview') void loadPreview()
+    setEditorMode(mode)
+  }
 
   const handleSeed = async () => {
     setSeeding(true)
@@ -310,6 +322,7 @@ export default function EmailTemplateEditor({ token, initialSlug, onClose }: Pro
     const template = templates.find(t => t.slug === editingSlug)
     if (!template) return null
     const catColor = CATEGORY_COLORS[template.category] || 'var(--text-muted)'
+    const codeLayers = editorMode === 'code' ? extractLayers(editHtml) : []
 
     return (
       <div className="ete-root">
@@ -335,7 +348,7 @@ export default function EmailTemplateEditor({ token, initialSlug, onClose }: Pro
               <button
                 key={m}
                 className={`ete-mode-tab${editorMode === m ? ' active' : ''}`}
-                onClick={() => setEditorMode(m)}
+                onClick={() => selectEditorMode(m)}
               >
                 {m}
               </button>
@@ -391,42 +404,38 @@ export default function EmailTemplateEditor({ token, initialSlug, onClose }: Pro
             </div>
 
             {/* Layers */}
-            {editorMode === 'code' && (() => {
-              const layers = extractLayers(editHtml)
-              if (layers.length === 0) return null
-              return (
-                <div>
-                  <div className="ete-section-title">Layers</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    {layers.map((layer, i) => (
-                      <button
-                        key={i}
-                        onClick={() => jumpToLayer(layer.line)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '5px',
-                          padding: `4px ${4 + layer.depth * 10}px`,
-                          border: 'none',
-                          background: selectedLayer === layer.line ? 'rgba(166,125,67,0.12)' : 'transparent',
-                          borderRadius: '4px',
-                          color: selectedLayer === layer.line ? 'var(--gold)' : 'var(--text-muted)',
-                          fontSize: '0.6rem', fontFamily: 'var(--font-mono)',
-                          cursor: 'pointer', textAlign: 'left', width: '100%',
-                          transition: 'all 0.12s',
-                        }}
-                      >
-                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-                        </svg>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {layer.name}
-                        </span>
-                        <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: '0.5rem' }}>{layer.line + 1}</span>
-                      </button>
-                    ))}
-                  </div>
+            {codeLayers.length > 0 && (
+              <div>
+                <div className="ete-section-title">Layers</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {codeLayers.map((layer, i) => (
+                    <button
+                      key={i}
+                      onClick={() => jumpToLayer(layer.line)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '5px',
+                        padding: `4px ${4 + layer.depth * 10}px`,
+                        border: 'none',
+                        background: selectedLayer === layer.line ? 'rgba(166,125,67,0.12)' : 'transparent',
+                        borderRadius: '4px',
+                        color: selectedLayer === layer.line ? 'var(--gold)' : 'var(--text-muted)',
+                        fontSize: '0.6rem', fontFamily: 'var(--font-mono)',
+                        cursor: 'pointer', textAlign: 'left', width: '100%',
+                        transition: 'all 0.12s',
+                      }}
+                    >
+                      <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+                      </svg>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {layer.name}
+                      </span>
+                      <span style={{ marginLeft: 'auto', opacity: 0.4, fontSize: '0.5rem' }}>{layer.line + 1}</span>
+                    </button>
+                  ))}
                 </div>
-              )
-            })()}
+              </div>
+            )}
 
             {/* Expandable: add more left panel sections here */}
           </div>

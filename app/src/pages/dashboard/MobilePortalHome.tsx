@@ -1715,8 +1715,8 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
         ? '◆'
         : '◇'
 
-  const loadInventory = useCallback(() => {
-    setInventoryState('loading')
+  // Fetch only: state is written once the request answers.
+  const requestInventory = useCallback(() => {
     rewardsApi.inventory()
       .then((nextInventory) => {
         setInventory(nextInventory)
@@ -1728,9 +1728,15 @@ function ClubLootCard({ quests, onClaimQuest }: { quests: QuestWithProgress[]; o
       })
   }, [])
 
+  const loadInventory = () => {
+    setInventoryState('loading')
+    requestInventory()
+  }
+
+  // Mount load: the inventory state already starts as loading.
   useEffect(() => {
-    loadInventory()
-  }, [loadInventory])
+    requestInventory()
+  }, [requestInventory])
 
   const completeMiniGame = async () => {
     if (!activeOffer) return
@@ -1926,8 +1932,8 @@ function ClubChatCard({ embedded = false }: { embedded?: boolean }) {
   const [chatDraft, setChatDraft] = useState('')
   const [chatPosting, setChatPosting] = useState(false)
 
-  const loadPosts = useCallback(() => {
-    setChatState('loading')
+  // Fetch only: state is written once the request answers.
+  const requestPosts = useCallback(() => {
     clubApi.listPosts({ limit: 10 })
       .then((result) => {
         setChatPosts(result.posts)
@@ -1936,7 +1942,13 @@ function ClubChatCard({ embedded = false }: { embedded?: boolean }) {
       .catch(() => setChatState('failed'))
   }, [])
 
-  useEffect(() => loadPosts(), [loadPosts])
+  const loadPosts = () => {
+    setChatState('loading')
+    requestPosts()
+  }
+
+  // Mount load: the chat state already starts as loading.
+  useEffect(() => requestPosts(), [requestPosts])
 
   const submitChatPost = async () => {
     const body = chatDraft.trim()

@@ -38,7 +38,14 @@ function isStandalone() {
 }
 
 export default function InstallAppQuest({ mode = 'compact' }: InstallAppQuestProps) {
-  const [step, setStep] = useState<Step>('install')
+  // Initial step from the install and notification state at mount.
+  const [step, setStep] = useState<Step>(() => {
+    const alreadyInstalled = isStandalone()
+    const notifGranted = Notification.permission === 'granted'
+    if (alreadyInstalled && notifGranted) return 'done'
+    if (alreadyInstalled) return 'notify'
+    return 'install'
+  })
   const [deferredPrompt, setDeferredPrompt] = useState<Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -51,20 +58,6 @@ export default function InstallAppQuest({ mode = 'compact' }: InstallAppQuestPro
     }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
-  }, [])
-
-  // Determine initial step on mount
-  useEffect(() => {
-    const alreadyInstalled = isStandalone()
-    const notifGranted = Notification.permission === 'granted'
-
-    if (alreadyInstalled && notifGranted) {
-      setStep('done')
-    } else if (alreadyInstalled) {
-      setStep('notify')
-    } else {
-      setStep('install')
-    }
   }, [])
 
   const handleInstall = async () => {
