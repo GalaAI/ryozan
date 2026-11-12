@@ -253,7 +253,7 @@ export function AgentTools({
                     <span aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'block', borderRadius: 8, background: 'linear-gradient(165deg,#171817,#0b0c0b)', transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}>
                       <ActionCardFace shell={card.shell} accent={accent} />
                     </span>
-                    <span className={`ryozan-agent-card-emblem${selectedCard ? ' ryozan-agent-card-emblem--selected' : ''}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backfaceVisibility: 'hidden', fontSize: 30, lineHeight: 1, color: 'rgba(0,0,0,.55)', textShadow: `0 1px 0 ${selectedCard ? 'rgba(var(--cream-rgb),.16)' : 'rgba(var(--cream-rgb),.08)'}, 0 -1px 1px rgba(0,0,0,.6)` }}>{agentGlyph}</span>
+                    <span className={`ryozan-agent-card-emblem${selectedCard ? ' ryozan-agent-card-emblem--selected' : ''}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backfaceVisibility: 'hidden', fontSize: 30, lineHeight: 1, color: 'rgba(var(--cream-rgb),.44)', textShadow: `0 1px 0 ${selectedCard ? 'rgba(var(--cream-rgb),.16)' : 'rgba(var(--cream-rgb),.08)'}, 0 -1px 1px rgba(0,0,0,.6)` }}>{agentGlyph}</span>
                   </button>
                 );
               })}

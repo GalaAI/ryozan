@@ -12,7 +12,7 @@ import { ryoCoin, type RyoCoinTransaction, type RyoCoinWallet } from '../../lib/
 const TX_TYPE_LABELS: Record<string, { label: string; color: string; sign: string }> = {
   earn: { label: 'Earned', color: 'var(--ok)', sign: '+' },
   spend: { label: 'Spent', color: 'var(--danger)', sign: '-' },
-  bonus: { label: 'Bonus', color: 'var(--gold)', sign: '+' },
+  bonus: { label: 'Bonus', color: 'var(--gold-vibrant)', sign: '+' },
   refund: { label: 'Refund', color: 'var(--muted)', sign: '+' },
 }
 
@@ -85,13 +85,13 @@ export default function WalletPage() {
           gap: '0.6rem',
           marginBottom: '0.4rem',
         }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.8">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.8">
             <circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M15.5 9.5a3 3 0 0 0-3-1.5H11a3 3 0 0 0 0 4h2a3 3 0 0 1 0 4h-1.5a3 3 0 0 1-3-1.5"/>
           </svg>
           <span style={{
             fontSize: '2.8rem',
             fontWeight: 700,
-            color: 'var(--gold)',
+            color: 'var(--gold-vibrant)',
             fontFamily: "'JetBrains Mono', monospace",
             lineHeight: 1,
           }}>
@@ -222,7 +222,7 @@ export default function WalletPage() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: `${meta.color}15`,
+                    background: `color-mix(in srgb, ${meta.color} 8%, transparent)`,
                     color: meta.color,
                     display: 'flex',
                     alignItems: 'center',

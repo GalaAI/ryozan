@@ -68,7 +68,7 @@ function StubRail({ brand }: { brand: string }) {
             刺青
           </span>
           <span style={{ width: 22, borderTop: '1px dashed rgba(235,220,195,.5)', margin: '10px 0' }} />
-          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.02, fontFamily: font.heading, fontSize: 17, color: '#D8AE62' }}>
+          <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.02, fontFamily: font.heading, fontSize: 17, color: '#E0B76F' }}>
             {brand.split('').map((c, i) => <span key={i}>{c}</span>)}
           </span>
         </div>
@@ -94,9 +94,9 @@ function DateRail({ date }: { date: NonNullable<SessionPassProps['date']> }) {
         borderRight: `1px solid ${color.borderSubtle}`,
       }}
     >
-      <span style={{ fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: color.textSecondary }}>{date.month}</span>
+      <span style={{ fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: color.text }}>{date.month}</span>
       <span style={{ fontFamily: font.title, fontSize: 'var(--text-3xl)', lineHeight: 0.9, color: color.boneWhite }}>{date.day}</span>
-      <span style={{ fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: color.textSecondary }}>{date.weekday}</span>
+      <span style={{ fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: color.text }}>{date.weekday}</span>
       {date.note ? (
         <span style={{ marginTop: 'var(--space-2)', fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: color.text, border: `1px solid ${color.panelBorder}`, borderRadius: radius.pill, padding: 'var(--space-1) var(--space-3)' }}>
           {date.note}

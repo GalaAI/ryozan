@@ -47,7 +47,7 @@ export function AccountMenu({ userName, roleLabel, avatarSrc, rows, style, child
           <span style={{ fontFamily: font.body, fontSize: 'var(--text-sm)', fontWeight: 700, color: color.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {userName}
           </span>
-          <span style={{ fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: color.gold }}>
+          <span style={{ fontFamily: font.btn, fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: color.goldText }}>
             {roleLabel}
           </span>
         </div>

@@ -142,7 +142,7 @@ export default function QuestsPage() {
             border: '1px solid rgba(250, 174, 21, 0.2)',
             borderRadius: '10px',
             textDecoration: 'none',
-            color: 'var(--gold)',
+            color: 'var(--gold-vibrant)',
             fontSize: '0.82rem',
             fontWeight: 600,
             transition: 'border-color 0.2s',
@@ -206,10 +206,10 @@ export default function QuestsPage() {
           gap: '2rem',
         }}>
           <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-            Earned: <strong style={{ color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace" }}>+{summary.total_xp_earned} XP</strong>
+            Earned: <strong style={{ color: 'var(--gold-vibrant)', fontFamily: "'JetBrains Mono', monospace" }}>+{summary.total_xp_earned} XP</strong>
           </span>
           <span style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-            Earned: <strong style={{ color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace" }}>+{summary.total_coin_earned} RYO</strong>
+            Earned: <strong style={{ color: 'var(--gold-vibrant)', fontFamily: "'JetBrains Mono', monospace" }}>+{summary.total_coin_earned} RYO</strong>
           </span>
         </div>
       )}
@@ -240,7 +240,7 @@ function StatBox({ label, value, icon, accent }: {
         height: '36px',
         borderRadius: '10px',
         background: accent ? 'rgba(250, 174, 21, 0.18)' : 'rgba(250, 174, 21, 0.1)',
-        color: 'var(--gold)',
+        color: 'var(--gold-vibrant)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -252,7 +252,7 @@ function StatBox({ label, value, icon, accent }: {
         <span style={{
           fontSize: '1.3rem',
           fontWeight: 700,
-          color: accent ? 'var(--gold)' : 'var(--text)',
+          color: accent ? 'var(--gold-vibrant)' : 'var(--text)',
           lineHeight: 1.15,
         }}>{value.toLocaleString()}</span>
         <span style={{
@@ -296,7 +296,7 @@ function QuestCard({ qp, icon, onClaim, claiming }: {
         height: '40px',
         borderRadius: '10px',
         background: done ? 'rgba(76, 175, 80, 0.12)' : 'rgba(250, 174, 21, 0.08)',
-        color: done ? 'var(--ok)' : 'var(--gold)',
+        color: done ? 'var(--ok)' : 'var(--gold-vibrant)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -339,7 +339,7 @@ function QuestCard({ qp, icon, onClaim, claiming }: {
               <div style={{
                 width: `${(progress / quest.target_count) * 100}%`,
                 height: '100%',
-                background: 'var(--gold)',
+                background: 'var(--gold-vibrant)',
                 borderRadius: '2px',
                 transition: 'width 0.3s ease',
               }} />
@@ -372,7 +372,7 @@ function QuestCard({ qp, icon, onClaim, claiming }: {
             disabled={claiming}
             style={{
               padding: '4px 14px',
-              background: 'var(--gold)',
+              background: 'var(--gold-vibrant)',
               color: 'var(--bg)',
               border: 'none',
               borderRadius: '6px',
@@ -391,7 +391,7 @@ function QuestCard({ qp, icon, onClaim, claiming }: {
             <span style={{
               fontSize: '0.72rem',
               fontWeight: 600,
-              color: 'var(--gold)',
+              color: 'var(--gold-vibrant)',
               fontFamily: "'JetBrains Mono', monospace",
             }}>
               +{quest.xp_reward} XP

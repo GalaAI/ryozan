@@ -12,7 +12,7 @@ export interface SectionLabelProps extends React.HTMLAttributes<HTMLSpanElement>
 
 const tones: Record<SectionLabelTone, string> = {
   muted: color.textMuted,
-  gold: color.gold,
+  gold: color.goldText,
   ghost: color.textDim,
   ink: color.text,
 };

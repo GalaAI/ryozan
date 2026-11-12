@@ -45,7 +45,7 @@
 
 .ryozan-error-boundary h1 {
     margin: 0;
-    color: var(--accent-cream);
+    color: var(--accent-cream-tile);
     font-family: var(--font-display);
     font-size: clamp(var(--text-2xl), 8vw, var(--text-3xl));
     font-weight: 800;
@@ -59,7 +59,7 @@
 
 .ryozan-state-boundary h2 {
     margin: 0;
-    color: var(--accent-cream);
+    color: var(--accent-cream-tile);
     font-family: var(--font-display);
     font-size: var(--text-2xl);
     line-height: 1;
@@ -115,14 +115,14 @@
 }
 
 .ryozan-error-boundary__action--primary {
-    border: 1px solid var(--accent-cream);
+    border: 1px solid var(--accent-cream-tile);
     color: var(--accent-ink);
-    background: var(--accent-cream);
+    background: var(--accent-cream-tile);
 }
 
 .ryozan-error-boundary__action--secondary {
     border: 1px solid var(--line-2);
-    color: var(--accent-cream);
+    color: var(--accent-cream-tile);
     background: var(--surface-2);
 }
 
@@ -131,7 +131,7 @@
 }
 
 .ryozan-error-boundary__action:focus-visible {
-    outline: 2px solid var(--accent-cream);
+    outline: 2px solid var(--accent-cream-tile);
     outline-offset: 3px;
 }
 
@@ -222,23 +222,23 @@
 /* ── Public form state reconciliation ──────────────── */
 
 .public-form-shell .public-form-status {
-    color: var(--ink);
+    color: var(--text);
     background: var(--panel-raised);
     border-color: var(--line-2);
 }
 
 .public-form-status h2 {
-    color: var(--accent-cream);
+    color: var(--accent-cream-tile);
     font-family: var(--font-display);
 }
 
 .public-form-status p {
-    color: var(--ink-mute);
+    color: var(--text-muted);
 }
 
 .public-form-status .public-form-icon.expired,
 .public-form-status .public-form-icon.success {
-    color: var(--accent-cream);
+    color: var(--accent-cream-tile);
     background: var(--surface-2);
 }
 

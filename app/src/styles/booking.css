@@ -1960,7 +1960,7 @@
     justify-content: space-between;
     gap: 18px;
     padding: 16px 18px;
-    color: var(--cream, #e2dac2);
+    color: var(--text, #e2dac2);
     background:
         linear-gradient(115deg, rgba(var(--brick-red-rgb, 163, 58, 49), 0.18), transparent 58%),
         #0b0c0b;
@@ -2120,7 +2120,7 @@
     color: rgba(166, 125, 67, 0.6);
 }
 .day-pref-tile-cal .cal-nav-btn:hover {
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
     background: rgba(166, 125, 67, 0.1);
 }
 .day-pref-tile-cal .cal-weekday {
@@ -2206,7 +2206,7 @@
 
 /* Today — bold gold text, no circle. !important overrides dashboard defaults */
 .day-pref-tile-cal .cal-cell.today .cal-day-num {
-    color: var(--gold, #a67d43) !important;
+    color: var(--gold-vibrant) !important;
     font-weight: 700 !important;
     background: none !important;
     border: none !important;
@@ -2221,7 +2221,7 @@
     background: none;
 }
 .day-pref-tile-cal .cal-cell.selected .cal-day-num {
-    background: var(--gold, #a67d43);
+    background: var(--gold-vibrant);
     color: #111110;
     font-weight: 700;
     border-radius: 50%;
@@ -2319,16 +2319,16 @@
 }
 
 .day-pref-slot:hover {
-    border-color: var(--gold, #a67d43);
+    border-color: var(--gold-vibrant);
     background: rgba(166, 125, 67, 0.08);
     color: var(--text, #e8dfcf);
 }
 
 .day-pref-slot.selected {
-    background: var(--gold, #a67d43);
+    background: var(--gold-vibrant);
     color: var(--bg, #0d0e0d);
     font-weight: 600;
-    border-color: var(--gold, #a67d43);
+    border-color: var(--gold-vibrant);
 }
 
 /* Session type info at bottom of slots */
@@ -2344,7 +2344,7 @@
 }
 
 .day-pref-session-deposit {
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
     font-weight: 600;
 }
 
@@ -2433,8 +2433,8 @@
 
 /* Flexible button active state */
 .day-pref-flexible.active {
-    color: var(--gold, #a67d43);
-    border-color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
+    border-color: var(--gold-vibrant);
     background: rgba(166, 125, 67, 0.06);
 }
 
@@ -2538,7 +2538,7 @@
     border: 1px solid var(--panel-border, rgba(166, 125, 67, 0.25));
     border-radius: 8px;
     font-size: 0.8rem;
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
     font-weight: 500;
 }
 
@@ -2575,7 +2575,7 @@
     text-align: center;
     padding: 10px;
     font-size: 0.78rem;
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
     opacity: 0.6;
     border: 1px dashed var(--panel-border, rgba(166, 125, 67, 0.25));
     border-radius: 8px;
@@ -2596,20 +2596,20 @@
 
 .day-pref-first:hover:not(:disabled) {
     opacity: 1;
-    border-color: var(--gold, #a67d43);
-    color: var(--gold, #a67d43);
+    border-color: var(--gold-vibrant);
+    color: var(--gold-vibrant);
 }
 
 .day-pref-flexible:hover {
     opacity: 1;
-    border-color: var(--gold, #a67d43);
+    border-color: var(--gold-vibrant);
 }
 
 /* ── Admin act-as proxy booking form ──────────────────────────── */
 .bkm-add-booking-btn {
-  background: var(--gold);
+  background: var(--gold-vibrant);
   color: var(--bg-dark);
-  border: 1px solid var(--gold);
+  border: 1px solid var(--gold-vibrant);
   border-radius: 6px;
   height: 42px;
   padding: 0 14px;
@@ -2620,13 +2620,13 @@
 }
 .bkm-add-booking-btn.is-open {
   background: rgba(255, 248, 236, 0.04);
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 
 /* Secondary header action: open the personal time-block composer. */
 .bkm-block-time-btn {
   background: rgba(255, 248, 236, 0.04);
-  color: var(--gold);
+  color: var(--gold-vibrant);
   border: 1px solid var(--panel-border);
   border-radius: 6px;
   height: 42px;
@@ -2637,7 +2637,7 @@
   white-space: nowrap;
 }
 .bkm-block-time-btn:hover {
-  border-color: var(--gold);
+  border-color: var(--gold-vibrant);
 }
 
 /* Time-block panel: two cards side by side (new block + upcoming list). */
@@ -2665,7 +2665,7 @@
   height: 38px;
   cursor: pointer;
 }
-.bkm-block-allday input { width: 16px; height: 16px; accent-color: var(--gold); }
+.bkm-block-allday input { width: 16px; height: 16px; accent-color: var(--gold-vibrant); }
 .bkm-block-empty {
   margin: 10px 0 0;
   color: var(--text-muted);
@@ -2698,7 +2698,7 @@
   min-width: 0;
 }
 .bkm-block-item-main strong { color: var(--text-light, var(--text)); font-size: 0.85rem; }
-.bkm-block-item-main span { color: var(--gold); font-size: 0.8rem; }
+.bkm-block-item-main span { color: var(--gold-vibrant); font-size: 0.8rem; }
 .bkm-block-item-main em { color: var(--text-muted); font-size: 0.78rem; font-style: normal; }
 .bkm-block-remove {
   flex-shrink: 0;
@@ -2794,14 +2794,14 @@
   border: 1px solid rgba(var(--brick-red-rgb, 163, 58, 49), 0.28);
   border-radius: 6px;
   background: var(--color-surface-2);
-  color: var(--ink);
+  color: var(--text);
 }
 .bkm-booky-command button,
 .bkm-booky-sources button {
   border: 1px solid var(--brick-red, #a33a31);
   border-radius: 6px;
   background: var(--brick-red, #a33a31);
-  color: var(--cream, #e2dac2);
+  color: var(--text, #e2dac2);
   cursor: pointer;
   font-family: var(--font-btn);
   font-weight: 700;
@@ -2980,9 +2980,9 @@
 .bkm-placement-chips button.is-active,
 .bkm-duration-chips button.is-active,
 .bkm-status-segments button.is-active {
-  border-color: var(--gold);
+  border-color: var(--gold-vibrant);
   background: rgba(166, 125, 67, 0.14);
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 .bkm-placement-chips,
 .bkm-duration-chips,
@@ -3066,7 +3066,7 @@
 .bkm-proxy-error { color: #ff6b6b; font-size: 0.85rem; margin: 0; }
 .bkm-proxy-empty { color: var(--text-muted); font-size: 0.9rem; margin: 0; }
 .bkm-proxy-submit {
-  background: var(--gold);
+  background: var(--gold-vibrant);
   color: var(--bg-dark);
   border: none;
   border-radius: 6px;

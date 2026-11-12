@@ -215,7 +215,7 @@ export default function AdminUsers() {
               <>
                 <h3>Invite Sent!</h3>
                 <p style={{ color: 'var(--muted)', fontSize: '0.85rem', margin: '0.5rem 0 1rem' }}>
-                  A branded email has been sent to <strong style={{ color: 'var(--gold)' }}>{inviteEmail}</strong>.
+                  A branded email has been sent to <strong style={{ color: 'var(--gold-vibrant)' }}>{inviteEmail}</strong>.
                   <br />The link expires in {inviteResult.hours} hours.
                 </p>
                 <label style={{ display: 'block', marginBottom: '0.75rem' }}>
@@ -385,7 +385,7 @@ export default function AdminUsers() {
                         height: '28px',
                         borderRadius: '50%',
                         background: u.avatar_url ? `url(${u.avatar_url}) center/cover` : 'rgba(250, 174, 21, 0.12)',
-                        color: 'var(--gold)',
+                        color: 'var(--gold-vibrant)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -422,7 +422,7 @@ export default function AdminUsers() {
                     <span style={{
                       fontFamily: "'JetBrains Mono', monospace",
                       fontSize: '0.82rem',
-                      color: u.bttcoin_balance > 0 ? 'var(--gold)' : 'var(--muted)',
+                      color: u.bttcoin_balance > 0 ? 'var(--gold-vibrant)' : 'var(--muted)',
                     }}>
                       {u.bttcoin_balance}
                     </span>
@@ -430,7 +430,7 @@ export default function AdminUsers() {
                   <td style={{ minWidth: '140px' }}>
                     {u.proxy_for ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--gold)' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--gold-vibrant)' }}>
                           {userList.find((x) => x.id === u.proxy_for)?.name?.split(' ')[0] ?? 'Unknown'}
                         </span>
                         <button

@@ -46,7 +46,7 @@
 .ete-back-btn:hover {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
-  border-color: var(--border-active);
+  border-color: var(--border-hover);
 }
 
 .ete-title {
@@ -561,7 +561,7 @@
 
 .ete-list-sync-btn:hover {
   color: var(--text);
-  border-color: var(--border-active);
+  border-color: var(--border-hover);
 }
 
 .ete-list-sync-btn:disabled {

@@ -45,7 +45,9 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
           boxSizing: 'border-box',
           minHeight: layout.touchMin,
           padding: '0 var(--space-3)',
-          border: `1px solid ${focused ? color.borderActive : color.panelBorder}`,
+          border: `1px solid ${focused ? color.borderActive : color.fieldBorder}`,
+          // Focus ring: the gold edge doubled to 2px, so focus never rests on a 1px hue shift.
+          boxShadow: focused ? `0 0 0 var(--hair) ${color.borderActive}` : undefined,
           borderRadius: shape === 'pill' ? radius.pill : radius.md,
           background: color.bgDark,
           color: color.text,

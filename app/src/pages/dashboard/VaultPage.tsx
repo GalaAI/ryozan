@@ -455,7 +455,7 @@ function ArchiveRow({ record, expanded, onToggle }: {
             {detailLoading ? (
               <div style={{ padding: '1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Loading record...</div>
             ) : detailError ? (
-              <div role="alert" style={{ padding: '1.5rem', color: 'var(--gold)', fontSize: '0.8rem' }}>{detailError}</div>
+              <div role="alert" style={{ padding: '1.5rem', color: 'var(--gold-vibrant)', fontSize: '0.8rem' }}>{detailError}</div>
             ) : detail?.data ? (
               <div className="archive-detail archive-full-record">
                 {/* Client Portion */}

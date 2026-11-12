@@ -434,7 +434,7 @@ select {
 
 .tab-btn:hover {
     transform: translateY(-1px);
-    border-color: var(--border-active);
+    border-color: var(--border-hover);
     color: #f6f6f6;
 }
 
@@ -544,9 +544,9 @@ select {
 }
 
 .topbar-back-btn:hover {
-    border-color: var(--gold);
+    border-color: var(--gold-vibrant);
     background: var(--border-subtle);
-    color: var(--gold);
+    color: var(--gold-vibrant);
 }
 
 .topbar-back-btn svg {
@@ -673,7 +673,7 @@ select {
     font-family: var(--font-heading, 'KC Tallboy', sans-serif);
     font-size: 0.9rem;
     font-weight: 700;
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
     line-height: 1;
 }
 .topbar-stat-label {
@@ -690,7 +690,7 @@ select {
     font-size: 1.375rem;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
     text-transform: none !important;
 }
 
@@ -978,9 +978,9 @@ select {
 }
 
 .sidebar-item.is-active {
-    color: var(--gold);
+    color: var(--gold-vibrant);
     background: var(--border-subtle);
-    border-left-color: var(--gold);
+    border-left-color: var(--gold-vibrant);
     box-shadow: inset 4px 0 12px -4px var(--gold-glow);
 }
 
@@ -1029,7 +1029,7 @@ select {
 }
 
 .sidebar-return-link:hover {
-    color: var(--gold);
+    color: var(--gold-vibrant);
     background: var(--border-subtle);
     opacity: 1;
 }
@@ -1173,10 +1173,14 @@ select {
     margin-left: 0.25rem;
 }
 
-.topbar-user-badge:hover,
-.topbar-user-badge.is-open {
+.topbar-user-badge:hover {
     background: var(--border-subtle);
     border-color: var(--gold);
+}
+
+.topbar-user-badge.is-open {
+    background: var(--border-subtle);
+    border-color: var(--gold-vibrant);
 }
 
 .topbar-user-badge.hidden {
@@ -1319,7 +1323,7 @@ select {
 }
 
 .notif-badge {
-    background: var(--gold) !important;
+    background: var(--gold-vibrant) !important;
     color: var(--bg) !important;
     font-weight: 800;
 }
@@ -1357,7 +1361,7 @@ select {
 .notif-mark-all {
     background: none;
     border: none;
-    color: var(--gold);
+    color: var(--gold-vibrant);
     font-size: 0.7rem;
     font-family: inherit;
     cursor: pointer;
@@ -1414,7 +1418,7 @@ select {
 }
 
 .notif-unread .notif-item-dot {
-    background: var(--gold);
+    background: var(--gold-vibrant);
 }
 
 .notif-item-content {
@@ -1430,7 +1434,7 @@ select {
 }
 
 .notif-unread .notif-item-title {
-    color: var(--gold);
+    color: var(--gold-vibrant);
 }
 
 .notif-item-msg {
@@ -1570,7 +1574,7 @@ select {
 }
 
 .topbar-icon-btn:hover .topbar-svg-icon {
-    color: var(--gold);
+    color: var(--gold-vibrant);
 }
 
 /* ── Topbar Player Avatar + Card ─────────────── */
@@ -1590,14 +1594,14 @@ select {
 }
 
 .topbar-player-btn:hover {
-    box-shadow: 0 0 0 2px var(--gold);
+    box-shadow: 0 0 0 2px var(--gold-vibrant);
 }
 
 .topbar-player-avatar {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: var(--gold);
+    background: var(--gold-vibrant);
     color: var(--bg);
     display: flex;
     align-items: center;
@@ -1653,7 +1657,7 @@ select {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: var(--gold);
+    background: var(--gold-vibrant);
     color: var(--bg);
     display: flex;
     align-items: center;
@@ -1689,7 +1693,7 @@ select {
 .player-card-role {
     font-family: var(--font-btn);
     font-size: 0.55rem;
-    color: var(--gold);
+    color: var(--gold-vibrant);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     line-height: 1.35;
@@ -1704,7 +1708,7 @@ select {
     display: flex;
     align-items: center;
     gap: 6px;
-    color: var(--gold);
+    color: var(--gold-vibrant);
     background: none;
     border: none;
     padding: 4px 0;
@@ -1931,7 +1935,7 @@ select {
     width: 72px;
     height: 72px;
     border-radius: 50%;
-    border: 2px solid var(--gold);
+    border: 2px solid var(--gold-vibrant);
     background: var(--border-subtle);
     cursor: pointer;
     position: relative;
@@ -1957,7 +1961,7 @@ select {
     font-family: var(--font-mono);
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--gold);
+    color: var(--gold-vibrant);
 }
 
 .avatar-editor-overlay {
@@ -1989,7 +1993,7 @@ select {
     border: 1px solid var(--panel-border);
     border-radius: var(--radius-pill);
     font-size: 0.72rem;
-    color: var(--gold);
+    color: var(--gold-vibrant);
     padding: 0.2rem 0.5rem;
     font-family: var(--font-mono);
 }
@@ -2297,7 +2301,7 @@ a.quick-action-btn:hover {
 }
 
 .inbox-tab.is-active {
-    color: var(--gold);
+    color: var(--gold-vibrant);
     background: var(--border-subtle);
     border-color: var(--panel-border);
 }
@@ -2424,13 +2428,13 @@ a.quick-action-btn:hover {
 }
 
 .doc-filter:hover {
-    border-color: var(--border-active);
+    border-color: var(--border-hover);
     color: var(--bone-white);
 }
 
 .doc-filter.is-active {
-    border-color: var(--gold);
-    color: var(--gold);
+    border-color: var(--gold-vibrant);
+    color: var(--gold-vibrant);
     background: var(--border-subtle);
 }
 
@@ -2529,7 +2533,7 @@ a.quick-action-btn:hover {
 
 .badge.role-founder   { border-color: #c084fc; color: #c084fc; }
 .badge.role-admin     { border-color: var(--danger); color: var(--danger); }
-.badge.role-artist    { border-color: var(--gold); color: var(--gold); }
+.badge.role-artist    { border-color: var(--gold-vibrant); color: var(--gold-vibrant); }
 .badge.role-assistant { border-color: #38bdf8; color: #38bdf8; }
 .badge.role-collector { border-color: var(--ok); color: var(--ok); }
 
@@ -2576,13 +2580,13 @@ a.quick-action-btn:hover {
 
 .topbar-icon-btn:hover {
     background: var(--border-subtle);
-    border-color: var(--gold);
+    border-color: var(--gold-vibrant);
 }
 
 .topbar-gala-btn.active {
     border-color: rgba(196, 166, 106, 0.58);
     background: rgba(196, 166, 106, 0.12);
-    color: var(--gold);
+    color: var(--gold-vibrant);
 }
 
 .topbar-badge {
@@ -2635,7 +2639,7 @@ a.quick-action-btn:hover {
 .notif-item:hover { background: rgba(255, 255, 255, 0.04); }
 
 .notif-item.unread {
-    border-left: 3px solid var(--gold);
+    border-left: 3px solid var(--gold-vibrant);
     background: var(--border-subtle);
 }
 
@@ -2866,9 +2870,9 @@ a.quick-action-btn:hover {
 }
 
 .sq-tab.is-active {
-    background: var(--gold);
+    background: var(--gold-vibrant);
     color: #000;
-    border-color: var(--gold);
+    border-color: var(--gold-vibrant);
     font-weight: 600;
 }
 

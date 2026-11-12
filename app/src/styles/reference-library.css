@@ -105,7 +105,7 @@
 }
 
 .ref-tile:hover .ref-tile-meta {
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 1;
 }
 
@@ -118,7 +118,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--gold);
+  background: var(--gold-vibrant);
   opacity: 1;
 }
 
@@ -156,12 +156,12 @@
 
 .ref-tile-action-btn:hover {
   background: rgba(166, 125, 67, 0.1);
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 1;
 }
 
 .ref-tile-action-btn.ref-pinned {
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 1;
 }
 
@@ -196,7 +196,7 @@
 }
 
 .ref-upload-zone-icon {
-  color: var(--gold);
+  color: var(--gold-vibrant);
   opacity: 0.5;
 }
 
@@ -407,11 +407,11 @@
 
 .ref-view-mode-btn:hover {
   border-color: rgba(166, 125, 67, 0.38);
-  color: var(--gold);
+  color: var(--gold-vibrant);
 }
 
 .ref-view-mode-btn.active {
-  color: var(--gold);
+  color: var(--gold-vibrant);
   border-color: rgba(166, 125, 67, 0.45);
   background: rgba(166, 125, 67, 0.07);
 }
@@ -492,7 +492,7 @@
   width: 20px;
   height: 20px;
   border: 2px solid rgba(166, 125, 67, 0.2);
-  border-top-color: var(--gold);
+  border-top-color: var(--gold-vibrant);
   border-radius: 50%;
   animation: ref-spin 0.6s linear infinite;
 }
