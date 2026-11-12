@@ -1,0 +1,28 @@
+name: solatree-lanes
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  issues:
+    types: [labeled]
+  workflow_run:
+    workflows: [gate]
+    types: [completed]
+permissions:
+  actions: write
+  contents: read
+  issues: write
+  pull-requests: write
+concurrency:
+  group: lanes-${{ github.event.pull_request.number || github.event.issue.number || github.run_id }}
+  queue: max
+  cancel-in-progress: false
+jobs:
+  lanes:
+    runs-on: ${{ vars.SOLATREE_LIGHT_RUNNER || vars.SOLATREE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: GalaAI/solatree/actions/lanes@1e322e9a6ac6eec23733833d89841e380f6228e2
+        with:
+          github-token: ${{ github.token }}
+          worker-workflow: ""
+          require-lane-branch: "true"
