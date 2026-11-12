@@ -48,5 +48,5 @@ See `api/alembic/README.md` (baseline, adopting an old database).
   as real 500s so Railway logs them.
 
 ## Lint (enforced)
-* `ruff==0.15.13`, `line-length=120`, configured in `api/ruff.toml`.
+* `ruff==0.17.4`, `line-length=120`, configured in `api/ruff.toml`.
 * Run from `api/`: `ruff check app/ main.py && ruff format --check app/ main.py`.

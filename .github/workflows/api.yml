@@ -31,7 +31,7 @@ jobs:
           cache-dependency-path: api/requirements.txt
 
       - name: Install dependencies and pinned Ruff
-        run: pip install -r requirements.txt ruff==0.15.13
+        run: pip install -r requirements.txt ruff==0.17.4
 
       - name: Ruff lint
         run: ruff check app/ main.py
@@ -345,6 +345,6 @@ jobs:
 
       - name: Lint with the repo ruff config
         run: |
-          pip install ruff==0.15.13
+          pip install ruff==0.17.4
           ruff check --config ../../api/ruff.toml .
           ruff format --check --config ../../api/ruff.toml .

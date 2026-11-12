@@ -400,9 +400,8 @@ def check_dead_code():
                         break
                 if not is_route:
                     definitions[node.name] = str(pf.relative_to(PROJECT_ROOT))
-            elif isinstance(node, ast.ClassDef):
-                if not node.name.startswith("_"):
-                    definitions[node.name] = str(pf.relative_to(PROJECT_ROOT))
+            elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+                definitions[node.name] = str(pf.relative_to(PROJECT_ROOT))
 
     all_source = ""
     for pf in py_files:

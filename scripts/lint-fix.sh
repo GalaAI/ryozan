@@ -7,7 +7,7 @@
 #   ./scripts/lint-fix.sh --format     # only format, no lint
 #
 # Why this exists:
-#   CI installs `ruff==0.15.13` (see .github/workflows/api.yml + api/requirements-dev.txt).
+#   CI installs `ruff==0.17.4` (see .github/workflows/api.yml + api/requirements-dev.txt).
 #   If you run a different ruff locally, format output differs and CI fails on drift
 #   that wasn't in your diff. This script isolates the pinned version in /tmp so it
 #   doesn't conflict with whatever ruff is on your PATH.
@@ -21,7 +21,7 @@
 
 set -euo pipefail
 
-RUFF_PIN="ruff==0.15.13"
+RUFF_PIN="ruff==0.17.4"
 VENV_DIR="${TMPDIR:-/tmp}/ryozan-ruff-pin-venv"
 SCOPE=( "app/" "main.py" )
 MODE="${1:-fix}"

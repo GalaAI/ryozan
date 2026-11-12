@@ -29,7 +29,7 @@ jobs:
       - name: Install backend toolchain (pinned ruff)
         run: |
           pip install --upgrade pip
-          pip install ruff==0.15.13
+          pip install ruff==0.17.4
           pip install -r api/requirements.txt
 
       # Same Node major as Frontend CI, so the agent sees the toolchain CI judges.

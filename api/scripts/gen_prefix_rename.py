@@ -204,7 +204,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--check", type=Path, help="revision file whose statement lists must equal the output")
     args = parser.parse_args(argv)
 
+    # SQLAlchemy 2.1 maps bare postgresql:// to psycopg (v3); Ryozan installs psycopg2.
     url = args.database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
     engine = sa.create_engine(url)
     try:
         with engine.connect() as conn:
