@@ -31,7 +31,7 @@
 }
 
 @keyframes ryozan-card-emblem-breathe {
-  0%, 100% { color: rgba(0, 0, 0, .5); filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0)); }
+  0%, 100% { color: rgba(var(--cream-rgb), .44); filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0)); }
   26%, 48% { color: rgb(var(--ryozan-agent-rgb)); filter: drop-shadow(0 0 8px rgb(var(--ryozan-agent-rgb))); }
 }
 
@@ -57,7 +57,8 @@
 }
 
 .ryozan-agent-card-emblem {
-  color: rgba(0, 0, 0, .55);
+  /* resting glyph: cream at 44% reads 3:1 or better on the card back (black read about 1.2:1) */
+  color: rgba(var(--cream-rgb), .44);
 }
 
 .ryozan-agent-card-emblem--selected {
