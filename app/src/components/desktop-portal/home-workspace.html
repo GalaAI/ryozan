@@ -43,7 +43,7 @@
 
 
                     </div>
-                    <button type="button" onClick="{{ cphOpenPass }}" style="margin-top:10px;min-height:38px;border-radius:99px;border:0;background:var(--accent-coral);color:#29140E;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 18px rgba(253,142,142,.3);transition:all .2s ease" style-hover="transform:translateY(-2px);box-shadow:0 0 28px rgba(253,142,142,.5)">Open bookings →</button>
+                    <button type="button" onClick="{{ cphOpenPass }}" style="margin-top:10px;min-height:38px;border-radius:99px;border:0;background:var(--accent-coral);color:var(--accent-ink);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 18px rgba(253,142,142,.3);transition:all .2s ease" style-hover="transform:translateY(-2px);box-shadow:0 0 28px rgba(253,142,142,.5)">Open bookings →</button>
                     <button type="button" onClick="{{ openSessionThread }}" style="margin-top:8px;min-height:34px;border-radius:99px;border:1px solid rgba(232,223,207,.4);background:transparent;color:rgba(232,223,207,.9);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;transition:all .2s ease" style-hover="background:var(--accent-cream);color:#121312">Open Courier</button>
                   </div>
                 </div>
@@ -191,7 +191,7 @@
               </div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-bottom: 4px; position: relative; top: -20px">
-              <button type="button" onClick="{{ nfOpenPass }}" style="min-height:38px;border-radius:99px;border:0;background:var(--accent-coral);color:#29140E;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 16px rgba(253,142,142,.25);transition:transform .2s ease, box-shadow .25s ease" style-hover="transform:translateY(-2px);box-shadow:0 0 26px rgba(253,142,142,.5)">Open bookings →</button>
+              <button type="button" onClick="{{ nfOpenPass }}" style="min-height:38px;border-radius:99px;border:0;background:var(--accent-coral);color:var(--accent-ink);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 16px rgba(253,142,142,.25);transition:transform .2s ease, box-shadow .25s ease" style-hover="transform:translateY(-2px);box-shadow:0 0 26px rgba(253,142,142,.5)">Open bookings →</button>
               <button type="button" onClick="{{ nextMsg }}" style="min-height:34px;border-radius:99px;border:1px solid rgba(232,223,207,.4);background:transparent;color:rgba(232,223,207,.9);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;transition:all .2s ease" style-hover="background:var(--accent-cream);color:#121312">{{ nfMsgLabel }}</button>
             </div>
           </sc-if>
@@ -208,7 +208,7 @@
                       <div style="display:flex;flex-direction:column;background:var(--well);border-right:1px solid var(--line)">
                         <div style="display:flex;align-items:center;gap:8px;padding:14px 16px 8px">
                           <span style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--bone-white)">inbox</span>
-                          <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:#29140E;background:var(--accent-coral);border-radius:99px;padding:2px 8px;box-shadow:0 0 22px 2px rgba(217,87,60,.46)">{{loadedInboxCount}}</span>
+                          <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:var(--accent-ink);background:var(--accent-coral);border-radius:99px;padding:2px 8px;box-shadow:0 0 22px 2px rgba(217,87,60,.46)">{{loadedInboxCount}}</span>
                         </div>
                         <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:2px 8px 10px">
                           <span style="padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-ghost)">{{loadedInboxLabel}}</span><sc-for list="{{ nbxRows }}" as="nb" hint-placeholder-count="4">

@@ -9487,7 +9487,7 @@ body:has(.gala-panel:not(.gala-collapsed)) .nexus-terminal .nexus-toolbar {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28), 0 0 16px color-mix(in srgb, var(--upload-accent) 12%, transparent);
 }
 .flash-upload-btn--primary:hover {
-  background: color-mix(in srgb, var(--upload-accent) 88%, var(--cream));
+  background: color-mix(in srgb, var(--upload-accent) 88%, var(--accent-cream-tile));
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.3), 0 0 20px color-mix(in srgb, var(--upload-accent) 20%, transparent);
 }
 .flash-upload-btn--ghost {
@@ -29672,7 +29672,7 @@ button.ryozan-portal-empty {
 }
 
 .ryozan-hub-upload-toggle > span > small {
-  color: #6b5147;
+  color: var(--bg-dark);
   font-family: var(--font-btn);
   font-size: 8.5px;
   font-weight: 700;
@@ -29718,7 +29718,8 @@ button.ryozan-portal-empty {
 .ryozan-hub-upload-stack .ryozan-club-actions-inner > button {
   border-color: rgba(211, 138, 104, 0.22);
   background: rgba(211, 138, 104, 0.05);
-  color: var(--accent-coral);
+  /* coral as text on the dark stack: rust reads 4.65:1 or better (coral was 4.16) */
+  color: var(--color-rust);
 }
 
 .ryozan-hub-upload-stack .ryozan-club-actions-inner > button:hover,
@@ -29738,7 +29739,8 @@ button.ryozan-portal-empty {
   border: 0;
   border-radius: 14px;
   background: var(--alt-sage);
-  color: #212121;
+  /* light ink on sage: 4.88:1 (dark ink read 3.19 and 2.62) */
+  color: var(--accent-cream-tile);
   text-align: left;
   cursor: pointer;
 }
@@ -29746,7 +29748,7 @@ button.ryozan-portal-empty {
 .ryozan-hub-options > strong,
 .ryozan-hub-pos > strong {
   flex-shrink: 0;
-  color: var(--bg-dark);
+  color: var(--accent-cream-tile);
   font-family: var(--font-btn);
   font-size: 15.5px;
   font-weight: 800;
@@ -29759,7 +29761,7 @@ button.ryozan-portal-empty {
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  color: #212121;
+  color: var(--accent-cream-tile);
   font-family: var(--font-body);
   font-size: 11px;
   text-align: right;
@@ -32314,4 +32316,6 @@ body:has(.app-view--portal-home) {
   --on-gold: var(--bg-dark);
   --gold-ink: var(--bg-dark);
   --gold-wash: color-mix(in srgb, var(--gold-vibrant) 12%, transparent);
+  /* the package's upload palette inks with the theme-following cream */
+  --upload-ink: var(--accent-cream-tile);
 }

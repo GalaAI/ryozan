@@ -222,7 +222,7 @@ export default function WalletPage() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: `${meta.color}15`,
+                    background: `color-mix(in srgb, ${meta.color} 8%, transparent)`,
                     color: meta.color,
                     display: 'flex',
                     alignItems: 'center',

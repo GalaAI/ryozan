@@ -254,6 +254,10 @@ export const THEME_FOLLOWING_TEXT = ['ink', 'ink-dim', 'ink-mute', 'ink-ghost', 
 // every property (text, borders, fills, outlines): use gold-vibrant, and bg-dark on it.
 export const THEME_FOLLOWING_GOLD = ['gold', 'gold-text', 'gold-fill', 'gold-decor', 'accent-seal', 'on-gold', 'gold-ink', 'gold-wash'];
 export const BACKOFFICE_GOLD = ['gold-vibrant', 'bg-dark'];
+// Light text tokens that turn dark in shop, banned in the back office as fills too.
+export const THEME_FOLLOWING_FILL = ['cream', 'accent-cream'];
+// Back-office pages whose markup is portalled into the desktop portal's shadow root.
+export const SHADOW_PINNED_FILES = ['pages/dashboard/DesktopPortalPage.tsx'];
 // Constant light text: same light value in every theme (website vocabulary plus the tile).
 export const BACKOFFICE_TEXT = ['text', 'text-primary', 'text-secondary', 'text-muted', 'muted', 'bone-white', 'accent-cream-tile'];
 // Narrow, named exceptions: light inner surfaces that deliberately follow the theme.
@@ -369,7 +373,11 @@ export function backofficeViolations() {
       const color = /(?:^|;)\s*color\s*:\s*var\(--([\w-]+)/.exec(m[2]);
       if (color && THEME_FOLLOWING_TEXT.includes(color[1])) hits.push(`var(--${color[1]})`);
       for (const d of m[2].matchAll(/(?:^|;)\s*([\w-]+)\s*:([^;]*)/g)) {
-        for (const t of d[2].matchAll(/var\(--([\w-]+)/g)) if (THEME_FOLLOWING_GOLD.includes(t[1])) hits.push(`${d[1]}: var(--${t[1]})`);
+        for (const t of d[2].matchAll(/var\(--([\w-]+)/g)) {
+          if (THEME_FOLLOWING_GOLD.includes(t[1])) hits.push(`${d[1]}: var(--${t[1]})`);
+          // cream and accent-cream also follow the theme as fills, borders and accents.
+          else if (d[1] !== 'color' && !d[1].startsWith('--') && THEME_FOLLOWING_FILL.includes(t[1])) hits.push(`${d[1]}: var(--${t[1]})`);
+        }
       }
       // A local custom property that wraps a theme-following text token (for example
       // --huddl-ink: var(--ink), or a var() fallback) carries the theme in by indirection.
@@ -385,12 +393,13 @@ export function backofficeViolations() {
       }
     }
   }
-  // Inline styles and component-scoped CSS in back-office source. The desktop portal is
-  // left out: its shadow host pins every gold token to the constant seal.
+  // Inline styles and component-scoped CSS in back-office source. Files that render
+  // inside the desktop portal's shadow root are left out: its host pins every one of
+  // these tokens to a constant (see the desktop portal test).
   for (const f of [...backofficeFiles()].sort()) {
-    if (f.includes(`${'/'}desktop-portal${'/'}`)) continue;
+    if (f.includes(`${'/'}desktop-portal${'/'}`) || SHADOW_PINNED_FILES.some((p) => f.endsWith(p))) continue;
     const src = readFileSync(f, 'utf8');
-    for (const t of src.matchAll(/var\(--([\w-]+)/g)) if (THEME_FOLLOWING_GOLD.includes(t[1])) out.push(`${f.slice(appSrc.length + 1)} -> var(--${t[1]})`);
+    for (const t of src.matchAll(/var\(--([\w-]+)/g)) if (THEME_FOLLOWING_GOLD.includes(t[1]) || THEME_FOLLOWING_TEXT.includes(t[1])) out.push(`${f.slice(appSrc.length + 1)} -> var(--${t[1]})`);
   }
   return out;
 }
@@ -491,7 +500,7 @@ test('desktop portal stays dark in every theme: shadow host pins, no theme switc
 
 // The back-office roots pin the theme-following gold (owner ruling 2026-11-11), so
 // @ryozan/ui components and global element rules that paint gold inline stay constant.
-export const BACKOFFICE_GOLD_PIN = { file: 'dashboard.css', selector: '.app-view, .ryozan-mobile-portal-home', tokens: ['--gold', '--gold-text', '--gold-fill', '--gold-decor', '--on-gold', '--gold-ink'] };
+export const BACKOFFICE_GOLD_PIN = { file: 'dashboard.css', selector: '.app-view, .ryozan-mobile-portal-home', tokens: ['--gold', '--gold-text', '--gold-fill', '--gold-decor', '--on-gold', '--gold-ink', '--upload-ink'] };
 
 test('back-office roots pin gold to a constant in every theme, readable on the dark shell', { skip: !existsSync(stylesDir) && 'app/src/styles not present (packed tarball)' }, () => {
   const decl = declarations(BACKOFFICE_GOLD_PIN.file, BACKOFFICE_GOLD_PIN.selector);
@@ -506,4 +515,96 @@ test('back-office roots pin gold to a constant in every theme, readable on the d
       assert.ok(ratio(c, gold) >= 4.5, `${p} on pinned gold: ${ratio(c, gold).toFixed(2)}:1`);
     } else for (const bg of shell) assert.ok(ratio(c, bg) >= 4.5, `${p} on the dark shell: ${ratio(c, bg).toFixed(2)}:1`);
   }
+});
+
+// ── Contrast sweep (owner ruling 2026-11-11, "fix the rest") ─────────────────────
+// Each pair names the rule that sets the text colour and the rule that paints its
+// ground; every stop of the ground (gradients composited over bg) must read 4.5:1
+// in every theme. These are the pairs the render pass found under the floor.
+export const SWEEP_PAIRS = [
+  { file: 'dashboard.css', fg: '.ryozan-hub-upload-toggle > span > small', bg: '.ryozan-hub-upload-toggle', why: 'hub Publish toggle label (was 2.11:1)' },
+  { file: 'dashboard.css', fg: '.ryozan-hub-upload-stack .ryozan-club-actions-inner > button', bg: '.ryozan-hub-upload-stack .ryozan-club-actions-inner', why: 'hub upload stack action labels (was 4.16:1)' },
+  { file: 'dashboard.css', fg: '.ryozan-hub-options > strong, .ryozan-hub-pos > strong', bg: '.ryozan-hub-options, .ryozan-hub-pos', why: '+POS tile title (was 3.19:1)' },
+  { file: 'dashboard.css', fg: '.ryozan-hub-options > span, .ryozan-hub-pos > span', bg: '.ryozan-hub-options, .ryozan-hub-pos', why: '+POS tile detail (was 2.62:1)' },
+  { file: 'artist-scroll.css', fg: '.scroll-stage-gate-btn', bg: '.scroll-stage-gate-btn', why: 'Accept Section button (was 1.12:1 in shop)' },
+];
+
+test('sweep pairs read 4.5:1 in every theme', { skip: !existsSync(stylesDir) && 'app/src/styles not present (packed tarball)' }, () => {
+  for (const p of SWEEP_PAIRS) {
+    const fg = declarations(p.file, p.fg).get('color');
+    const bgDecl = declarations(p.file, p.bg);
+    const bg = bgDecl.get('background') ?? bgDecl.get('background-color');
+    assert.ok(fg && bg, `${p.file}: ${p.fg} colour or ${p.bg} background not found`);
+    for (const theme of themes) {
+      const fgStops = stopsOf(fg, theme), bgStops = stopsOf(bg, theme);
+      assert.ok(fgStops && bgStops, `${p.why}: cannot resolve ${fg} on ${bg}`);
+      for (const b of bgStops) {
+        const k = ratio(fgStops[0], b);
+        assert.ok(k >= 4.5, `${p.why} (${theme}): ${k.toFixed(2)}:1 on ${b.slice(0, 3).map(Math.round)}`);
+      }
+    }
+  }
+});
+
+// Coral count chips in the desktop portal's own workspace templates (not the frozen
+// shell, see below). They render in the portal's shadow root, so each colour resolves
+// through the :host pin in NativeDesktopPortal.tsx: ink and fill must both be tokens
+// (no hex literals, AGENTS.md), and the ink must read 4.5:1 on the fill in every theme.
+const coralTemplates = ['home-workspace.html', 'booky-workspace.html'];
+test('coral count chips read 4.5:1 through the portal pins', { skip: !existsSync(portalDir) && 'desktop portal not present (packed tarball)' }, () => {
+  const host = readFileSync(join(portalDir, 'NativeDesktopPortal.tsx'), 'utf8');
+  const pin = new Map([...(/`:host\{([^`]*?)\}/.exec(host)?.[1] ?? '').matchAll(/(--[\w-]+):([^;]*)/g)].map((d) => [d[1], d[2].trim()]));
+  const resolve = (value) => { const v = /^var\((--[\w-]+)\)$/.exec(value); return v && pin.has(v[1]) ? fixedColour(pin.get(v[1])) : null; };
+  let seen = 0;
+  for (const name of coralTemplates) {
+    for (const m of readFileSync(join(portalDir, name), 'utf8').matchAll(/style="([^"]*background:var\(--accent-coral\)[^"]*)"/g)) {
+      const ink = /(?:^|;)color:([^;]+)/.exec(m[1]);
+      if (!ink) continue;
+      seen++;
+      assert.ok(!/#[0-9a-fA-F]{3,8}\b/.test(ink[1]), `${name}: coral chip ink ${ink[1]} is a hex literal; use a token`);
+      const fg = resolve(ink[1].trim()), bg = resolve('var(--accent-coral)');
+      assert.ok(fg && bg, `${name}: ${ink[1]} or accent-coral does not resolve through the :host pin`);
+      const k = ratio(fg, bg);
+      assert.ok(k >= 4.5, `${name}: ${ink[1]} on accent-coral reads ${k.toFixed(2)}:1`);
+    }
+  }
+  assert.ok(seen >= 4, `expected the four coral chips and buttons, found ${seen}`);
+  // shell.html is left out: it is extracted from the frozen canon (extract-source.mjs)
+  // and its unread badge (4.48:1) changes upstream, with a canon version bump.
+});
+
+// Booky's accent is its nav and glyph colour on the dark mobile portal.
+test('Booky accent reads 4.5:1 on the dark portal', { skip: !existsSync(join(appSrc, 'pages', 'dashboard', 'MobilePortalHome.tsx')) && 'app/src not present (packed tarball)' }, () => {
+  const src = readFileSync(join(appSrc, 'pages', 'dashboard', 'MobilePortalHome.tsx'), 'utf8');
+  const accent = /const BOOKY_ACCENT = '([^']+)'/.exec(src);
+  assert.ok(accent, 'BOOKY_ACCENT not found');
+  for (const theme of themes) {
+    const fg = stopsOf(accent[1], theme);
+    assert.ok(fg, `BOOKY_ACCENT ${accent[1]} must resolve to a token`);
+    for (const g of ['color-ground', 'color-surface']) assert.ok(ratio(fg[0], col(g, theme)) >= 4.5, `BOOKY_ACCENT on ${g} (${theme}): ${ratio(fg[0], col(g, theme)).toFixed(2)}:1`);
+  }
+});
+
+// SessionPass: the vertical brand letters sit on the oxblood ribbon gradient.
+test('SessionPass ribbon letters read 4.5:1 on both ribbon stops', () => {
+  const src = readFileSync(join(here, '..', 'src', 'components', 'SessionPass.tsx'), 'utf8');
+  const ribbon = /linear-gradient\(180deg,(#[0-9a-fA-F]{6}),(#[0-9a-fA-F]{6})\)/.exec(src);
+  const letters = /color: '(#[0-9a-fA-F]{6})' \}\}>\s*\{brand\.split/.exec(src);
+  assert.ok(ribbon && letters, 'SessionPass ribbon or letters not found');
+  for (const stop of [ribbon[1], ribbon[2]]) {
+    const k = ratio(parse(letters[1]), parse(stop));
+    assert.ok(k >= 4.5, `SessionPass letters ${letters[1]} on ${stop}: ${k.toFixed(2)}:1`);
+  }
+});
+
+// Colours may be CSS variables (agent accents are var(--token)), so no source may build
+// a translucent colour by appending hex alpha to an interpolated colour: `${accent}22`
+// becomes invalid CSS. Use color-mix(in srgb, <colour> N%, transparent).
+test('no hex alpha suffix on interpolated colours', () => {
+  const roots = [join(here, '..', 'src'), appSrc].filter((d) => existsSync(d));
+  const hits = [];
+  for (const dir of roots) for (const f of sourceFiles(dir)) {
+    for (const m of readFileSync(f, 'utf8').matchAll(/\$\{([^}]*(?:accent|color|colour|tone|tint)[^}]*)\}[0-9a-fA-F]{2}(?![0-9a-zA-Z_])/gi)) hits.push(`${f.slice(f.indexOf('/src/') + 1)}: \${${m[1]}}…`);
+  }
+  assert.deepEqual(hits, [], `hex alpha appended to an interpolated colour (use color-mix):\n${hits.join('\n')}`);
 });
