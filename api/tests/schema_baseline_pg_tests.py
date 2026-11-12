@@ -28,6 +28,7 @@ import sqlalchemy as sa
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 
+from app.core.config import psycopg2_url
 from app.core.schema_compare import BASELINE_REVISION, compare_schemas, load_baseline_snapshot, snapshot_schema
 
 API_ROOT = Path(__file__).resolve().parents[1]
@@ -86,7 +87,7 @@ def _run(*args: str) -> subprocess.CompletedProcess:
 @unittest.skipUnless(TEST_DATABASE_URL and LOCAL, "set BTTCO_TEST_DATABASE_URL to a local database this suite may wipe")
 class SchemaBaselinePostgresTests(unittest.TestCase):
     def setUp(self):
-        self.engine = sa.create_engine(TEST_DATABASE_URL)
+        self.engine = sa.create_engine(psycopg2_url(TEST_DATABASE_URL))
         self.addCleanup(self.engine.dispose)
         self.baseline = load_baseline_snapshot()
         self._sql("DROP SCHEMA public CASCADE", "CREATE SCHEMA public")

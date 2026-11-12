@@ -48,6 +48,7 @@ os.environ.setdefault("ENABLE_CONFIG_HEALTH", "false")
 
 import sqlalchemy as sa  # noqa: E402
 
+from app.core.config import psycopg2_url  # noqa: E402
 from app.core.schema_compare import (  # noqa: E402
     BASELINE_REVISION,
     RECONCILABLE_KINDS,
@@ -141,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Database: {_redacted(url)}")
     print(f"Baseline: {BASELINE_REVISION} ({len(baseline['tables'])} tables)")
 
-    engine = sa.create_engine(url)
+    engine = sa.create_engine(psycopg2_url(url))
     try:
         with engine.connect() as conn, conn.begin():
             if _has_alembic_version(conn):

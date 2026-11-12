@@ -38,6 +38,7 @@ from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.core.config import psycopg2_url  # noqa: E402
 from app.core.schema_compare import (  # noqa: E402
     BASELINE_SNAPSHOT_PATH,
     BASELINE_SQL_PATH,
@@ -81,7 +82,7 @@ def normalized_dump(url: str) -> str:
 def _snapshot(url: str, tables: set[str] | None = None) -> tuple[dict, set[str]]:
     import sqlalchemy as sa
 
-    engine = sa.create_engine(url)
+    engine = sa.create_engine(psycopg2_url(url))
     try:
         with engine.begin() as conn:
             every_table = set(sa.inspect(conn).get_table_names(schema="public")) - {"alembic_version"}
@@ -93,7 +94,7 @@ def _snapshot(url: str, tables: set[str] | None = None) -> tuple[dict, set[str]]
 def _assert_empty(verify_url: str) -> None:
     import sqlalchemy as sa
 
-    engine = sa.create_engine(verify_url)
+    engine = sa.create_engine(psycopg2_url(verify_url))
     try:
         with engine.connect() as conn:
             if sa.inspect(conn).get_table_names(schema="public"):
@@ -106,7 +107,7 @@ def _replay(sql: str, verify_url: str) -> None:
     """Run the candidate baseline in one transaction on the (empty) verify database."""
     import sqlalchemy as sa
 
-    engine = sa.create_engine(verify_url)
+    engine = sa.create_engine(psycopg2_url(verify_url))
     try:
         with engine.begin() as conn:
             conn.exec_driver_sql(sql)
@@ -118,7 +119,7 @@ def _reset(verify_url: str) -> None:
     """Empty the verify database again. Only ever called on a database _assert_empty passed."""
     import sqlalchemy as sa
 
-    engine = sa.create_engine(verify_url)
+    engine = sa.create_engine(psycopg2_url(verify_url))
     try:
         with engine.begin() as conn:
             conn.exec_driver_sql("DROP SCHEMA public CASCADE; CREATE SCHEMA public")

@@ -57,6 +57,19 @@ _URL_FORBIDDEN = re.compile(r"[\s\"'()<>\\`]")
 _SHOP_PACK_SCOPE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?")
 
 
+def psycopg2_url(url: str) -> str:
+    """Pin a Postgres URL to psycopg2, the only sync driver Ryozan installs.
+
+    SQLAlchemy 2.1 maps a bare postgresql:// URL to psycopg (v3), so every sync
+    engine must name psycopg2 explicitly. libpq tools (psql, pg_dump) and
+    asyncpg still want the bare form, so convert only where an engine is built.
+    """
+    for prefix in ("postgresql+asyncpg://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg2://" + url[len(prefix) :]
+    return url
+
+
 def _is_hostname(value: str) -> bool:
     return len(value) <= 253 and bool(_HOSTNAME.fullmatch(value))
 
@@ -127,16 +140,17 @@ class Settings(BaseSettings):
     # Fall back to the docker dev mirror on :5433 (docker-compose.yml `db`),
     # never to a shared host database. Production supplies both via Railway.
     DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5433/nexus"
-    DATABASE_SYNC_URL: str = "postgresql://postgres:postgres@localhost:5433/nexus"
+    DATABASE_SYNC_URL: str = "postgresql+psycopg2://postgres:postgres@localhost:5433/nexus"
 
     @model_validator(mode="after")
     def fix_database_urls(self):
-        """Ensure DATABASE_URL uses asyncpg driver and DATABASE_SYNC_URL is plain psycopg."""
+        """Ensure DATABASE_URL uses asyncpg and DATABASE_SYNC_URL names psycopg2."""
         if self.DATABASE_URL.startswith("postgresql://"):
             self.DATABASE_SYNC_URL = self.DATABASE_URL
             self.DATABASE_URL = self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
         elif self.DATABASE_URL.startswith("postgresql+asyncpg://"):
-            self.DATABASE_SYNC_URL = self.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+            self.DATABASE_SYNC_URL = self.DATABASE_URL
+        self.DATABASE_SYNC_URL = psycopg2_url(self.DATABASE_SYNC_URL)
         return self
 
     # Auth. Shared secrets have no public default: development generates and

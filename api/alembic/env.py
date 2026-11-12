@@ -18,7 +18,7 @@ from alembic import context
 # models the app never loads (guild, since deleted) and missed ones it does
 # (booking add-ons, rewards), so autogenerate compared against a schema nobody runs.
 from app.api.v1 import router as _api_router  # noqa: F401
-from app.core.config import get_settings
+from app.core.config import get_settings, psycopg2_url
 from app.core.database import Base
 from app.mcp import oauth as _mcp_oauth  # noqa: F401
 from app.mcp import router as _mcp_router  # noqa: F401
@@ -27,10 +27,7 @@ settings = get_settings()
 config = context.config
 
 # Override sqlalchemy.url — ensure sync (psycopg2) driver for migrations
-_sync_url = settings.DATABASE_SYNC_URL
-if "+asyncpg" in _sync_url:
-    _sync_url = _sync_url.replace("+asyncpg", "")
-config.set_main_option("sqlalchemy.url", _sync_url)
+config.set_main_option("sqlalchemy.url", psycopg2_url(settings.DATABASE_SYNC_URL))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
