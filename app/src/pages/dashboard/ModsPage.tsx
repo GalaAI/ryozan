@@ -114,20 +114,17 @@ function MatrixView({ view }: { view: MatrixModView }) {
                 </Badge>
               ))}
             </div>
-            {matrix.devices?.map((device) => (
-              <div key={device.key} style={row}>
-                <strong>{device.label}</strong>
-                {device.actions.length === 1 ? (
-                  <Badge title={device.adapter}>status only</Badge>
-                ) : (
-                  device.actions.map((action) => (
-                    <Badge key={action} tone={action === 'status' ? 'neutral' : 'info'}>
-                      {action.replaceAll('_', ' ')}
-                    </Badge>
-                  ))
-                )}
-              </div>
-            ))}
+            {matrix.devices?.length ? (
+              <MetaList
+                rows={matrix.devices.map((device) => ({
+                  label: device.label,
+                  value:
+                    device.actions.length === 1
+                      ? 'status only'
+                      : device.actions.map((action) => action.replaceAll('_', ' ')).join(', '),
+                }))}
+              />
+            ) : null}
             {matrix.writeRefusal && <p style={muted}>{matrix.writeRefusal}</p>}
           </div>
         </Panel>
