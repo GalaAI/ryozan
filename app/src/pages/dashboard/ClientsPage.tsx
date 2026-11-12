@@ -130,10 +130,9 @@ export default function ClientsPage() {
   }, [search])
 
   // Fetch all bookings on mount
+  // `loading` starts true and `error` starts empty, so the mount load needs no reset.
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError(null)
     const loadAllBookings = async () => {
       const firstPage = await bookingsApi.list({ limit: 100 })
       const rows = [...firstPage.bookings]

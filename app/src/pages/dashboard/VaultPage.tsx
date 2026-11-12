@@ -208,6 +208,13 @@ function payStructureDraft(artist: ArtistStripeInfo): PayStructureDraft {
 
 /* ── Archive Tab Component ────────────────────── */
 
+type ArchiveSortColumn = 'date' | 'type' | 'client'
+
+function SortIndicator({ col, sortBy, sortDir }: { col: ArchiveSortColumn; sortBy: ArchiveSortColumn; sortDir: 'asc' | 'desc' }) {
+  if (sortBy !== col) return <span className="archive-sort-icon archive-sort-inactive">{Icons.sortAsc}</span>
+  return <span className="archive-sort-icon">{sortDir === 'asc' ? Icons.chevronUp : Icons.chevronDown}</span>
+}
+
 export function ArchiveTab() {
   const [records, setRecords] = useState<ArchiveRecord[]>([])
   const [total, setTotal] = useState(0)
@@ -221,38 +228,53 @@ export function ArchiveTab() {
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const pageSize = 25
 
-  const loadArchive = useCallback(async () => {
-    setIsLoading(true)
-    setArchiveError(null)
-    try {
-      const data = await archiveApi.list({
-        type: typeFilter,
-        status: 'approved',
-        search: searchTerm || undefined,
-        skip: page * pageSize,
-        limit: pageSize,
-        sort_by: sortBy,
-        sort_dir: sortDir,
-      })
+  // Fetch only: state is written once the request answers.
+  const requestArchive = useCallback(() => archiveApi.list({
+    type: typeFilter,
+    status: 'approved',
+    search: searchTerm || undefined,
+    skip: page * pageSize,
+    limit: pageSize,
+    sort_by: sortBy,
+    sort_dir: sortDir,
+  })
+    .then((data) => {
       setRecords(data.records)
       setTotal(data.total)
-    } catch (error) {
+    })
+    .catch((error) => {
       setRecords([])
       setTotal(0)
       setArchiveError(error instanceof Error ? error.message : 'Archive records could not be loaded')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [typeFilter, searchTerm, page, sortBy, sortDir])
+    })
+    .finally(() => setIsLoading(false)), [typeFilter, searchTerm, page, sortBy, sortDir])
 
-  useEffect(() => {
-    loadArchive()
-  }, [loadArchive])
+  const loadArchive = () => {
+    setIsLoading(true)
+    setArchiveError(null)
+    return requestArchive()
+  }
 
-  // Reset to page 0 when filters change
-  useEffect(() => {
+  // Reset to page 0 when filters change (adjusted during render).
+  const filterKey = [typeFilter, searchTerm, sortBy, sortDir] as const
+  const [filtersSeen, setFiltersSeen] = useState(filterKey)
+  if (filtersSeen.some((part, index) => part !== filterKey[index])) {
+    setFiltersSeen(filterKey)
     setPage(0)
-  }, [typeFilter, searchTerm, sortBy, sortDir])
+  }
+
+  // Each new query shows loading during render; the effect fetches it.
+  const queryKey = [typeFilter, searchTerm, page, sortBy, sortDir] as const
+  const [querySeen, setQuerySeen] = useState(queryKey)
+  if (querySeen.some((part, index) => part !== queryKey[index])) {
+    setQuerySeen(queryKey)
+    setIsLoading(true)
+    setArchiveError(null)
+  }
+
+  useEffect(() => {
+    requestArchive()
+  }, [requestArchive])
 
   const totalPages = Math.ceil(total / pageSize)
 
@@ -263,11 +285,6 @@ export function ArchiveTab() {
       setSortBy(col)
       setSortDir(col === 'date' ? 'desc' : 'asc')
     }
-  }
-
-  const SortIndicator = ({ col }: { col: 'date' | 'type' | 'client' }) => {
-    if (sortBy !== col) return <span className="archive-sort-icon archive-sort-inactive">{Icons.sortAsc}</span>
-    return <span className="archive-sort-icon">{sortDir === 'asc' ? Icons.chevronUp : Icons.chevronDown}</span>
   }
 
   return (
@@ -322,7 +339,7 @@ export function ArchiveTab() {
                 onClick={() => toggleSort('client')}
                 onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') toggleSort('client') }}
               >
-                Client <SortIndicator col="client" />
+                Client <SortIndicator col="client" sortBy={sortBy} sortDir={sortDir} />
               </th>
               <th
                 className="archive-th archive-th-sortable"
@@ -332,7 +349,7 @@ export function ArchiveTab() {
                 onClick={() => toggleSort('type')}
                 onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') toggleSort('type') }}
               >
-                Type <SortIndicator col="type" />
+                Type <SortIndicator col="type" sortBy={sortBy} sortDir={sortDir} />
               </th>
               <th className="archive-th">Artist</th>
               <th className="archive-th"></th>
@@ -640,7 +657,7 @@ export default function VaultPage() {
     try {
       const result = await stripeConnect.adminOnboard(artistId)
       if (!result.url) throw new Error('Stripe Connect did not return a setup link')
-      window.location.href = result.url
+      window.location.assign(result.url)
     } catch (error) {
       setFinanceUnavailable(true)
       setArtistOnboardingNeedsPlatformSetup(

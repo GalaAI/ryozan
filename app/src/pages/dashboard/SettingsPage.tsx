@@ -43,7 +43,10 @@ export default function SettingsPage() {
   const [marketingSaving, setMarketingSaving] = useState(false)
 
   // ── Google Calendar ──
-  const [googleConnected, setGoogleConnected] = useState(false)
+  // Returning with ?google=connected shows the calendar as connected at once.
+  const [googleConnected, setGoogleConnected] = useState(() => (
+    new URLSearchParams(window.location.search).get('google') === 'connected'
+  ))
   const [googleEmail, setGoogleEmail] = useState<string | null>(null)
   const [googleHealthy, setGoogleHealthy] = useState(false)
   const [googleReconnectRequired, setGoogleReconnectRequired] = useState(false)
@@ -77,7 +80,6 @@ export default function SettingsPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('google') === 'connected') {
       toast.success('Google Calendar connected successfully')
-      setGoogleConnected(true)
       // Clean up the URL without a reload
       const url = new URL(window.location.href)
       url.searchParams.delete('google')

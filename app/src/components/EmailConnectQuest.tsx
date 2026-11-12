@@ -39,16 +39,11 @@ export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQues
   const [confirmRelease, setConfirmRelease] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const s = await emailConnect.status()
-      setStatus(s)
-    } catch {
+  const fetchStatus = useCallback(() => emailConnect.status()
+    .then(setStatus, () => {
       // No route yet, that's fine
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+    })
+    .finally(() => setLoading(false)), [])
 
   useEffect(() => {
     fetchStatus()
@@ -71,10 +66,8 @@ export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQues
 
   // Debounced handle availability check
   useEffect(() => {
-    if (handle.length < 2) {
-      setHandleResult(null)
-      return
-    }
+    // Below two characters the result is cleared where the handle changes.
+    if (handle.length < 2) return
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setChecking(true)
@@ -274,6 +267,7 @@ export default function EmailConnectQuest({ mode = 'compact' }: EmailConnectQues
           onChange={(e) => {
             const val = e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, '')
             setHandle(val)
+            if (val.length < 2) setHandleResult(null)
             setError('')
           }}
           maxLength={20}

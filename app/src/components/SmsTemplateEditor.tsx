@@ -197,21 +197,30 @@ export default function SmsTemplateEditor({ token, onClose }: Props) {
   const [seedBusy, setSeedBusy] = useState(false)
   const [templateFocus, setTemplateFocus] = useState<TemplateFocus>('auto')
 
-  const loadAll = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [tpls, st] = await Promise.all([fetchTemplates(token), fetchStats(token).catch(() => null)])
+  // Fetch only; callers that reload reset loading and error first.
+  const requestAll = useCallback(() => Promise.all([fetchTemplates(token), fetchStats(token).catch(() => null)])
+    .then(([tpls, st]) => {
       setTemplates(tpls)
       setStats(st)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [token])
+    })
+    .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+    .finally(() => setLoading(false)), [token])
 
-  useEffect(() => { loadAll() }, [loadAll])
+  const loadAll = () => {
+    setLoading(true)
+    setError(null)
+    return requestAll()
+  }
+
+  // A new token starts a fresh load: reset during render, fetch in the effect.
+  const [loadedToken, setLoadedToken] = useState(token)
+  if (loadedToken !== token) {
+    setLoadedToken(token)
+    setLoading(true)
+    setError(null)
+  }
+
+  useEffect(() => { requestAll() }, [requestAll])
 
   async function handleSeed() {
     setSeedBusy(true)
@@ -479,8 +488,14 @@ function EditPane({ token, slug, onBack }: { token: string; slug: string; onBack
   const [testPhone, setTestPhone] = useState('')
   const [testResult, setTestResult] = useState<string | null>(null)
 
-  useEffect(() => {
+  // A new template starts loading during render; the effect only fetches.
+  const [tplKey, setTplKey] = useState(() => [token, slug] as const)
+  if (tplKey[0] !== token || tplKey[1] !== slug) {
+    setTplKey([token, slug])
     setLoadingTpl(true)
+  }
+
+  useEffect(() => {
     fetchOne(token, slug).then(t => {
       setTpl(t)
       setName(t.name)

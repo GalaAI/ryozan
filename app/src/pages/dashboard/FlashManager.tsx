@@ -255,8 +255,11 @@ export default function FlashManager({ artistId, compact = false, stage, onStage
   // Upload state
   const [dragOver, setDragOver] = useState(false)
 
-  useEffect(() => {
-    const scopeVersion = ++artistScopeVersionRef.current
+  // A new artist scope starts from a clean upload stage. The reset happens
+  // during render; the effect below loads that artist's sheets.
+  const [artistScope, setArtistScope] = useState<{ artistId: typeof artistId } | null>(null)
+  if (!artistScope || artistScope.artistId !== artistId) {
+    setArtistScope({ artistId })
     setSheets([])
     setSelectedSheet(null)
     setDesigns([])
@@ -268,6 +271,10 @@ export default function FlashManager({ artistId, compact = false, stage, onStage
     setDeletingDesignId(null)
     setLoading(true)
     setError(null)
+  }
+
+  useEffect(() => {
+    const scopeVersion = ++artistScopeVersionRef.current
 
     void listFlashSheets(0, 20, artistId)
       .then((result) => {
@@ -293,17 +300,17 @@ export default function FlashManager({ artistId, compact = false, stage, onStage
   // internal workflowStage. Depending on workflowStage here caused an
   // oscillation that cleared selectedSheet and strobed the stage pills, so
   // opening a sheet's review view was impossible while the parent held 'upload'.
-  const prevStageRef = useRef(stage)
-  useEffect(() => {
-    if (stage && stage !== prevStageRef.current) {
+  const [prevStage, setPrevStage] = useState(stage)
+  if (stage !== prevStage) {
+    setPrevStage(stage)
+    if (stage) {
       setWorkflowStage(stage)
       if (stage === 'upload') {
         setSelectedSheet(null)
         setDesigns([])
       }
     }
-    prevStageRef.current = stage
-  }, [stage])
+  }
 
   useEffect(() => {
     return () => {

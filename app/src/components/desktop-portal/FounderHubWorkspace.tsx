@@ -390,7 +390,11 @@ function PreviewControl({agentId,draft,onPreview}:{agentId:string;draft:Omit<Ben
   const generation = useRef(0)
   const inFlight = useRef(false)
   const signature = JSON.stringify(draft)
-  useEffect(()=>{generation.current+=1;setFeedback('');return()=>{generation.current+=1}},[signature,scenario,agentId])
+  // A changed draft, scenario or agent clears the old feedback during render;
+  // the effect retires any preview still in flight.
+  const [feedbackKey,setFeedbackKey] = useState(()=>[signature,scenario,agentId] as const)
+  if(feedbackKey[0]!==signature||feedbackKey[1]!==scenario||feedbackKey[2]!==agentId){setFeedbackKey([signature,scenario,agentId]);setFeedback('')}
+  useEffect(()=>{generation.current+=1;return()=>{generation.current+=1}},[signature,scenario,agentId])
   const preview = async () => {
     if(inFlight.current || scenario.trim().length<10)return
     const version=generation.current

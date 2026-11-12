@@ -73,13 +73,10 @@ export default function ShopTextsConnection() {
   const [own, setOwn] = useState({ sid: '', token: '', number: '' })
   const [form, setForm] = useState<ShopTextsVerification>(BLANK_FORM)
 
-  const refresh = useCallback(async () => {
-    try {
-      setLoad({ state: 'ready', value: await shopConnections.texts() })
-    } catch {
-      setLoad({ state: 'failed' })
-    }
-  }, [])
+  const refresh = useCallback(() => shopConnections.texts().then(
+    (value) => setLoad({ state: 'ready', value }),
+    () => setLoad({ state: 'failed' }),
+  ), [])
 
   useEffect(() => {
     void refresh()

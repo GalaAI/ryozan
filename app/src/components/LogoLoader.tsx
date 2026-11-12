@@ -132,6 +132,12 @@ export default function LogoLoader({
   twinkleSpeed = 0.75,
 }: LogoLoaderProps) {
   const [phase, setPhase] = useState<Phase>('fill')
+  // A new `loop` restarts the sequence below; the phase resets during render.
+  const [phaseLoop, setPhaseLoop] = useState(loop)
+  if (phaseLoop !== loop) {
+    setPhaseLoop(loop)
+    setPhase('fill')
+  }
   const fillRef = useRef<HTMLSpanElement>(null)
 
   // Physics state. Refs, not state: this mutates every animation frame.
@@ -149,7 +155,6 @@ export default function LogoLoader({
     lq.current = { p: 0 }
     pour.current = { x: 0.5 }
     done.current = false
-    setPhase('fill')
 
     const at = (fn: () => void, ms: number) => { timers.current.push(window.setTimeout(fn, ms)) }
 

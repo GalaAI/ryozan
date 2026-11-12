@@ -380,22 +380,21 @@ export default function CountersignPanel({
   const handledOpenRequest = useRef(0)
   const formReady = !!signature && aftercareCert && !submitting
 
-  const fetchPending = useCallback(async () => {
-    try {
-      const res = await waiverApi.list({ status: 'pending_review', limit: 50 })
+  const userName = user?.name
+  const fetchPending = useCallback(() => waiverApi.list({ status: 'pending_review', limit: 50 })
+    .then((res) => {
       // Filter to only show waivers assigned to the current artist
-      const myWaivers = user?.name
+      const myWaivers = userName
         ? res.waivers.filter((w: WaiverListItem) =>
-            !w.artist_name || w.artist_name.toLowerCase() === user.name!.toLowerCase()
+            !w.artist_name || w.artist_name.toLowerCase() === userName.toLowerCase()
           )
         : res.waivers
       setPending(myWaivers)
-    } catch {
+    })
+    .catch(() => {
       // silent
-    } finally {
-      setIsLoading(false)
-    }
-  }, [user?.name])
+    })
+    .finally(() => setIsLoading(false)), [userName])
 
   useEffect(() => {
     fetchPending()

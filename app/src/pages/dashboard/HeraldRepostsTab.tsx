@@ -43,11 +43,14 @@ function RepostCard({
   const [schedule, setSchedule] = useState(toLocalInput(draft.scheduledFor))
   const [working, setWorking] = useState(false)
 
-  useEffect(() => {
+  // A refreshed draft replaces the local edits (adjusted during render).
+  const [shownDraft, setShownDraft] = useState(draft)
+  if (shownDraft !== draft) {
+    setShownDraft(draft)
     setCaption(draft.caption)
     setHashtags(tagLine(draft.hashtags))
     setSchedule(toLocalInput(draft.scheduledFor))
-  }, [draft])
+  }
 
   const locked = draft.status === 'published' || draft.status === 'rejected'
   const edited =
@@ -181,14 +184,12 @@ export default function HeraldRepostsTab() {
   const [notice, setNotice] = useState<string | null>(null)
   const [geotag, setGeotag] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    try {
-      setDrafts((await socialReposts.list()).drafts)
-    } catch (error) {
+  const load = useCallback(() => socialReposts.list()
+    .then((result) => setDrafts(result.drafts))
+    .catch((error: unknown) => {
       setNotice(errorText(error))
       setDrafts([])
-    }
-  }, [])
+    }), [])
 
   useEffect(() => {
     void load()

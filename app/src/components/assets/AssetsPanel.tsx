@@ -8,7 +8,7 @@
  *   Library — Asset gallery (icons, logos, banners; localStorage-backed)
  *   CSS     — Global CSS injection editor for live style changes
  */
-import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react'
 import { users as usersApi, listEmailLog, getEmailStats, retryEmailLog, type User, type EmailLogRow, type EmailStatsResponse } from '../../lib/api'
 import { useToast } from '../Toast'
 import { useStudioSettings } from '../../hooks/useStudioSettings'
@@ -145,7 +145,6 @@ export default function AssetsPanel({ token }: Props) {
   // Send modal state
   const [sendSlug, setSendSlug] = useState<string | null>(null)
   const [sendSearch, setSendSearch] = useState('')
-  const [sendSuggestions, setSendSuggestions] = useState<User[]>([])
   const [sendRecipients, setSendRecipients] = useState<Recipient[]>([])
   const [sending, setSending] = useState(false)
   const [allUsers, setAllUsers] = useState<User[]>([])
@@ -202,20 +201,17 @@ export default function AssetsPanel({ token }: Props) {
   }, [sendSlug])
 
   // ── Send search filter ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (!sendSearch.trim()) { setSendSuggestions([]); return }
+  const sendSuggestions = useMemo(() => {
+    if (!sendSearch.trim()) return []
     const q = sendSearch.toLowerCase()
-    setSendSuggestions(
-      allUsers.filter(u =>
-        (u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)) &&
-        !sendRecipients.find(r => r.email === u.email)
-      ).slice(0, 8)
-    )
+    return allUsers.filter(u =>
+      (u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q)) &&
+      !sendRecipients.find(r => r.email === u.email)
+    ).slice(0, 8)
   }, [sendSearch, allUsers, sendRecipients])
 
-  // ── Color init ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (activeTab !== 'colors') return
+  // ── Color init (runs when the Colors tab is opened) ─────────────────────
+  const initColors = () => {
     const style = getComputedStyle(document.documentElement)
     const vals: Record<string, string> = {}
     for (const g of COLOR_GROUPS)
@@ -229,7 +225,12 @@ export default function AssetsPanel({ token }: Props) {
     }
     setSavedColors(saved)
     setColorValues(vals)
-  }, [activeTab])
+  }
+
+  const selectTab = (tab: AssetsTab) => {
+    if (tab === 'colors' && activeTab !== 'colors') initColors()
+    setActiveTab(tab)
+  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const toggleActive = async (t: EmailTemplate) => {
@@ -280,7 +281,7 @@ export default function AssetsPanel({ token }: Props) {
   const addRecipient = (r: Recipient) => {
     if (!sendRecipients.find(x => x.email === r.email))
       setSendRecipients(prev => [...prev, r])
-    setSendSearch(''); setSendSuggestions([])
+    setSendSearch('')
   }
 
   const addAudience = (role: string) => {
@@ -405,7 +406,7 @@ export default function AssetsPanel({ token }: Props) {
           <button
             key={t}
             className={`assets-tab${activeTab === t ? ' active' : ''}`}
-            onClick={() => setActiveTab(t)}
+            onClick={() => selectTab(t)}
           >
             {t}
           </button>

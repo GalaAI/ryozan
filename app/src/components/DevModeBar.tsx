@@ -211,7 +211,7 @@ function isColorValue(v: string) {
 /* ── Sub-components ─────────────────────────────────────────── */
 
 function DesignTab({ embedded = false }: { embedded?: boolean }) {
-  const [groups, setGroups] = useState<CSSTokenGroup[]>([])
+  const [groups, setGroups] = useState<CSSTokenGroup[]>(() => groupTokens(getAllCSSVars()))
   const [activeGroup, setActiveGroup] = useState(0)
   const [copied, setCopied] = useState<string | null>(null)
   const [editingToken, setEditingToken] = useState<string | null>(null)
@@ -219,10 +219,6 @@ function DesignTab({ embedded = false }: { embedded?: boolean }) {
   const [query, setQuery] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
-
-  useEffect(() => {
-    setGroups(groupTokens(getAllCSSVars()))
-  }, [])
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text).catch(() => {})

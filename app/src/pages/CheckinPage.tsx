@@ -173,8 +173,9 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
     window.scrollTo(0, 0)
   }
 
-  /** Open the details card. `res` is a verified lookup; `typed` is what a walk-in typed in the finder. */
-  const openDetails = useCallback(async (res: CheckinVerifyResult | null, typed: string, formToken: string | null) => {
+  // Opening the details stage: the visible state is set right away, then the
+  // form behind a token (if any) is read and merged in.
+  const prepareDetails = (res: CheckinVerifyResult | null, typed: string) => {
     setCtx(res)
     setDetailsOpen(true)
     const base: CheckinDetails = { ...EMPTY_DETAILS }
@@ -198,13 +199,13 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
     if (onFile?.photo_id_url) setReusePhotoId(true)
     if (onFile?.signature_url) setReuseSignature(true)
     if (onFile && Object.keys(onFile.health || {}).length) setHealth((h) => ({ ...h, sameOffered: true, prior: onFile.health }))
+    return base
+  }
 
-    if (!formToken) {
-      setDetails(base)
-      return
-    }
-    try {
-      const loaded = await documents.getPublicForm(formToken)
+  const loadDetailsForm = useCallback((res: CheckinVerifyResult | null, base: CheckinDetails, formToken: string) => {
+    const booking = res?.booking
+    const onFile = res?.on_file
+    return documents.getPublicForm(formToken).then((loaded) => {
       if (loaded.expired) {
         setDead({ title: 'Link expired', body: 'This check-in link has expired or was already signed. Ask the front desk for a fresh one.' })
         setStage(0)
@@ -234,7 +235,7 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
         setPrefillNote(`Filled from ${onFile ? 'your last visit' : booking ? 'your booking' : 'your record'}. Edit anything that changed.`)
       }
       if (onFile && Object.keys(detailsErrors(merged)).length === 0) setDetailsCollapsed(true)
-    } catch (err) {
+    }).catch((err) => {
       setDetails(base)
       const status = (err as { status?: number }).status
       if (status === 404 || status === 410) {
@@ -243,13 +244,30 @@ function CheckinFlow({ token: linkToken, routeArtist, onDirtyChange, onStartOver
         return
       }
       setNotice(messageOf(err, 'Your check-in could not be loaded. Ask the front desk.'))
-    }
-  }, [routeArtist])
+    })
+  }, [])
 
-  // A link (?t=) skips the finder: the staff already know who this is.
+  /** Open the details card. `res` is a verified lookup; `typed` is what a walk-in typed in the finder. */
+  const openDetails = async (res: CheckinVerifyResult | null, typed: string, formToken: string | null) => {
+    const base = prepareDetails(res, typed)
+    if (!formToken) {
+      setDetails(base)
+      return
+    }
+    await loadDetailsForm(res, base, formToken)
+  }
+
+  // A link (?t=) skips the finder: the staff already know who this is. The
+  // details stage opens during render; the effect reads the linked form.
+  const [linkSeen, setLinkSeen] = useState<readonly [string | null, string | null] | null>(null)
+  if (!linkSeen || linkSeen[0] !== linkToken || linkSeen[1] !== routeArtist) {
+    setLinkSeen([linkToken, routeArtist])
+    if (linkToken) prepareDetails(null, '')
+  }
   useEffect(() => {
-    if (linkToken) void openDetails(null, '', linkToken)
-  }, [linkToken, openDetails])
+    if (linkToken) void loadDetailsForm(null, { ...EMPTY_DETAILS }, linkToken)
+    // routeArtist: a new route artist reopens the linked details, as before.
+  }, [linkToken, loadDetailsForm, routeArtist])
 
   const lookup = async () => {
     const value = contact.trim()

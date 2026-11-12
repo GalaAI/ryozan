@@ -40,13 +40,10 @@ export default function ShopEmailConnection() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(async () => {
-    try {
-      setLoad({ state: 'ready', value: await shopConnections.email() })
-    } catch {
-      setLoad({ state: 'failed' })
-    }
-  }, [])
+  const refresh = useCallback(() => shopConnections.email().then(
+    (value) => setLoad({ state: 'ready', value }),
+    () => setLoad({ state: 'failed' }),
+  ), [])
 
   useEffect(() => {
     void refresh()

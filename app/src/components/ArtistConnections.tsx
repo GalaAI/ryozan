@@ -157,8 +157,7 @@ export default function ArtistConnections() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [emailExpanded, setEmailExpanded] = useState(false)
 
-  const loadStatuses = useCallback(async () => {
-    const requestId = ++requestRef.current
+  const resetStatuses = () => {
     setStripe(loading())
     setEmail(loading())
     setGoogle(loading())
@@ -166,37 +165,57 @@ export default function ArtistConnections() {
     setPinterest(loading())
     setAvailability({ state: 'loading' })
     setActionError(null)
+  }
 
+  // Reads every status; state is only written once the requests answer.
+  const fetchStatuses = useCallback(() => {
+    const requestId = ++requestRef.current
     // An options failure falls back to reading every status and showing live connections only.
-    const offered = integrationAvailability(await integrations.options().catch(() => null))
-    if (requestRef.current !== requestId) return
-    setAvailability(offered)
+    return integrations.options().catch(() => null).then(async (options) => {
+      const offered = integrationAvailability(options)
+      if (requestRef.current !== requestId) return
+      setAvailability(offered)
 
-    const [stripeResult, emailResult, googleResult, googleSigninResult, pinterestResult] = await Promise.allSettled([
-      readOffered(offered, 'stripe_connect', stripeConnect.status),
-      readOffered(offered, 'email_forwarding', emailConnect.status),
-      readOffered(offered, 'google_calendar', googleAuth.getStatus),
-      readOffered(offered, 'google_signin_link', googleAuth.getSigninLinkStatus),
-      readOffered(offered, 'pinterest', pinterestAuth.getStatus),
-    ])
-    if (requestRef.current !== requestId) return
+      const [stripeResult, emailResult, googleResult, googleSigninResult, pinterestResult] = await Promise.allSettled([
+        readOffered(offered, 'stripe_connect', stripeConnect.status),
+        readOffered(offered, 'email_forwarding', emailConnect.status),
+        readOffered(offered, 'google_calendar', googleAuth.getStatus),
+        readOffered(offered, 'google_signin_link', googleAuth.getSigninLinkStatus),
+        readOffered(offered, 'pinterest', pinterestAuth.getStatus),
+      ])
+      if (requestRef.current !== requestId) return
 
-    setStripe(stripeResult.status === 'fulfilled'
-      ? { state: 'ready', value: stripeResult.value }
-      : { state: 'failed', value: null })
-    setEmail(emailResult.status === 'fulfilled'
-      ? { state: 'ready', value: emailResult.value }
-      : { state: 'failed', value: null })
-    setGoogle(googleResult.status === 'fulfilled'
-      ? { state: 'ready', value: googleResult.value }
-      : { state: 'failed', value: null })
-    setGoogleSignin(googleSigninResult.status === 'fulfilled'
-      ? { state: 'ready', value: googleSigninResult.value }
-      : { state: 'failed', value: null })
-    setPinterest(pinterestResult.status === 'fulfilled'
-      ? { state: 'ready', value: pinterestResult.value }
-      : { state: 'failed', value: null })
+      setStripe(stripeResult.status === 'fulfilled'
+        ? { state: 'ready', value: stripeResult.value }
+        : { state: 'failed', value: null })
+      setEmail(emailResult.status === 'fulfilled'
+        ? { state: 'ready', value: emailResult.value }
+        : { state: 'failed', value: null })
+      setGoogle(googleResult.status === 'fulfilled'
+        ? { state: 'ready', value: googleResult.value }
+        : { state: 'failed', value: null })
+      setGoogleSignin(googleSigninResult.status === 'fulfilled'
+        ? { state: 'ready', value: googleSigninResult.value }
+        : { state: 'failed', value: null })
+      setPinterest(pinterestResult.status === 'fulfilled'
+        ? { state: 'ready', value: pinterestResult.value }
+        : { state: 'failed', value: null })
+    })
   }, [])
+
+  const loadStatuses = () => {
+    resetStatuses()
+    return fetchStatuses()
+  }
+
+  // A new location starts a fresh read, so the statuses reset during render
+  // (the effect below only fetches). On mount these already hold their reset values.
+  const locationKey = `${location.pathname}${location.search}`
+  const [statusKey, setStatusKey] = useState(locationKey)
+  if (statusKey !== locationKey) {
+    setStatusKey(locationKey)
+    resetStatuses()
+  }
 
   const openStripeOnboarding = useCallback(async (refreshCallback = false) => {
     setActing('stripe')
@@ -215,7 +234,7 @@ export default function ArtistConnections() {
 
   useEffect(() => {
     let active = true
-    void loadStatuses().then(() => {
+    void fetchStatuses().then(() => {
       if (!active || stripeReturn !== 'return') return
       const params = new URLSearchParams(location.search)
       params.delete('stripe')
@@ -226,7 +245,7 @@ export default function ArtistConnections() {
       active = false
       requestRef.current += 1
     }
-  }, [loadStatuses, location.pathname, location.search, navigate, stripeReturn])
+  }, [fetchStatuses, location.pathname, location.search, navigate, stripeReturn])
 
   useEffect(() => {
     if (stripeReturn !== 'refresh') return

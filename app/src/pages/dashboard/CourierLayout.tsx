@@ -820,7 +820,7 @@ export default function CourierLayout() {
   // Conversations
   const [convList, setConvList] = useState<Conversation[]>([])
   const [activeConvId, setActiveConvId] = useState<string | null>(initialConvId)
-  const [convLoading, setConvLoading] = useState(false)
+  const [convLoading, setConvLoading] = useState(true)
   const [convError, setConvError] = useState(false)
   const [selectedNumberLane, setSelectedNumberLane] = useState('all')
 
@@ -915,7 +915,7 @@ export default function CourierLayout() {
     () => convList.filter((conversation) => conversationMatchesLane(conversation, selectedNumberLane)),
     [convList, selectedNumberLane],
   )
-  const activeConversation = convList.find((c) => c.id === activeConvId)
+  const activeConversation = useMemo(() => convList.find((c) => c.id === activeConvId), [activeConvId, convList])
   const bookingContext = activeConversation?.booking_context
   const composerTemplates = useMemo(() => quickReplies.slice(0, 4), [quickReplies])
 
@@ -942,16 +942,25 @@ export default function CourierLayout() {
     }
   }, [showQuickReply])
 
-  useEffect(() => {
-    if (!bookingContext?.id) {
+  // The attached booking resets during render when the thread's booking changes;
+  // the effect below only fetches it.
+  const bookingContextId = bookingContext?.id
+  const [bookingContextSeen, setBookingContextSeen] = useState(bookingContextId)
+  if (bookingContextSeen !== bookingContextId) {
+    setBookingContextSeen(bookingContextId)
+    if (!bookingContextId) {
       setActiveBooking(null)
       setActiveBookingLoading(false)
-      return
+    } else {
+      setActiveBookingLoading(true)
     }
+  }
+
+  useEffect(() => {
+    if (!bookingContextId) return
 
     let cancelled = false
-    setActiveBookingLoading(true)
-    bookingsApi.get(bookingContext.id)
+    bookingsApi.get(bookingContextId)
       .then((booking) => {
         if (!cancelled) setActiveBooking(booking)
       })
@@ -965,7 +974,7 @@ export default function CourierLayout() {
     return () => {
       cancelled = true
     }
-  }, [bookingContext?.id])
+  }, [bookingContextId])
 
   useEffect(() => {
     toastRef.current = toast
@@ -996,40 +1005,51 @@ export default function CourierLayout() {
     }, { replace: true })
   }, [setSearchParams])
 
-  useEffect(() => {
-    if (canUseCourierTools) return
-    if (activeCharm !== 'chat') setActiveCharm('chat')
-  }, [activeCharm, canUseCourierTools])
+  // Without Courier tools only the chat charm is available.
+  if (!canUseCourierTools && activeCharm !== 'chat') setActiveCharm('chat')
 
   // Load conversations
-  const loadConversations = useCallback(async () => {
-    if (conversationsInFlightRef.current) return
+  // Claims the conversation request slot; null while one is already in flight.
+  const beginConversationsRequest = useCallback(() => {
+    if (conversationsInFlightRef.current) return null
     conversationsInFlightRef.current = true
-    const requestSeq = ++conversationsRequestSeqRef.current
-    setConvLoading(true)
-    try {
-      const data = await convApi.list()
+    return ++conversationsRequestSeqRef.current
+  }, [])
+
+  // Fetch only: state is written once the request answers.
+  const fetchConversations = useCallback((requestSeq: number) => convApi.list()
+    .then((data) => {
       if (conversationsRequestSeqRef.current !== requestSeq) return
       setConvList(data.conversations)
       setConvError(false)
       convErrorToastShownRef.current = false
-    } catch (error) {
+    })
+    .catch((error) => {
       if (conversationsRequestSeqRef.current !== requestSeq) return
       setConvError(true)
       if (!convErrorToastShownRef.current) {
         toastRef.current.error(error instanceof ApiError ? error.message : 'Failed to load conversations')
         convErrorToastShownRef.current = true
       }
-    } finally {
+    })
+    .finally(() => {
       conversationsInFlightRef.current = false
       if (conversationsRequestSeqRef.current === requestSeq) {
         setConvLoading(false)
       }
-    }
-  }, [])
+    }), [])
+
+  const loadConversations = useCallback(async () => {
+    const requestSeq = beginConversationsRequest()
+    if (requestSeq === null) return
+    setConvLoading(true)
+    await fetchConversations(requestSeq)
+  }, [beginConversationsRequest, fetchConversations])
 
   useEffect(() => {
-    loadConversations()
+    // The first load: `convLoading` already starts true.
+    const requestSeq = beginConversationsRequest()
+    if (requestSeq !== null) void fetchConversations(requestSeq)
     const pollConversations = () => {
       if (isCourierDocumentVisible()) loadConversations()
     }
@@ -1042,18 +1062,16 @@ export default function CourierLayout() {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [loadConversations])
+  }, [beginConversationsRequest, fetchConversations, loadConversations])
 
-  useEffect(() => {
-    if (selectedNumberLane === 'all') return
+  // A number lane keeps a thread from that lane selected (adjusted during render).
+  if (selectedNumberLane !== 'all') {
     if (filteredConvList.length === 0) {
-      setActiveConvId(null)
-      return
-    }
-    if (!activeConvId || !filteredConvList.some((conversation) => conversation.id === activeConvId)) {
+      if (activeConvId !== null) setActiveConvId(null)
+    } else if (!activeConvId || !filteredConvList.some((conversation) => conversation.id === activeConvId)) {
       setActiveConvId(filteredConvList[0].id)
     }
-  }, [activeConvId, filteredConvList, selectedNumberLane])
+  }
 
   // Load response templates for quick-reply toolbar
   useEffect(() => {
@@ -1110,18 +1128,21 @@ export default function CourierLayout() {
     }
   }, [canSeeDelivery])
 
+  // Channel routing (and delivery, when the Channels charm is already open)
+  // loads once, the first time a non-collector is known.
+  const loadChannels = useCallback((includeDelivery: boolean) => {
+    loadChannelStatus()
+    if (includeDelivery) void loadEmailDelivery()
+  }, [loadChannelStatus, loadEmailDelivery])
+
   useEffect(() => {
     if (!isCollector && !channelStatusAttemptedRef.current) {
       channelStatusAttemptedRef.current = true
-      loadChannelStatus()
-      if (activeCharm === 'channels') void loadEmailDelivery()
+      loadChannels(activeCharm === 'channels')
     }
-  }, [activeCharm, isCollector, loadChannelStatus, loadEmailDelivery])
+  }, [activeCharm, isCollector, loadChannels])
 
-  const refreshChannels = useCallback(() => {
-    loadChannelStatus()
-    void loadEmailDelivery()
-  }, [loadChannelStatus, loadEmailDelivery])
+  const refreshChannels = useCallback(() => loadChannels(true), [loadChannels])
 
   const closeEmailSetup = useCallback(() => {
     setEmailSetupOpen(false)
@@ -1179,12 +1200,12 @@ export default function CourierLayout() {
     }
   }, [toast])
 
-  // Load messages when conversation changes
-  const loadMessages = useCallback(async (options: { showLoading?: boolean } = {}) => {
+  // Claims the message request slot for the open thread. Returns null when a
+  // request is already in flight, or when no thread is open (which clears it).
+  const beginMessagesRequest = useCallback(() => {
     const conversationId = activeConvIdRef.current
-    const showLoading = options.showLoading ?? true
 
-    if (messagesInFlightRef.current) return
+    if (messagesInFlightRef.current) return null
     messagesInFlightRef.current = true
     const requestSeq = ++messagesRequestSeqRef.current
 
@@ -1194,40 +1215,53 @@ export default function CourierLayout() {
       setMessagesLoading(false)
       messagesErrorToastShownRef.current = false
       messagesInFlightRef.current = false
-      return
+      return null
     }
-    if (showLoading) setMessagesLoading(true)
-    try {
-      const data = await convApi.getMessages(conversationId, { limit: 100 })
-      if (messagesRequestSeqRef.current !== requestSeq || activeConvIdRef.current !== conversationId) return
-      setMessages(data.messages.reverse())
-      setMessagesError(false)
-      messagesErrorToastShownRef.current = false
-    } catch (error) {
-      if (messagesRequestSeqRef.current !== requestSeq || activeConvIdRef.current !== conversationId) return
-      if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
-        selectConversation(null)
-        toastRef.current.error(error.status === 404 ? 'Conversation not found' : 'Conversation access denied')
-        return
-      }
-      setMessagesError(true)
-      if (!messagesErrorToastShownRef.current) {
-        toastRef.current.error(error instanceof ApiError ? error.message : 'Failed to load messages')
-        messagesErrorToastShownRef.current = true
-      }
-    } finally {
-      messagesInFlightRef.current = false
-      if (messagesRequestSeqRef.current === requestSeq && activeConvIdRef.current === conversationId) {
-        setMessagesLoading(false)
-      }
-    }
-  }, [selectConversation])
+    return { conversationId, requestSeq }
+  }, [])
+
+  // Fetch only: state is written once the request answers.
+  const fetchMessages = useCallback(({ conversationId, requestSeq }: { conversationId: string; requestSeq: number }) => convApi.getMessages(conversationId, { limit: 100 })
+      .then((data) => {
+        if (messagesRequestSeqRef.current !== requestSeq || activeConvIdRef.current !== conversationId) return
+        setMessages(data.messages.reverse())
+        setMessagesError(false)
+        messagesErrorToastShownRef.current = false
+      })
+      .catch((error) => {
+        if (messagesRequestSeqRef.current !== requestSeq || activeConvIdRef.current !== conversationId) return
+        if (error instanceof ApiError && (error.status === 403 || error.status === 404)) {
+          selectConversation(null)
+          toastRef.current.error(error.status === 404 ? 'Conversation not found' : 'Conversation access denied')
+          return
+        }
+        setMessagesError(true)
+        if (!messagesErrorToastShownRef.current) {
+          toastRef.current.error(error instanceof ApiError ? error.message : 'Failed to load messages')
+          messagesErrorToastShownRef.current = true
+        }
+      })
+      .finally(() => {
+        messagesInFlightRef.current = false
+        if (messagesRequestSeqRef.current === requestSeq && activeConvIdRef.current === conversationId) {
+          setMessagesLoading(false)
+        }
+      }), [selectConversation])
+
+  // Load messages when conversation changes
+  const loadMessages = useCallback(async (options: { showLoading?: boolean } = {}) => {
+    const request = beginMessagesRequest()
+    if (!request) return
+    if (options.showLoading ?? true) setMessagesLoading(true)
+    await fetchMessages(request)
+  }, [beginMessagesRequest, fetchMessages])
 
   useEffect(() => {
-    setMessages([])
-    setMessagesError(false)
+    // The thread's visible state, including its loading flag, was reset during
+    // render (see threadSeen below), so this load does not set it again.
     messagesErrorToastShownRef.current = false
-    loadMessages({ showLoading: true })
+    const request = beginMessagesRequest()
+    if (request) void fetchMessages(request)
     if (activeConvId) {
       convApi.markRead(activeConvId)
         .then(() => {
@@ -1239,7 +1273,7 @@ export default function CourierLayout() {
         })
         .catch(() => {})
     }
-  }, [activeConvId, loadMessages])
+  }, [activeConvId, beginMessagesRequest, fetchMessages])
 
   // Poll messages every 5s
   useEffect(() => {
@@ -1280,7 +1314,7 @@ export default function CourierLayout() {
 
   // Poll typing status every 2s
   useEffect(() => {
-    if (!activeConvId) { setTypingNames([]); return }
+    if (!activeConvId) return
     const conversationId = activeConvId
     const poll = async () => {
       if (!isCourierDocumentVisible()) return
@@ -1616,16 +1650,27 @@ export default function CourierLayout() {
     ]
   }, [activeConversation, bookingContext, newMessage, workspaceNote])
 
-  useEffect(() => {
-    sendRequestSeqRef.current += 1
-    uploadRequestSeqRef.current += 1
-    galaAssistRequestSeqRef.current += 1
+  // Switching threads clears the previous thread's visible state during render;
+  // the effect retires its in-flight requests.
+  const [threadSeen, setThreadSeen] = useState(activeConvId)
+  if (threadSeen !== activeConvId) {
+    setThreadSeen(activeConvId)
+    setMessages([])
+    setMessagesError(false)
+    if (activeConvId) setMessagesLoading(true)
+    if (!activeConvId) setTypingNames([])
     setIsSending(false)
     setIsUploading(false)
     setGalaLoading(false)
     setWorkspaceNote('')
     setShowQuickReply(false)
     setAssistError(null)
+  }
+
+  useEffect(() => {
+    sendRequestSeqRef.current += 1
+    uploadRequestSeqRef.current += 1
+    galaAssistRequestSeqRef.current += 1
   }, [activeConvId])
 
   useEffect(() => {
@@ -1700,9 +1745,9 @@ export default function CourierLayout() {
   }, [handleSummarizeToNotes, handleUseSuggestion])
 
   const handleBookingAssist = useCallback(async () => {
-    if (!bookingContext?.id) return
+    if (!bookingContextId) return
     const conversationId = activeConvIdRef.current
-    const bookingId = bookingContext.id
+    const bookingId = bookingContextId
     const requestSeq = galaAssistRequestSeqRef.current + 1
     galaAssistRequestSeqRef.current = requestSeq
     setGalaLoading(true)
@@ -1722,7 +1767,7 @@ export default function CourierLayout() {
         setGalaLoading(false)
       }
     }
-  }, [bookingContext?.id, toast])
+  }, [bookingContextId, toast])
 
   // Input toolbar (left of text field)
   const inputToolbar = activeConvId ? (

@@ -70,30 +70,43 @@ export default function TimeBlockManager({ artists, canTargetOthers, onClose }: 
     [artists, artistId],
   )
 
-  const loadBlocks = useCallback(async () => {
-    // Target mode needs a chosen artist; self mode omits artist_id and the
-    // backend defaults to the current user's own calendar.
+  // Target mode needs a chosen artist; self mode omits artist_id and the
+  // backend defaults to the current user's own calendar.
+  const canLoadBlocks = !(canTargetOthers && !artistId)
+
+  // Fetch only: state is written once the request answers.
+  const requestBlocks = useCallback(async () => {
     if (canTargetOthers && !artistId) return
-    setLoading(true)
-    try {
-      const start = todayIso()
-      const end = addDaysIso(start, 90)
-      const rows = await calendarApi.timeBlocks.list({
-        start,
-        end,
-        artist_id: canTargetOthers ? artistId : undefined,
+    const start = todayIso()
+    const end = addDaysIso(start, 90)
+    await calendarApi.timeBlocks.list({
+      start,
+      end,
+      artist_id: canTargetOthers ? artistId : undefined,
+    })
+      .then(setBlocks)
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : 'Failed to load time blocks')
       })
-      setBlocks(rows)
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to load time blocks')
-    } finally {
-      setLoading(false)
-    }
+      .finally(() => setLoading(false))
   }, [canTargetOthers, artistId, toast])
 
+  const loadBlocks = useCallback(async () => {
+    if (canTargetOthers && !artistId) return
+    setLoading(true)
+    await requestBlocks()
+  }, [canTargetOthers, artistId, requestBlocks])
+
+  // A new target starts a load: the flag turns on during render, the effect fetches.
+  const [blocksTarget, setBlocksTarget] = useState<readonly unknown[] | null>(null)
+  if (!blocksTarget || blocksTarget[0] !== canTargetOthers || blocksTarget[1] !== artistId || blocksTarget[2] !== toast) {
+    setBlocksTarget([canTargetOthers, artistId, toast])
+    if (canLoadBlocks) setLoading(true)
+  }
+
   useEffect(() => {
-    void loadBlocks()
-  }, [loadBlocks])
+    void requestBlocks()
+  }, [requestBlocks])
 
   const handleCreate = useCallback(async () => {
     if (canTargetOthers && !artistId) {

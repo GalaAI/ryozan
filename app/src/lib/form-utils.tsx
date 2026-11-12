@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 /**
  * Shared form utilities - used by DocumentHub (dashboard) and PublicFormPage (magic link).
  *

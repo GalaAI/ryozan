@@ -148,14 +148,34 @@ export default function ArtistProfileEditor() {
   const pinterestCallback = urlSearch.get('pinterest')
   const appointmentTypesRequested = requestedSection === 'appointment-types'
 
+  // Flash and shop live in Hustle; portfolio (gallery) is managed here.
+  const redirectsToHub = user?.role === 'artist' && (
+    requestedTab === 'integrations'
+    || requestedSection === 'integrations'
+    || googleCallback !== null
+    || pinterestCallback !== null
+  )
+  const redirectsAway = redirectsToHub
+    || Boolean(requestedTab && ['flash', 'shop'].includes(requestedTab))
+    || requestedTab === 'booking'
+
+  // The requested tab opens during render whenever the URL request changes;
+  // the effect below only performs the redirects.
+  const tabRequest = [googleCallback, pinterestCallback, requestedSection, requestedTab, user?.role] as const
+  const [tabRequestSeen, setTabRequestSeen] = useState<readonly unknown[] | null>(null)
+  if (!tabRequestSeen || tabRequestSeen.some((part, index) => part !== tabRequest[index])) {
+    setTabRequestSeen(tabRequest)
+    if (!redirectsAway) {
+      if (requestedTab === 'gallery') {
+        setActiveTab('gallery')
+      } else if (requestedTab && ['settings', 'profile', 'contact', 'integrations', 'account'].includes(requestedTab)) {
+        setActiveTab('settings')
+      }
+    }
+  }
+
   useEffect(() => {
-    // Flash and shop live in Hustle; portfolio (gallery) is managed here.
-    if (user?.role === 'artist' && (
-      requestedTab === 'integrations'
-      || requestedSection === 'integrations'
-      || googleCallback !== null
-      || pinterestCallback !== null
-    )) {
+    if (redirectsToHub) {
       const callback = googleCallback
         ? `&google=${encodeURIComponent(googleCallback)}`
         : pinterestCallback
@@ -170,14 +190,8 @@ export default function ArtistProfileEditor() {
     }
     if (requestedTab === 'booking') {
       window.location.replace('/dashboard/huddle?charm=bookings')
-      return
     }
-    if (requestedTab === 'gallery') {
-      setActiveTab('gallery')
-    } else if (requestedTab && ['settings', 'profile', 'contact', 'integrations', 'account'].includes(requestedTab)) {
-      setActiveTab('settings')
-    }
-  }, [googleCallback, pinterestCallback, requestedSection, requestedTab, user?.role])
+  }, [googleCallback, pinterestCallback, redirectsToHub, requestedTab])
 
   useEffect(() => {
     if (activeTab !== 'settings' || !requestedSection) return
@@ -200,22 +214,6 @@ export default function ArtistProfileEditor() {
     return () => window.cancelAnimationFrame(frame)
   }, [activeTab, appointmentTypesRequested, requestedSection])
 
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('pinterest') === 'connected') {
-      toast.success('Pinterest account connected')
-      setPinterestConnected(true)
-      const url = new URL(window.location.href)
-      url.searchParams.delete('pinterest')
-      window.history.replaceState({}, '', url.toString())
-      pinterestAuth.getStatus()
-        .then((res) => {
-          setPinterestConnected(res.connected)
-          setPinterestUsername(res.username || null)
-        })
-        .catch(() => { /* silent */ })
-    }
-  }, [])
-
   // Account tab state
   const [acctName, setAcctName] = useState(user?.name || '')
   const [acctMarketing, setAcctMarketing] = useState(user?.marketing_opt_in || false)
@@ -231,8 +229,26 @@ export default function ArtistProfileEditor() {
   const [integrationsLoading, setIntegrationsLoading] = useState(false)
   const [googleConnected, setGoogleConnected] = useState(false)
   const [googleManaged, setGoogleManaged] = useState(false)
-  const [pinterestConnected, setPinterestConnected] = useState(false)
+  // Returning from Pinterest with ?pinterest=connected shows it connected at once.
+  const [pinterestConnected, setPinterestConnected] = useState(() => (
+    new URLSearchParams(window.location.search).get('pinterest') === 'connected'
+  ))
   const [pinterestUsername, setPinterestUsername] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('pinterest') === 'connected') {
+      toast.success('Pinterest account connected')
+      const url = new URL(window.location.href)
+      url.searchParams.delete('pinterest')
+      window.history.replaceState({}, '', url.toString())
+      pinterestAuth.getStatus()
+        .then((res) => {
+          setPinterestConnected(res.connected)
+          setPinterestUsername(res.username || null)
+        })
+        .catch(() => { /* silent */ })
+    }
+  }, [toast])
 
   // Form fields: Profile & Bio
   const [title, setTitle] = useState('')
@@ -344,24 +360,27 @@ export default function ArtistProfileEditor() {
     if (type === 'ok') setTimeout(() => setMessage(null), 3000)
   }
 
-  const loadSessionTypes = useCallback(async () => {
-    setSessionTypesLoading(true)
-    try {
-      const types = await sessionTypesApi.mine()
+  // Fetch only: state is written once the request answers.
+  const requestSessionTypes = useCallback(() => sessionTypesApi.mine()
+    .then((types) => {
       setSessionTypeRows(types)
       setEditingSessionTypes(
         Object.fromEntries(types.map((type) => [type.id, sessionTypeToDraft(type)]))
       )
-    } catch {
+    })
+    .catch(() => {
       setMessage({ type: 'err', text: 'Could not load appointment types.' })
-    } finally {
-      setSessionTypesLoading(false)
-    }
-  }, [])
+    })
+    .finally(() => setSessionTypesLoading(false)), [])
+
+  const loadSessionTypes = () => {
+    setSessionTypesLoading(true)
+    return requestSessionTypes()
+  }
 
   useEffect(() => {
-    if (user) void loadSessionTypes()
-  }, [user, loadSessionTypes])
+    if (user) void requestSessionTypes()
+  }, [user, requestSessionTypes])
 
   const sessionTypePayload = (draft: SessionTypeDraft) => ({
     label: draft.label.trim(),
@@ -459,24 +478,37 @@ export default function ArtistProfileEditor() {
     }
   }
 
-  const loadBookingAddOns = useCallback(async () => {
-    setBookingAddOnsLoading(true)
-    try {
-      const rows = await bookingAddOnsApi.mine()
+  // Fetch only: state is written once the request answers.
+  const requestBookingAddOns = useCallback(() => bookingAddOnsApi.mine()
+    .then((rows) => {
       setBookingAddOnRows(rows)
       setEditingBookingAddOns(
         Object.fromEntries(rows.map((addOn) => [addOn.id, bookingAddOnToDraft(addOn)]))
       )
-    } catch {
+    })
+    .catch(() => {
       setMessage({ type: 'err', text: 'Could not load booking add-ons.' })
-    } finally {
-      setBookingAddOnsLoading(false)
+    })
+    .finally(() => setBookingAddOnsLoading(false)), [])
+
+  const loadBookingAddOns = () => {
+    setBookingAddOnsLoading(true)
+    return requestBookingAddOns()
+  }
+
+  // Each signed-in user (re)loads both lists; their loading flags turn on during render.
+  const [catalogUser, setCatalogUser] = useState<typeof user | undefined>(undefined)
+  if (catalogUser !== user) {
+    setCatalogUser(user)
+    if (user) {
+      setSessionTypesLoading(true)
+      setBookingAddOnsLoading(true)
     }
-  }, [])
+  }
 
   useEffect(() => {
-    if (user) void loadBookingAddOns()
-  }, [user, loadBookingAddOns])
+    if (user) void requestBookingAddOns()
+  }, [user, requestBookingAddOns])
 
   const bookingAddOnPayload = (draft: BookingAddOnDraft) => ({
     label: draft.label.trim(),
@@ -767,7 +799,7 @@ export default function ArtistProfileEditor() {
 
   // ── Save button (reused across tabs) ──────────
 
-  const SaveButton = () => (
+  const saveButton = (
     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
       <button
         onClick={handleSave}
@@ -959,7 +991,7 @@ export default function ArtistProfileEditor() {
                     </div>
                   </div>
                 </div>
-                <SaveButton />
+                {saveButton}
               </div>
             </details>
 
@@ -995,7 +1027,7 @@ export default function ArtistProfileEditor() {
                     <input type="url" className="form-input" value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://yoursite.com" />
                   </div>
                 </div>
-                <SaveButton />
+                {saveButton}
               </div>
             </details>
 
@@ -1171,7 +1203,7 @@ export default function ArtistProfileEditor() {
                     })}
                   </div>
                 </div>
-                <SaveButton />
+                {saveButton}
                 <div
                   id="appointment-types"
                   ref={appointmentTypesRef}
@@ -1707,7 +1739,7 @@ export default function ArtistProfileEditor() {
               )}
             </div>
 
-            <SaveButton />
+            {saveButton}
           </div>
         )}
 
@@ -1783,7 +1815,7 @@ export default function ArtistProfileEditor() {
               />
             </div>
 
-            <SaveButton />
+            {saveButton}
           </div>
         )}
 
@@ -2506,14 +2538,15 @@ function IntegrationsTab({
 }) {
   const [googleActing, setGoogleActing] = useState(false)
   const [pinterestActing, setPinterestActing] = useState(false)
-  const [loaded, setLoaded] = useState(false)
+  // Load once on mount; the callback is a fresh closure every render.
+  const loadedRef = useRef(false)
 
   useEffect(() => {
-    if (!loaded) {
-      setLoaded(true)
+    if (!loadedRef.current) {
+      loadedRef.current = true
       onLoadIntegrations()
     }
-  }, [loaded, onLoadIntegrations])
+  }, [onLoadIntegrations])
 
   if (loading) {
     return <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted)' }}>Loading Modz...</div>

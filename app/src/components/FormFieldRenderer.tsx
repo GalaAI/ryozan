@@ -44,8 +44,8 @@ function displayField(field: FormField): FormField {
   }
 }
 
-export default function FormFieldRenderer({ field, value, onChange }: Props) {
-  field = displayField(field)
+export default function FormFieldRenderer({ field: rawField, value, onChange }: Props) {
+  const field = displayField(rawField)
   const val = value ?? ''
 
   switch (field.type) {

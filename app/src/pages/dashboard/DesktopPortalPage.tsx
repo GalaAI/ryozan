@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../../lib/routes'
 import { NativeDesktopPortal } from '../../components/desktop-portal/NativeDesktopPortal'
@@ -117,7 +117,6 @@ export default function DesktopPortalPage() {
   const conversationId = params.get('convo')
   const currentConversation = useRef(conversationId)
   const lifetime = useRef(0)
-  currentConversation.current = conversationId
   const user = data.user.data
   const loadReplyTemplates = useCallback(() => api.readResponseTemplates(user ?? undefined), [api, user])
   const agentId: DesktopAgentId = tab === 'pit' && user?.role === 'founder' ? 'gala' : tab === 'books' ? 'booky' : tab === 'courier' ? 'mercury' : ['studio', 'hub', 'shop'].includes(tab) ? 'xar' : ['arkstation', 'guild'].includes(tab) ? 'herald' : user?.role === 'founder' ? 'gala' : user?.role === 'admin' ? 'spyder' : 'bella'
@@ -125,29 +124,46 @@ export default function DesktopPortalPage() {
   const chatKey = tab==='courier' && conversationId ? `mercury:${conversationId}` : activeChats[chatAgent] ?? chatAgent
   const chatOwner = `${user?.id ?? ''}:${user?.role ?? ''}:${user?.proxy_for ?? ''}`
   const currentChatOwner = useRef(chatOwner)
-  currentChatOwner.current=chatOwner
+  // Async replies compare against the committed conversation and chat owner.
+  useLayoutEffect(()=>{ currentConversation.current = conversationId; currentChatOwner.current = chatOwner },[chatOwner,conversationId])
+  // A new signed-in owner restores that owner's saved chats during render.
+  const hasUser = Boolean(user)
+  const [chatOwnerSeen,setChatOwnerSeen] = useState<string | null>(null)
+  if (chatOwnerSeen!==chatOwner) {
+    setChatOwnerSeen(chatOwner)
+    if (hasUser) {
+      setActiveChats({}); setHubChatAgent('gala'); setChatStorageError('')
+      try { setChats(restoreAgentChats(sessionStorage.getItem(`ryozan:desktop-chats:${chatOwner}`))); setChatStorageWritable(true) }
+      catch { setChats({}); setChatStorageWritable(false); setChatStorageError('Saved conversations could not be read. New conversations remain available in memory. The unreadable archive has not been overwritten.') }
+      setChatStorageOwner(chatOwner)
+    }
+  }
   useEffect(()=>{
-    if (!user) return
-    setActiveChats({}); setHubChatAgent('gala'); setChatStorageError('')
-    try { setChats(restoreAgentChats(sessionStorage.getItem(`ryozan:desktop-chats:${chatOwner}`))); setChatStorageWritable(true) }
-    catch { setChats({}); setChatStorageWritable(false); setChatStorageError('Saved conversations could not be read. New conversations remain available in memory. The unreadable archive has not been overwritten.') }
-    setChatStorageOwner(chatOwner)
-  },[chatOwner])
-  useEffect(()=>{
-    if (!user || chatStorageOwner!==chatOwner || !chatStorageWritable) return
+    if (!hasUser || chatStorageOwner!==chatOwner || !chatStorageWritable) return
     try {
       // Save private text turns only. Never persist executable response cards or Courier evidence.
       sessionStorage.setItem(`ryozan:desktop-chats:${chatOwner}`,JSON.stringify(restoreAgentChats(JSON.stringify(chats))))
-    } catch { setChatStorageError('Browser storage is unavailable or full. These conversations are only retained while this page stays open.') }
-  },[chats,chatOwner,chatStorageOwner,chatStorageWritable])
+    } catch {
+      // The failure is only known once this effect's write to sessionStorage (an
+      // external system) throws, so it can only be surfaced from here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setChatStorageError('Browser storage is unavailable or full. These conversations are only retained while this page stays open.')
+    }
+  },[chats,chatOwner,chatStorageOwner,chatStorageWritable,hasUser])
 
   useEffect(() => { void api.load(setData); return () => { lifetime.current += 1; api.cancelLoad() } }, [api])
   useEffect(() => { let active = true; void api.readArtifactTypes().then(types => { if (active) setArtifactTypes(types) }).catch(() => { if (active) setStatus('Message actions unavailable: could not load the action registry.') }); return () => { active = false } }, [api])
+  // Each thread request clears the previous thread during render; the effect fetches.
+  const threadKey = [api, tab, conversationId, threadRevision] as const
+  const [threadSeen,setThreadSeen] = useState<readonly unknown[] | null>(null)
+  if (!threadSeen || threadSeen.some((part,index)=>part!==threadKey[index])) {
+    setThreadSeen(threadKey)
+    setThread(null); setThreadError(''); setDraft('')
+    setThreadLoading(tab === 'courier' && Boolean(conversationId))
+  }
   useEffect(() => {
     let active = true
-    setThread(null); setThreadError(''); setDraft('')
-    if (tab !== 'courier' || !conversationId) { setThreadLoading(false); return }
-    setThreadLoading(true)
+    if (tab !== 'courier' || !conversationId) return
     void api.readConversation(conversationId).then(value => { if (active) setThread(value) }).catch(error => { if (active) setThreadError(String(error)) }).finally(() => { if (active) setThreadLoading(false) })
     return () => { active = false }
   }, [api, tab, conversationId, threadRevision])
@@ -264,6 +280,9 @@ export default function DesktopPortalPage() {
 
   if (!user) return <div role="status">{data.user.error ?? 'Loading authenticated desktop portal…'}</div>
   if (tab === 'pit' && user.role !== 'founder') return <section style={body} aria-label="Founder access"><p role="alert">The founder board is available only to founder accounts.</p><button type="button" style={button} onClick={() => selectTab(user.role === 'collector' ? 'you' : 'hub')}>Open your Hub</button></section>
+  // The reply card opens its own workspace (it has a component), so its button
+  // holds the action rather than the deck card.
+  const draftReply = thread && !threadLoading ? () => void sendAgent('Draft a reply to this conversation for my review. Do not send it.') : undefined
   const catalog: Record<string, DesktopDeckAction> = {
     livepage: { id: 'livepage', title: 'Live page', description: 'Review your API-backed artist profile in the workspace. This does not publish any changes.', cta: 'Review profile', component: <Resource resource={data.artist}>{artist => artist ? <section aria-label="Artist profile review"><h3>{artist.title}</h3><p>{artist.bio}</p><p>{artist.specialty?.join(' · ')}</p><p>Public page: /artist/{artist.slug}</p><p>This is a profile-data review, not the full public-page layout.</p></section> : <p>No artist profile is available.</p>}</Resource> },
     paths: { id: 'paths', title: 'Paths', description: 'Booking-path configuration is not connected to this desktop workspace yet.', cta: 'Not connected' },
@@ -273,7 +292,7 @@ export default function DesktopPortalPage() {
       ? { id: 'schedule', title: 'Schedule', description: 'Open the calendar backed by your loaded booking records. This does not change appointments.', cta: 'Open calendar', run: () => selectTab('home') }
       : { id: 'schedule', title: 'Schedule', description: 'Preview availability and explicitly save a time for a pending inquiry without confirming it.', cta: 'Preview availability', component: <Resource resource={data.bookings}>{records => <SchedulingWorkspace key={JSON.stringify([user.id, user.role, user.proxy_for])} bookings={records.items} loadSuggestions={id => api.readScheduleSuggestions(id, user)} saveSchedule={savePendingSchedule} />}</Resource> },
     charge: { id: 'charge', title: 'Take payment', description: 'Payment creation is not connected here. No charge will be created by opening this card.', cta: 'Not connected' },
-    reply: { id: 'reply', title: 'Draft reply', description: 'Ask Taisō for a private draft using this conversation. Nothing is sent to the recipient.', cta: thread ? 'Ask Taisō' : 'Select a conversation', run: thread && !threadLoading ? () => void sendAgent('Draft a reply to this conversation for my review. Do not send it.') : undefined },
+    reply: { id: 'reply', title: 'Draft reply', description: 'Ask Taisō for a private draft using this conversation. Nothing is sent to the recipient.', cta: thread ? 'Ask Taisō' : 'Select a conversation' },
     instants: { id: 'instants', title: 'Quick replies', description: 'Preview a saved reply and place it in the selected recipient’s draft. Sending stays separate.', cta: 'Choose reply', component: <QuickRepliesWorkspace key={JSON.stringify([user.id, user.role, user.proxy_for, conversationId])} loadTemplates={loadReplyTemplates} recipient={thread && thread.conversation.id === conversationId && !threadLoading && !threadError ? thread.conversation.name ?? thread.conversation.booking_context?.client_name ?? 'Conversation' : null} existingDraft={draft} disabled={working || threadLoading} onUse={text => {
       if (!conversationId || currentConversation.current !== conversationId || thread?.conversation.id !== conversationId || threadLoading || threadError || working) throw new Error('Select and load the recipient conversation before preparing a draft.')
       setDraft(text)
@@ -350,7 +369,7 @@ export default function DesktopPortalPage() {
     </fieldset>
     <p role="status" aria-live="polite">{status}</p>
   </form> : <p>No artist profile is available for this account.</p>}</Resource>
-  catalog.reply.component = <section aria-label="Prepare reply"><p>{catalog.reply.description}</p><p>{thread ? 'Uses the selected Courier conversation. The recipient receives nothing from this action.' : 'Select a conversation in Courier first.'}</p><button type="button" style={button} disabled={working || !catalog.reply.run} onClick={catalog.reply.run}>{working ? 'Preparing…' : catalog.reply.cta}</button><p>The private draft appears in the agent conversation alongside this workspace.</p></section>
+  catalog.reply.component = <section aria-label="Prepare reply"><p>{catalog.reply.description}</p><p>{thread ? 'Uses the selected Courier conversation. The recipient receives nothing from this action.' : 'Select a conversation in Courier first.'}</p><button type="button" style={button} disabled={working || !thread || threadLoading} onClick={draftReply}>{working ? 'Preparing…' : catalog.reply.cta}</button><p>The private draft appears in the agent conversation alongside this workspace.</p></section>
   const slots = user.role === 'collector' ? ['bookings','message','schedule'] : tab === 'studio' ? ['livepage','paths','bio','storefront','schedule','charge'] : tab === 'books' ? ['new-booking','bookcfg','schedule','confirm','charge'] : tab === 'courier' ? ['instants','reply','deposit','aftercare','schedule'] : ['bookings','message','schedule','quests']
   // Bench and recorded trials are served by Ark agent evolution; a standalone install hides them.
   const availableFounderActions = founderActions.filter(action => evolution || !EVOLUTION_ACTIONS.has(action.id))

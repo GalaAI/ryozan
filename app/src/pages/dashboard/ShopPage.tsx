@@ -152,30 +152,45 @@ export default function ShopPage({ artistSlug }: ShopPageProps) {
   const [previewDesign, setPreviewDesign] = useState<FlashDesign | null>(null)
   const requestSequence = useRef(0)
 
-  const loadDesigns = useCallback(async () => {
+  // Fetch only: state is written once the request answers.
+  const requestDesigns = useCallback(() => {
     const requestId = ++requestSequence.current
-    setLoading(true)
-    setLoadError('')
-    try {
-      const data = await browsePublicFlashStore({
-        artist_slug: artistSlug,
-        style: styleFilter !== 'all' ? styleFilter : undefined,
-        limit: 30,
+    return browsePublicFlashStore({
+      artist_slug: artistSlug,
+      style: styleFilter !== 'all' ? styleFilter : undefined,
+      limit: 30,
+    })
+      .then((data) => {
+        if (requestId !== requestSequence.current) return
+        setDesigns(data.designs || [])
+        setTotal(data.total || 0)
       })
-      if (requestId !== requestSequence.current) return
-      setDesigns(data.designs || [])
-      setTotal(data.total || 0)
-    } catch (caught) {
-      if (requestId !== requestSequence.current) return
-      setDesigns([])
-      setTotal(0)
-      setLoadError(caught instanceof Error ? caught.message : 'The flash storefront could not be loaded.')
-    } finally {
-      if (requestId === requestSequence.current) setLoading(false)
-    }
+      .catch((caught) => {
+        if (requestId !== requestSequence.current) return
+        setDesigns([])
+        setTotal(0)
+        setLoadError(caught instanceof Error ? caught.message : 'The flash storefront could not be loaded.')
+      })
+      .finally(() => {
+        if (requestId === requestSequence.current) setLoading(false)
+      })
   }, [artistSlug, styleFilter])
 
-  useEffect(() => { loadDesigns() }, [loadDesigns])
+  const loadDesigns = () => {
+    setLoading(true)
+    setLoadError('')
+    return requestDesigns()
+  }
+
+  // A new artist or style filter starts a fresh load: reset during render, fetch in the effect.
+  const [designsQuery, setDesignsQuery] = useState<readonly [typeof artistSlug, string] | null>(null)
+  if (!designsQuery || designsQuery[0] !== artistSlug || designsQuery[1] !== styleFilter) {
+    setDesignsQuery([artistSlug, styleFilter])
+    setLoading(true)
+    setLoadError('')
+  }
+
+  useEffect(() => { requestDesigns() }, [requestDesigns])
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {

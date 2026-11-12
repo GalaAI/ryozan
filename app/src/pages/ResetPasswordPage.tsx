@@ -42,8 +42,16 @@ export default function ResetPasswordPage() {
 
   const token = params.get('token') ?? ''
 
+  // No token at all is dead on arrival (decided during render); otherwise the
+  // effect asks the server.
+  const [tokenSeen, setTokenSeen] = useState<string | null>(null)
+  if (tokenSeen !== token) {
+    setTokenSeen(token)
+    if (!token) setTokenState('dead')
+  }
+
   useEffect(() => {
-    if (!token) { setTokenState('dead'); return }
+    if (!token) return
     let cancelled = false
     auth.validateResetToken(token)
       .then(r => { if (!cancelled) setTokenState(r.usable ? 'usable' : 'dead') })
