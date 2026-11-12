@@ -282,5 +282,45 @@ class SignedDateFormattingTests(unittest.TestCase):
         self.assertIsNone(waiver._format_signed_datetime(None))
 
 
+class WaiverPdfHealthTests(unittest.IsolatedAsyncioTestCase):
+    async def test_blood_thinners_answer_is_printed_on_the_record(self):
+        text = await _render(
+            _FakeInstance(
+                extra_data={
+                    "intoxicated": "No",
+                    "pregnant": "No",
+                    "blood_thinners": "Yes",
+                    "blood_disorder": "No",
+                    "skin_condition": "No",
+                }
+            ),
+            fetch="raise",
+        )
+        self.assertIn("Blood Thinners", text)
+        self.assertIn("Yes", text)
+
+    async def test_a_missing_health_answer_prints_as_not_recorded_never_no(self):
+        text = await _render(
+            _FakeInstance(extra_data={"intoxicated": "No", "pregnant": "No", "blood_thinners": None}),
+            fetch="raise",
+        )
+        self.assertIn("Blood Thinners", text)
+        self.assertIn("Not recorded", text.split("Blood Thinners", 1)[1].split("Blood Disorder", 1)[0])
+
+    def test_yes_no_answer_keeps_missing_apart_from_no(self):
+        self.assertEqual(waiver._yes_no_answer("No"), "No")
+        self.assertEqual(waiver._yes_no_answer(False), "No")
+        self.assertEqual(waiver._yes_no_answer("yes"), "Yes")
+        for missing in (None, "", "  "):
+            self.assertEqual(waiver._yes_no_answer(missing), "Not recorded")
+
+
+class WaiverSubmitHealthTests(unittest.TestCase):
+    def test_the_legacy_waiver_form_carries_blood_thinners(self):
+        from app.schemas.waiver import WaiverSubmit
+
+        self.assertIn("blood_thinners", WaiverSubmit.model_fields)
+
+
 if __name__ == "__main__":
     unittest.main()

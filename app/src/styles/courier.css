@@ -146,7 +146,7 @@
     font-size: 0.6rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
 }
 
 .qp-composer-close {
@@ -194,7 +194,7 @@
 
 .qp-composer-field input:focus {
     outline: none;
-    border-color: var(--gold, #a67d43);
+    border-color: var(--gold-vibrant);
 }
 
 .qp-composer-hint {
@@ -204,11 +204,16 @@
 }
 
 /* Active state for toolbar toggle buttons */
-.bkm-msg-toolbar-btn--active,
-.courier-tool-btn--active {
+.bkm-msg-toolbar-btn--active {
     background: rgba(166, 125, 67, 0.15) !important;
     border-color: var(--gold, #a67d43) !important;
     color: var(--gold, #a67d43) !important;
+}
+
+.courier-tool-btn--active {
+    background: rgba(166, 125, 67, 0.15) !important;
+    border-color: var(--gold-vibrant) !important;
+    color: var(--gold-vibrant) !important;
 }
 
 /* Booking courier bar - wraps tools + input + send in one row */
@@ -475,7 +480,7 @@
     font-size: 0.62rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
 }
 
 .courier-delivery-stats {
@@ -631,7 +636,7 @@
 }
 
 .courier-delivery-template {
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.58rem;
     letter-spacing: 0.08em;
@@ -737,9 +742,9 @@
 }
 
 .courier-number-filter-btn.active {
-    border-color: var(--gold, #a67d43);
+    border-color: var(--gold-vibrant);
     background: rgba(166, 125, 67, 0.12);
-    color: var(--gold, #a67d43);
+    color: var(--gold-vibrant);
 }
 
 .courier-number-filter-btn:disabled {

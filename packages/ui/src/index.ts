@@ -52,6 +52,12 @@ export type { BadgeProps, BadgeTone, StatusTextProps } from './components/Badge'
 export { TextField } from './components/TextField';
 export type { TextFieldProps } from './components/TextField';
 
+export { TextArea } from './components/TextArea';
+export type { TextAreaProps } from './components/TextArea';
+
+export { Checkbox } from './components/Checkbox';
+export type { CheckboxProps } from './components/Checkbox';
+
 export { Avatar } from './components/Avatar';
 export type { AvatarProps } from './components/Avatar';
 

@@ -167,6 +167,11 @@ export default defineConfig(({ mode }) => {
           target: apiTarget,
           changeOrigin: true,
         },
+        // Shop brand pack files (api/app/services/shop_pack.py), e.g. Email Foundry.
+        '/dependencies': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
       },
     },
   }

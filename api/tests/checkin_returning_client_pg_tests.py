@@ -140,6 +140,9 @@ class ReturningClientCheckinTests(unittest.IsolatedAsyncioTestCase):
                 "data": {
                     **filled,
                     **HEALTH,
+                    # A check-in waiver files every yes/no health answer (_require_waiver_intake_answers).
+                    "blood_disorder": "No",
+                    "skin_condition": "No",
                     "tattoo_description": "Traditional swallow",
                     "tattoo_placement": "Left forearm",
                     "quoted_price": "250",

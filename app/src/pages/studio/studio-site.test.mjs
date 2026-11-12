@@ -102,7 +102,8 @@ test('empty settings: neutral copy, no empty sections, no original-studio conten
     assert.match(html, /Tattoo studio/)
   }
   const home = pages[0]
-  assert.match(home, /href="\/dashboard\/book"/)
+  assert.match(home, /href="\/book"/)
+  assert.match(home, /href="\/ask"/)
   for (const id of ['about', 'artists', 'gallery']) assert.doesNotMatch(home, new RegExp(`id="${id}"`), id)
   assert.doesNotMatch(home, /--studio-hero-image/)
   assert.doesNotMatch(home, />Our story</, 'no story link without a story')

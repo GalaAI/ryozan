@@ -210,7 +210,7 @@ body::before {
 }
 .nav-icon-btn:hover {
     color: var(--gold);
-    border-color: var(--border-active);
+    border-color: var(--border-hover);
     background: rgba(250, 174, 21, 0.06);
 }
 
@@ -226,7 +226,7 @@ body::before {
     transition: border-color 0.2s, background 0.2s;
 }
 .nav-user-pill:hover {
-    border-color: var(--border-active);
+    border-color: var(--border-hover);
     background: rgba(250, 174, 21, 0.06);
 }
 .nav-pill-avatar {

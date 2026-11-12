@@ -50,7 +50,7 @@ export function BookingSheet({
   onCommit, note, commitLabel = 'Book it →',
 }: BookingSheetProps) {
   return (
-    <Sheet open={open} onClose={onClose} label="New booking" eyebrow="New booking" title={dayLabel} accent={color.gold}>
+    <Sheet open={open} onClose={onClose} label="New booking" eyebrow="New booking" title={dayLabel} accent={color.goldText}>
       <TextField
         value={name}
         onChange={(e) => onNameChange(e.currentTarget.value)}

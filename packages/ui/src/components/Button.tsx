@@ -20,16 +20,18 @@ const fonts: Record<ButtonSize, string> = { sm: 'var(--text-xs)', md: 'var(--tex
 /**
  * Always uppercase, always mono, always letter-spaced — the brand's button
  * signature. 'primary' is filled gold; 'accent' is the heritage-pink CTA;
- * 'outline' is the gold hairline; 'ghost' is chrome-less.
+ * 'outline' is the gold hairline; 'ghost' is chrome-less. Gold labels use
+ * `gold-text` and the primary label `on-gold`, so small text holds 4.5:1 in
+ * every theme; `gold` itself stays on fills and hairlines.
  */
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   { variant = 'primary', size = 'md', shape = 'pill', fullWidth = false, style, children, ...rest },
   ref,
 ) {
   const skins: Record<ButtonVariant, React.CSSProperties> = {
-    primary: { background: color.gold, color: color.bg, border: 0 },
+    primary: { background: color.gold, color: color.onGold, border: 0 },
     accent: { background: color.pink, color: color.smoke, border: 0, boxShadow: shadow.gold },
-    outline: { background: 'transparent', color: color.gold, border: `1px solid ${color.gold}` },
+    outline: { background: 'transparent', color: color.goldText, border: `1px solid ${color.gold}` },
     ghost: { background: 'transparent', color: color.textMuted, border: `1px solid ${color.borderSubtle}` },
     danger: { background: 'transparent', color: color.danger, border: `1px solid ${color.danger}` },
   };

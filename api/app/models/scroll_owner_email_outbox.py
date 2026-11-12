@@ -28,6 +28,12 @@ class ScrollOwnerEmailOutbox(Base):
     html_body: Mapped[str] = mapped_column(Text, nullable=False)
     attachment_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     attachment_content: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    # Set only when the row holds the bytes of a scroll PDF whose upload failed: the exact DocumentInstance
+    # ids the server created for this submission (JSON list) and the submitting artist, written at submit
+    # time. The retry writes the stored PDF URL onto these records only, never onto a record found by
+    # matching client-writable data_json. NULL on rows queued before ids were recorded.
+    document_ids: Mapped[str | None] = mapped_column(Text, nullable=True)
+    artist_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="queued", index=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)

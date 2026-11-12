@@ -4,7 +4,7 @@
 import ComingSoonPage from './ComingSoonPage'
 
 const icon = (
-  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold, #a67d43)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gold-vibrant)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 0 0-8 0v2"/><circle cx="12" cy="15" r="2"/>
   </svg>
 )

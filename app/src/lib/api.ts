@@ -604,7 +604,17 @@ export interface GiftCardRedeemResponse {
   status: string
 }
 
+export interface GiftCardTerms {
+  currency: string
+  min_amount_cents: number
+  max_amount_cents: number
+  /** Customer price adjustment in basis points; checkout charges face value plus this. */
+  price_adjustment_bps: number
+}
+
 export const giftCards = {
+  /** Public: the amount range and price adjustment the purchase page shows before checkout. */
+  terms: () => request<GiftCardTerms>('/gift-cards/terms'),
   checkout: (data: GiftCardCheckoutRequest) => request<GiftCardCheckoutResponse>('/gift-cards/checkout', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -883,6 +893,8 @@ export interface PublicBookingSubmit {
   preferred_date?: string
   preferred_time?: string
   hold_token?: string
+  /** 1 to 3 proposed times with no hold and no deposit; the artist confirms one. */
+  preferred_slots?: { date: string; time: string }[]
   booking_add_on_ids?: string[]
   save_payment_method?: boolean
   reference_image_urls?: string[]
@@ -904,6 +916,35 @@ export interface PublicBookingResponse {
   booky_outcome: BookingOutcomeEnvelope | null
   idempotent_acknowledgement: boolean
   account_setup_token: string | null
+}
+
+export interface PublicInquirySubmit {
+  inquiry_id?: string
+  artist_slug?: string | null
+  first_name: string
+  last_name: string
+  email: string
+  phone?: string
+  sms_opt_in?: boolean
+  message: string
+}
+
+export interface PublicInquiryResponse {
+  reference_code: string
+  conversation_id: string | null
+  message: string
+  idempotent_acknowledgement: boolean
+}
+
+/** GET /bookings/checkout-status/{session_id}: where a booking stands after Stripe. No contact details. */
+export interface PublicCheckoutStatus {
+  reference_code: string | null
+  artist_name: string | null
+  booking_status: string
+  deposit_state: 'paid' | 'authorized' | 'pending' | 'none'
+  deposit_amount: number | null
+  scheduled_date: string | null
+  scheduled_time: string | null
 }
 
 export interface PublicBookingDraft {
@@ -992,6 +1033,14 @@ export const bookings = {
     }
     return res.json()
   },
+
+  /** Public: a general question for the shop; opens a Courier thread, never a booking */
+  submitInquiry: (data: PublicInquirySubmit): Promise<PublicInquiryResponse> =>
+    request('/bookings/inquiry', { method: 'POST', body: JSON.stringify(data) }),
+
+  /** Public: the booking behind a Stripe Checkout Session, read on the confirm page */
+  checkoutStatus: (sessionId: string): Promise<PublicCheckoutStatus> =>
+    request(`/bookings/checkout-status/${encodeURIComponent(sessionId)}`),
 
   /** Auth: link a guest booking to a newly created account */
   linkAccount: (referenceCode: string) =>
@@ -1632,6 +1681,39 @@ export interface DocumentPublicForm {
   prefill_notice: string | null
 }
 
+export type CheckinLookupResult =
+  | { found: false }
+  | { found: true; challenge: string; channel: 'email' | 'phone'; sent_to: string }
+
+export interface CheckinBookingView {
+  reference: string | null
+  artist_name: string | null
+  artist_slug: string | null
+  description: string | null
+  placement: string | null
+  size: string | null
+  date: string | null
+  time: string | null
+  status: string
+}
+
+export interface CheckinOnFile {
+  signed_at: string | null
+  photo_id_url: string | null
+  signature_url: string | null
+  health: Record<string, string>
+}
+
+export interface CheckinVerifyResult {
+  token: string
+  first_name: string
+  booking: CheckinBookingView | null
+  visits: number
+  last_visit: string | null
+  member: { tier: string | null } | null
+  on_file: CheckinOnFile | null
+}
+
 export interface DocumentPublicSubmit {
   data: Record<string, unknown>
   signature_data?: string   // base64 PNG
@@ -1731,6 +1813,20 @@ export const documents = {
     }
     return res.json()
   },
+
+  /** Public: step one of kiosk check-in. A match sends a one-time code to the contact on file. */
+  checkinLookup: (contact: string) =>
+    request<CheckinLookupResult>('/documents/checkin/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ contact }),
+    }),
+
+  /** Public: step two. A correct code opens a waiver token prefilled from the booking or last visit. */
+  checkinVerify: (challenge: string, code: string) =>
+    request<CheckinVerifyResult>('/documents/checkin/verify', {
+      method: 'POST',
+      body: JSON.stringify({ challenge, code }),
+    }),
 
   /** Manual resend reminder for a sent document */
   remind: (id: string) =>
@@ -1864,6 +1960,8 @@ export interface StudioSettings {
   sample_flash_urls: string[]
   /** Domain studio email handles live on; empty means handles are off. */
   email_domain: string
+  /** @scope (without the @) of the shop brand pack served at /dependencies/@<scope>/; empty means no pack. */
+  shop_pack_scope: string
   /** The studio's public website; blank values hide their section. */
   site: StudioSiteSettings
 }
@@ -4815,12 +4913,15 @@ export async function uploadScrollDoc(params: {
   title?: string
   notes?: string
   aiDigestEnabled?: boolean
+  /** The file is a government ID: stored privately, served only through short-lived signed links. */
+  isId?: boolean
 }): Promise<{ id: string; title: string; file_url: string; status: string; ai_digest: unknown; created_at: string }> {
   const fd = new FormData()
   fd.append('file', params.file)
   fd.append('title', params.title ?? params.file.name)
   fd.append('notes', params.notes ?? '')
-  fd.append('ai_digest_enabled', params.aiDigestEnabled ? 'true' : 'false')
+  fd.append('ai_digest_enabled', params.aiDigestEnabled && !params.isId ? 'true' : 'false')
+  fd.append('is_id', params.isId ? 'true' : 'false')
   const res = await fetch(`${API_BASE}/scrolls/${params.categorySlug}/upload`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${getToken()}` },
