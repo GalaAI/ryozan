@@ -1,0 +1,16 @@
+# solatree caller schema 4. Written by solatree install: per-repo settings go in .github/solatree.json and repo variables.
+name: solatree-update
+on:
+  schedule: [{ cron: "41 6 * * *" }]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  update:
+    runs-on: ${{ github.event.repository.visibility != 'public' && (vars.SOLATREE_LIGHT_RUNNER || vars.SOLATREE_RUNNER) || 'ubuntu-latest' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: GalaAI/solatree/actions/install@harvest-v0
