@@ -17,7 +17,7 @@ permissions:
 jobs:
   graft:
     if: github.event_name != 'workflow_run' && (github.event_name != 'issue_comment' || github.event.issue.pull_request)
-    uses: GalaAI/solatree/.github/workflows/graft.yml@ac61b56a126755e3f6c0782a3d0c2c9d2e2ebf79
+    uses: GalaAI/solatree/.github/workflows/graft.yml@harvest-v0
   tend:
     if: github.event_name == 'workflow_run'
-    uses: GalaAI/solatree/.github/workflows/tend.yml@ac61b56a126755e3f6c0782a3d0c2c9d2e2ebf79
+    uses: GalaAI/solatree/.github/workflows/tend.yml@harvest-v0
